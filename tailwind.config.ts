@@ -23,6 +23,7 @@ const config: Config = {
         background: "var(--background)",
         foreground: "var(--foreground)",
         primary: "#800020",
+        gold: "#FFD700",
       },
     },
   },
