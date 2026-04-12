@@ -41,7 +41,7 @@ export default function Home() {
           {products.map((product) => {
             const oldPrice = Math.round(product.price * 1.15);
             return (
-              <Link href="/shop" key={product.id} className="group">
+              <Link href={`/product/${product.id}`} key={product.id} className="group">
                 <div className="flex flex-col bg-white dark:bg-zinc-900 rounded-xl overflow-hidden transition-all duration-300 shadow border border-transparent hover:border-slate-200 dark:hover:border-zinc-700">
 
                   {/* 1. Image Section */}

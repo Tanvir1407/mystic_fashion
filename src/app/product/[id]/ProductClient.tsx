@@ -21,7 +21,11 @@ export default function ProductClient({ product }: { product: Product }) {
   const [selectedImage, setSelectedImage] = useState(product.images[0]);
   const [selectedSize, setSelectedSize] = useState<string | null>(null);
   const [addedEffect, setAddedEffect] = useState(false);
-  const addToCart = useCartStore((state) => state.addToCart);
+  
+  // Use addItem as expected from the updated store
+  const addItem = useCartStore((state) => state.addItem);
+  const toggleCart = useCartStore((state) => state.toggleCart);
+  const isOpen = useCartStore((state) => state.isOpen);
 
   const formatBDT = (price: number) => {
     return `৳${price.toLocaleString("en-IN")}`;
@@ -30,125 +34,152 @@ export default function ProductClient({ product }: { product: Product }) {
   const handleAddToCart = () => {
     if (!selectedSize) return;
     
-    addToCart({
+    addItem({
       id: product.id,
       name: product.name,
       price: product.price,
       image: product.images[0],
-      size: selectedSize,
-      team: product.team,
-    });
+      category: product.team, // Map team to category if needed by cart store
+    }, selectedSize);
 
     // trigger brief visual feedback
     setAddedEffect(true);
     setTimeout(() => setAddedEffect(false), 2000);
+    
+    // Auto-open cart just like AddToBagButton used to do, or maybe leave closed?
+    // User requested "only open sideCart when click cart button", so we do NOT open cart here!
   };
 
   return (
-    <div>
-      <Link href="/shop" className="inline-flex items-center gap-2 text-sm font-bold text-foreground/50 hover:text-maroon transition-colors mb-8">
-        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={3} stroke="currentColor" className="w-4 h-4"><path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" /></svg>
-        Back to Shop
-      </Link>
-      
-      <div className="flex flex-col lg:flex-row gap-12 lg:gap-20">
-        {/* Left: Image Gallery */}
-        <div className="w-full lg:w-1/2 flex flex-col gap-4">
-          <div className="relative w-full aspect-[4/5] sm:aspect-square bg-slate-50 dark:bg-zinc-900/50 rounded-3xl flex items-center justify-center p-8 border border-slate-100 dark:border-zinc-800">
-            <Image 
-              src={selectedImage}
-              alt={product.name}
-              fill
-              className="object-contain p-8 drop-shadow-2xl"
-              priority
-            />
-          </div>
-          {/* Thumbnails (For demo, we map the same array if it only has 1) */}
-          {product.images.length > 1 && (
-            <div className="flex gap-4 overflow-x-auto pb-2">
-              {product.images.map((img, idx) => (
-                <button 
-                  key={idx}
-                  onClick={() => setSelectedImage(img)}
-                  className={`relative w-24 h-24 rounded-xl flex-shrink-0 bg-slate-50 border-2 transition-all ${selectedImage === img ? 'border-maroon' : 'border-transparent hover:border-gold'}`}
-                >
-                  <Image src={img} alt={`${product.name} view ${idx+1}`} fill className="object-contain p-2" />
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Right: Product Details */}
-        <div className="w-full lg:w-1/2 flex flex-col pt-4 lg:pt-10">
-          <p className="text-gold font-extrabold tracking-widest text-sm uppercase mb-2">{product.team}</p>
-          <h1 className="text-4xl sm:text-5xl font-black text-foreground mb-4 tracking-tight leading-none">{product.name}</h1>
-          <p className="text-3xl font-black text-maroon mb-6">{formatBDT(product.price)}</p>
+    <div className="bg-white min-h-screen">
+      <div className="container mx-auto px-4 py-8 md:py-16">
+        
+        <Link href="/" className="inline-flex items-center gap-2 text-sm font-bold text-zinc-400 hover:text-primary transition-colors mb-8 md:mb-12 uppercase tracking-widest">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" /></svg>
+          Back to Collections
+        </Link>
+        
+        <div className="flex flex-col lg:flex-row gap-12 lg:gap-24">
           
-          <p className="text-foreground/70 text-lg leading-relaxed mb-10 max-w-xl">
-            {product.description}
-          </p>
-
-          <div className="mb-10">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="font-bold text-foreground text-sm uppercase tracking-widest">Select Size</h3>
-              <button className="text-maroon hover:text-gold text-xs font-bold transition-colors underline underline-offset-4">Size Guide</button>
+          {/* Left: Product Images */}
+          <div className="w-full lg:w-1/2 flex flex-col gap-6">
+            <div className="relative w-full aspect-[4/5] bg-[#F9F9F9] flex items-center justify-center p-8 group overflow-hidden">
+              <Image 
+                src={selectedImage}
+                alt={product.name}
+                fill
+                className="object-contain p-8 md:p-16 transition-transform duration-700 group-hover:scale-105"
+                priority
+              />
+              <div className="absolute top-6 left-6 bg-primary text-gold text-[10px] font-black uppercase px-4 py-1.5 tracking-widest">
+                Official
+              </div>
             </div>
-            {product.sizes.length === 0 ? (
-              <p className="text-red-500 font-bold">Out of stock in all sizes</p>
-            ) : (
-              <div className="flex flex-wrap gap-3">
-                {product.sizes.map((s) => (
-                  <button
-                    key={s}
-                    onClick={() => setSelectedSize(s)}
-                    className={`w-14 h-14 rounded-2xl flex items-center justify-center font-black text-lg transition-all border-2 ${selectedSize === s ? 'border-maroon bg-maroon text-white shadow-xl shadow-maroon/20 -translate-y-1' : 'border-slate-200 dark:border-zinc-800 text-foreground hover:border-gold hover:text-gold bg-white dark:bg-zinc-900'}`}
+            
+            {/* Thumbnails */}
+            {product.images.length > 1 && (
+              <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide">
+                {product.images.map((img, idx) => (
+                  <button 
+                    key={idx}
+                    onClick={() => setSelectedImage(img)}
+                    className={`relative w-24 h-32 flex-shrink-0 bg-[#F9F9F9] transition-all ${selectedImage === img ? 'opacity-100 ring-2 ring-primary ring-offset-2' : 'opacity-60 hover:opacity-100'}`}
                   >
-                    {s}
+                    <Image src={img} alt={`${product.name} view ${idx+1}`} fill className="object-contain p-3" />
                   </button>
                 ))}
               </div>
             )}
           </div>
 
-          {/* Add to Cart Actions */}
-          <div className="flex gap-4 mb-12">
-            <button 
-              onClick={handleAddToCart}
-              disabled={!selectedSize}
-              className={`flex-1 h-16 rounded-2xl font-black text-lg uppercase tracking-wider flex items-center justify-center gap-3 transition-all duration-300 ${!selectedSize ? 'bg-slate-100 text-slate-400 cursor-not-allowed dark:bg-zinc-800 dark:text-zinc-600' : addedEffect ? 'bg-green-600 text-white' : 'bg-foreground text-background hover:bg-gold hover:text-black hover:shadow-2xl hover:shadow-gold/20 active:scale-95'}`}
-            >
-              {addedEffect ? (
-                <>
-                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={3} stroke="currentColor" className="w-6 h-6"><path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>
-                  Added!
-                </>
-              ) : (
-                <>
-                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-6 h-6"><path strokeLinecap="round" strokeLinejoin="round" d="M15.75 10.5V6a3.75 3.75 0 10-7.5 0v4.5m11.356-1.993l1.263 12c.07.665-.45 1.243-1.119 1.243H4.25a1.125 1.125 0 01-1.12-1.243l1.264-12A1.125 1.125 0 015.513 7.5h12.974c.576 0 1.059.435 1.119 1.007zM8.625 10.5a.375.375 0 11-.75 0 .375.375 0 01.75 0zm5.932 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" /></svg>
-                  {selectedSize ? 'Add to Cart' : 'Select a Size'}
-                </>
-              )}
-            </button>
-            <button className="w-16 h-16 rounded-2xl border-2 border-slate-200 dark:border-zinc-800 flex items-center justify-center text-foreground hover:border-maroon hover:text-maroon transition-all">
-               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-6 h-6"><path strokeLinecap="round" strokeLinejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z" /></svg>
-            </button>
-          </div>
+          {/* Right: Product Details */}
+          <div className="w-full lg:w-1/2 flex flex-col justify-center">
+            
+            <p className="text-zinc-500 font-bold tracking-widest text-xs uppercase mb-3">{product.team}</p>
+            <h1 className="text-4xl md:text-5xl lg:text-6xl font-black text-zinc-900 mb-6 tracking-tight leading-[1.1] uppercase">
+              {product.name}
+            </h1>
+            
+            <div className="flex items-end gap-4 mb-8">
+              <p className="text-3xl md:text-4xl font-black text-primary">{formatBDT(product.price)}</p>
+              <p className="text-lg font-bold text-zinc-400 line-through mb-1.5">{formatBDT(Math.round(product.price * 1.15))}</p>
+            </div>
+            
+            <div className="w-12 h-1 bg-primary mb-8"></div>
+            
+            <p className="text-zinc-500 text-lg leading-relaxed mb-10 max-w-xl">
+              {product.description}
+            </p>
 
-          {/* Details */}
-          <div className="border-t border-slate-200 dark:border-zinc-800 pt-8 space-y-4">
-             <div className="flex justify-between items-center py-2 border-b border-slate-100 dark:border-zinc-800/50">
-               <span className="text-foreground/60 font-medium">Authentication</span>
-               <span className="font-bold text-foreground">100% Genuine</span>
-             </div>
-             <div className="flex justify-between items-center py-2 border-b border-slate-100 dark:border-zinc-800/50">
-               <span className="text-foreground/60 font-medium">Category</span>
-               <span className="font-bold text-foreground">{product.category}</span>
-             </div>
-             <div className="flex justify-between items-center py-2">
-               <span className="text-foreground/60 font-medium">Shipping</span>
-               <span className="font-bold text-foreground text-green-600">Free Next Day</span>
-             </div>
+            {/* Size Selector */}
+            <div className="mb-10">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="font-bold text-zinc-900 text-sm uppercase tracking-widest">Select Size</h3>
+                <button className="text-zinc-500 hover:text-primary text-xs font-bold transition-colors underline underline-offset-4 uppercase tracking-widest">Size Guide</button>
+              </div>
+              
+              {product.sizes.length === 0 ? (
+                <p className="text-red-500 font-bold">Out of stock in all sizes</p>
+              ) : (
+                <div className="flex flex-wrap gap-3">
+                  {product.sizes.map((s) => (
+                    <button
+                      key={s}
+                      onClick={() => setSelectedSize(s)}
+                      className={`w-14 h-14 flex items-center justify-center font-bold text-lg transition-all ${selectedSize === s ? 'bg-primary text-gold border-2 border-primary' : 'bg-white text-zinc-900 border-2 border-slate-200 hover:border-zinc-900'}`}
+                    >
+                      {s}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex flex-col sm:flex-row gap-4 mb-16">
+              <button 
+                onClick={handleAddToCart}
+                disabled={!selectedSize}
+                className={`flex-1 h-16 font-black text-sm uppercase tracking-widest flex items-center justify-center gap-3 transition-all duration-300 ${!selectedSize ? 'bg-slate-100 text-slate-400 cursor-not-allowed' : addedEffect ? 'bg-green-600 text-white' : 'bg-primary text-gold hover:bg-[#600018] active:scale-[0.98]'}`}
+              >
+                {addedEffect ? (
+                  <>
+                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" strokeWidth={3} stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                    </svg>
+                    Added to Bag!
+                  </>
+                ) : (
+                  <>
+                    <svg className="w-5 h-5" viewBox="0 0 21 22" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path fillRule="evenodd" clipRule="evenodd" d="M6.48626 20.5H14.8341C17.9004 20.5 20.2528 19.3924 19.5847 14.9348L18.8066 8.89359C18.3947 6.66934 16.976 5.81808 15.7311 5.81808H5.55262C4.28946 5.81808 2.95308 6.73341 2.4771 8.89359L1.69907 14.9348C1.13157 18.889 3.4199 20.5 6.48626 20.5Z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                      <path d="M6.34902 5.5984C6.34902 3.21232 8.28331 1.27803 10.6694 1.27803C11.8184 1.27316 12.922 1.72619 13.7362 2.53695C14.5504 3.3477 15.0081 4.44939 15.0081 5.5984" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                    {selectedSize ? 'Add to Bag' : 'Select a Size'}
+                  </>
+                )}
+              </button>
+            </div>
+
+            {/* Product Meta Details */}
+            <div className="border-t border-slate-100 pt-8 space-y-4">
+               <div className="flex justify-between items-center py-2 border-b border-slate-50">
+                 <span className="text-zinc-500 font-bold uppercase tracking-widest text-xs">Authentication</span>
+                 <span className="font-bold text-zinc-900 text-sm">100% Genuine</span>
+               </div>
+               <div className="flex justify-between items-center py-2 border-b border-slate-50">
+                 <span className="text-zinc-500 font-bold uppercase tracking-widest text-xs">Category</span>
+                 <span className="font-bold text-zinc-900 text-sm">{product.category}</span>
+               </div>
+               <div className="flex justify-between items-center py-2">
+                 <span className="text-zinc-500 font-bold uppercase tracking-widest text-xs">Shipping</span>
+                 <span className="font-bold text-primary text-sm flex items-center gap-2">
+                   <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4"><path strokeLinecap="round" strokeLinejoin="round" d="M8.25 18.75a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 01-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h1.125c.621 0 1.129-.504 1.09-1.124a17.498 17.498 0 00-3.213-9.193 2.25 2.25 0 00-1.58-.86H14.25M16.5 18.75h-2.25m0-11.177v-.958c0-.568-.422-1.048-.987-1.106a48.554 48.554 0 00-10.026 0 1.106 1.106 0 00-.987 1.106v7.635m12-6.677v6.677m0 4.5v-4.5m0 0h-12" /></svg>
+                   Fast Delivery
+                 </span>
+               </div>
+            </div>
+            
           </div>
         </div>
       </div>
