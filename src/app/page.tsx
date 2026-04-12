@@ -1,41 +1,28 @@
 import Image from "next/image";
 import Link from "next/link";
+import { PrismaClient } from "@/generated/prisma/client";
+import { PrismaPg } from '@prisma/adapter-pg';
+import { Pool } from 'pg';
 
-export default function Home() {
+const pool = new Pool({ connectionString: process.env.DATABASE_URL })
+const adapter = new PrismaPg(pool)
+const prisma = new PrismaClient({ adapter });
+
+export const dynamic = "force-dynamic";
+
+export default async function Home() {
+  const formatBDT = (price: number) => {
+    return `৳${price.toLocaleString("en-IN")}`;
+  };
+
+  const trendingProducts = await prisma.product.findMany({
+    take: 4,
+  });
+
   return (
     <div className="min-h-screen bg-background flex flex-col items-center">
       
-      {/* Sticky Header */}
-      <header className="sticky top-0 w-full z-50 bg-background/80 backdrop-blur-lg border-b border-maroon/10 shadow-sm">
-        <div className="max-w-7xl mx-auto px-8 h-20 flex justify-between items-center">
-          {/* Logo */}
-          <Link href="/" className="font-extrabold text-2xl tracking-tighter text-maroon flex items-center gap-2 group">
-            <span className="group-hover:text-gold transition-colors duration-300">Mystic</span> 
-            <span className="text-foreground">Fashion</span>
-            <div className="w-2 h-2 rounded-full bg-gold ml-1"></div>
-          </Link>
 
-          {/* Desktop Nav */}
-          <nav className="hidden md:flex gap-8 text-sm font-semibold tracking-wide text-foreground/80">
-            <Link href="#hero" className="hover:text-maroon transition-colors duration-300">Home</Link>
-            <Link href="#trending" className="hover:text-maroon transition-colors duration-300">Jerseys</Link>
-            <Link href="#collections" className="hover:text-maroon transition-colors duration-300">Collections</Link>
-            <Link href="#footer" className="hover:text-maroon transition-colors duration-300">Contact</Link>
-          </nav>
-
-          {/* Cart Icon & Actions */}
-          <div className="flex items-center gap-6">
-            <button className="relative p-2 text-foreground hover:text-maroon transition-colors group">
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-6 h-6">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 10.5V6a3.75 3.75 0 10-7.5 0v4.5m11.356-1.993l1.263 12c.07.665-.45 1.243-1.119 1.243H4.25a1.125 1.125 0 01-1.12-1.243l1.264-12A1.125 1.125 0 015.513 7.5h12.974c.576 0 1.059.435 1.119 1.007zM8.625 10.5a.375.375 0 11-.75 0 .375.375 0 01.75 0zm5.932 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" />
-              </svg>
-              <span className="absolute top-0 right-0 w-4 h-4 rounded-full bg-gold text-xs font-bold text-foreground flex items-center justify-center transform translate-x-1 -translate-y-1 group-hover:scale-110 transition-transform">
-                0
-              </span>
-            </button>
-          </div>
-        </div>
-      </header>
 
       {/* Hero Section */}
       <section id="hero" className="w-full relative bg-foreground overflow-hidden">
@@ -99,21 +86,16 @@ export default function Home() {
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-          {[
-            { id: 1, name: "Aurum Away Kit", price: "$125.00", img: "/images/trending_jersey_1_1775987099771.png", tag: "New" },
-            { id: 2, name: "Legacy Retro '90", price: "$140.00", img: "/images/trending_jersey_2_1775987115734.png", tag: "Limited" },
-            { id: 3, name: "Apex Onyx Edition", price: "$130.00", img: "/images/trending_jersey_3_1775987132054.png" },
-            { id: 4, name: "Aethelred Classic", price: "$115.00", img: "/images/trending_jersey_4_1775987153020.png" },
-          ].map((jersey, i) => (
+          {trendingProducts.map((jersey, i) => (
             <div key={jersey.id} className="group flex flex-col bg-slate-50/50 dark:bg-zinc-900/50 rounded-3xl p-6 hover:bg-slate-100 dark:hover:bg-zinc-800/80 transition-all duration-300 hover:shadow-xl hover:-translate-y-2 border border-slate-200 dark:border-zinc-800">
               <div className="relative w-full aspect-square mb-6 rounded-2xl bg-white dark:bg-black/20 overflow-hidden flex items-center justify-center">
-                {jersey.tag && (
+                {i === 0 && (
                   <span className="absolute top-3 left-3 z-10 px-3 py-1 bg-maroon text-white text-[10px] font-black uppercase rounded-full tracking-wider shadow-md">
-                    {jersey.tag}
+                    Trending
                   </span>
                 )}
                 <Image 
-                  src={jersey.img}
+                  src={jersey.images[0]}
                   alt={jersey.name}
                   fill
                   className="object-contain p-4 group-hover:scale-110 transition-transform duration-500"
@@ -121,15 +103,17 @@ export default function Home() {
               </div>
               <div className="flex flex-col flex-1">
                 <div className="flex justify-between items-start mb-2">
-                  <h4 className="font-bold text-lg text-foreground group-hover:text-maroon transition-colors">{jersey.name}</h4>
-                  <span className="font-black text-foreground">{jersey.price}</span>
+                  <Link href={`/product/${jersey.id}`}>
+                    <h4 className="font-bold text-lg text-foreground group-hover:text-maroon transition-colors line-clamp-1">{jersey.name}</h4>
+                  </Link>
+                  <span className="font-black text-foreground ml-2">{formatBDT(jersey.price)}</span>
                 </div>
-                <button className="mt-auto w-full py-3 bg-white dark:bg-black border-2 border-slate-200 dark:border-zinc-800 hover:border-maroon hover:bg-maroon hover:text-white rounded-xl font-bold flex items-center justify-center gap-2 transition-all duration-300">
+                <Link href={`/product/${jersey.id}`} className="mt-auto w-full py-3 bg-white dark:bg-black border-2 border-slate-200 dark:border-zinc-800 hover:border-maroon hover:bg-maroon hover:text-white rounded-xl font-bold flex items-center justify-center gap-2 transition-all duration-300">
                   <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-5 h-5">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
                   </svg>
-                  Add to Cart
-                </button>
+                  View Product
+                </Link>
               </div>
             </div>
           ))}
