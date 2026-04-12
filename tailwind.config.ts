@@ -11,6 +11,8 @@ const config: Config = {
       colors: {
         background: "var(--background)",
         foreground: "var(--foreground)",
+        maroon: "#800020",
+        gold: "#FFD700",
       },
     },
   },
