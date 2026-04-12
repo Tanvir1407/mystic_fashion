@@ -8,6 +8,10 @@ import Image from "next/image";
 export default function SidebarCart() {
   const { items, isOpen, toggleCart, updateQuantity, removeItem, getTotalPrice } = useCartStore();
 
+  const formatBDT = (price: number) => {
+    return `৳${price.toLocaleString("en-IN")}`;
+  };
+
   return (
     <AnimatePresence>
       {isOpen && (
@@ -32,7 +36,7 @@ export default function SidebarCart() {
             {/* Header */}
             <div className="p-6 border-b border-slate-100 dark:border-zinc-900 flex justify-between items-center">
               <div className="flex items-center gap-3">
-                <ShoppingBag className="w-6 h-6 text-maroon" />
+                <ShoppingBag className="w-6 h-6 text-primary" />
                 <h2 className="text-xl font-black uppercase tracking-tight">Shopping Cart</h2>
               </div>
               <button
@@ -68,14 +72,14 @@ export default function SidebarCart() {
                         />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center">
-                           <ShoppingBag className="w-8 h-8 text-slate-300" />
+                          <ShoppingBag className="w-8 h-8 text-slate-300" />
                         </div>
                       )}
                     </div>
                     <div className="flex-1 flex flex-col justify-between py-1">
                       <div>
                         <div className="flex justify-between items-start">
-                          <h3 className="font-bold text-sm uppercase leading-tight group-hover:text-maroon transition-colors line-clamp-2">
+                          <h3 className="font-bold text-sm uppercase leading-tight group-hover:text-primary transition-colors line-clamp-2">
                             {item.name}
                           </h3>
                           <button
@@ -90,8 +94,8 @@ export default function SidebarCart() {
                             Size: {item.size}
                           </span>
                         )}
-                        <p className="text-maroon font-black mt-1">
-                          {item.price.toLocaleString()} BDT
+                        <p className="text-primary font-black mt-1">
+                          {formatBDT(item.price)}
                         </p>
                       </div>
 
@@ -123,16 +127,12 @@ export default function SidebarCart() {
               <div className="p-6 border-t border-slate-100 dark:border-zinc-900 bg-slate-50/50 dark:bg-zinc-900/30">
                 <div className="flex justify-between items-center mb-6">
                   <span className="text-slate-500 font-bold uppercase tracking-widest text-xs">Subtotal</span>
-                  <span className="text-2xl font-black">{getTotalPrice().toLocaleString()} BDT</span>
+                  <span className="text-2xl font-black text-primary">{formatBDT(getTotalPrice())}</span>
                 </div>
-                <button className="w-full bg-foreground text-background py-4 rounded-xl font-black uppercase tracking-widest hover:bg-maroon hover:text-white transition-all transform active:scale-[0.98] shadow-lg shadow-black/10">
+                <button className="w-full text-white bg-primary py-3 rounded-xl font-black uppercase tracking-widest hover:bg-[#600018] transition-all transform active:scale-[0.98] shadow-lg shadow-black/10">
                   Checkout Now
                 </button>
-                <div className="mt-4 flex items-center justify-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-tighter">
-                  <span className="flex items-center gap-1">Secure Checkout</span>
-                  <span>•</span>
-                  <span>Fast Delivery</span>
-                </div>
+
               </div>
             )}
           </motion.div>

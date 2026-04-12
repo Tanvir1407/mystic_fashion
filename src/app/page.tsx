@@ -1,38 +1,11 @@
 import Header from "@/components/Header";
 import HeroCarousel from "@/components/HeroCarousel";
+import Footer from "@/components/Footer";
 import SidebarCart from "@/components/SidebarCart";
+import AddToBagButton from "@/components/AddToBagButton";
 import Link from "next/link";
 import Image from "next/image";
 
-// Cute empty product placeholder SVG
-function EmptyProductIcon() {
-  return (
-    <svg className="w-24 h-24 text-primary" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-      {/* T-shirt shape */}
-      <path
-        d="M30 25L20 35L30 45V75C30 77 31.5 78.5 33.5 78.5H66.5C68.5 78.5 70 77 70 75V45L80 35L70 25H60C60 30.5 55.5 35 50 35C44.5 35 40 30.5 40 25H30Z"
-        stroke="currentColor"
-        strokeWidth="3"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        fill="currentColor"
-        fillOpacity="0.06"
-      />
-      {/* Hanger */}
-      <path
-        d="M50 15V20"
-        stroke="currentColor"
-        strokeWidth="2.5"
-        strokeLinecap="round"
-      />
-      <circle cx="50" cy="13" r="3" stroke="currentColor" strokeWidth="2" fill="none" />
-      {/* Sparkle left */}
-      <path d="M18 20L20 22M16 22L22 20" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" opacity="0.5" />
-      {/* Sparkle right */}
-      <path d="M78 55L80 57M76 57L82 55" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" opacity="0.5" />
-    </svg>
-  );
-}
 
 // Format price in BDT
 function formatBDT(price: number) {
@@ -95,13 +68,7 @@ export default function Home() {
 
                   {/* 3. Add to Bag */}
                   <div className="px-3 pb-3 md:px-4 md:pb-4">
-                    <button className="w-full text-white bg-primary text-gold py-2.5 rounded-lg font-bold text-sm uppercase tracking-wider transition-all duration-300 flex items-center justify-center gap-2 hover:bg-[#600018] active:scale-[0.97]">
-                      <svg className="w-4 h-4" viewBox="0 0 21 22" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path fillRule="evenodd" clipRule="evenodd" d="M6.48626 20.5H14.8341C17.9004 20.5 20.2528 19.3924 19.5847 14.9348L18.8066 8.89359C18.3947 6.66934 16.976 5.81808 15.7311 5.81808H5.55262C4.28946 5.81808 2.95308 6.73341 2.4771 8.89359L1.69907 14.9348C1.13157 18.889 3.4199 20.5 6.48626 20.5Z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                        <path d="M6.34902 5.5984C6.34902 3.21232 8.28331 1.27803 10.6694 1.27803C11.8184 1.27316 12.922 1.72619 13.7362 2.53695C14.5504 3.3477 15.0081 4.44939 15.0081 5.5984" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                      </svg>
-                      Add to Bag
-                    </button>
+                    <AddToBagButton product={product} />
                   </div>
 
                 </div>
@@ -111,6 +78,7 @@ export default function Home() {
         </div>
       </section>
 
+      <Footer />
       <SidebarCart />
     </main>
   );
