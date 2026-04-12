@@ -21,7 +21,7 @@ export default async function ProductPage({ params }: { params: { id: string } }
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      <main className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-8 py-12">
+      <main className="container mx-auto flex-1 w-full py-12">
         <ProductClient product={product} />
       </main>
       <footer className="w-full bg-foreground text-background py-8 border-t-4 border-gold text-center">

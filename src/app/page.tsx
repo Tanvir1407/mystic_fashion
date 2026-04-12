@@ -11,7 +11,7 @@ export default function Home() {
       <HeroCarousel />
       
       {/* Featured Collections */}
-      <section className="max-w-[1400px] mx-auto px-4 md:px-6 lg:px-12 py-24">
+      <section className="container mx-auto py-24">
         <div className="flex flex-col md:flex-row justify-between items-end mb-16 gap-6">
           <div className="max-w-xl">
             <span className="text-maroon font-black uppercase tracking-[0.3em] text-xs mb-4 block">New Season 2024</span>
@@ -51,7 +51,7 @@ export default function Home() {
 
       {/* Featured Banner */}
       <section className="px-4 md:px-6 lg:px-12 mb-24">
-        <div className="max-w-[1400px] mx-auto relative rounded-[3rem] overflow-hidden bg-zinc-900 h-[500px] flex items-center p-8 md:p-16 lg:p-24">
+        <div className="container mx-auto relative rounded-[3rem] overflow-hidden bg-zinc-900 h-[500px] flex items-center p-8 md:p-16 lg:p-24">
           <div className="absolute inset-0 opacity-40">
             <img 
               src="https://images.unsplash.com/photo-1517466787929-bc90951d0974?q=80&w=2000&auto=format&fit=crop" 

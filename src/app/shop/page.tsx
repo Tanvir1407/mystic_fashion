@@ -43,13 +43,13 @@ export default async function ShopPage({
 
 
       <div className="w-full bg-maroon/5 py-12 border-b border-maroon/10">
-        <div className="max-w-7xl mx-auto px-8">
+        <div className="container mx-auto">
             <h1 className="text-4xl md:text-5xl font-black text-foreground tracking-tighter">Shop <span className="text-maroon">Jerseys</span></h1>
             <p className="text-foreground/70 mt-2 font-medium">Find your perfect fit. Represent your colors.</p>
         </div>
       </div>
 
-      <main className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-8 py-10 flex flex-col md:flex-row gap-10">
+      <main className="container mx-auto flex-1 w-full py-10 flex flex-col md:flex-row gap-10">
         {/* Sidebar Filter */}
         <aside className="w-full md:w-64 flex-shrink-0">
           <div className="sticky top-28 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-2xl p-6 shadow-sm">

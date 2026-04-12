@@ -45,7 +45,7 @@ export default function HeroCarousel() {
                 <div className="absolute inset-0 bg-gradient-to-r from-black via-black/60 to-transparent" />
               </div>
               
-              <div className="relative h-full max-w-[1400px] mx-auto px-6 lg:px-12 flex flex-col justify-center">
+              <div className="relative h-full container mx-auto flex flex-col justify-center">
                 <motion.div
                   initial={{ opacity: 0, y: 20 }}
                   whileInView={{ opacity: 1, y: 0 }}

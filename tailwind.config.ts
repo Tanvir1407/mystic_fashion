@@ -7,12 +7,22 @@ const config: Config = {
     "./src/app/**/*.{js,ts,jsx,tsx,mdx}",
   ],
   theme: {
+    container: {
+      center: true,
+      padding: '0.75rem',
+      screens: {
+        sm: '540px',
+        md: '720px',
+        lg: '960px',
+        xl: '1140px',
+        '2xl': '1320px',
+      },
+    },
     extend: {
       colors: {
         background: "var(--background)",
         foreground: "var(--foreground)",
-        maroon: "#800020",
-        gold: "#FFD700",
+        primary: "#800020",
       },
     },
   },
