@@ -49,7 +49,7 @@ export default function CheckoutPage() {
           <p className="text-zinc-500 max-w-sm mb-8 leading-relaxed">
             Thank you for shopping with Mystic Fashion. Your order has been placed successfully and will be delivered soon.
           </p>
-          <Link href="/" className="bg-primary text-gold px-8 py-4 rounded-xl font-bold uppercase tracking-widest hover:bg-[#600018] transition-all active:scale-[0.98]">
+          <Link href="/" className="bg-primary text-white px-8 py-4 rounded-xl font-bold uppercase tracking-widest hover:bg-[#600018] transition-all active:scale-[0.98]">
             Continue Shopping
           </Link>
         </div>
@@ -62,13 +62,13 @@ export default function CheckoutPage() {
     <main className="min-h-screen bg-slate-50 flex flex-col">
       <Header />
 
-      <div className="flex-1 container mx-auto py-10 md:py-16">
-        <div className="mb-10">
+      <div className="flex-1 container mx-auto py-10 md:py-10">
+        <div className="mb-10 flex justify-between">
+          <h1 className="text-3xl md:text-4xl font-black uppercase tracking-tight mt-6">Checkout</h1>
           <Link href="/shop" className="inline-flex items-center gap-2 text-sm font-bold text-zinc-500 hover:text-primary transition-colors">
             <ArrowLeft className="w-4 h-4" />
             Back to Shop
           </Link>
-          <h1 className="text-3xl md:text-4xl font-black uppercase tracking-tight mt-6">Checkout</h1>
         </div>
 
         {items.length === 0 ? (
@@ -78,7 +78,7 @@ export default function CheckoutPage() {
             </div>
             <h2 className="text-2xl font-bold mb-4">Your cart is empty</h2>
             <p className="text-zinc-500 mb-8 max-w-sm">Looks like you haven't added anything to your cart yet.</p>
-            <Link href="/" className="bg-primary text-gold px-8 py-4 rounded-xl font-bold uppercase tracking-widest hover:bg-[#600018] transition-all">
+            <Link href="/" className="bg-primary text-white px-8 py-4 rounded-xl font-bold uppercase tracking-widest hover:bg-[#600018] transition-all">
               Start Shopping
             </Link>
           </div>

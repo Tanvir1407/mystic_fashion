@@ -11,7 +11,7 @@ export default function SidebarCart() {
   const router = useRouter();
 
   const handleCheckout = () => {
-    toggleCart(); 
+    toggleCart();
     router.push('/checkout');
   };
 
@@ -57,14 +57,36 @@ export default function SidebarCart() {
             {/* Cart Items */}
             <div className="flex-1 overflow-y-auto p-6 space-y-6">
               {items.length === 0 ? (
-                <div className="h-full flex flex-col items-center justify-center text-center space-y-4">
-                  <div className="w-20 h-20 bg-slate-100 dark:bg-zinc-900 rounded-full flex items-center justify-center">
-                    <ShoppingBag className="w-10 h-10 text-slate-300" />
+                <div className="h-full flex flex-col items-center justify-center text-center space-y-8 px-4 pb-10">
+                  <div className="relative">
+                    {/* Soft background glow */}
+                    <div className="absolute inset-0 bg-primary/5 rounded-full blur-2xl transform scale-150"></div>
+
+                    {/* Icon Container */}
+                    <div className="w-32 h-32 bg-white dark:bg-zinc-900 border-2 border-dashed border-slate-200 dark:border-zinc-800 rounded-[2rem] rotate-3 flex items-center justify-center relative z-10 shadow-sm transition-transform hover:rotate-0 duration-500">
+                      <div className="-rotate-3 flex flex-col items-center">
+                        <ShoppingBag className="w-12 h-12 text-slate-300 mb-2" strokeWidth={1} />
+                        <div className="w-6 h-1 bg-primary/20 rounded-full"></div>
+                      </div>
+                    </div>
                   </div>
-                  <div>
-                    <h3 className="text-lg font-bold">Your cart is empty</h3>
-                    <p className="text-slate-500 text-sm">Add some items to get started!</p>
+
+                  <div className="space-y-3 z-10 relative">
+                    <h3 className="text-2xl font-black uppercase tracking-tight text-zinc-900 dark:text-white">
+                      Your Bag is Empty
+                    </h3>
+                    <p className="text-slate-500 text-sm max-w-[240px] mx-auto leading-relaxed">
+                      Looks like you haven't made your choice yet. Let's find some premium gear for you.
+                    </p>
                   </div>
+
+                  <button
+                    onClick={toggleCart}
+                    className="relative z-10  dark:bg-white text-white dark:text-zinc-900 px-8 py-4 rounded-xl font-bold uppercase tracking-widest text-xs bg-primary transition-all shadow-xl shadow-black/5 active:scale-[0.98] overflow-hidden group"
+                  >
+                    <span className="relative z-10 text-white transition-colors">Start Browsing</span>
+                    <div className="absolute inset-0 bg-primary translate-y-full group-hover:translate-y-0 transition-transform duration-300"></div>
+                  </button>
                 </div>
               ) : (
                 items.map((item) => (
@@ -136,7 +158,7 @@ export default function SidebarCart() {
                   <span className="text-slate-500 font-bold uppercase tracking-widest text-xs">Subtotal</span>
                   <span className="text-2xl font-black text-primary">{formatBDT(getTotalPrice())}</span>
                 </div>
-                <button 
+                <button
                   onClick={handleCheckout}
                   className="w-full text-white bg-primary py-3 rounded-xl font-black uppercase tracking-widest hover:bg-[#600018] transition-all transform active:scale-[0.98] shadow-lg shadow-black/10"
                 >
