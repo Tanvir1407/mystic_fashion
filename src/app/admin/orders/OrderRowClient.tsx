@@ -1,7 +1,7 @@
 "use client";
 
-import { OrderStatus } from "@/generated/prisma/client";
-import { updateOrderStatus } from "../../actions";
+import type { OrderStatus } from "@/generated/prisma/client";
+import { updateOrderStatus } from "../actions";
 import { useState } from "react";
 
 export default function OrderRowClient({ order, items }: { order: any, items: any[] }) {
@@ -49,7 +49,7 @@ export default function OrderRowClient({ order, items }: { order: any, items: an
             'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-500/10 dark:border-blue-500/20'
           }`}
         >
-          {Object.values(OrderStatus).map((s) => (
+          {['PENDING', 'PAID', 'SHIPPED', 'DELIVERED', 'CANCELLED'].map((s) => (
             <option key={s} value={s}>{s}</option>
           ))}
         </select>

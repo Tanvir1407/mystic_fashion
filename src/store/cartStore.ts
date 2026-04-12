@@ -2,57 +2,71 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
 export interface CartItem {
-  id: string; // the product id
+  id: string;
   name: string;
   price: number;
-  image: string;
-  size: string;
-  team: string;
   quantity: number;
+  image: string;
+  category?: string;
+  size?: string;
 }
 
-interface CartState {
+interface CartStore {
   items: CartItem[];
-  addToCart: (item: Omit<CartItem, 'quantity'>) => void;
-  removeFromCart: (id: string, size: string) => void;
+  isOpen: boolean;
+  addItem: (product: any, size?: string) => void;
+  removeItem: (id: string, size?: string) => void;
+  updateQuantity: (id: string, quantity: number, size?: string) => void;
   clearCart: () => void;
+  toggleCart: () => void;
   getTotalItems: () => number;
+  getTotalPrice: () => number;
 }
 
-export const useCartStore = create<CartState>()(
+export const useCartStore = create<CartStore>()(
   persist(
     (set, get) => ({
       items: [],
-      addToCart: (item) => {
-        set((state) => {
-          // Check if item with same ID and SIZE already exists
-          const existingItemIndex = state.items.findIndex(
-            (i) => i.id === item.id && i.size === item.size
-          );
-          
-          if (existingItemIndex !== -1) {
-            // increment quantity
-            const updatedItems = [...state.items];
-            updatedItems[existingItemIndex].quantity += 1;
-            return { items: updatedItems };
-          } else {
-            // add new
-            return { items: [...state.items, { ...item, quantity: 1 }] };
-          }
+      isOpen: false,
+      addItem: (product, size) => {
+        const currentItems = get().items;
+        const existingItem = currentItems.find(
+          (item) => item.id === product.id && item.size === size
+        );
+
+        if (existingItem) {
+          set({
+            items: currentItems.map((item) =>
+              item.id === product.id && item.size === size
+                ? { ...item, quantity: item.quantity + 1 }
+                : item
+            ),
+          });
+        } else {
+          set({
+            items: [...currentItems, { ...product, quantity: 1, size }],
+          });
+        }
+      },
+      removeItem: (id, size) => {
+        set({
+          items: get().items.filter((item) => !(item.id === id && item.size === size)),
         });
       },
-      removeFromCart: (id, size) => {
-        set((state) => ({
-          items: state.items.filter((i) => !(i.id === id && i.size === size)),
-        }));
+      updateQuantity: (id, quantity, size) => {
+        set({
+          items: get().items.map((item) =>
+            item.id === id && item.size === size ? { ...item, quantity: Math.max(0, quantity) } : item
+          ).filter(item => item.quantity > 0),
+        });
       },
       clearCart: () => set({ items: [] }),
-      getTotalItems: () => {
-        return get().items.reduce((total, item) => total + item.quantity, 0);
-      },
+      toggleCart: () => set({ isOpen: !get().isOpen }),
+      getTotalItems: () => get().items.reduce((total, item) => total + item.quantity, 0),
+      getTotalPrice: () => get().items.reduce((total, item) => total + item.price * item.quantity, 0),
     }),
     {
-      name: 'mystic-cart-storage', // key for localStorage
+      name: 'cart-storage',
     }
   )
 );
