@@ -15,8 +15,6 @@ interface AddToBagButtonProps {
 
 export default function AddToBagButton({ product }: AddToBagButtonProps) {
   const addItem = useCartStore((state) => state.addItem);
-  const toggleCart = useCartStore((state) => state.toggleCart);
-  const isOpen = useCartStore((state) => state.isOpen);
   const [added, setAdded] = useState(false);
 
   const handleAdd = (e: React.MouseEvent) => {
@@ -34,11 +32,6 @@ export default function AddToBagButton({ product }: AddToBagButtonProps) {
 
     setAdded(true);
     setTimeout(() => setAdded(false), 2000);
-
-    // Open cart if it isn't open
-    if (!isOpen) {
-      toggleCart();
-    }
   };
 
   return (

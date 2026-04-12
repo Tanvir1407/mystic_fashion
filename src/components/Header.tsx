@@ -13,6 +13,10 @@ export default function Header() {
   const { getTotalItems, toggleCart } = useCartStore();
   const pathname = usePathname();
 
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   // Hide header elements completely in the admin panel to avoid conflict
   const isAdminPath = pathname.startsWith("/admin");
 

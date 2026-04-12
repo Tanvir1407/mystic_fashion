@@ -4,9 +4,16 @@ import { motion, AnimatePresence } from "framer-motion";
 import { X, ShoppingBag, Trash2, Plus, Minus } from "lucide-react";
 import { useCartStore } from "../store/cartStore";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 
 export default function SidebarCart() {
   const { items, isOpen, toggleCart, updateQuantity, removeItem, getTotalPrice } = useCartStore();
+  const router = useRouter();
+
+  const handleCheckout = () => {
+    toggleCart(); 
+    router.push('/checkout');
+  };
 
   const formatBDT = (price: number) => {
     return `৳${price.toLocaleString("en-IN")}`;
@@ -129,7 +136,10 @@ export default function SidebarCart() {
                   <span className="text-slate-500 font-bold uppercase tracking-widest text-xs">Subtotal</span>
                   <span className="text-2xl font-black text-primary">{formatBDT(getTotalPrice())}</span>
                 </div>
-                <button className="w-full text-white bg-primary py-3 rounded-xl font-black uppercase tracking-widest hover:bg-[#600018] transition-all transform active:scale-[0.98] shadow-lg shadow-black/10">
+                <button 
+                  onClick={handleCheckout}
+                  className="w-full text-white bg-primary py-3 rounded-xl font-black uppercase tracking-widest hover:bg-[#600018] transition-all transform active:scale-[0.98] shadow-lg shadow-black/10"
+                >
                   Checkout Now
                 </button>
 
