@@ -3,7 +3,6 @@ import HeroCarousel from "@/components/HeroCarousel";
 import SidebarCart from "@/components/SidebarCart";
 import Link from "next/link";
 import Image from "next/image";
-import { ArrowRight } from "lucide-react";
 
 // Cute empty product placeholder SVG
 function EmptyProductIcon() {
