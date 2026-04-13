@@ -10,7 +10,7 @@ interface Metrics {
   pendingOrderQty: number;
   deliveredProductQty: number;
   cancelProductQty: number;
-  totalRevenue: number;
+  totalProfit: number;
   totalSaleAmount: number;
   totalPurchaseAmount: number;
   totalCancelAmount: number;
@@ -38,9 +38,9 @@ export default function DashboardClient({ filter, metrics, topProducts, recentOr
   const fmt = (n: number) => `৳${n.toLocaleString("en-IN")}`;
 
   const filters = [
-    { label: "Weekly",   value: "weekly" },
-    { label: "Monthly",  value: "monthly" },
-    { label: "Yearly",   value: "yearly" },
+    { label: "Weekly", value: "weekly" },
+    { label: "Monthly", value: "monthly" },
+    { label: "Yearly", value: "yearly" },
     { label: "All Time", value: "all" },
   ];
 
@@ -75,15 +75,15 @@ export default function DashboardClient({ filter, metrics, topProducts, recentOr
 
   const metricCards = [
     // Row 1 — Quantity
-    { label: "Current Stock",     value: metrics.currentStockCount.toLocaleString(),     suffix: "units",  icon: Package,      color: "bg-blue-500/10 text-blue-600" },
-    { label: "Pending Orders",    value: metrics.pendingOrderQty.toLocaleString(),       suffix: "qty",    icon: ShoppingCart,  color: "bg-amber-500/10 text-amber-600" },
-    { label: "Delivered",         value: metrics.deliveredProductQty.toLocaleString(),   suffix: "qty",    icon: Truck,         color: "bg-emerald-500/10 text-emerald-600" },
-    { label: "Cancelled",         value: metrics.cancelProductQty.toLocaleString(),      suffix: "qty",    icon: XCircle,       color: "bg-red-500/10 text-red-600" },
+    { label: "Current Stock", value: metrics.currentStockCount.toLocaleString(), suffix: "units", icon: Package, color: "bg-blue-500/10 text-blue-600" },
+    { label: "Pending Orders", value: metrics.pendingOrderQty.toLocaleString(), suffix: "qty", icon: ShoppingCart, color: "bg-amber-500/10 text-amber-600" },
+    { label: "Delivered", value: metrics.deliveredProductQty.toLocaleString(), suffix: "qty", icon: Truck, color: "bg-emerald-500/10 text-emerald-600" },
+    { label: "Cancelled", value: metrics.cancelProductQty.toLocaleString(), suffix: "qty", icon: XCircle, color: "bg-red-500/10 text-red-600" },
     // Row 2 — Financial
-    { label: "Total Revenue",     value: fmt(metrics.totalRevenue),                      suffix: null,     icon: TrendingUp,    color: "bg-indigo-500/10 text-indigo-600" },
-    { label: "Total Sales",       value: fmt(metrics.totalSaleAmount),                   suffix: null,     icon: DollarSign,    color: "bg-emerald-500/10 text-emerald-600" },
-    { label: "Purchase Cost",     value: fmt(metrics.totalPurchaseAmount),                suffix: null,     icon: ArrowDownCircle, color: "bg-sky-500/10 text-sky-600" },
-    { label: "Cancel Value",      value: fmt(metrics.totalCancelAmount),                  suffix: null,     icon: XCircle,       color: "bg-red-500/10 text-red-600" },
+    { label: "Total Profit", value: fmt(metrics.totalProfit), suffix: null, icon: TrendingUp, color: "bg-indigo-500/10 text-indigo-600" },
+    { label: "Total Sales", value: fmt(metrics.totalSaleAmount), suffix: null, icon: DollarSign, color: "bg-emerald-500/10 text-emerald-600" },
+    { label: "Total Purchases ", value: fmt(metrics.totalPurchaseAmount), suffix: null, icon: ArrowDownCircle, color: "bg-sky-500/10 text-sky-600" },
+    { label: "Cancel Value", value: fmt(metrics.totalCancelAmount), suffix: null, icon: XCircle, color: "bg-red-500/10 text-red-600" },
   ];
 
   return (
@@ -100,11 +100,10 @@ export default function DashboardClient({ filter, metrics, topProducts, recentOr
             <button
               key={f.value}
               onClick={() => router.push(`/admin?filter=${f.value}`)}
-              className={`px-3 py-1 text-[11px] font-bold rounded-md transition-all ${
-                filter === f.value
-                  ? "bg-slate-900 text-white shadow"
-                  : "text-slate-500 hover:text-slate-800"
-              }`}
+              className={`px-3 py-1 text-[11px] font-bold rounded-md transition-all ${filter === f.value
+                ? "bg-slate-900 text-white shadow"
+                : "text-slate-500 hover:text-slate-800"
+                }`}
             >
               {f.label}
             </button>
@@ -136,10 +135,10 @@ export default function DashboardClient({ filter, metrics, topProducts, recentOr
       {/* ── Line Chart ── */}
       <div className="bg-white rounded-xl border border-slate-200/80 p-5 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-sm font-bold text-slate-900">Revenue & Sales Trend</h2>
+          <h2 className="text-sm font-bold text-slate-900">Revenue & Cost Trend</h2>
           <div className="flex items-center gap-4">
-            <span className="flex items-center gap-1.5 text-[11px] font-semibold text-indigo-500"><span className="w-3 h-[3px] rounded-full bg-indigo-500 inline-block"></span>Revenue</span>
-            <span className="flex items-center gap-1.5 text-[11px] font-semibold text-emerald-500"><span className="w-3 h-[3px] rounded-full bg-emerald-500 inline-block"></span>Sales</span>
+            <span className="flex items-center gap-1.5 text-[11px] font-semibold text-indigo-500"><span className="w-3 h-[3px] rounded-full bg-indigo-500 inline-block"></span>Profit (Realized)</span>
+            <span className="flex items-center gap-1.5 text-[11px] font-semibold text-orange-400"><span className="w-3 h-[3px] rounded-full bg-orange-400 inline-block"></span>Total Purchases</span>
           </div>
         </div>
 
@@ -149,29 +148,29 @@ export default function DashboardClient({ filter, metrics, topProducts, recentOr
           <div className="relative">
             {/* Y-axis reference lines */}
             <div className="absolute inset-0 flex flex-col justify-between pointer-events-none" style={{ padding: `${padY}px 0` }}>
-              {[0,1,2,3].map(i => <div key={i} className="border-t border-slate-100"></div>)}
+              {[0, 1, 2, 3].map(i => <div key={i} className="border-t border-slate-100"></div>)}
             </div>
 
             <svg viewBox={`0 0 ${chartW} ${chartH}`} className="w-full h-52 relative z-10" preserveAspectRatio="none">
               <defs>
                 <linearGradient id="revGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#6366f1" stopOpacity="0.15"/>
-                  <stop offset="100%" stopColor="#6366f1" stopOpacity="0"/>
+                  <stop offset="0%" stopColor="#6366f1" stopOpacity="0.15" />
+                  <stop offset="100%" stopColor="#6366f1" stopOpacity="0" />
                 </linearGradient>
                 <linearGradient id="salesGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#10b981" stopOpacity="0.12"/>
-                  <stop offset="100%" stopColor="#10b981" stopOpacity="0"/>
+                  <stop offset="0%" stopColor="#fb923c" stopOpacity="0.12" />
+                  <stop offset="100%" stopColor="#fb923c" stopOpacity="0" />
                 </linearGradient>
               </defs>
-              
+
               {/* Area fills */}
               <polygon points={toArea("revenue")} fill="url(#revGrad)" />
               <polygon points={toArea("sales")} fill="url(#salesGrad)" />
-              
+
               {/* Lines */}
               <polyline points={toPoints("revenue")} fill="none" stroke="#6366f1" strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
-              <polyline points={toPoints("sales")} fill="none" stroke="#10b981" strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
-              
+              <polyline points={toPoints("sales")} fill="none" stroke="#fb923c" strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
+
               {/* Dots */}
               {chartData.map((d, i) => {
                 const step = chartData.length > 1 ? (chartW) / (chartData.length - 1) : 0;
@@ -181,7 +180,7 @@ export default function DashboardClient({ filter, metrics, topProducts, recentOr
                 return (
                   <g key={i}>
                     <circle cx={x} cy={yRev} r="4" fill="#fff" stroke="#6366f1" strokeWidth="2" vectorEffect="non-scaling-stroke" />
-                    <circle cx={x} cy={ySales} r="4" fill="#fff" stroke="#10b981" strokeWidth="2" vectorEffect="non-scaling-stroke" />
+                    <circle cx={x} cy={ySales} r="4" fill="#fff" stroke="#fb923c" strokeWidth="2" vectorEffect="non-scaling-stroke" />
                   </g>
                 );
               })}
@@ -190,7 +189,7 @@ export default function DashboardClient({ filter, metrics, topProducts, recentOr
             {/* X-axis labels */}
             <div className="flex justify-between mt-2 px-0">
               {chartData.map((d, i) => (
-                <span key={i} className="text-[10px] font-semibold text-slate-400 text-center" style={{ width: `${100 / chartData.length}%`}}>
+                <span key={i} className="text-[10px] font-semibold text-slate-400 text-center" style={{ width: `${100 / chartData.length}%` }}>
                   {i % Math.ceil(chartData.length / 10) === 0 || chartData.length <= 12 ? d.name : ""}
                 </span>
               ))}

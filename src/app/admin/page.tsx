@@ -46,15 +46,16 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
   const cancelProductQty = cancelledOrders.reduce((acc, o) => acc + o.items.reduce((s, i) => s + i.quantity, 0), 0);
 
   // ── Row 2: Financial metrics ──
-  const validOrders = ordersInRange.filter(o => o.status !== "CANCELLED");
-  const totalRevenue = validOrders.reduce((acc, o) => acc + o.totalAmount, 0);
-  const totalSaleAmount = deliveredOrders.reduce((acc, o) => acc + o.totalAmount, 0);
+  // ── Row 2: Financial metrics (Product Sales ONLY, excluding delivery fees) ──
+  // ── Row 2: Financial metrics (Product Sales ONLY, excluding delivery fees) ──
+  const totalProfit = deliveredOrders.reduce((acc, o) => acc + o.items.reduce((sum, item) => sum + ((item.price - (item.product.purchasePrice || 0)) * item.quantity), 0), 0);
+  const totalSaleAmount = deliveredOrders.reduce((acc, o) => acc + o.items.reduce((sum, item) => sum + (item.price * item.quantity), 0), 0);
   const totalPurchaseAmount = allPurchases.reduce((acc, p) => acc + p.totalAmount, 0);
-  const totalCancelAmount = cancelledOrders.reduce((acc, o) => acc + o.totalAmount, 0);
+  const totalCancelAmount = cancelledOrders.reduce((acc, o) => acc + o.items.reduce((sum, item) => sum + (item.price * item.quantity), 0), 0);
 
-  // ── Top 5 Best Selling Products ──
+  // ── Top 5 Best Selling Products (Calculated from DELIVERED orders only) ──
   const productSalesMap = new Map<string, {name: string, sold: number, revenue: number, image: string}>();
-  validOrders.forEach(order => {
+  deliveredOrders.forEach(order => {
     order.items.forEach(item => {
       const existing = productSalesMap.get(item.productId);
       if (existing) {
@@ -81,36 +82,61 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
   const chartData: { name: string, revenue: number, sales: number }[] = [];
 
   if (filter === "weekly" || filter === "monthly") {
-    const buckets = new Map<string, { revenue: number, sales: number }>();
+    // Bucketing for Orders (Delivered Revenue) and Purchases (Outflow)
+    const buckets = new Map<string, { revenue: number, purchases: number }>();
     let curr = new Date(startDate);
     while (curr <= now) {
-      buckets.set(curr.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }), { revenue: 0, sales: 0 });
+      buckets.set(curr.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }), { revenue: 0, purchases: 0 });
       curr.setDate(curr.getDate() + 1);
     }
+    
     ordersInRange.forEach(o => {
-      const key = o.createdAt.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-      const b = buckets.get(key) || { revenue: 0, sales: 0 };
-      if (o.status !== "CANCELLED") b.revenue += o.totalAmount;
-      if (o.status === "DELIVERED") b.sales += o.totalAmount;
+      if (o.status === "DELIVERED") {
+        const key = o.createdAt.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        const b = buckets.get(key) || { revenue: 0, purchases: 0 };
+        const itemsTotal = o.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+        const itemsCost = o.items.reduce((sum, item) => sum + ((item.product.purchasePrice || 0) * item.quantity), 0);
+        b.revenue += (itemsTotal - itemsCost);
+        buckets.set(key, b);
+      }
+    });
+
+    allPurchases.forEach(p => {
+      const key = p.createdAt.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      const b = buckets.get(key) || { revenue: 0, purchases: 0 };
+      b.purchases += p.totalAmount;
       buckets.set(key, b);
     });
-    buckets.forEach((v, k) => chartData.push({ name: k, ...v }));
+
+    buckets.forEach((v, k) => chartData.push({ name: k, revenue: v.revenue, sales: v.purchases })); // Reusing "sales" key for purchases in chart
   } else {
-    const buckets = new Map<string, { revenue: number, sales: number }>();
+    const buckets = new Map<string, { revenue: number, purchases: number }>();
     if (filter === "yearly") {
       for (let i = 11; i >= 0; i--) {
         const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-        buckets.set(d.toLocaleDateString('en-US', { month: 'short', year: '2-digit' }), { revenue: 0, sales: 0 });
+        buckets.set(d.toLocaleDateString('en-US', { month: 'short', year: '2-digit' }), { revenue: 0, purchases: 0 });
       }
     }
+    
     ordersInRange.forEach(o => {
-      const key = o.createdAt.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
-      const b = buckets.get(key) || { revenue: 0, sales: 0 };
-      if (o.status !== "CANCELLED") b.revenue += o.totalAmount;
-      if (o.status === "DELIVERED") b.sales += o.totalAmount;
+      if (o.status === "DELIVERED") {
+        const key = o.createdAt.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
+        const b = buckets.get(key) || { revenue: 0, purchases: 0 };
+        const itemsTotal = o.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+        const itemsCost = o.items.reduce((sum, item) => sum + ((item.product.purchasePrice || 0) * item.quantity), 0);
+        b.revenue += (itemsTotal - itemsCost);
+        buckets.set(key, b);
+      }
+    });
+
+    allPurchases.forEach(p => {
+      const key = p.createdAt.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
+      const b = buckets.get(key) || { revenue: 0, purchases: 0 };
+      b.purchases += p.totalAmount;
       buckets.set(key, b);
     });
-    buckets.forEach((v, k) => chartData.push({ name: k, ...v }));
+
+    buckets.forEach((v, k) => chartData.push({ name: k, revenue: v.revenue, sales: v.purchases }));
     if (filter === "all") {
       chartData.sort((a, b) => new Date("01 " + a.name).getTime() - new Date("01 " + b.name).getTime());
     }
@@ -124,7 +150,7 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
         pendingOrderQty,
         deliveredProductQty,
         cancelProductQty,
-        totalRevenue,
+        totalProfit,
         totalSaleAmount,
         totalPurchaseAmount,
         totalCancelAmount,
