@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { createProduct, updateProduct } from "../../actions";
+import { createProduct, updateProduct, uploadImage } from "../../actions";
 import { Plus, Trash2, Save, ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -18,7 +18,34 @@ export default function ProductFormClient({
   const [name, setName] = useState(initialData?.name || "");
   const [description, setDescription] = useState(initialData?.description || "");
   const [price, setPrice] = useState(initialData?.price || "");
-  const [images, setImages] = useState(initialData?.images?.join(", ") || "");
+  const [images, setImages] = useState<string[]>(initialData?.images || []);
+  const [isUploading, setIsUploading] = useState(false);
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    setIsUploading(true);
+    
+    try {
+      const newImages: string[] = [];
+      for (const file of Array.from(files)) {
+        const formData = new FormData();
+        formData.append("file", file);
+        const url = await uploadImage(formData);
+        newImages.push(url);
+      }
+      setImages((prev) => [...prev, ...newImages]);
+    } catch (err) {
+      alert("Failed to upload image.");
+      console.error(err);
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const removeImage = (index: number) => {
+    setImages(images.filter((_, i) => i !== index));
+  };
   const [team, setTeam] = useState(initialData?.team || "");
   const [category, setCategory] = useState(initialData?.category || "");
   const [sizeChartId, setSizeChartId] = useState(initialData?.sizeChartId || "");
@@ -60,7 +87,7 @@ export default function ProductFormClient({
       name: name.trim(),
       description: description.trim(),
       price: parseFloat(price),
-      images: images.split(",").map((i: string) => i.trim()).filter((i: string) => i),
+      images: images,
       team: team.trim(),
       category: category.trim(),
       sizeChartId: sizeChartId || undefined,
@@ -167,15 +194,44 @@ export default function ProductFormClient({
           </div>
 
           <div className="col-span-1 md:col-span-2">
-            <label className="block text-sm font-semibold text-slate-900 mb-2">Gallery Images (Comma Separated URLs)</label>
-            <input 
-              type="text" 
-              value={images}
-              onChange={(e) => setImages(e.target.value)}
-              placeholder="/images/hero.png, /images/detail.png"
-              className="w-full px-4 py-2 border border-slate-300 rounded-md focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 text-sm font-mono text-slate-600"
-              required
-            />
+            <label className="block text-sm font-semibold text-slate-900 mb-2">Gallery Images</label>
+            <div className="flex flex-col gap-4">
+              <div className="flex flex-wrap gap-2">
+                {images.map((img, idx) => (
+                  <div key={idx} className="relative group w-24 h-24 border border-slate-200 rounded-md overflow-hidden bg-slate-50">
+                    <img src={img} alt={`Uploaded ${idx}`} className="w-full h-full object-cover" />
+                    <button 
+                      type="button" 
+                      onClick={() => removeImage(idx)}
+                      className="absolute top-1 right-1 bg-red-600/80 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600"
+                      title="Remove Image"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+              
+              <div className="relative border-2 border-dashed border-slate-300 rounded-lg p-6 hover:border-indigo-500 transition-colors bg-slate-50 text-center flex flex-col items-center justify-center">
+                <input 
+                  type="file" 
+                  accept="image/*"
+                  multiple
+                  onChange={handleImageUpload}
+                  disabled={isUploading}
+                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer disabled:cursor-not-allowed"
+                />
+                {isUploading ? (
+                  <div className="w-5 h-5 border-2 border-indigo-500/50 border-t-indigo-600 rounded-full animate-spin" />
+                ) : (
+                  <>
+                    <Plus className="w-6 h-6 text-slate-400 mb-2" />
+                    <span className="text-sm font-medium text-slate-600">Click or drag images to upload</span>
+                    <span className="text-xs text-slate-400 mt-1">PNG, JPG up to 5MB</span>
+                  </>
+                )}
+              </div>
+            </div>
           </div>
         </div>
 

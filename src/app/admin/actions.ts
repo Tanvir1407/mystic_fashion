@@ -5,6 +5,8 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { OrderStatus } from "@/generated/prisma/client";
 import { revalidatePath } from "next/cache";
+import { writeFile, mkdir } from "fs/promises";
+import { join, dirname } from "path";
 
 export async function adminLogin(password: string) {
   const correctPassword = process.env.ADMIN_PASSWORD;
@@ -186,4 +188,23 @@ export async function updatePurchaseStatus(id: string, status: string) {
     data: { status },
   });
   revalidatePath("/admin/purchases");
+}
+
+export async function uploadImage(formData: FormData) {
+  const file = formData.get("file") as File;
+  if (!file) throw new Error("No file received");
+
+  const bytes = await file.arrayBuffer();
+  const buffer = Buffer.from(bytes);
+
+  const uniqueName = `${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
+  
+  // Ensure the uploads directory exists
+  const publicUploadsDir = join(process.cwd(), "public", "uploads");
+  try { await mkdir(publicUploadsDir, { recursive: true }); } catch (e) {}
+  
+  const filePath = join(publicUploadsDir, uniqueName);
+  await writeFile(filePath, buffer);
+  
+  return `/uploads/${uniqueName}`;
 }

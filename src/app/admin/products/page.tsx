@@ -53,53 +53,53 @@ export default async function AdminProductsPage() {
               {products.map((product) => {
                 const totalStock = product.variants.reduce((acc: number, v: any) => acc + v.stock, 0);
                 return (
-                <tr key={product.id} className="hover:bg-slate-50/50 transition-colors group">
-                  <td className="px-6 py-4">
-                    <div className="flex flex-col">
-                      <span className="font-medium text-sm text-slate-900">{product.name}</span>
-                      <span className="text-xs text-slate-500 mt-0.5">{product.category}</span>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 text-sm text-slate-600 font-mono">
-                    <div className="flex flex-col">
-                      <span>৳{product.price.toLocaleString("en-IN")}</span>
-                      {product.purchasePrice && (
-                        <span className="text-[10px] text-slate-400 mt-0.5 line-through">Cost: ৳{product.purchasePrice}</span>
-                      )}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${totalStock > 10 ? 'bg-green-100 text-green-800' : totalStock > 0 ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'}`}>
-                      {totalStock} in stock
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 text-sm text-slate-600">
-                    <span className="bg-slate-100 text-slate-700 px-2.5 py-1 rounded-full text-xs font-medium">
-                      {product.team}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 flex items-center justify-end gap-2 md:opacity-0 group-hover:opacity-100 transition-opacity">
-                    <Link
-                      href={`/admin/products/${product.id}/edit`}
-                      className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-slate-100 rounded-md transition-colors"
-                      title="Edit Product"
-                    >
-                      <Edit2 className="w-4 h-4" />
-                    </Link>
-                    <form action={async () => {
-                      "use server";
-                      await deleteProduct(product.id);
-                    }}>
-                      <button
-                        type="submit"
-                        className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors"
-                        title="Delete Product"
+                  <tr key={product.id} className="hover:bg-slate-50/50 transition-colors group">
+                    <td className="px-6 py-4">
+                      <div className="flex flex-col">
+                        <span className="font-medium text-sm text-slate-900">{product.name}</span>
+                        <span className="text-xs text-slate-500 mt-0.5">{product.category}</span>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 text-sm text-slate-600 font-mono">
+                      <div className="flex flex-col">
+                        <span>৳{product.price.toLocaleString("en-IN")}</span>
+                        {product.purchasePrice && (
+                          <span className="text-[10px] text-slate-400 mt-0.5 ">Cost: ৳{product.purchasePrice}</span>
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${totalStock > 10 ? 'bg-green-100 text-green-800' : totalStock > 0 ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'}`}>
+                        {totalStock} in stock
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-sm text-slate-600">
+                      <span className="bg-slate-100 text-slate-700 px-2.5 py-1 rounded-full text-xs font-medium">
+                        {product.team}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 flex items-center justify-end gap-2 md:opacity-0 group-hover:opacity-100 transition-opacity">
+                      <Link
+                        href={`/admin/products/${product.id}/edit`}
+                        className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-slate-100 rounded-md transition-colors"
+                        title="Edit Product"
                       >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </form>
-                  </td>
-                </tr>
+                        <Edit2 className="w-4 h-4" />
+                      </Link>
+                      <form action={async () => {
+                        "use server";
+                        await deleteProduct(product.id);
+                      }}>
+                        <button
+                          type="submit"
+                          className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors"
+                          title="Delete Product"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </form>
+                    </td>
+                  </tr>
                 );
               })}
               {products.length === 0 && (
