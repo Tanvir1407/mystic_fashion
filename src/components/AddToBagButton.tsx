@@ -2,6 +2,7 @@
 
 import { useCartStore } from "@/store/cartStore";
 import { useState } from "react";
+import { X } from "lucide-react";
 
 interface AddToBagButtonProps {
   product: {
@@ -10,33 +11,82 @@ interface AddToBagButtonProps {
     price: number;
     team: string;
     image: string;
+    originalPrice?: number;
+    variants?: { size: string, stock: number }[];
   };
 }
 
 export default function AddToBagButton({ product }: AddToBagButtonProps) {
   const addItem = useCartStore((state) => state.addItem);
   const [added, setAdded] = useState(false);
+  const [selectingSize, setSelectingSize] = useState(false);
 
-  const handleAdd = (e: React.MouseEvent) => {
-    e.preventDefault(); // Prevent navigating if this is wrapped in a Link
+  const availableVariants = product.variants?.filter(v => v.stock > 0) || [];
+
+  const handleAddClick = (e: React.MouseEvent) => {
+    e.preventDefault();
     e.stopPropagation();
 
-    // The cartStore addItem expects (product, size)
+    // If we have sizes to choose from
+    if (availableVariants.length > 0) {
+      if (availableVariants.length === 1) {
+        // Just add the only available size
+        addToCartConfirmed(availableVariants[0].size);
+      } else {
+        // Open size selector inline
+        setSelectingSize(true);
+      }
+    } else {
+      // Fallback if no sizes configured
+      addToCartConfirmed("M");
+    }
+  };
+
+  const addToCartConfirmed = (size: string) => {
     addItem({
       id: product.id,
       name: product.name,
       price: product.price,
+      originalPrice: product.originalPrice,
       image: product.image,
       category: product.team
-    }, "M"); // Default size since it's the homepage quick add
+    }, size);
 
+    setSelectingSize(false);
     setAdded(true);
     setTimeout(() => setAdded(false), 2000);
   };
 
+  if (selectingSize) {
+    return (
+      <div 
+        onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
+        className="w-full flex items-center justify-between bg-zinc-100 rounded-lg p-1 animate-in fade-in zoom-in duration-200"
+      >
+        <div className="flex flex-1 items-center justify-start gap-1 overflow-x-auto scrollbar-hide px-1">
+          {availableVariants.map(v => (
+            <button
+              key={v.size}
+              onClick={(e) => { e.preventDefault(); e.stopPropagation(); addToCartConfirmed(v.size); }}
+              className="flex-shrink-0 w-8 h-8 rounded-md bg-white border border-slate-200 text-xs font-bold text-zinc-900 hover:bg-primary hover:text-gold hover:border-primary transition-colors"
+            >
+              {v.size}
+            </button>
+          ))}
+        </div>
+        <button 
+          onClick={(e) => { e.preventDefault(); e.stopPropagation(); setSelectingSize(false); }}
+          className="w-8 h-8 flex items-center justify-center text-zinc-400 hover:text-red-500 transition-colors flex-shrink-0 border-l border-slate-200 ml-1"
+        >
+          <X className="w-4 h-4" />
+        </button>
+      </div>
+    );
+  }
+
   return (
     <button 
-      onClick={handleAdd}
+      onClick={handleAddClick}
       className={`w-full text-white py-2.5 rounded-lg font-bold text-sm uppercase tracking-wider transition-all duration-300 flex items-center justify-center gap-2 active:scale-[0.97] ${added ? 'bg-green-600 text-white' : 'bg-primary text-gold hover:bg-[#600018]'}`}
     >
       {added ? (

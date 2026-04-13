@@ -24,7 +24,10 @@ export default function CheckoutClient({ deliveryData }: { deliveryData: { insid
   const isDhaka = selectedDistrict === "Dhaka";
   const deliveryFee = selectedDistrict ? (isDhaka ? deliveryData.insideDhaka : deliveryData.outsideDhaka) : 0;
   
-  const subtotal = getTotalPrice();
+  const subtotal = getTotalPrice(); // Total after discounts
+  const originalSubtotal = items.reduce((total, item) => total + (item.originalPrice || item.price) * item.quantity, 0);
+  const totalDiscount = originalSubtotal - subtotal;
+  
   const total = subtotal + (items.length > 0 ? deliveryFee : 0);
 
   const [isPending, startTransition] = useTransition();
@@ -200,13 +203,30 @@ export default function CheckoutClient({ deliveryData }: { deliveryData: { insid
                       <div className="flex-1">
                         <h4 className="font-bold text-sm leading-snug line-clamp-2">{item.name}</h4>
                         {item.size && <span className="text-xs text-zinc-500 mt-1 block">Size: {item.size}</span>}
-                        <p className="font-bold text-primary text-sm mt-1">{formatBDT(item.price)}</p>
+                        <div className="flex items-center gap-2 mt-1">
+                          {item.originalPrice && item.originalPrice > item.price && (
+                            <span className="text-xs font-bold text-zinc-400 line-through">{formatBDT(item.originalPrice)}</span>
+                          )}
+                          <p className="font-bold text-primary text-sm">{formatBDT(item.price)}</p>
+                        </div>
                       </div>
                     </div>
                   ))}
                 </div>
 
                 <div className="border-t border-slate-100 pt-4 space-y-3 mb-6">
+                  {totalDiscount > 0 && (
+                    <>
+                      <div className="flex justify-between text-zinc-500 text-sm">
+                        <span>Original Subtotal</span>
+                        <span className="font-medium line-through">{formatBDT(originalSubtotal)}</span>
+                      </div>
+                      <div className="flex justify-between text-green-600 text-sm font-bold">
+                        <span>Discount Savings</span>
+                        <span>-{formatBDT(totalDiscount)}</span>
+                      </div>
+                    </>
+                  )}
                   <div className="flex justify-between text-zinc-600 text-sm">
                     <span>Subtotal</span>
                     <span className="font-bold text-zinc-900">{formatBDT(subtotal)}</span>

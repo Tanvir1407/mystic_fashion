@@ -28,7 +28,7 @@ export default async function ShopPage({
 
   const products = await prisma.product.findMany({
     where,
-    include: { discount: true },
+    include: { discount: true, variants: true },
   });
 
   const availableTeams = ["Aurum FC", "Real Madrid", "Argentina", "Aethelred", "Custom"];

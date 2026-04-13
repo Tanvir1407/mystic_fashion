@@ -15,7 +15,7 @@ function formatBDT(price: number) {
 
 export default async function Home() {
   const [products, heroSlides] = await Promise.all([
-    prisma.product.findMany({ take: 12, orderBy: { createdAt: "desc" }, include: { discount: true } }),
+    prisma.product.findMany({ take: 12, orderBy: { createdAt: "desc" }, include: { discount: true, variants: true } }),
     prisma.heroSlide.findMany({ where: { active: true }, orderBy: { sortOrder: "asc" } }),
   ]);
 
@@ -91,8 +91,10 @@ export default async function Home() {
                       id: product.id,
                       name: product.name,
                       price: finalPrice,
+                      originalPrice: isDiscounted ? product.price : undefined,
                       team: product.team,
-                      image: product.images[0] || ""
+                      image: product.images[0] || "",
+                      variants: product.variants
                     }} />
                   </div>
 

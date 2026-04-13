@@ -72,6 +72,7 @@ export default function ProductClient({ product, sizeChartData, deliveryData }: 
       id: product.id,
       name: product.name,
       price: finalPrice,
+      originalPrice: isDiscounted ? product.price : undefined,
       image: product.images[0] || "",
       category: product.team,
     }, selectedSize, quantity);
