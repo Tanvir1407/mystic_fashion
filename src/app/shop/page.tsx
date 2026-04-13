@@ -28,6 +28,7 @@ export default async function ShopPage({
 
   const products = await prisma.product.findMany({
     where,
+    include: { discount: true },
   });
 
   const availableTeams = ["Aurum FC", "Real Madrid", "Argentina", "Aethelred", "Custom"];
@@ -120,19 +121,42 @@ export default async function ShopPage({
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {products.map((product) => (
+              {products.map((product) => {
+                let finalPrice = product.price;
+                let isDiscounted = false;
+                
+                if (product.discount && product.discount.active) {
+                  isDiscounted = true;
+                  if (product.discount.discountType === "PERCENTAGE") {
+                    finalPrice = product.price - (product.price * (product.discount.value / 100));
+                  } else {
+                    finalPrice = Math.max(0, product.price - product.discount.value);
+                  }
+                }
+
+                return (
                 <div key={product.id} className="group flex flex-col bg-white dark:bg-zinc-900 rounded-3xl p-5 hover:bg-slate-50 dark:hover:bg-zinc-800 transition-all duration-500 hover:shadow-2xl hover:-translate-y-2 border border-slate-100 dark:border-zinc-800">
                   <div className="relative w-full aspect-[4/5] mb-5 rounded-2xl bg-slate-50 dark:bg-black/40 overflow-hidden flex items-center justify-center">
+                    
+                    {/* Discount Badge */}
+                    {isDiscounted && (
+                      <div className="absolute top-3 left-3 z-10 bg-red-600 text-white text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded-sm shadow-md">
+                        {product.discount!.discountType === "PERCENTAGE" 
+                          ? `${product.discount!.value}% OFF` 
+                          : `৳${product.discount!.value} OFF`}
+                      </div>
+                    )}
+
                     <Image 
                       src={product.images[0]}
                       alt={product.name}
                       fill
                       className="object-contain p-4 group-hover:scale-110 group-hover:rotate-1 transition-all duration-700"
                     />
-                    <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                       <button className="w-10 h-10 bg-white rounded-full flex items-center justify-center text-maroon shadow-lg hover:bg-maroon hover:text-white transition-colors">
+                    <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10">
+                       <Link href={`/product/${product.id}`} className="w-10 h-10 bg-white rounded-full flex items-center justify-center text-maroon shadow-lg hover:bg-maroon hover:text-white transition-colors">
                          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z" /></svg>
-                       </button>
+                       </Link>
                     </div>
                   </div>
                   <div className="flex flex-col flex-1 relative z-10 text-left">
@@ -145,7 +169,12 @@ export default async function ShopPage({
                     <div className="flex justify-between items-end mt-auto pt-4 border-t border-slate-100 dark:border-zinc-800">
                       <div className="flex flex-col">
                         <span className="text-xs text-foreground/50 font-medium mb-1">Price</span>
-                        <span className="font-black text-maroon text-xl">{formatBDT(product.price)}</span>
+                        {isDiscounted && (
+                          <span className="text-foreground/40 font-medium text-sm line-through">
+                            {formatBDT(product.price)}
+                          </span>
+                        )}
+                        <span className="font-black text-maroon text-xl">{formatBDT(finalPrice)}</span>
                       </div>
                       <Link href={`/product/${product.id}`} className="h-12 px-6 bg-foreground text-background hover:bg-gold hover:text-black hover:shadow-lg hover:shadow-gold/20 rounded-xl font-bold flex items-center justify-center gap-2 transition-all duration-300 active:scale-95">
                         Grab It
@@ -153,7 +182,7 @@ export default async function ShopPage({
                     </div>
                   </div>
                 </div>
-              ))}
+              )})}
             </div>
           )}
         </div>

@@ -17,6 +17,11 @@ interface Product {
   team: string;
   category: string;
   variants: { size: string, stock: number }[];
+  discount?: {
+    active: boolean;
+    discountType: "PERCENTAGE" | "FLAT";
+    value: number;
+  } | null;
 }
 
 export default function ProductClient({ product, sizeChartData, deliveryData }: { product: Product, sizeChartData?: any, deliveryData?: { insideDhaka: number, outsideDhaka: number } }) {
@@ -48,13 +53,25 @@ export default function ProductClient({ product, sizeChartData, deliveryData }: 
     ? product.variants.find(v => v.size === selectedSize)?.stock || 0
     : 0;
 
+  let finalPrice = product.price;
+  let isDiscounted = false;
+
+  if (product.discount && product.discount.active) {
+    isDiscounted = true;
+    if (product.discount.discountType === "PERCENTAGE") {
+      finalPrice = product.price - (product.price * (product.discount.value / 100));
+    } else {
+      finalPrice = Math.max(0, product.price - product.discount.value);
+    }
+  }
+
   const handleAddToCart = () => {
     if (!selectedSize) return;
 
     addItem({
       id: product.id,
       name: product.name,
-      price: product.price,
+      price: finalPrice,
       image: product.images[0] || "",
       category: product.team,
     }, selectedSize, quantity);
@@ -122,6 +139,14 @@ export default function ProductClient({ product, sizeChartData, deliveryData }: 
                   </button>
                 </>
               )}
+              {/* Discount Badge on Main Image */}
+              {isDiscounted && (
+                <div className="absolute top-4 left-4 z-20 bg-red-600 text-white text-xs font-black uppercase tracking-widest px-3 py-1.5 rounded-sm shadow-md">
+                  {product.discount!.discountType === "PERCENTAGE" 
+                    ? `${product.discount!.value}% OFF` 
+                    : `৳${product.discount!.value} OFF`}
+                </div>
+              )}
             </div>
 
             {/* Thumbnails Row */}
@@ -162,8 +187,10 @@ export default function ProductClient({ product, sizeChartData, deliveryData }: 
             <p className="text-slate-500 font-medium mb-6 uppercase tracking-wider text-sm">{product.category} &bull; {product.team}</p>
 
             <div className="flex items-end gap-4 mb-8">
-              <p className="text-3xl md:text-4xl font-black text-[#800020]">{formatBDT(product.price)}</p>
-              {/* <p className="text-lg font-bold text-zinc-400 line-through mb-1.5">{formatBDT(Math.round(product.price * 1.15))}</p> */}
+              <p className="text-3xl md:text-4xl font-black text-[#800020]">{formatBDT(finalPrice)}</p>
+              {isDiscounted ? (
+                <p className="text-lg font-bold text-zinc-400 line-through mb-1.5">{formatBDT(product.price)}</p>
+              ) : null}
             </div>
 
             <div className="w-12 h-1 bg-[#800020] mb-8"></div>

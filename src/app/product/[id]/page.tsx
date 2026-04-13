@@ -14,6 +14,7 @@ export default async function ProductPage({ params }: { params: { id: string } }
       include: {
         variants: true,
         sizeChart: true,
+        discount: true,
       }
     }),
     prisma.deliverySetting.findUnique({

@@ -15,7 +15,7 @@ function formatBDT(price: number) {
 
 export default async function Home() {
   const [products, heroSlides] = await Promise.all([
-    prisma.product.findMany({ take: 12, orderBy: { createdAt: "desc" } }),
+    prisma.product.findMany({ take: 12, orderBy: { createdAt: "desc" }, include: { discount: true } }),
     prisma.heroSlide.findMany({ where: { active: true }, orderBy: { sortOrder: "asc" } }),
   ]);
 
@@ -27,12 +27,33 @@ export default async function Home() {
       <section className="container mx-auto py-20 px-4 md:px-0">
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
           {products.map((product) => {
+            let finalPrice = product.price;
+            let isDiscounted = false;
+            
+            if (product.discount && product.discount.active) {
+              isDiscounted = true;
+              if (product.discount.discountType === "PERCENTAGE") {
+                finalPrice = product.price - (product.price * (product.discount.value / 100));
+              } else {
+                finalPrice = Math.max(0, product.price - product.discount.value);
+              }
+            }
+
             return (
               <Link href={`/product/${product.id}`} key={product.id} className="group">
-                <div className="flex flex-col bg-white dark:bg-zinc-900 rounded-xl overflow-hidden transition-all duration-300 shadow border border-transparent hover:border-slate-200 dark:hover:border-zinc-700 h-full">
+                <div className="flex flex-col bg-white dark:bg-zinc-900 rounded-xl overflow-hidden transition-all duration-300 shadow border border-transparent hover:border-slate-200 dark:hover:border-zinc-700 h-full relative">
+
+                  {/* Discount Badge */}
+                  {isDiscounted && (
+                    <div className="absolute top-3 right-3 z-10 bg-red-600 text-white text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded-sm shadow-md">
+                      {product.discount!.discountType === "PERCENTAGE" 
+                        ? `${product.discount!.value}% OFF` 
+                        : `৳${product.discount!.value} OFF`}
+                    </div>
+                  )}
 
                   {/* 1. Image Section */}
-                  <div className="relative aspect-[3/4] bg-[#F5F5F5] dark:bg-zinc-800 overflow-hidden">
+                  <div className="relative w-full aspect-[3/4] bg-[#F5F5F5] dark:bg-zinc-800 overflow-hidden">
                     {product.images[0] ? (
                       <Image
                         src={product.images[0]}
@@ -53,7 +74,14 @@ export default async function Home() {
                       {product.name}
                     </h3>
                     <div className="flex items-baseline gap-2 mt-auto pt-2">
-                      <span className="text-[#800020] font-black text-base md:text-lg">{formatBDT(product.price)}</span>
+                       {isDiscounted && (
+                         <span className="text-zinc-400 dark:text-zinc-500 font-medium text-sm line-through">
+                           {formatBDT(product.price)}
+                         </span>
+                       )}
+                       <span className="text-[#800020] font-black text-base md:text-lg">
+                         {formatBDT(finalPrice)}
+                       </span>
                     </div>
                   </div>
 
@@ -62,7 +90,7 @@ export default async function Home() {
                     <AddToBagButton product={{
                       id: product.id,
                       name: product.name,
-                      price: product.price,
+                      price: finalPrice,
                       team: product.team,
                       image: product.images[0] || ""
                     }} />
