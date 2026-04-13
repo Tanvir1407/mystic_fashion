@@ -3,8 +3,20 @@
 import type { OrderStatus } from "@/generated/prisma/client";
 import { updateOrderStatus } from "../actions";
 import { useState } from "react";
+import Link from "next/link";
+import { Eye } from "lucide-react";
 
-export default function OrderRowClient({ order, items }: { order: any, items: any[] }) {
+export default function OrderRowClient({ 
+  order, 
+  items, 
+  isSelected, 
+  onSelect 
+}: { 
+  order: any, 
+  items: any[], 
+  isSelected?: boolean, 
+  onSelect?: () => void 
+}) {
   const [status, setStatus] = useState<OrderStatus>(order.status);
   const [loading, setLoading] = useState(false);
 
@@ -18,6 +30,14 @@ export default function OrderRowClient({ order, items }: { order: any, items: an
 
   return (
     <tr className="hover:bg-slate-50/50 transition-colors group">
+      <td className="px-6 py-4">
+        <input 
+          type="checkbox" 
+          checked={isSelected || false}
+          onChange={onSelect}
+          className="rounded border-slate-300 text-indigo-600 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 cursor-pointer"
+        />
+      </td>
       <td className="px-6 py-4">
         <div className="flex flex-col">
           <span className="font-medium text-sm text-slate-900">{order.customerName}</span>
@@ -58,6 +78,11 @@ export default function OrderRowClient({ order, items }: { order: any, items: an
             <option key={s} value={s}>{s}</option>
           ))}
         </select>
+      </td>
+      <td className="px-6 py-4 text-right">
+        <Link href={`/admin/orders/${order.id}`} className="inline-flex items-center justify-center p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors rounded-md group-hover:bg-white border border-transparent group-hover:border-slate-200">
+          <Eye className="w-4 h-4" />
+        </Link>
       </td>
     </tr>
   );

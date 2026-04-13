@@ -121,6 +121,14 @@ export async function updateOrderStatus(orderId: string, status: OrderStatus) {
   revalidatePath("/admin/orders");
 }
 
+export async function bulkUpdateOrderStatus(orderIds: string[], status: OrderStatus) {
+  await prisma.order.updateMany({
+    where: { id: { in: orderIds } },
+    data: { status },
+  });
+  revalidatePath("/admin/orders");
+}
+
 export async function saveSizeChart(category: string, data: any) {
   await prisma.sizeChart.upsert({
     where: { category },
