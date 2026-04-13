@@ -208,3 +208,15 @@ export async function uploadImage(formData: FormData) {
   
   return `/uploads/${uniqueName}`;
 }
+
+export async function updateDeliverySettings(insideDhaka: number, outsideDhaka: number) {
+  await prisma.deliverySetting.upsert({
+    where: { id: "default" },
+    update: { insideDhaka, outsideDhaka },
+    create: { id: "default", insideDhaka, outsideDhaka },
+  });
+  revalidatePath("/admin/settings");
+  revalidatePath("/");
+  revalidatePath("/checkout");
+  revalidatePath("/product/[id]", "page");
+}

@@ -14,16 +14,15 @@ interface Product {
   description: string;
   price: number;
   images: string[];
-  sizes: string[];
   team: string;
-  stock: number;
   category: string;
+  variants: { size: string, stock: number }[];
 }
 
-export default function ProductClient({ product }: { product: Product }) {
+export default function ProductClient({ product, sizeChartData, deliveryData }: { product: Product, sizeChartData?: any, deliveryData?: { insideDhaka: number, outsideDhaka: number } }) {
   const router = useRouter();
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
-  const selectedImage = product.images[selectedImageIndex];
+  const selectedImage = product.images[selectedImageIndex] || "";
 
   const handlePrevImage = () => {
     setSelectedImageIndex((prev) => (prev > 0 ? prev - 1 : product.images.length - 1));
@@ -43,6 +42,12 @@ export default function ProductClient({ product }: { product: Product }) {
     return `৳${price.toLocaleString("en-IN")}`;
   };
 
+  const totalStock = product.variants.reduce((acc, v) => acc + v.stock, 0);
+
+  const selectedVariantStock = selectedSize
+    ? product.variants.find(v => v.size === selectedSize)?.stock || 0
+    : 0;
+
   const handleAddToCart = () => {
     if (!selectedSize) return;
 
@@ -50,7 +55,7 @@ export default function ProductClient({ product }: { product: Product }) {
       id: product.id,
       name: product.name,
       price: product.price,
-      image: product.images[0],
+      image: product.images[0] || "",
       category: product.team,
     }, selectedSize, quantity);
 
@@ -65,8 +70,10 @@ export default function ProductClient({ product }: { product: Product }) {
   };
 
   const incrementQuantity = () => {
-    if (quantity < product.stock) {
-      setQuantity(q => q + 1);
+    if (selectedSize) {
+      if (quantity < selectedVariantStock) setQuantity(q => q + 1);
+    } else {
+      setQuantity(q => q + 1); // allow guessing before size select
     }
   };
 
@@ -87,13 +94,17 @@ export default function ProductClient({ product }: { product: Product }) {
           <div className="w-full lg:w-1/2 flex flex-col gap-4">
             {/* Main Image */}
             <div className="relative w-full aspect-[4/5] bg-[#F9F9F9] flex items-center justify-center group overflow-hidden rounded-md shadow-sm border border-slate-100">
-              <Image
-                src={selectedImage}
-                alt={product.name}
-                fill
-                className="object-cover transition-transform duration-700"
-                priority
-              />
+              {selectedImage ? (
+                <Image
+                  src={selectedImage}
+                  alt={product.name}
+                  fill
+                  className="object-cover transition-transform duration-700"
+                  priority
+                />
+              ) : (
+                <span className="text-slate-400 font-medium">No Image</span>
+              )}
               {/* Navigation Arrows */}
               {product.images.length > 1 && (
                 <>
@@ -127,16 +138,6 @@ export default function ProductClient({ product }: { product: Product }) {
                   <Image src={img} alt={`${product.name} view ${idx + 1}`} fill className="object-cover" />
                 </button>
               ))}
-              {/* Video Placeholder */}
-              <button
-                className="relative w-24 h-32 flex-shrink-0 bg-[#F9F9F9] flex flex-col items-center justify-center rounded-md border border-slate-200 hover:border-[#FFD700] transition-colors group"
-                onClick={() => { }}
-              >
-                <div className="w-10 h-10 bg-[#800020] rounded-full flex items-center justify-center text-[#FFD700] mb-2 group-hover:scale-110 transition-transform shadow-md">
-                  <Play className="w-4 h-4 ml-0.5" fill="currentColor" />
-                </div>
-                <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Video</span>
-              </button>
             </div>
           </div>
 
@@ -144,20 +145,25 @@ export default function ProductClient({ product }: { product: Product }) {
           <div className="w-full lg:w-1/2 flex flex-col justify-center">
 
             <div className="flex items-center gap-4 mb-3">
-              {product.stock > 0 && (
+              {totalStock > 0 ? (
                 <span className="bg-green-50 text-green-700 text-[10px] font-black uppercase px-2 py-1 rounded-sm tracking-widest">
                   In Stock
+                </span>
+              ) : (
+                <span className="bg-red-50 text-red-700 text-[10px] font-black uppercase px-2 py-1 rounded-sm tracking-widest">
+                  Out of Stock
                 </span>
               )}
             </div>
 
-            <h1 className="text-2xl  font-black text-zinc-900 mb-6 tracking-tight leading-[1.1] uppercase">
+            <h1 className="text-2xl font-black text-zinc-900 mb-2 tracking-tight leading-[1.1] uppercase">
               {product.name}
             </h1>
+            <p className="text-slate-500 font-medium mb-6 uppercase tracking-wider text-sm">{product.category} &bull; {product.team}</p>
 
             <div className="flex items-end gap-4 mb-8">
               <p className="text-3xl md:text-4xl font-black text-[#800020]">{formatBDT(product.price)}</p>
-              <p className="text-lg font-bold text-zinc-400 line-through mb-1.5">{formatBDT(Math.round(product.price * 1.15))}</p>
+              {/* <p className="text-lg font-bold text-zinc-400 line-through mb-1.5">{formatBDT(Math.round(product.price * 1.15))}</p> */}
             </div>
 
             <div className="w-12 h-1 bg-[#800020] mb-8"></div>
@@ -168,20 +174,26 @@ export default function ProductClient({ product }: { product: Product }) {
                 <h3 className="font-bold text-zinc-900 text-sm uppercase tracking-widest">Select Size</h3>
               </div>
 
-              {product.sizes.length === 0 ? (
-                <p className="text-red-500 font-bold">Out of stock in all sizes</p>
+              {product.variants.length === 0 ? (
+                <p className="text-red-500 font-bold">Size map not configured yet.</p>
               ) : (
                 <div className="flex flex-wrap gap-3">
-                  {product.sizes.map((s) => (
+                  {product.variants.map((v) => (
                     <button
-                      key={s}
-                      onClick={() => setSelectedSize(s)}
-                      className={`w-14 h-14 rounded-md flex items-center justify-center font-bold text-lg transition-all ${selectedSize === s
-                        ? 'bg-[#800020] text-[#FFD700] border-2 border-[#FFD700] shadow-md'
-                        : 'bg-white text-zinc-900 border-2 border-slate-200 hover:border-zinc-900'
+                      key={v.size}
+                      onClick={() => {
+                        setSelectedSize(v.size);
+                        setQuantity(1); // Reset qty constraint when switching sizes
+                      }}
+                      disabled={v.stock <= 0}
+                      className={`w-14 h-14 rounded-md flex flex-col items-center justify-center font-bold text-lg transition-all ${v.stock <= 0
+                        ? 'bg-slate-50 text-slate-300 border-2 border-slate-200 cursor-not-allowed'
+                        : selectedSize === v.size
+                          ? 'bg-[#800020] text-[#FFD700] border-2 border-[#FFD700] shadow-md'
+                          : 'bg-white text-zinc-900 border-2 border-slate-200 hover:border-zinc-900'
                         }`}
                     >
-                      {s}
+                      <span>{v.size}</span>
                     </button>
                   ))}
                 </div>
@@ -190,7 +202,12 @@ export default function ProductClient({ product }: { product: Product }) {
 
             {/* Quantity Selector */}
             <div className="mb-10">
-              <h3 className="font-bold text-zinc-900 text-sm uppercase tracking-widest mb-4">Quantity</h3>
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="font-bold text-zinc-900 text-sm uppercase tracking-widest">Quantity</h3>
+                {selectedSize && (
+                  <span className="text-xs font-semibold text-slate-500">{selectedVariantStock} units available</span>
+                )}
+              </div>
               <div className="flex items-center inline-flex border-2 border-slate-200 rounded-md bg-white">
                 <button
                   onClick={decrementQuantity}
@@ -214,8 +231,8 @@ export default function ProductClient({ product }: { product: Product }) {
             <div className="flex flex-col sm:flex-row gap-4 mb-2">
               <button
                 onClick={handleAddToCart}
-                disabled={!selectedSize}
-                className={`flex-1 h-14 font-black text-sm uppercase tracking-widest flex items-center justify-center gap-3 transition-all duration-300 border-2 rounded-md ${!selectedSize
+                disabled={!selectedSize || totalStock <= 0}
+                className={`flex-1 h-14 font-black text-sm uppercase tracking-widest flex items-center justify-center gap-3 transition-all duration-300 border-2 rounded-md ${(!selectedSize || totalStock <= 0)
                   ? 'border-slate-200 bg-slate-50 text-slate-400 cursor-not-allowed'
                   : addedEffect
                     ? 'border-green-600 bg-green-50 text-green-700'
@@ -237,8 +254,8 @@ export default function ProductClient({ product }: { product: Product }) {
 
               <button
                 onClick={handleBuyNow}
-                disabled={!selectedSize}
-                className={`flex-1 h-14 font-black text-sm uppercase tracking-widest flex items-center justify-center gap-3 transition-all duration-300 rounded-md ${!selectedSize
+                disabled={!selectedSize || totalStock <= 0}
+                className={`flex-1 h-14 font-black text-sm uppercase tracking-widest flex items-center justify-center gap-3 transition-all duration-300 rounded-md ${(!selectedSize || totalStock <= 0)
                   ? 'bg-slate-200 text-slate-400 cursor-not-allowed'
                   : 'bg-[#800020] text-[#FFD700] hover:bg-[#600018] active:scale-[0.98] shadow-md'
                   }`}
@@ -247,57 +264,41 @@ export default function ProductClient({ product }: { product: Product }) {
                 Buy Now
               </button>
             </div>
-            {!selectedSize && <p className="text-xs text-red-500 font-bold uppercase tracking-widest px-1 mt-2">Please select a size to continue</p>}
+            {!selectedSize && totalStock > 0 && <p className="text-xs text-red-500 font-bold uppercase tracking-widest px-1 mt-2">Please select a size to continue</p>}
 
             {/* Size Chart Data Table */}
-            <div className="mt-10 pt-8 border-t border-slate-100">
-              <h3 className="font-bold text-zinc-900 text-sm uppercase tracking-widest mb-4">Size Chart</h3>
-              <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse border border-slate-200">
-                  <thead>
-                    <tr className="bg-slate-50 uppercase text-xs tracking-widest text-zinc-900">
-                      <th className="p-3 border border-slate-200 font-bold">Size</th>
-                      <th className="p-3 border border-slate-200 font-bold">Length (inches)</th>
-                      <th className="p-3 border border-slate-200 font-bold">Chest (inches)</th>
-                      <th className="p-3 border border-slate-200 font-bold">Sleeve (inches)</th>
-                    </tr>
-                  </thead>
-                  <tbody className="text-zinc-600 text-sm">
-                    <tr>
-                      <td className="p-3 border border-slate-200 font-bold text-zinc-900">S</td>
-                      <td className="p-3 border border-slate-200">27.0</td>
-                      <td className="p-3 border border-slate-200">38.0</td>
-                      <td className="p-3 border border-slate-200">8.0</td>
-                    </tr>
-                    <tr className="bg-slate-50">
-                      <td className="p-3 border border-slate-200 font-bold text-zinc-900">M</td>
-                      <td className="p-3 border border-slate-200">28.0</td>
-                      <td className="p-3 border border-slate-200">40.0</td>
-                      <td className="p-3 border border-slate-200">8.5</td>
-                    </tr>
-                    <tr>
-                      <td className="p-3 border border-slate-200 font-bold text-zinc-900">L</td>
-                      <td className="p-3 border border-slate-200">29.0</td>
-                      <td className="p-3 border border-slate-200">42.0</td>
-                      <td className="p-3 border border-slate-200">9.0</td>
-                    </tr>
-                    <tr className="bg-slate-50">
-                      <td className="p-3 border border-slate-200 font-bold text-zinc-900">XL</td>
-                      <td className="p-3 border border-slate-200">30.0</td>
-                      <td className="p-3 border border-slate-200">44.0</td>
-                      <td className="p-3 border border-slate-200">9.5</td>
-                    </tr>
-                    <tr>
-                      <td className="p-3 border border-slate-200 font-bold text-zinc-900">XXL</td>
-                      <td className="p-3 border border-slate-200">31.0</td>
-                      <td className="p-3 border border-slate-200">46.0</td>
-                      <td className="p-3 border border-slate-200">10.0</td>
-                    </tr>
-                  </tbody>
-                </table>
+            {sizeChartData && Array.isArray(sizeChartData.data) && sizeChartData.data.length > 0 && (
+              <div className="mt-10 pt-8 border-t border-slate-100">
+                <h3 className="font-bold text-zinc-900 text-sm uppercase tracking-widest mb-4">Size Chart</h3>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left border-collapse border border-slate-200">
+                    <thead>
+                      <tr className="bg-slate-50 uppercase text-xs tracking-widest text-zinc-900">
+                        <th className="p-3 border border-slate-200 font-bold">Size</th>
+                        {Object.keys(sizeChartData.data[0])
+                          .filter(k => k !== 'size')
+                          .map((h: string, idx: number) => (
+                            <th key={idx} className="p-3 border border-slate-200 font-bold capitalize">{h} (inches)</th>
+                          ))}
+                      </tr>
+                    </thead>
+                    <tbody className="text-zinc-600 text-sm">
+                      {sizeChartData.data.map((row: any, i: number) => (
+                        <tr key={i} className={i % 2 !== 0 ? "bg-slate-50" : ""}>
+                          <td className="p-3 border border-slate-200 font-bold text-zinc-900 uppercase">{row.size}</td>
+                          {Object.keys(sizeChartData.data[0])
+                            .filter(k => k !== 'size')
+                            .map((h: string, idx: number) => (
+                              <td key={idx} className="p-3 border border-slate-200">{row[h]}</td>
+                            ))}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <p className="text-xs text-zinc-500 mt-3">* Measurements may vary by 0.5 inches due to the manufacturing process.</p>
               </div>
-              <p className="text-xs text-zinc-500 mt-3">* Measurements may vary by 0.5 inches due to the manufacturing process.</p>
-            </div>
+            )}
 
           </div>
         </div>
@@ -339,14 +340,14 @@ export default function ProductClient({ product }: { product: Product }) {
                   <Check className="w-5 h-5 text-[#800020] flex-shrink-0 mt-0.5" />
                   <div>
                     <strong className="block text-zinc-900 mb-1">Inside Dhaka</strong>
-                    <p>Delivery in 2-3 working days. Charge: ৳80</p>
+                    <p>Delivery in 2-3 working days. Charge: {deliveryData?.insideDhaka === 0 ? "Free" : `৳${deliveryData?.insideDhaka || 80}`}</p>
                   </div>
                 </li>
                 <li className="flex items-start gap-3">
                   <Check className="w-5 h-5 text-[#800020] flex-shrink-0 mt-0.5" />
                   <div>
                     <strong className="block text-zinc-900 mb-1">Outside Dhaka</strong>
-                    <p>Delivery in 3-5 working days. Charge: ৳150</p>
+                    <p>Delivery in 3-5 working days. Charge: {deliveryData?.outsideDhaka === 0 ? "Free" : `৳${deliveryData?.outsideDhaka || 150}`}</p>
                   </div>
                 </li>
               </ul>
@@ -359,4 +360,3 @@ export default function ProductClient({ product }: { product: Product }) {
     </div>
   );
 }
-

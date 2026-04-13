@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { adminLogout } from "./actions";
-import { Package, ShoppingCart, LogOut, Search, Bell, User, Truck } from "lucide-react";
+import { Package, ShoppingCart, LogOut, Search, Bell, User, Truck, Settings } from "lucide-react";
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -71,6 +71,17 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           >
             <Truck className="w-4 h-4" />
             Purchases
+          </Link>
+          <Link
+            href="/admin/settings"
+            className={`flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-colors ${
+              pathname.includes("/admin/settings")
+                ? "bg-maroon text-white shadow-md shadow-maroon/20"
+                : "hover:bg-slate-800 hover:text-white"
+            }`}
+          >
+            <Settings className="w-4 h-4" />
+            Settings
           </Link>
         </nav>
 

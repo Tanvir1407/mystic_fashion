@@ -80,6 +80,7 @@ model Order {
   id           String      @id @default(uuid())
   customerName String
   phone        String
+  district     String      @default("Dhaka")
   address      String
   totalAmount  Float
   status       OrderStatus @default(PENDING)
@@ -90,14 +91,22 @@ model Order {
 }
 
 model OrderItem {
-  id        String @id @default(uuid())
+  id        String   @id @default(uuid())
   orderId   String
   productId String
+  size      String   @default("M") // Required to know which variant to fulfill
   quantity  Int
-  price     Float // Storing price at time of purchase
+  price     Float    // Storing price at time of purchase
 
   order   Order   @relation(fields: [orderId], references: [id])
   product Product @relation(fields: [productId], references: [id])
+}
+
+model DeliverySetting {
+  id           String   @id @default("default")
+  insideDhaka  Int      @default(80)
+  outsideDhaka Int      @default(150)
+  updatedAt    DateTime @updatedAt
 }
 
 model Purchase {

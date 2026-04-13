@@ -25,13 +25,16 @@ export default function OrderRowClient({ order, items }: { order: any, items: an
         </div>
       </td>
       <td className="px-6 py-4">
-        <div className="text-sm text-slate-600 max-w-[250px] truncate" title={order.address}>{order.address}</div>
+        <div className="flex flex-col items-start gap-1">
+          <span className="text-sm text-slate-600 max-w-[250px] truncate" title={order.address}>{order.address}</span>
+          <span className="bg-slate-100 text-slate-600 px-2 py-0.5 rounded text-[10px] uppercase font-bold tracking-wider">{order.district}</span>
+        </div>
       </td>
       <td className="px-6 py-4">
         <div className="flex flex-col gap-0.5">
           {items.map((item) => (
             <div key={item.id} className="text-xs font-medium text-slate-600">
-              <span className="text-slate-400">{item.quantity}x</span> {item.product.name}
+              <span className="text-slate-400">{item.quantity}x</span> {item.product.name} <span className="font-bold text-[#800020]">({item.size})</span>
             </div>
           ))}
         </div>
