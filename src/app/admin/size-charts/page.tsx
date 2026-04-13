@@ -56,13 +56,14 @@ export default async function AdminSizeChartsPage() {
                     <td className="px-6 py-4 text-sm text-slate-600 font-mono">
                       {sizesString}
                     </td>
-                    <td className="px-6 py-4 flex items-center justify-end gap-2 md:opacity-0 group-hover:opacity-100 transition-opacity">
+                    <td className="px-6 py-4 flex items-center justify-end gap-2">
                       <Link
                         href={`/admin/size-charts/${chart.id}/edit`}
-                        className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-slate-100 rounded-md transition-colors"
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-indigo-600 bg-indigo-50 border border-indigo-200 rounded-md hover:bg-indigo-100 hover:border-indigo-300 transition-colors"
                         title="Edit Size Chart"
                       >
-                        <Edit2 className="w-4 h-4" />
+                        <Edit2 className="w-3.5 h-3.5" />
+                        Edit
                       </Link>
                       <form action={async () => {
                         "use server";
@@ -70,10 +71,11 @@ export default async function AdminSizeChartsPage() {
                       }}>
                         <button
                           type="submit"
-                          className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors"
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-red-600 bg-red-50 border border-red-100 rounded-md hover:bg-red-100 hover:border-red-200 transition-colors cursor-pointer"
                           title="Delete Chart"
                         >
-                          <Trash2 className="w-4 h-4" />
+                          <Trash2 className="w-3.5 h-3.5" />
+                          Delete
                         </button>
                       </form>
                     </td>
