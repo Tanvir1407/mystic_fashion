@@ -8,7 +8,7 @@ import { revalidatePath } from "next/cache";
 
 export async function adminLogin(password: string) {
   const correctPassword = process.env.ADMIN_PASSWORD;
-  
+
   if (password === correctPassword) {
     cookies().set("admin-auth", "true", {
       httpOnly: true,
@@ -99,4 +99,48 @@ export async function updateOrderStatus(orderId: string, status: OrderStatus) {
     data: { status },
   });
   revalidatePath("/admin/orders");
+}
+
+export async function saveSizeChart(category: string, data: any) {
+  await prisma.SizeChart.upsert({
+    where: { category },
+    update: { data },
+    create: { category, data },
+  });
+  revalidatePath("/admin/size-charts");
+  redirect("/admin/size-charts");
+}
+
+export async function deleteSizeChart(id: string) {
+  await prisma.sizeChart.delete({
+    where: { id },
+  });
+  revalidatePath("/admin/size-charts");
+}
+
+export async function createPurchase(supplierName: string, invoiceNumber: string, totalAmount: number, items: any) {
+  await prisma.purchase.create({
+    data: {
+      supplierName,
+      invoiceNumber,
+      totalAmount,
+      itemsJSON: items,
+      status: "PENDING"
+    }
+  });
+  revalidatePath("/admin/purchases");
+  redirect("/admin/purchases");
+}
+
+export async function deletePurchase(id: string) {
+  await prisma.purchase.delete({ where: { id } });
+  revalidatePath("/admin/purchases");
+}
+
+export async function updatePurchaseStatus(id: string, status: string) {
+  await prisma.purchase.update({
+    where: { id },
+    data: { status }
+  });
+  revalidatePath("/admin/purchases");
 }
