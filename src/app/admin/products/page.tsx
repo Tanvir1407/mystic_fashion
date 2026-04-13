@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
 import { deleteProduct } from "../actions";
+import { Plus, Edit2, Trash2, Filter } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -10,49 +11,72 @@ export default async function AdminProductsPage() {
   });
 
   return (
-    <div className="flex flex-col gap-8">
-      <div className="flex items-center justify-between">
+    <div className="flex flex-col gap-6">
+      {/* Header */}
+      <div className="flex items-start sm:items-center justify-between flex-col sm:flex-row gap-4">
         <div>
-          <h1 className="text-3xl font-black text-foreground">Products Dashboard</h1>
-          <p className="text-foreground/60 mt-1 font-medium">Manage your jerseys, inventory, and pricing.</p>
+          <h1 className="text-2xl font-semibold tracking-tight text-slate-900">Products</h1>
+          <p className="text-sm text-slate-500 mt-1">Manage your jerseys, inventory, and pricing.</p>
         </div>
         <Link
           href="/admin/products/new"
-          className="h-12 px-6 bg-foreground text-background font-bold rounded-xl flex items-center justify-center gap-2 hover:bg-gold hover:text-black transition-colors"
+          className="h-10 px-4 bg-slate-900 text-white text-sm font-medium rounded-md flex items-center justify-center gap-2 hover:bg-slate-800 transition-colors shadow-sm"
         >
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
+          <Plus className="w-4 h-4" />
           Add Product
         </Link>
       </div>
 
-      <div className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-3xl overflow-hidden shadow-sm">
+      {/* Toolbar */}
+      <div className="flex items-center gap-3">
+        <button className="h-9 px-3 bg-white border border-slate-200 text-slate-600 rounded-md text-sm font-medium flex items-center gap-2 hover:bg-slate-50 transition-colors shadow-sm">
+          <Filter className="w-4 h-4" />
+          Filter
+        </button>
+      </div>
+
+      {/* Data Table */}
+      <div className="bg-white border border-slate-200 rounded-lg overflow-hidden shadow-sm">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="border-b border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-800/50">
-                <th className="p-4 font-bold text-sm text-foreground/60 uppercase tracking-wider">Product</th>
-                <th className="p-4 font-bold text-sm text-foreground/60 uppercase tracking-wider">Price (BDT)</th>
-                <th className="p-4 font-bold text-sm text-foreground/60 uppercase tracking-wider">Stock</th>
-                <th className="p-4 font-bold text-sm text-foreground/60 uppercase tracking-wider">Team</th>
-                <th className="p-4 font-bold text-sm text-foreground/60 uppercase tracking-wider text-right">Actions</th>
+              <tr className="border-b border-slate-200 bg-slate-50">
+                <th className="px-6 py-3 font-semibold text-xs text-slate-500 uppercase tracking-wider">Product</th>
+                <th className="px-6 py-3 font-semibold text-xs text-slate-500 uppercase tracking-wider">Price (BDT)</th>
+                <th className="px-6 py-3 font-semibold text-xs text-slate-500 uppercase tracking-wider">Stock</th>
+                <th className="px-6 py-3 font-semibold text-xs text-slate-500 uppercase tracking-wider">Team</th>
+                <th className="px-6 py-3 font-semibold text-xs text-slate-500 uppercase tracking-wider text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-200 dark:divide-zinc-800">
+            <tbody className="divide-y divide-slate-200">
               {products.map((product) => (
-                <tr key={product.id} className="hover:bg-slate-50 dark:hover:bg-zinc-800/50 transition-colors">
-                  <td className="p-4">
-                    <div className="font-bold text-foreground">{product.name}</div>
-                    <div className="text-xs text-foreground/50">{product.category}</div>
+                <tr key={product.id} className="hover:bg-slate-50/50 transition-colors group">
+                  <td className="px-6 py-4">
+                    <div className="flex flex-col">
+                      <span className="font-medium text-sm text-slate-900">{product.name}</span>
+                      <span className="text-xs text-slate-500 mt-0.5">{product.category}</span>
+                    </div>
                   </td>
-                  <td className="p-4 font-mono font-medium">৳{product.price.toLocaleString("en-IN")}</td>
-                  <td className="p-4 font-medium">{product.stock}</td>
-                  <td className="p-4 font-medium">{product.team}</td>
-                  <td className="p-4 flex items-center justify-end gap-3">
+                  <td className="px-6 py-4 text-sm text-slate-600 font-mono">
+                    ৳{product.price.toLocaleString("en-IN")}
+                  </td>
+                  <td className="px-6 py-4">
+                    <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${product.stock > 10 ? 'bg-green-100 text-green-800' : product.stock > 0 ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'}`}>
+                      {product.stock} in stock
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 text-sm text-slate-600">
+                    <span className="bg-slate-100 text-slate-700 px-2.5 py-1 rounded-full text-xs font-medium">
+                      {product.team}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 flex items-center justify-end gap-2 md:opacity-0 group-hover:opacity-100 transition-opacity">
                     <Link
                       href={`/admin/products/${product.id}/edit`}
-                      className="text-sm font-bold text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 transition-colors"
+                      className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-slate-100 rounded-md transition-colors"
+                      title="Edit Product"
                     >
-                      Edit
+                      <Edit2 className="w-4 h-4" />
                     </Link>
                     <form action={async () => {
                       "use server";
@@ -60,9 +84,10 @@ export default async function AdminProductsPage() {
                     }}>
                       <button
                         type="submit"
-                        className="text-sm font-bold text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 transition-colors"
+                        className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors"
+                        title="Delete Product"
                       >
-                        Delete
+                        <Trash2 className="w-4 h-4" />
                       </button>
                     </form>
                   </td>
@@ -70,8 +95,8 @@ export default async function AdminProductsPage() {
               ))}
               {products.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="p-8 text-center text-foreground/50 font-medium">
-                    No products found. Add some jerseys!
+                  <td colSpan={5} className="px-6 py-12 text-center">
+                    <p className="text-sm text-slate-500 font-medium">No products found. Add some jerseys!</p>
                   </td>
                 </tr>
               )}
