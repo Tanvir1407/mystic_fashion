@@ -25,6 +25,8 @@ model Discount {
   active       Boolean      @default(true)
   createdAt    DateTime     @default(now())
   updatedAt    DateTime     @updatedAt
+
+  products     Product[]
 }
 
 enum OrderStatus {
@@ -71,6 +73,9 @@ model Product {
   
   sizeChartId   String?
   sizeChart     SizeChart? @relation(fields: [sizeChartId], references: [id])
+
+  discountId    String?
+  discount      Discount? @relation(fields: [discountId], references: [id])
 
   variants      ProductVariant[]
   orderItems    OrderItem[]

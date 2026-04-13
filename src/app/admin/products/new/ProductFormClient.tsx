@@ -6,12 +6,14 @@ import { Plus, Trash2, Save, ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
-export default function ProductFormClient({ 
-  initialData, 
-  sizeCharts 
-}: { 
-  initialData?: any, 
-  sizeCharts: any[] 
+export default function ProductFormClient({
+  initialData,
+  sizeCharts,
+  discounts
+}: {
+  initialData?: any,
+  sizeCharts: any[],
+  discounts: any[]
 }) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
@@ -25,7 +27,7 @@ export default function ProductFormClient({
     const files = e.target.files;
     if (!files || files.length === 0) return;
     setIsUploading(true);
-    
+
     try {
       const newImages: string[] = [];
       for (const file of Array.from(files)) {
@@ -49,6 +51,7 @@ export default function ProductFormClient({
   const [team, setTeam] = useState(initialData?.team || "");
   const [category, setCategory] = useState(initialData?.category || "");
   const [sizeChartId, setSizeChartId] = useState(initialData?.sizeChartId || "");
+  const [discountId, setDiscountId] = useState(initialData?.discountId || "");
 
   const [variants, setVariants] = useState<{ id: string, size: string, stock: number }[]>(
     initialData?.variants?.map((v: any, idx: number) => ({ id: String(idx), size: v.size, stock: v.stock })) || [
@@ -75,7 +78,7 @@ export default function ProductFormClient({
     if (variants.length === 0) return alert("You must add at least one Size Variant.");
 
     setLoading(true);
-    
+
     // Check duplicate sizes in UI
     const sizesSet = new Set(variants.map(v => v.size.trim().toLowerCase()));
     if (sizesSet.size !== variants.length) {
@@ -91,6 +94,7 @@ export default function ProductFormClient({
       team: team.trim(),
       category: category.trim(),
       sizeChartId: sizeChartId || undefined,
+      discountId: discountId || null,
       variants: variants.map(({ size, stock }) => ({ size: size.trim(), stock }))
     };
 
@@ -119,8 +123,8 @@ export default function ProductFormClient({
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
           <div className="col-span-1 md:col-span-2">
             <label className="block text-sm font-semibold text-slate-900 mb-2">Product Name *</label>
-            <input 
-              type="text" 
+            <input
+              type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="e.g. Mystic Classic Jersey"
@@ -131,7 +135,7 @@ export default function ProductFormClient({
 
           <div className="col-span-1 md:col-span-2">
             <label className="block text-sm font-semibold text-slate-900 mb-2">Description</label>
-            <textarea 
+            <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               rows={4}
@@ -143,8 +147,8 @@ export default function ProductFormClient({
 
           <div>
             <label className="block text-sm font-semibold text-slate-900 mb-2">Selling Price (৳) *</label>
-            <input 
-              type="number" 
+            <input
+              type="number"
               step="0.01"
               value={price}
               onChange={(e) => setPrice(e.target.value)}
@@ -155,8 +159,8 @@ export default function ProductFormClient({
           </div>
 
           <div>
-            <label className="block text-sm font-semibold text-slate-900 mb-0.5">Size Chart Reference</label>
-            <p className="text-xs text-slate-500 mb-2 font-medium">This chart shows in customer view or product single page.</p>
+            <label className="block text-sm font-semibold text-slate-900 mb-2">Size Chart Reference.              <span className="text-xs text-slate-500 font-medium">(This chart shows in customer view)</span>
+            </label>
             <select
               value={sizeChartId}
               onChange={(e) => setSizeChartId(e.target.value)}
@@ -170,9 +174,25 @@ export default function ProductFormClient({
           </div>
 
           <div>
+            <label className="block text-sm font-semibold text-slate-900 mb-2">Discount</label>
+            <select
+              value={discountId}
+              onChange={(e) => setDiscountId(e.target.value)}
+              className="w-full px-4 py-2 border border-slate-300 rounded-md focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 text-sm bg-white"
+            >
+              <option value="">No Active Promotion</option>
+              {discounts.map(disc => (
+                <option key={disc.id} value={disc.id}>
+                  {disc.name} ({disc.discountType === "PERCENTAGE" ? `${disc.value}% OFF` : `৳${disc.value} OFF`})
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
             <label className="block text-sm font-semibold text-slate-900 mb-2">Team / Brand</label>
-            <input 
-              type="text" 
+            <input
+              type="text"
               value={team}
               onChange={(e) => setTeam(e.target.value)}
               placeholder="e.g. Mystic FC"
@@ -183,8 +203,8 @@ export default function ProductFormClient({
 
           <div>
             <label className="block text-sm font-semibold text-slate-900 mb-2">Product Category</label>
-            <input 
-              type="text" 
+            <input
+              type="text"
               value={category}
               onChange={(e) => setCategory(e.target.value)}
               placeholder="e.g. Jerseys"
@@ -200,8 +220,8 @@ export default function ProductFormClient({
                 {images.map((img, idx) => (
                   <div key={idx} className="relative group w-24 h-24 border border-slate-200 rounded-md overflow-hidden bg-slate-50">
                     <img src={img} alt={`Uploaded ${idx}`} className="w-full h-full object-cover" />
-                    <button 
-                      type="button" 
+                    <button
+                      type="button"
                       onClick={() => removeImage(idx)}
                       className="absolute top-1 right-1 bg-red-600/80 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600"
                       title="Remove Image"
@@ -211,10 +231,10 @@ export default function ProductFormClient({
                   </div>
                 ))}
               </div>
-              
+
               <div className="relative border-2 border-dashed border-slate-300 rounded-lg p-6 hover:border-indigo-500 transition-colors bg-slate-50 text-center flex flex-col items-center justify-center">
-                <input 
-                  type="file" 
+                <input
+                  type="file"
                   accept="image/*"
                   multiple
                   onChange={handleImageUpload}
@@ -237,7 +257,7 @@ export default function ProductFormClient({
 
         {/* Variants Section */}
         <div className="border border-slate-200 rounded-md overflow-hidden mb-8">
-           <div className="bg-slate-50 px-4 py-3 border-b border-slate-200 flex justify-between items-center">
+          <div className="bg-slate-50 px-4 py-3 border-b border-slate-200 flex justify-between items-center">
             <h3 className="text-sm font-semibold text-slate-700">Size Variants & Stock</h3>
             <p className="text-xs text-slate-500 font-medium">Auto-synced via Purchases Module</p>
           </div>
@@ -253,9 +273,9 @@ export default function ProductFormClient({
               {variants.map((v) => (
                 <tr key={v.id}>
                   <td className="px-4 py-2">
-                    <input 
-                      type="text" 
-                      value={v.size} 
+                    <input
+                      type="text"
+                      value={v.size}
                       onChange={(e) => updateVariant(v.id, "size", e.target.value.toUpperCase())}
                       placeholder="e.g. XL"
                       className="w-full px-3 py-1.5 border border-slate-200 rounded text-sm focus:outline-none focus:border-indigo-500 uppercase"
@@ -263,18 +283,18 @@ export default function ProductFormClient({
                     />
                   </td>
                   <td className="px-4 py-2">
-                    <input 
-                      type="number" 
+                    <input
+                      type="number"
                       min="0"
-                      value={v.stock} 
+                      value={v.stock}
                       onChange={(e) => updateVariant(v.id, "stock", parseInt(e.target.value) || 0)}
                       className="w-full px-3 py-1.5 border border-slate-200 bg-slate-50 text-slate-500 rounded text-sm focus:outline-none font-mono cursor-not-allowed"
                       title="Stock limits are driven exclusively by Purchase records. You can override manually here if authorized."
                     />
                   </td>
                   <td className="px-4 py-2 text-center">
-                    <button 
-                      type="button" 
+                    <button
+                      type="button"
                       onClick={() => removeVariant(v.id)}
                       className="text-slate-400 hover:text-red-600 transition-colors p-1 rounded-md hover:bg-red-50"
                     >
@@ -286,10 +306,10 @@ export default function ProductFormClient({
             </tbody>
           </table>
           <div className="bg-white p-3 text-center border-t border-slate-100">
-            <button 
-               type="button"
-               onClick={addVariant}
-               className="text-xs font-medium text-indigo-600 hover:text-indigo-800 flex items-center justify-center gap-1 mx-auto bg-indigo-50 px-3 py-1.5 rounded-full transition-colors"
+            <button
+              type="button"
+              onClick={addVariant}
+              className="text-xs font-medium text-indigo-600 hover:text-indigo-800 flex items-center justify-center gap-1 mx-auto bg-indigo-50 px-3 py-1.5 rounded-full transition-colors"
             >
               <Plus className="w-3 h-3" />
               Add Size Variant
@@ -298,8 +318,8 @@ export default function ProductFormClient({
         </div>
 
         <div className="flex justify-end pt-4 border-t border-slate-100">
-          <button 
-            type="submit" 
+          <button
+            type="submit"
             disabled={loading}
             className="px-6 py-2.5 bg-slate-900 text-white font-medium rounded-md flex items-center justify-center gap-2 hover:bg-slate-800 transition-colors disabled:opacity-75 shadow-sm"
           >

@@ -37,6 +37,7 @@ export async function createProduct(data: {
   team: string;
   category: string;
   sizeChartId?: string;
+  discountId?: string | null;
   variants: { size: string; stock: number }[];
 }) {
   await prisma.product.create({
@@ -48,6 +49,7 @@ export async function createProduct(data: {
       team: data.team,
       category: data.category,
       sizeChartId: data.sizeChartId,
+      discountId: data.discountId,
       variants: {
         create: data.variants,
       },
@@ -67,6 +69,7 @@ export async function updateProduct(id: string, data: {
   team: string;
   category: string;
   sizeChartId?: string;
+  discountId?: string | null;
   variants: { size: string; stock: number }[];
 }) {
   await prisma.product.update({
@@ -79,6 +82,7 @@ export async function updateProduct(id: string, data: {
       team: data.team,
       category: data.category,
       sizeChartId: data.sizeChartId,
+      discountId: data.discountId,
     },
   });
 

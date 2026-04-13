@@ -33,7 +33,7 @@ export default function DiscountManager({ initialDiscounts }: { initialDiscounts
     if (!newName.trim() || !newValue) return;
     const valueNum = parseFloat(newValue);
     if (isNaN(valueNum) || valueNum <= 0) return alert("Please enter a valid discount amount.");
-    
+
     startTransition(async () => {
       const created = await createDiscount({ name: newName, discountType: newType, value: valueNum });
       setDiscounts(prev => [created, ...prev]);
@@ -108,8 +108,8 @@ export default function DiscountManager({ initialDiscounts }: { initialDiscounts
             <div className="w-32 space-y-1.5">
               <label className="text-xs font-bold text-slate-600 uppercase tracking-wider">Type</label>
               <select value={newType} onChange={e => setNewType(e.target.value as any)} className="w-full text-sm px-3 py-2 border border-indigo-200 rounded-md focus:border-indigo-400 bg-white">
-                <option value="PERCENTAGE">% Off</option>
-                <option value="FLAT">Flat ৳</option>
+                <option value="PERCENTAGE">Percentage</option>
+                <option value="FLAT">Flat</option>
               </select>
             </div>
             <div className="w-32 space-y-1.5">
@@ -134,7 +134,7 @@ export default function DiscountManager({ initialDiscounts }: { initialDiscounts
           <div className="divide-y divide-slate-100">
             {discounts.map(d => (
               <div key={d.id} className={`flex items-center px-6 py-4 hover:bg-slate-50 transition-colors ${!d.active ? "opacity-50" : ""}`}>
-                
+
                 {editingId === d.id ? (
                   /* Edit Row */
                   <div className="w-full flex items-end gap-4 p-2 bg-slate-50 border border-slate-200 rounded-lg">
@@ -145,8 +145,8 @@ export default function DiscountManager({ initialDiscounts }: { initialDiscounts
                     <div className="w-28 space-y-1">
                       <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Type</label>
                       <select value={editType} onChange={e => setEditType(e.target.value as any)} className="w-full text-sm px-2.5 py-1.5 border border-slate-300 rounded focus:border-indigo-500 bg-white">
-                        <option value="PERCENTAGE">% Off</option>
-                        <option value="FLAT">Flat Rate</option>
+                        <option value="PERCENTAGE">Percentage</option>
+                        <option value="FLAT">Flat</option>
                       </select>
                     </div>
                     <div className="w-24 space-y-1">
@@ -169,12 +169,12 @@ export default function DiscountManager({ initialDiscounts }: { initialDiscounts
                       <div className="flex items-center gap-2">
                         <h3 className="text-sm font-bold text-slate-800">{d.name}</h3>
                         {d.discountType === "PERCENTAGE" ? (
-                          <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-cyan-50 border border-cyan-100 text-cyan-700">
-                            <Percent className="w-3 h-3" /> Percentage
+                          <span className="inline-flex items-center text-[10px] font-bold px-2 py-0.5 rounded-full bg-cyan-50 border border-cyan-100 text-cyan-700">
+                            Percentage
                           </span>
                         ) : (
-                          <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 border border-emerald-100 text-emerald-700">
-                            <span className="text-xs">৳</span> Flat Rate
+                          <span className="inline-flex items-center text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 border border-emerald-100 text-emerald-700">
+                            Flat
                           </span>
                         )}
                       </div>
