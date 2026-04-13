@@ -5,9 +5,14 @@ import { ImagePlay } from "lucide-react";
 export const dynamic = "force-dynamic";
 
 export default async function AdminHeroPage() {
-  const slides = await prisma.heroSlide.findMany({
-    orderBy: { sortOrder: "asc" },
-  });
+  let slides: any[] = [];
+  try {
+    slides = await prisma.heroSlide.findMany({
+      orderBy: { sortOrder: "asc" },
+    });
+  } catch (error) {
+    console.error("Error fetching slides:", error);
+  }
 
   return (
     <div className="flex flex-col gap-6">

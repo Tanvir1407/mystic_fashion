@@ -14,10 +14,26 @@ function formatBDT(price: number) {
 }
 
 export default async function Home() {
-  const [products, heroSlides] = await Promise.all([
-    prisma.product.findMany({ take: 12, orderBy: { createdAt: "desc" }, include: { discount: true, variants: true } }),
-    prisma.heroSlide.findMany({ where: { active: true }, orderBy: { sortOrder: "asc" } }),
-  ]);
+  let products: any[] = [];
+  try {
+    products = await prisma.product.findMany({ 
+      take: 12, 
+      orderBy: { createdAt: "desc" }, 
+      include: { discount: true, variants: true } 
+    });
+  } catch (error) {
+    console.error("Error fetching products:", error);
+  }
+
+  let heroSlides: any[] = [];
+  try {
+    heroSlides = await prisma.heroSlide.findMany({ 
+      where: { active: true }, 
+      orderBy: { sortOrder: "asc" } 
+    });
+  } catch (error) {
+    console.error("Error fetching heroSlides:", error);
+  }
 
   return (
     <main className="min-h-screen bg-white dark:bg-zinc-950">
