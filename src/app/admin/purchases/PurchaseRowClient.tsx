@@ -2,7 +2,7 @@
 
 import { updatePurchaseStatus, deletePurchase } from "../actions";
 import { useState } from "react";
-import { Trash2 } from "lucide-react";
+import { DeleteWarningModal } from "@/components/DeleteWarningModal";
 
 export default function PurchaseRowClient({ purchase }: { purchase: any }) {
   const [status, setStatus] = useState<string>(purchase.status);
@@ -61,13 +61,18 @@ export default function PurchaseRowClient({ purchase }: { purchase: any }) {
           ))}
         </select>
         
-        <form className="opacity-0 group-hover:opacity-100 transition-opacity" action={async () => {
-          await deletePurchase(purchase.id);
-        }}>
-           <button type="submit" className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors" title="Delete Purchase">
-              <Trash2 className="w-4 h-4" />
-           </button>
-        </form>
+        <DeleteWarningModal
+          title={`Delete purchase from "${purchase.supplierName}"?`}
+          description={`Permanently removes invoice ${purchase.invoiceNumber || "N/A"} and all its line items. This cannot be undone.`}
+          impacts={[
+            { label: "Stock levels incremented by this purchase will NOT be reversed — inventory totals will become inaccurate.", severity: "high" },
+            { label: "Purchase cost data used to calculate product margins will be lost, breaking profit/loss calculations.", severity: "high" },
+            { label: `All ${purchase.items?.length || 0} purchase line item(s) will be permanently deleted from the database.`, severity: "high" },
+            { label: "Supplier purchase history reports may show gaps or incorrect totals.", severity: "medium" },
+            { label: "The invoice reference number will no longer be traceable in the system.", severity: "low" },
+          ]}
+          onConfirm={async () => { await deletePurchase(purchase.id); }}
+        />
       </td>
     </tr>
   );

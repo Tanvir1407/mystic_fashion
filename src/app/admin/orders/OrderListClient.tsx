@@ -61,7 +61,8 @@ export default function OrderListClient({ initialOrders }: { initialOrders: any[
           >
             <option value="ALL">All Statuses</option>
             <option value="PENDING">Pending</option>
-            <option value="PAID">Paid</option>
+            <option value="CONFIRMED">Confirmed</option>
+            <option value="PACKAGING">Packaging</option>
             <option value="SHIPPED">Shipped</option>
             <option value="DELIVERED">Delivered</option>
             <option value="CANCELLED">Cancelled</option>
@@ -79,7 +80,8 @@ export default function OrderListClient({ initialOrders }: { initialOrders: any[
               className="px-2 py-1 text-xs border border-indigo-200 rounded text-indigo-700 bg-white focus:outline-none"
             >
               <option value="PENDING">Set Pending</option>
-              <option value="PAID">Set Paid</option>
+              <option value="CONFIRMED">Set Confirmed</option>
+              <option value="PACKAGING">Set Packaging</option>
               <option value="SHIPPED">Set Shipped</option>
               <option value="DELIVERED">Set Delivered</option>
               <option value="CANCELLED">Set Cancelled</option>

@@ -1,7 +1,8 @@
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
 import { deleteProduct } from "../actions";
-import { Plus, Edit2, Trash2, Filter } from "lucide-react";
+import { Plus, Edit2, Filter } from "lucide-react";
+import { ProductDeleteButton } from "./ProductDeleteButton";
 
 export const dynamic = "force-dynamic";
 
@@ -78,26 +79,17 @@ export default async function AdminProductsPage() {
                         {product.team}
                       </span>
                     </td>
-                    <td className="px-6 py-4 flex items-center justify-end gap-2 md:opacity-0 group-hover:opacity-100 transition-opacity">
-                      <Link
-                        href={`/admin/products/${product.id}/edit`}
-                        className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-slate-100 rounded-md transition-colors"
-                        title="Edit Product"
-                      >
-                        <Edit2 className="w-4 h-4" />
-                      </Link>
-                      <form action={async () => {
-                        "use server";
-                        await deleteProduct(product.id);
-                      }}>
-                        <button
-                          type="submit"
-                          className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors"
-                          title="Delete Product"
+                    <td className="px-6 py-4 text-right">
+                      <div className="flex items-center justify-end gap-2">
+                        <Link
+                          href={`/admin/products/${product.id}/edit`}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-indigo-600 bg-indigo-50 border border-indigo-200 rounded-md hover:bg-indigo-100 hover:border-indigo-300 transition-colors"
                         >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </form>
+                          <Edit2 className="w-3.5 h-3.5" />
+                          Edit
+                        </Link>
+                        <ProductDeleteButton productId={product.id} productName={product.name} />
+                      </div>
                     </td>
                   </tr>
                 );

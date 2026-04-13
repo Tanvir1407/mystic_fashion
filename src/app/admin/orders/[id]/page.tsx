@@ -40,10 +40,13 @@ export default async function SingleOrderPage({ params }: { params: { id: string
           <h1 className="text-2xl font-bold tracking-tight text-slate-900 flex items-center gap-3">
             Order #{order.id.slice(0, 8).toUpperCase()}
             <span className={`text-[10px] px-2.5 py-1 rounded-sm uppercase tracking-wider font-black ${
-               order.status === 'DELIVERED' ? 'bg-green-100 text-green-700' :
-               order.status === 'PENDING' ? 'bg-amber-100 text-amber-700' :
-               order.status === 'CANCELLED' ? 'bg-red-100 text-red-700' :
-               'bg-blue-100 text-blue-700'
+               order.status === 'DELIVERED'  ? 'bg-green-100 text-green-700' :
+               order.status === 'PENDING'    ? 'bg-amber-100 text-amber-700' :
+               order.status === 'CONFIRMED'   ? 'bg-blue-100 text-blue-700' :
+               order.status === 'PACKAGING'  ? 'bg-purple-100 text-purple-700' :
+               order.status === 'SHIPPED'    ? 'bg-indigo-100 text-indigo-700' :
+               order.status === 'CANCELLED'  ? 'bg-red-100 text-red-700' :
+               'bg-slate-100 text-slate-700'
             }`}>
               {order.status}
             </span>

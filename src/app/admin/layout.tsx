@@ -23,73 +23,70 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             Mystic Admin
           </Link>
         </div>
-        
+
         <div className="px-5 py-6 font-semibold text-xs tracking-wider text-slate-500 uppercase">
           Overview
         </div>
         <nav className="flex-1 px-3 space-y-1">
           <Link
             href="/admin/products"
-            className={`flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-colors ${
-              pathname.includes("/admin/products")
+            className={`flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-colors ${pathname.includes("/admin/products")
                 ? "bg-maroon text-white shadow-md shadow-maroon/20"
                 : "hover:bg-slate-800 hover:text-white"
-            }`}
+              }`}
           >
             <Package className="w-4 h-4" />
             Products
           </Link>
-          <Link
-            href="/admin/size-charts"
-            className={`flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-colors ${
-              pathname.includes("/admin/size-charts")
-                ? "bg-maroon text-white shadow-md shadow-maroon/20"
-                : "hover:bg-slate-800 hover:text-white"
-            }`}
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-ruler"><path d="M21.3 15.3a2.4 2.4 0 0 1 0 3.4l-2.6 2.6a2.4 2.4 0 0 1-3.4 0L2.7 8.7a2.41 2.41 0 0 1 0-3.4l2.6-2.6a2.41 2.41 0 0 1 3.4 0Z"/><path d="m14.5 12.5 2-2"/><path d="m11.5 9.5 2-2"/><path d="m8.5 6.5 2-2"/><path d="m17.5 15.5 2-2"/></svg>
-            Size Charts
-          </Link>
-          <Link
-            href="/admin/hero"
-            className={`flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-colors ${
-              pathname.includes("/admin/hero")
-                ? "bg-maroon text-white shadow-md shadow-maroon/20"
-                : "hover:bg-slate-800 hover:text-white"
-            }`}
-          >
-            <ImagePlay className="w-4 h-4" />
-            Hero Slides
-          </Link>
+
           <Link
             href="/admin/orders"
-            className={`flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-colors ${
-              pathname.includes("/admin/orders")
+            className={`flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-colors ${pathname.includes("/admin/orders")
                 ? "bg-maroon text-white shadow-md shadow-maroon/20"
                 : "hover:bg-slate-800 hover:text-white"
-            }`}
+              }`}
           >
             <ShoppingCart className="w-4 h-4" />
             Orders
           </Link>
           <Link
             href="/admin/purchases"
-            className={`flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-colors ${
-              pathname.includes("/admin/purchases")
+            className={`flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-colors ${pathname.includes("/admin/purchases")
                 ? "bg-maroon text-white shadow-md shadow-maroon/20"
                 : "hover:bg-slate-800 hover:text-white"
-            }`}
+              }`}
           >
             <Truck className="w-4 h-4" />
             Purchases
           </Link>
+
           <Link
-            href="/admin/settings"
-            className={`flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-colors ${
-              pathname.includes("/admin/settings")
+            href="/admin/size-charts"
+            className={`flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-colors ${pathname.includes("/admin/size-charts")
                 ? "bg-maroon text-white shadow-md shadow-maroon/20"
                 : "hover:bg-slate-800 hover:text-white"
-            }`}
+              }`}
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-ruler"><path d="M21.3 15.3a2.4 2.4 0 0 1 0 3.4l-2.6 2.6a2.4 2.4 0 0 1-3.4 0L2.7 8.7a2.41 2.41 0 0 1 0-3.4l2.6-2.6a2.41 2.41 0 0 1 3.4 0Z" /><path d="m14.5 12.5 2-2" /><path d="m11.5 9.5 2-2" /><path d="m8.5 6.5 2-2" /><path d="m17.5 15.5 2-2" /></svg>
+            Size Charts
+          </Link>
+          <Link
+            href="/admin/hero"
+            className={`flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-colors ${pathname.includes("/admin/hero")
+                ? "bg-maroon text-white shadow-md shadow-maroon/20"
+                : "hover:bg-slate-800 hover:text-white"
+              }`}
+          >
+            <ImagePlay className="w-4 h-4" />
+            Hero Slides
+          </Link>
+
+          <Link
+            href="/admin/settings"
+            className={`flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-colors ${pathname.includes("/admin/settings")
+                ? "bg-maroon text-white shadow-md shadow-maroon/20"
+                : "hover:bg-slate-800 hover:text-white"
+              }`}
           >
             <Settings className="w-4 h-4" />
             Settings
@@ -114,9 +111,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           <div className="flex-1 flex items-center">
             <div className="relative w-72">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-              <input 
-                type="text" 
-                placeholder="Search resources..." 
+              <input
+                type="text"
+                placeholder="Search resources..."
                 className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-md text-sm focus:border-slate-300 focus:bg-white focus:ring-0 transition-colors"
               />
             </div>

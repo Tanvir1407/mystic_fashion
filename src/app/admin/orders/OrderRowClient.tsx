@@ -68,20 +68,30 @@ export default function OrderRowClient({
           onChange={handleStatusChange}
           disabled={loading}
           className={`px-3 py-1.5 rounded-md text-xs font-medium border focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors shadow-sm ${
-            status === 'DELIVERED' ? 'bg-green-50 text-green-700 border-green-200' :
-            status === 'PENDING' ? 'bg-amber-50 text-amber-700 border-amber-200' :
-            status === 'CANCELLED' ? 'bg-red-50 text-red-700 border-red-200' :
-            'bg-blue-50 text-blue-700 border-blue-200'
+            status === 'DELIVERED'  ? 'bg-green-50 text-green-700 border-green-200' :
+            status === 'PENDING'    ? 'bg-amber-50 text-amber-700 border-amber-200' :
+            status === 'CONFIRMED'   ? 'bg-blue-50 text-blue-700 border-blue-200' :
+            status === 'PACKAGING'  ? 'bg-purple-50 text-purple-700 border-purple-200' :
+            status === 'SHIPPED'    ? 'bg-indigo-50 text-indigo-700 border-indigo-200' :
+            status === 'CANCELLED'  ? 'bg-red-50 text-red-700 border-red-200' :
+            'bg-slate-50 text-slate-700 border-slate-200'
           }`}
         >
-          {['PENDING', 'PAID', 'SHIPPED', 'DELIVERED', 'CANCELLED'].map((s) => (
-            <option key={s} value={s}>{s}</option>
-          ))}
+          <option value="PENDING">Pending</option>
+          <option value="CONFIRMED">Confirmed</option>
+          <option value="PACKAGING">Packaging</option>
+          <option value="SHIPPED">Shipped</option>
+          <option value="DELIVERED">Delivered</option>
+          <option value="CANCELLED">Cancelled</option>
         </select>
       </td>
       <td className="px-6 py-4 text-right">
-        <Link href={`/admin/orders/${order.id}`} className="inline-flex items-center justify-center p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors rounded-md group-hover:bg-white border border-transparent group-hover:border-slate-200">
+        <Link
+          href={`/admin/orders/${order.id}`}
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-indigo-600 bg-indigo-50 border border-indigo-200 rounded-md hover:bg-indigo-100 hover:border-indigo-300 transition-colors"
+        >
           <Eye className="w-4 h-4" />
+          View
         </Link>
       </td>
     </tr>
