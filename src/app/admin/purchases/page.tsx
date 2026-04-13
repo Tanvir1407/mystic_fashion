@@ -3,20 +3,32 @@ import PurchaseRowClient from "./PurchaseRowClient";
 import { Filter, Plus } from "lucide-react";
 import Link from "next/link";
 
+import { AdminPagination } from "@/components/AdminPagination";
+
 export const dynamic = "force-dynamic";
 
-export default async function AdminPurchasesPage() {
-  const purchases = await prisma.purchase.findMany({
-    orderBy: { createdAt: "desc" },
-    include: {
-      items: {
-        include: {
-          product: true,
-          variant: true
+export default async function AdminPurchasesPage({ searchParams }: { searchParams: { page?: string } }) {
+  const page = Number(searchParams?.page) || 1;
+  const PER_PAGE = 10;
+
+  const [purchases, totalCount] = await Promise.all([
+    prisma.purchase.findMany({
+      skip: (page - 1) * PER_PAGE,
+      take: PER_PAGE,
+      orderBy: { createdAt: "desc" },
+      include: {
+        items: {
+          include: {
+            product: true,
+            variant: true
+          }
         }
       }
-    }
-  });
+    }),
+    prisma.purchase.count()
+  ]);
+
+  const totalPages = Math.ceil(totalCount / PER_PAGE);
 
   return (
     <div className="flex flex-col gap-6">
@@ -70,6 +82,7 @@ export default async function AdminPurchasesPage() {
             </tbody>
           </table>
         </div>
+        <AdminPagination currentPage={page} totalPages={totalPages} />
       </div>
     </div>
   );

@@ -6,13 +6,26 @@ import type { OrderStatus } from "@/generated/prisma/client";
 import { bulkUpdateOrderStatus } from "../actions";
 import { Filter } from "lucide-react";
 
-export default function OrderListClient({ initialOrders }: { initialOrders: any[] }) {
-  const [filter, setFilter] = useState<OrderStatus | "ALL">("ALL");
+import { useRouter } from "next/navigation";
+import { AdminPagination } from "@/components/AdminPagination";
+
+export default function OrderListClient({ 
+  initialOrders,
+  currentPage = 1,
+  totalPages = 1,
+  currentFilter = "ALL"
+}: { 
+  initialOrders: any[],
+  currentPage?: number,
+  totalPages?: number,
+  currentFilter?: string
+}) {
+  const router = useRouter();
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkStatus, setBulkStatus] = useState<OrderStatus>("PENDING");
   const [loading, setLoading] = useState(false);
 
-  const filteredOrders = initialOrders.filter(o => filter === "ALL" || o.status === filter);
+  const filteredOrders = initialOrders; // Filtering is now done on the server
 
   const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.checked) {
@@ -52,10 +65,11 @@ export default function OrderListClient({ initialOrders }: { initialOrders: any[
         <div className="flex items-center gap-3">
           <Filter className="w-4 h-4 text-slate-400" />
           <select 
-            value={filter} 
+            value={currentFilter} 
             onChange={e => {
-              setFilter(e.target.value as OrderStatus | "ALL");
+              const newFilter = e.target.value;
               setSelectedIds(new Set());
+              router.push(`/admin/orders?filter=${newFilter}&page=1`);
             }}
             className="text-sm border-0 font-medium text-slate-700 bg-transparent py-1 pl-1 pr-6 focus:ring-0 cursor-pointer focus:outline-none"
           >
@@ -139,6 +153,7 @@ export default function OrderListClient({ initialOrders }: { initialOrders: any[
             </tbody>
           </table>
         </div>
+        <AdminPagination currentPage={currentPage} totalPages={totalPages} />
       </div>
     </div>
   );

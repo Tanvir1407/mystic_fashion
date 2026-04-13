@@ -3,17 +3,31 @@ import OrderListClient from "./OrderListClient";
 
 export const dynamic = "force-dynamic";
 
-export default async function AdminOrdersPage() {
-  const orders = await prisma.order.findMany({
-    orderBy: { createdAt: "desc" },
-    include: {
-      items: {
-        include: {
-          product: true,
+export default async function AdminOrdersPage({ searchParams }: { searchParams: { page?: string, filter?: string } }) {
+  const page = Number(searchParams?.page) || 1;
+  const filter = searchParams?.filter || "ALL";
+  const PER_PAGE = 10;
+
+  const whereClause = filter !== "ALL" ? { status: filter as any } : {};
+
+  const [orders, totalCount] = await Promise.all([
+    prisma.order.findMany({
+      where: whereClause,
+      skip: (page - 1) * PER_PAGE,
+      take: PER_PAGE,
+      orderBy: { createdAt: "desc" },
+      include: {
+        items: {
+          include: {
+            product: true,
+          },
         },
       },
-    },
-  });
+    }),
+    prisma.order.count({ where: whereClause })
+  ]);
 
-  return <OrderListClient initialOrders={orders} />;
+  const totalPages = Math.ceil(totalCount / PER_PAGE);
+
+  return <OrderListClient initialOrders={orders} currentPage={page} totalPages={totalPages} currentFilter={filter} />;
 }

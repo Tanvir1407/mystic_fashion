@@ -4,13 +4,25 @@ import { deleteProduct } from "../actions";
 import { Plus, Edit2, Filter } from "lucide-react";
 import { ProductDeleteButton } from "./ProductDeleteButton";
 
+import { AdminPagination } from "@/components/AdminPagination";
+
 export const dynamic = "force-dynamic";
 
-export default async function AdminProductsPage() {
-  const products = await prisma.product.findMany({
-    orderBy: { team: "asc" },
-    include: { variants: true }
-  });
+export default async function AdminProductsPage({ searchParams }: { searchParams: { page?: string } }) {
+  const page = Number(searchParams?.page) || 1;
+  const PER_PAGE = 10;
+
+  const [products, totalCount] = await Promise.all([
+    prisma.product.findMany({
+      skip: (page - 1) * PER_PAGE,
+      take: PER_PAGE,
+      orderBy: { team: "asc" },
+      include: { variants: true }
+    }),
+    prisma.product.count()
+  ]);
+
+  const totalPages = Math.ceil(totalCount / PER_PAGE);
 
   return (
     <div className="flex flex-col gap-6">
@@ -104,6 +116,7 @@ export default async function AdminProductsPage() {
             </tbody>
           </table>
         </div>
+        <AdminPagination currentPage={page} totalPages={totalPages} />
       </div>
     </div>
   );
