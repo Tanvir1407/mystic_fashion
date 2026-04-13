@@ -12,15 +12,23 @@ export default async function AdminProductsPage({ searchParams }: { searchParams
   const page = Number(searchParams?.page) || 1;
   const PER_PAGE = 10;
 
-  const [products, totalCount] = await Promise.all([
-    prisma.product.findMany({
-      skip: (page - 1) * PER_PAGE,
-      take: PER_PAGE,
-      orderBy: { team: "asc" },
-      include: { variants: true }
-    }),
-    prisma.product.count()
-  ]);
+  let products: any[] = [];
+  let totalCount = 0;
+  try {
+    const [fetchedProducts, fetchedCount] = await Promise.all([
+      prisma.product.findMany({
+        skip: (page - 1) * PER_PAGE,
+        take: PER_PAGE,
+        orderBy: { team: "asc" },
+        include: { variants: true }
+      }),
+      prisma.product.count()
+    ]);
+    products = fetchedProducts;
+    totalCount = fetchedCount;
+  } catch (error) {
+    console.error("Error fetching products:", error);
+  }
 
   const totalPages = Math.ceil(totalCount / PER_PAGE);
 

@@ -18,14 +18,29 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
   }
 
   // Fetch all data concurrently
-  const [ordersInRange, allProducts, allPurchases] = await Promise.all([
-    prisma.order.findMany({
+  let ordersInRange: any[] = [];
+  try {
+    ordersInRange = await prisma.order.findMany({
       where: { createdAt: { gte: startDate } },
       include: { items: { include: { product: true } } }
-    }),
-    prisma.product.findMany({ include: { variants: true } }),
-    prisma.purchase.findMany({ where: { createdAt: { gte: startDate } } })
-  ]);
+    });
+  } catch (error) {
+    console.error("Error fetching orders:", error);
+  }
+
+  let allProducts: any[] = [];
+  try {
+    allProducts = await prisma.product.findMany({ include: { variants: true } });
+  } catch (error) {
+    console.error("Error fetching products:", error);
+  }
+
+  let allPurchases: any[] = [];
+  try {
+    allPurchases = await prisma.purchase.findMany({ where: { createdAt: { gte: startDate } } });
+  } catch (error) {
+    console.error("Error fetching purchases:", error);
+  }
 
   // ── Row 1: Quantity-based metrics ──
   // Current stock count (absolute state, not time-filtered)

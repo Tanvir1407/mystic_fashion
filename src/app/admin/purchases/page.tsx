@@ -11,22 +11,30 @@ export default async function AdminPurchasesPage({ searchParams }: { searchParam
   const page = Number(searchParams?.page) || 1;
   const PER_PAGE = 10;
 
-  const [purchases, totalCount] = await Promise.all([
-    prisma.purchase.findMany({
-      skip: (page - 1) * PER_PAGE,
-      take: PER_PAGE,
-      orderBy: { createdAt: "desc" },
-      include: {
-        items: {
-          include: {
-            product: true,
-            variant: true
+  let purchases: any[] = [];
+  let totalCount = 0;
+  try {
+    const [fetchedPurchases, fetchedCount] = await Promise.all([
+      prisma.purchase.findMany({
+        skip: (page - 1) * PER_PAGE,
+        take: PER_PAGE,
+        orderBy: { createdAt: "desc" },
+        include: {
+          items: {
+            include: {
+              product: true,
+              variant: true
+            }
           }
         }
-      }
-    }),
-    prisma.purchase.count()
-  ]);
+      }),
+      prisma.purchase.count()
+    ]);
+    purchases = fetchedPurchases;
+    totalCount = fetchedCount;
+  } catch (error) {
+    console.error("Error fetching purchases:", error);
+  }
 
   const totalPages = Math.ceil(totalCount / PER_PAGE);
 

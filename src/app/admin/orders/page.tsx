@@ -10,22 +10,30 @@ export default async function AdminOrdersPage({ searchParams }: { searchParams: 
 
   const whereClause = filter !== "ALL" ? { status: filter as any } : {};
 
-  const [orders, totalCount] = await Promise.all([
-    prisma.order.findMany({
-      where: whereClause,
-      skip: (page - 1) * PER_PAGE,
-      take: PER_PAGE,
-      orderBy: { createdAt: "desc" },
-      include: {
-        items: {
-          include: {
-            product: true,
+  let orders: any[] = [];
+  let totalCount = 0;
+  try {
+    const [fetchedOrders, fetchedCount] = await Promise.all([
+      prisma.order.findMany({
+        where: whereClause,
+        skip: (page - 1) * PER_PAGE,
+        take: PER_PAGE,
+        orderBy: { createdAt: "desc" },
+        include: {
+          items: {
+            include: {
+              product: true,
+            },
           },
         },
-      },
-    }),
-    prisma.order.count({ where: whereClause })
-  ]);
+      }),
+      prisma.order.count({ where: whereClause })
+    ]);
+    orders = fetchedOrders;
+    totalCount = fetchedCount;
+  } catch (error) {
+    console.error("Error fetching orders:", error);
+  }
 
   const totalPages = Math.ceil(totalCount / PER_PAGE);
 
