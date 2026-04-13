@@ -16,7 +16,7 @@ export default function PurchaseRowClient({ purchase }: { purchase: any }) {
     setLoading(false);
   };
 
-  const items = purchase.itemsJSON || [];
+  const items = purchase.items || [];
 
   return (
     <tr className="hover:bg-slate-50/50 transition-colors group">
@@ -35,7 +35,7 @@ export default function PurchaseRowClient({ purchase }: { purchase: any }) {
         <div className="flex flex-col gap-0.5 max-h-24 overflow-y-auto">
           {items.map((item: any, idx: number) => (
              <div key={idx} className="text-xs font-medium text-slate-600">
-              <span className="text-slate-400">{item.quantity}x</span> {item.name}
+              <span className="text-slate-400">{item.quantity}x</span> {item.product.name} ({item.variant.size})
             </div>
           ))}
           {items.length === 0 && <span className="text-xs text-slate-400 italic">No items detailed</span>}

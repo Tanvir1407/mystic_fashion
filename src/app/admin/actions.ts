@@ -27,26 +27,28 @@ export async function adminLogout() {
   redirect("/admin/login");
 }
 
-export async function createProduct(formData: FormData) {
-  const name = formData.get("name") as string;
-  const description = formData.get("description") as string;
-  const price = parseFloat(formData.get("price") as string);
-  const images = (formData.get("images") as string).split(",").map((i) => i.trim());
-  const sizes = (formData.get("sizes") as string).split(",").map((i) => i.trim());
-  const team = formData.get("team") as string;
-  const stock = parseInt(formData.get("stock") as string, 10);
-  const category = formData.get("category") as string;
-
+export async function createProduct(data: {
+  name: string;
+  description: string;
+  price: number;
+  images: string[];
+  team: string;
+  category: string;
+  sizeChartId?: string;
+  variants: { size: string; stock: number }[];
+}) {
   await prisma.product.create({
     data: {
-      name,
-      description,
-      price,
-      images,
-      sizes,
-      team,
-      stock,
-      category,
+      name: data.name,
+      description: data.description,
+      price: data.price,
+      images: data.images,
+      team: data.team,
+      category: data.category,
+      sizeChartId: data.sizeChartId,
+      variants: {
+        create: data.variants,
+      },
     },
   });
 
@@ -55,27 +57,43 @@ export async function createProduct(formData: FormData) {
   redirect("/admin/products");
 }
 
-export async function updateProduct(id: string, formData: FormData) {
-  const name = formData.get("name") as string;
-  const description = formData.get("description") as string;
-  const price = parseFloat(formData.get("price") as string);
-  const images = (formData.get("images") as string).split(",").map((i) => i.trim());
-  const sizes = (formData.get("sizes") as string).split(",").map((i) => i.trim());
-  const team = formData.get("team") as string;
-  const stock = parseInt(formData.get("stock") as string, 10);
-  const category = formData.get("category") as string;
-
+export async function updateProduct(id: string, data: {
+  name: string;
+  description: string;
+  price: number;
+  images: string[];
+  team: string;
+  category: string;
+  sizeChartId?: string;
+  variants: { size: string; stock: number }[];
+}) {
   await prisma.product.update({
     where: { id },
     data: {
-      name,
-      description,
-      price,
-      images,
-      sizes,
-      team,
-      stock,
-      category,
+      name: data.name,
+      description: data.description,
+      price: data.price,
+      images: data.images,
+      team: data.team,
+      category: data.category,
+      sizeChartId: data.sizeChartId,
+    },
+  });
+
+  await prisma.$transaction(
+    data.variants.map((v) =>
+      prisma.productVariant.upsert({
+        where: { productId_size: { productId: id, size: v.size } },
+        update: { stock: v.stock },
+        create: { productId: id, size: v.size, stock: v.stock },
+      })
+    )
+  );
+
+  await prisma.productVariant.deleteMany({
+    where: {
+      productId: id,
+      size: { notIn: data.variants.map((v) => v.size) },
     },
   });
 
@@ -102,7 +120,7 @@ export async function updateOrderStatus(orderId: string, status: OrderStatus) {
 }
 
 export async function saveSizeChart(category: string, data: any) {
-  await prisma.SizeChart.upsert({
+  await prisma.sizeChart.upsert({
     where: { category },
     update: { data },
     create: { category, data },
@@ -118,17 +136,42 @@ export async function deleteSizeChart(id: string) {
   revalidatePath("/admin/size-charts");
 }
 
-export async function createPurchase(supplierName: string, invoiceNumber: string, totalAmount: number, items: any) {
-  await prisma.purchase.create({
+export async function createPurchase(
+  supplierName: string,
+  invoiceNumber: string,
+  totalAmount: number,
+  items: { productId: string; variantId: string; quantity: number; unitPrice: number }[]
+) {
+  const purchase = await prisma.purchase.create({
     data: {
       supplierName,
       invoiceNumber,
       totalAmount,
-      itemsJSON: items,
-      status: "PENDING"
-    }
+      status: "COMPLETED", // Assuming immediate stock update on creation
+      items: {
+        create: items.map((i) => ({
+          productId: i.productId,
+          variantId: i.variantId,
+          quantity: i.quantity,
+          unitPrice: i.unitPrice,
+        })),
+      },
+    },
   });
+
+  for (const item of items) {
+    await prisma.productVariant.update({
+      where: { id: item.variantId },
+      data: { stock: { increment: item.quantity } },
+    });
+    await prisma.product.update({
+      where: { id: item.productId },
+      data: { purchasePrice: item.unitPrice },
+    });
+  }
+
   revalidatePath("/admin/purchases");
+  revalidatePath("/admin/products");
   redirect("/admin/purchases");
 }
 
@@ -140,7 +183,7 @@ export async function deletePurchase(id: string) {
 export async function updatePurchaseStatus(id: string, status: string) {
   await prisma.purchase.update({
     where: { id },
-    data: { status }
+    data: { status },
   });
   revalidatePath("/admin/purchases");
 }

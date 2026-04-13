@@ -25,18 +25,55 @@ enum AdminRole {
   MANAGER
 }
 
-model Product {
-  id          String   @id @default(uuid())
-  name        String
-  description String
-  price       Float
-  images      String[]
-  sizes       String[]
-  team        String
-  stock       Int
-  category    String
+model Admin {
+  id        String    @id @default(uuid())
+  email     String    @unique
+  password  String
+  role      AdminRole @default(MANAGER)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+}
 
-  orderItems OrderItem[]
+model SizeChart {
+  id        String    @id @default(uuid())
+  category  String    @unique
+  data      Json
+  products  Product[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+}
+
+model Product {
+  id            String   @id @default(uuid())
+  name          String
+  description   String
+  price         Float
+  purchasePrice Float?   // Updated dynamically from purchases
+  images        String[]
+  team          String
+  category      String
+  
+  sizeChartId   String?
+  sizeChart     SizeChart? @relation(fields: [sizeChartId], references: [id])
+
+  variants      ProductVariant[]
+  orderItems    OrderItem[]
+  purchaseItems PurchaseItem[]
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model ProductVariant {
+  id        String   @id @default(uuid())
+  productId String
+  size      String   
+  stock     Int      @default(0)
+
+  product       Product        @relation(fields: [productId], references: [id], onDelete: Cascade)
+  purchaseItems PurchaseItem[]
+
+  @@unique([productId, size])
 }
 
 model Order {
@@ -63,30 +100,26 @@ model OrderItem {
   product Product @relation(fields: [productId], references: [id])
 }
 
-model Admin {
-  id        String    @id @default(uuid())
-  email     String    @unique
-  password  String
-  role      AdminRole @default(MANAGER)
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-}
-
-model SizeChart {
-  id        String   @id @default(uuid())
-  category  String   @unique
-  data      Json
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-
 model Purchase {
   id            String   @id @default(uuid())
   supplierName  String
   invoiceNumber String?
   totalAmount   Float
   status        String   @default("PENDING") // PENDING, COMPLETED, CANCELLED
-  itemsJSON     Json?
+  items         PurchaseItem[]
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
+}
+
+model PurchaseItem {
+  id            String   @id @default(uuid())
+  purchaseId    String
+  productId     String
+  variantId     String  
+  quantity      Int
+  unitPrice     Float   
+  
+  purchase      Purchase       @relation(fields: [purchaseId], references: [id], onDelete: Cascade)
+  product       Product        @relation(fields: [productId], references: [id])
+  variant       ProductVariant @relation(fields: [variantId], references: [id])
 }

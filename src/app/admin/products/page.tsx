@@ -8,6 +8,7 @@ export const dynamic = "force-dynamic";
 export default async function AdminProductsPage() {
   const products = await prisma.product.findMany({
     orderBy: { team: "asc" },
+    include: { variants: true }
   });
 
   return (
@@ -49,7 +50,9 @@ export default async function AdminProductsPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200">
-              {products.map((product) => (
+              {products.map((product) => {
+                const totalStock = product.variants.reduce((acc: number, v: any) => acc + v.stock, 0);
+                return (
                 <tr key={product.id} className="hover:bg-slate-50/50 transition-colors group">
                   <td className="px-6 py-4">
                     <div className="flex flex-col">
@@ -58,11 +61,16 @@ export default async function AdminProductsPage() {
                     </div>
                   </td>
                   <td className="px-6 py-4 text-sm text-slate-600 font-mono">
-                    ৳{product.price.toLocaleString("en-IN")}
+                    <div className="flex flex-col">
+                      <span>৳{product.price.toLocaleString("en-IN")}</span>
+                      {product.purchasePrice && (
+                        <span className="text-[10px] text-slate-400 mt-0.5 line-through">Cost: ৳{product.purchasePrice}</span>
+                      )}
+                    </div>
                   </td>
                   <td className="px-6 py-4">
-                    <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${product.stock > 10 ? 'bg-green-100 text-green-800' : product.stock > 0 ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'}`}>
-                      {product.stock} in stock
+                    <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${totalStock > 10 ? 'bg-green-100 text-green-800' : totalStock > 0 ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'}`}>
+                      {totalStock} in stock
                     </span>
                   </td>
                   <td className="px-6 py-4 text-sm text-slate-600">
@@ -92,7 +100,8 @@ export default async function AdminProductsPage() {
                     </form>
                   </td>
                 </tr>
-              ))}
+                );
+              })}
               {products.length === 0 && (
                 <tr>
                   <td colSpan={5} className="px-6 py-12 text-center">

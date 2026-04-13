@@ -6,9 +6,16 @@ import Link from "next/link";
 export const dynamic = "force-dynamic";
 
 export default async function AdminPurchasesPage() {
-  // @ts-ignore - Ignore TS error until prisma schema is pushed and generated locally by the user
   const purchases = await prisma.purchase.findMany({
     orderBy: { createdAt: "desc" },
+    include: {
+      items: {
+        include: {
+          product: true,
+          variant: true
+        }
+      }
+    }
   });
 
   return (
