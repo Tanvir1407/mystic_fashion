@@ -31,8 +31,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           <Link
             href="/admin/products"
             className={`flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-colors ${pathname.includes("/admin/products")
-                ? "bg-maroon text-white shadow-md shadow-maroon/20"
-                : "hover:bg-slate-800 hover:text-white"
+              ? "bg-maroon text-white shadow-md shadow-maroon/20"
+              : "hover:bg-slate-800 hover:text-white"
               }`}
           >
             <Package className="w-4 h-4" />
@@ -42,8 +42,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           <Link
             href="/admin/orders"
             className={`flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-colors ${pathname.includes("/admin/orders")
-                ? "bg-maroon text-white shadow-md shadow-maroon/20"
-                : "hover:bg-slate-800 hover:text-white"
+              ? "bg-maroon text-white shadow-md shadow-maroon/20"
+              : "hover:bg-slate-800 hover:text-white"
               }`}
           >
             <ShoppingCart className="w-4 h-4" />
@@ -52,19 +52,28 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           <Link
             href="/admin/purchases"
             className={`flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-colors ${pathname.includes("/admin/purchases")
-                ? "bg-maroon text-white shadow-md shadow-maroon/20"
-                : "hover:bg-slate-800 hover:text-white"
+              ? "bg-maroon text-white shadow-md shadow-maroon/20"
+              : "hover:bg-slate-800 hover:text-white"
               }`}
           >
             <Truck className="w-4 h-4" />
             Purchases
           </Link>
-
+          <Link
+            href="/admin/discounts"
+            className={`flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-colors ${pathname.includes("/admin/discounts")
+              ? "bg-maroon text-white shadow-md shadow-maroon/20"
+              : "hover:bg-slate-800 hover:text-white"
+              }`}
+          >
+            <Tag className="w-4 h-4" />
+            Discounts
+          </Link>
           <Link
             href="/admin/size-charts"
             className={`flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-colors ${pathname.includes("/admin/size-charts")
-                ? "bg-maroon text-white shadow-md shadow-maroon/20"
-                : "hover:bg-slate-800 hover:text-white"
+              ? "bg-maroon text-white shadow-md shadow-maroon/20"
+              : "hover:bg-slate-800 hover:text-white"
               }`}
           >
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-ruler"><path d="M21.3 15.3a2.4 2.4 0 0 1 0 3.4l-2.6 2.6a2.4 2.4 0 0 1-3.4 0L2.7 8.7a2.41 2.41 0 0 1 0-3.4l2.6-2.6a2.41 2.41 0 0 1 3.4 0Z" /><path d="m14.5 12.5 2-2" /><path d="m11.5 9.5 2-2" /><path d="m8.5 6.5 2-2" /><path d="m17.5 15.5 2-2" /></svg>
@@ -73,8 +82,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           <Link
             href="/admin/hero"
             className={`flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-colors ${pathname.includes("/admin/hero")
-                ? "bg-maroon text-white shadow-md shadow-maroon/20"
-                : "hover:bg-slate-800 hover:text-white"
+              ? "bg-maroon text-white shadow-md shadow-maroon/20"
+              : "hover:bg-slate-800 hover:text-white"
               }`}
           >
             <ImagePlay className="w-4 h-4" />
@@ -84,23 +93,14 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           <Link
             href="/admin/settings"
             className={`flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-colors ${pathname.includes("/admin/settings")
-                ? "bg-maroon text-white shadow-md shadow-maroon/20"
-                : "hover:bg-slate-800 hover:text-white"
+              ? "bg-maroon text-white shadow-md shadow-maroon/20"
+              : "hover:bg-slate-800 hover:text-white"
               }`}
           >
             <Settings className="w-4 h-4" />
             Settings
           </Link>
-          <Link
-            href="/admin/discounts"
-            className={`flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-colors ${pathname.includes("/admin/discounts")
-                ? "bg-maroon text-white shadow-md shadow-maroon/20"
-                : "hover:bg-slate-800 hover:text-white"
-              }`}
-          >
-            <Tag className="w-4 h-4" />
-            Discounts
-          </Link>
+
         </nav>
 
         <div className="p-4 border-t border-slate-800">
