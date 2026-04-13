@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { adminLogout } from "./actions";
-import { Package, ShoppingCart, LogOut, Search, Bell, User, Truck, Settings } from "lucide-react";
+import { Package, ShoppingCart, LogOut, Search, Bell, User, Truck, Settings, ImagePlay } from "lucide-react";
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -49,6 +49,17 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           >
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-ruler"><path d="M21.3 15.3a2.4 2.4 0 0 1 0 3.4l-2.6 2.6a2.4 2.4 0 0 1-3.4 0L2.7 8.7a2.41 2.41 0 0 1 0-3.4l2.6-2.6a2.41 2.41 0 0 1 3.4 0Z"/><path d="m14.5 12.5 2-2"/><path d="m11.5 9.5 2-2"/><path d="m8.5 6.5 2-2"/><path d="m17.5 15.5 2-2"/></svg>
             Size Charts
+          </Link>
+          <Link
+            href="/admin/hero"
+            className={`flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-colors ${
+              pathname.includes("/admin/hero")
+                ? "bg-maroon text-white shadow-md shadow-maroon/20"
+                : "hover:bg-slate-800 hover:text-white"
+            }`}
+          >
+            <ImagePlay className="w-4 h-4" />
+            Hero Slides
           </Link>
           <Link
             href="/admin/orders"

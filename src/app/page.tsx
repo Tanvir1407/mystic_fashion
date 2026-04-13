@@ -14,15 +14,15 @@ function formatBDT(price: number) {
 }
 
 export default async function Home() {
-  const products = await prisma.product.findMany({
-    take: 12,
-    orderBy: { createdAt: "desc" },
-  });
+  const [products, heroSlides] = await Promise.all([
+    prisma.product.findMany({ take: 12, orderBy: { createdAt: "desc" } }),
+    prisma.heroSlide.findMany({ where: { active: true }, orderBy: { sortOrder: "asc" } }),
+  ]);
 
   return (
     <main className="min-h-screen bg-white dark:bg-zinc-950">
       <Header />
-      <HeroCarousel />
+      <HeroCarousel slides={heroSlides} />
 
       <section className="container mx-auto py-20 px-4 md:px-0">
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">

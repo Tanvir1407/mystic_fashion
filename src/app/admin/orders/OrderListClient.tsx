@@ -53,7 +53,10 @@ export default function OrderListClient({ initialOrders }: { initialOrders: any[
           <Filter className="w-4 h-4 text-slate-400" />
           <select 
             value={filter} 
-            onChange={e => setFilter(e.target.value as OrderStatus | "ALL")}
+            onChange={e => {
+              setFilter(e.target.value as OrderStatus | "ALL");
+              setSelectedIds(new Set());
+            }}
             className="text-sm border-0 font-medium text-slate-700 bg-transparent py-1 pl-1 pr-6 focus:ring-0 cursor-pointer focus:outline-none"
           >
             <option value="ALL">All Statuses</option>
