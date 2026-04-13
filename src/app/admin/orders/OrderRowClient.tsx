@@ -2,7 +2,7 @@
 
 import type { OrderStatus } from "@/generated/prisma/client";
 import { updateOrderStatus } from "../actions";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Eye } from "lucide-react";
 
@@ -19,6 +19,10 @@ export default function OrderRowClient({
 }) {
   const [status, setStatus] = useState<OrderStatus>(order.status);
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    setStatus(order.status);
+  }, [order.status]);
 
   const handleStatusChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
     const newStatus = e.target.value as OrderStatus;

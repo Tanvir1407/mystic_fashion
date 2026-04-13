@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import OrderRowClient from "./OrderRowClient";
 import type { OrderStatus } from "@/generated/prisma/client";
 import { bulkUpdateOrderStatus } from "../actions";
@@ -24,8 +24,13 @@ export default function OrderListClient({
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkStatus, setBulkStatus] = useState<OrderStatus>("PENDING");
   const [loading, setLoading] = useState(false);
+  const [optimisticOrders, setOptimisticOrders] = useState(initialOrders);
 
-  const filteredOrders = initialOrders; // Filtering is now done on the server
+  useEffect(() => {
+    setOptimisticOrders(initialOrders);
+  }, [initialOrders]);
+
+  const filteredOrders = optimisticOrders; // Filtering is now done on the server
 
   const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.checked) {
@@ -45,9 +50,23 @@ export default function OrderListClient({
   const handleBulkUpdate = async () => {
     if (selectedIds.size === 0) return;
     setLoading(true);
-    await bulkUpdateOrderStatus(Array.from(selectedIds), bulkStatus);
-    setSelectedIds(new Set());
-    setLoading(false);
+
+    // Optimistic Update
+    setOptimisticOrders(prev => prev.map(o => 
+      selectedIds.has(o.id) ? { ...o, status: bulkStatus } : o
+    ));
+
+    try {
+      await bulkUpdateOrderStatus(Array.from(selectedIds), bulkStatus);
+      setSelectedIds(new Set());
+      router.refresh();
+    } catch (error) {
+      // Revert if error
+      setOptimisticOrders(initialOrders);
+      console.error(error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
