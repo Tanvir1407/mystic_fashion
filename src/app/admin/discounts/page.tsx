@@ -4,9 +4,14 @@ import DiscountManager from "./DiscountManager";
 export const dynamic = "force-dynamic";
 
 export default async function AdminDiscountsPage() {
-  const discounts = await prisma.discount.findMany({
-    orderBy: { createdAt: "desc" },
-  });
+  let discounts: any[] = [];
+  try {
+    discounts = await prisma.discount.findMany({
+      orderBy: { createdAt: "desc" },
+    });
+  } catch (error) {
+    console.error("Error fetching discounts:", error);
+  }
 
   return (
     <div className="flex flex-col gap-6">

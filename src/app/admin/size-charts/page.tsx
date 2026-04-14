@@ -7,9 +7,14 @@ export const dynamic = "force-dynamic";
 
 export default async function AdminSizeChartsPage() {
   // @ts-ignore - Ignore TS error until prisma schema is pushed and generated locally by the user
-  const sizeCharts = await prisma.sizeChart.findMany({
-    orderBy: { createdAt: "desc" },
-  });
+  let sizeCharts: any[] = [];
+  try {
+    sizeCharts = await prisma.sizeChart.findMany({
+      orderBy: { createdAt: "desc" },
+    });
+  } catch (error) {
+     console.error("Error fetching size charts:", error);
+  }
 
   return (
     <div className="flex flex-col gap-6">

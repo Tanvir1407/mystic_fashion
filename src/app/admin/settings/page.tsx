@@ -5,9 +5,15 @@ import { Settings } from "lucide-react";
 export const dynamic = "force-dynamic";
 
 export default async function AdminSettingsPage() {
-  const settings = await prisma.deliverySetting.findUnique({
-    where: { id: "default" }
-  }) || { insideDhaka: 80, outsideDhaka: 150 };
+  let settings = { insideDhaka: 80, outsideDhaka: 150 };
+  try {
+    const fetchedSettings = await prisma.deliverySetting.findUnique({
+      where: { id: "default" }
+    });
+    if (fetchedSettings) settings = fetchedSettings;
+  } catch (error) {
+    console.error("Error fetching settings:", error);
+  }
 
   return (
     <div className="flex flex-col gap-6">
