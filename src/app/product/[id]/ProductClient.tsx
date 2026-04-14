@@ -182,7 +182,7 @@ export default function ProductClient({ product, sizeChartData, deliveryData }: 
               )}
             </div>
 
-            <h1 className="text-2xl font-black text-zinc-900 mb-2 tracking-tight leading-[1.1] uppercase">
+            <h1 className="text-2xl font-black text-zinc-900 mb-2  leading-[1.1] ">
               {product.name}
             </h1>
             <p className="text-slate-500 font-medium mb-6 uppercase tracking-wider text-sm">{product.category} &bull; {product.team}</p>
@@ -288,7 +288,7 @@ export default function ProductClient({ product, sizeChartData, deliveryData }: 
                   : 'bg-primary text-[#FFD700] hover:bg-[#600018] active:scale-[0.98]'
                   }`}
               >
-                <ShoppingCart className="w-5 h-5" />
+                <ShoppingCart className=" w-5 h-5" />
                 Buy it Now
               </button>
             </div>

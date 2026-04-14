@@ -59,7 +59,7 @@ export default function AddToBagButton({ product }: AddToBagButtonProps) {
 
   if (selectingSize) {
     return (
-      <div 
+      <div
         onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
         className="w-full flex items-center justify-between bg-zinc-100 rounded-lg p-1 animate-in fade-in zoom-in duration-200"
       >
@@ -74,7 +74,7 @@ export default function AddToBagButton({ product }: AddToBagButtonProps) {
             </button>
           ))}
         </div>
-        <button 
+        <button
           onClick={(e) => { e.preventDefault(); e.stopPropagation(); setSelectingSize(false); }}
           className="w-8 h-8 flex items-center justify-center text-zinc-400 hover:text-red-500 transition-colors flex-shrink-0 border-l border-slate-200 ml-1"
         >
@@ -85,9 +85,9 @@ export default function AddToBagButton({ product }: AddToBagButtonProps) {
   }
 
   return (
-    <button 
+    <button
       onClick={handleAddClick}
-      className={`w-full text-white py-2.5 rounded-lg font-bold text-sm uppercase tracking-wider transition-all duration-300 flex items-center justify-center gap-2 active:scale-[0.97] ${added ? 'bg-green-600 text-white' : 'bg-primary text-gold hover:bg-[#600018]'}`}
+      className={`w-full text-white py-2.5 rounded-lg font-bold text-xs md:text-sm uppercase tracking-wider transition-all duration-300 flex items-center justify-center gap-2 active:scale-[0.97] ${added ? 'bg-green-600 text-white' : 'bg-primary text-gold hover:bg-[#600018]'}`}
     >
       {added ? (
         <>
@@ -98,7 +98,7 @@ export default function AddToBagButton({ product }: AddToBagButtonProps) {
         </>
       ) : (
         <>
-          <svg className="w-4 h-4" viewBox="0 0 21 22" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <svg className="hidden ml:block w-4 h-4" viewBox="0 0 21 22" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path fillRule="evenodd" clipRule="evenodd" d="M6.48626 20.5H14.8341C17.9004 20.5 20.2528 19.3924 19.5847 14.9348L18.8066 8.89359C18.3947 6.66934 16.976 5.81808 15.7311 5.81808H5.55262C4.28946 5.81808 2.95308 6.73341 2.4771 8.89359L1.69907 14.9348C1.13157 18.889 3.4199 20.5 6.48626 20.5Z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
             <path d="M6.34902 5.5984C6.34902 3.21232 8.28331 1.27803 10.6694 1.27803C11.8184 1.27316 12.922 1.72619 13.7362 2.53695C14.5504 3.3477 15.0081 4.44939 15.0081 5.5984" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
           </svg>

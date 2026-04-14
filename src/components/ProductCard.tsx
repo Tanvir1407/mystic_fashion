@@ -38,12 +38,12 @@ export default function ProductCard({ product }: ProductCardProps) {
   return (
     <Link href={`/product/${product.id}`} className="group">
       <div className="flex flex-col bg-white dark:bg-zinc-900 rounded-xl overflow-hidden transition-all duration-300 shadow border border-transparent hover:border-slate-200 dark:hover:border-zinc-700 h-full relative">
-        
+
         {/* Discount Badge */}
         {isDiscounted && (
           <div className="absolute top-3 right-3 z-10 bg-red-600 text-white text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded-sm shadow-md">
-            {product.discount!.discountType === "PERCENTAGE" 
-              ? `${product.discount!.value}% OFF` 
+            {product.discount!.discountType === "PERCENTAGE"
+              ? `${product.discount!.value}% OFF`
               : `৳${product.discount!.value} OFF`}
           </div>
         )}
@@ -66,18 +66,18 @@ export default function ProductCard({ product }: ProductCardProps) {
 
         {/* Product Info */}
         <div className="p-3 md:p-4 flex flex-col gap-1.5 flex-1">
-          <h3 className="text-sm md:text-[15px] font-bold text-zinc-800 dark:text-zinc-100 leading-snug line-clamp-2 group-hover:text-[#800020] transition-colors duration-300">
+          <h3 className="text-xs mm:text-sm md:text-[15px] font-bold text-zinc-800 dark:text-zinc-100 leading-snug line-clamp-2 group-hover:text-[#800020] transition-colors duration-300">
             {product.name}
           </h3>
           <div className="flex items-baseline gap-2 mt-auto pt-2">
-             {isDiscounted && (
-               <span className="text-zinc-400 dark:text-zinc-500 font-medium text-sm line-through">
-                 {formatBDT(product.price)}
-               </span>
-             )}
-             <span className="text-[#800020] font-black text-base md:text-lg">
-               {formatBDT(finalPrice)}
-             </span>
+            {isDiscounted && (
+              <span className="text-zinc-400 dark:text-zinc-500 font-medium text-sm line-through">
+                {formatBDT(product.price)}
+              </span>
+            )}
+            <span className="text-[#800020] font-black text-base md:text-lg">
+              {formatBDT(finalPrice)}
+            </span>
           </div>
         </div>
 
