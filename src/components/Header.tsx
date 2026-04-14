@@ -99,15 +99,10 @@ export default function Header() {
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="w-full h-12 pl-6 pr-14 rounded-xl bg-slate-100 dark:bg-zinc-900 border-2 border-primary focus:outline-none text-sm font-bold text-foreground transition-all"
                 />
-                <button type="submit" className="absolute right-1 top-1 w-10 h-10 rounded-xl bg-foreground text-background flex items-center justify-center hover:bg-primary hover:text-white transition-colors">
+                <button type="submit" className="absolute right-0 top-0 bottom-0 w-12 rounded-r-xl bg-primary text-background flex items-center justify-center hover:bg-primary hover:text-white transition-colors">
                   <Search className="w-4 h-4" />
                 </button>
               </form>
-
-              <div className="mt-6 pt-6 border-t border-slate-100 dark:border-zinc-900 flex justify-between items-center text-sm font-bold text-foreground/70">
-                <Link href="/stores" className="flex items-center gap-2"><MapPin className="w-4 h-4" /> Stores</Link>
-                <div className="flex items-center gap-2 text-primary font-black"><Phone className="w-4 h-4" />01700-MYSTIC</div>
-              </div>
             </div>
           </motion.div>
         )}

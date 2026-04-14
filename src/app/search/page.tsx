@@ -37,12 +37,12 @@ export default async function SearchPage({
     <main className="min-h-screen bg-white dark:bg-zinc-950">
       <Header />
 
-      <div className="container mx-auto py-12 px-4 md:px-0">
+      <div className="container mx-auto py-2 md:py-12 px-4 md:px-0">
         <div className="mb-10 text-center md:text-left">
           <h1 className="text-xl font-semibold text-primary">
             {query ? `Search Results for "${query}"` : "Search Products"}
           </h1>
-          <p className="text-zinc-500 mt-2 font-medium">
+          <p className="text-zinc-500 md:mt-2 mt-1 font-medium">
             {products.length} {products.length === 1 ? "product" : "products"} found
           </p>
         </div>

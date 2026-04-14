@@ -143,8 +143,8 @@ export default function ProductClient({ product, sizeChartData, deliveryData }: 
               {/* Discount Badge on Main Image */}
               {isDiscounted && (
                 <div className="absolute top-4 left-4 z-20 bg-red-600 text-white text-xs font-black uppercase tracking-widest px-3 py-1.5 rounded-sm shadow-md">
-                  {product.discount!.discountType === "PERCENTAGE" 
-                    ? `${product.discount!.value}% OFF` 
+                  {product.discount!.discountType === "PERCENTAGE"
+                    ? `${product.discount!.value}% OFF`
                     : `৳${product.discount!.value} OFF`}
                 </div>
               )}
@@ -211,14 +211,14 @@ export default function ProductClient({ product, sizeChartData, deliveryData }: 
                       key={v.size}
                       onClick={() => {
                         setSelectedSize(v.size);
-                        setQuantity(1); // Reset qty constraint when switching sizes
+                        setQuantity(1);
                       }}
                       disabled={v.stock <= 0}
-                      className={`w-14 h-14 rounded-md flex flex-col items-center justify-center font-bold text-lg transition-all ${v.stock <= 0
-                        ? 'bg-slate-50 text-slate-300 border-2 border-slate-200 cursor-not-allowed'
+                      className={`w-14 h-14 rounded-xl flex flex-col items-center justify-center font-bold text-base transition-all duration-200 border-2 ${v.stock <= 0
+                        ? 'bg-slate-50 text-slate-300 border-slate-100 cursor-not-allowed'
                         : selectedSize === v.size
-                          ? 'bg-[#800020] text-[#FFD700] border-2 border-[#FFD700] shadow-md'
-                          : 'bg-white text-zinc-900 border-2 border-slate-200 hover:border-zinc-900'
+                          ? 'bg-primary text-[#FFD700] border-primary shadow-lg shadow-primary/20 scale-105'
+                          : 'bg-white text-zinc-900 border-slate-200 hover:border-primary'
                         }`}
                     >
                       <span>{v.size}</span>
@@ -236,45 +236,45 @@ export default function ProductClient({ product, sizeChartData, deliveryData }: 
                   <span className="text-xs font-semibold text-slate-500">{selectedVariantStock} units available</span>
                 )}
               </div>
-              <div className="flex items-center inline-flex border-2 border-slate-200 rounded-md bg-white">
+              <div className="flex items-center inline-flex bg-slate-100 dark:bg-zinc-900 rounded-xl p-1 gap-1">
                 <button
                   onClick={decrementQuantity}
-                  className="w-12 h-12 flex items-center justify-center text-zinc-500 hover:text-zinc-900 transition-colors"
+                  className="w-10 h-10 flex items-center justify-center text-zinc-500 hover:text-zinc-900 bg-white dark:bg-zinc-800 rounded-lg shadow-sm transition-all active:scale-90"
                 >
-                  <Minus className="w-4 h-4" strokeWidth={3} />
+                  <Minus className="w-3.5 h-3.5" strokeWidth={3} />
                 </button>
-                <div className="w-12 h-12 flex items-center justify-center font-bold text-lg text-zinc-900">
+                <div className="w-12 flex items-center justify-center font-black text-lg text-zinc-900 dark:text-zinc-100">
                   {quantity}
                 </div>
                 <button
                   onClick={incrementQuantity}
-                  className="w-12 h-12 flex items-center justify-center text-zinc-500 hover:text-zinc-900 transition-colors"
+                  className="w-10 h-10 flex items-center justify-center text-zinc-500 hover:text-zinc-900 bg-white dark:bg-zinc-800 rounded-lg shadow-sm transition-all active:scale-90"
                 >
-                  <Plus className="w-4 h-4" strokeWidth={3} />
+                  <Plus className="w-3.5 h-3.5" strokeWidth={3} />
                 </button>
               </div>
             </div>
 
             {/* Action Buttons */}
-            <div className="flex flex-col sm:flex-row gap-4 mb-2">
+            <div className="flex flex-col sm:flex-row gap-3 mt-8">
               <button
                 onClick={handleAddToCart}
                 disabled={!selectedSize || totalStock <= 0}
-                className={`flex-1 h-14 font-black text-sm uppercase tracking-widest flex items-center justify-center gap-3 transition-all duration-300 border-2 rounded-md ${(!selectedSize || totalStock <= 0)
+                className={`md:flex-1 h-14 md:h-16 font-black text-xs md:text-sm uppercase tracking-[0.15em] flex items-center justify-center gap-3 transition-all duration-300 border-2 rounded-xl ${(!selectedSize || totalStock <= 0)
                   ? 'border-slate-200 bg-slate-50 text-slate-400 cursor-not-allowed'
                   : addedEffect
                     ? 'border-green-600 bg-green-50 text-green-700'
-                    : 'border-[#800020] bg-white text-[#800020] hover:bg-[#800020] hover:text-white active:scale-[0.98]'
+                    : 'border-primary bg-white text-primary hover:bg-primary hover:text-white active:scale-[0.98]'
                   }`}
               >
                 {addedEffect ? (
                   <>
                     <Check className="w-5 h-5" strokeWidth={3} />
-                    Added
+                    Added to Bag
                   </>
                 ) : (
                   <>
-                    <ShoppingCart className="w-5 h-5" />
+                    <ShoppingBag className="w-5 h-5" />
                     {selectedSize ? 'Add to Bag' : 'Select Size'}
                   </>
                 )}
@@ -283,13 +283,13 @@ export default function ProductClient({ product, sizeChartData, deliveryData }: 
               <button
                 onClick={handleBuyNow}
                 disabled={!selectedSize || totalStock <= 0}
-                className={`flex-1 h-14 font-black text-sm uppercase tracking-widest flex items-center justify-center gap-3 transition-all duration-300 rounded-md ${(!selectedSize || totalStock <= 0)
-                  ? 'bg-slate-200 text-slate-400 cursor-not-allowed'
-                  : 'bg-[#800020] text-[#FFD700] hover:bg-[#600018] active:scale-[0.98] shadow-md'
+                className={`md:flex-1 h-14 md:h-16 font-black text-xs md:text-sm uppercase tracking-[0.15em] flex items-center justify-center gap-3 transition-all duration-300 rounded-xl shadow-lg shadow-primary/10 ${(!selectedSize || totalStock <= 0)
+                  ? 'bg-slate-200 text-slate-400 cursor-not-allowed shadow-none'
+                  : 'bg-primary text-[#FFD700] hover:bg-[#600018] active:scale-[0.98]'
                   }`}
               >
-                <ShoppingBag className="w-5 h-5" />
-                Buy Now
+                <ShoppingCart className="w-5 h-5" />
+                Buy it Now
               </button>
             </div>
             {!selectedSize && totalStock > 0 && <p className="text-xs text-red-500 font-bold uppercase tracking-widest px-1 mt-2">Please select a size to continue</p>}
