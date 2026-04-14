@@ -61,28 +61,76 @@ export default function AddToBagButton({ product }: AddToBagButtonProps) {
     return (
       <div
         onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
-        className="w-full flex items-center justify-between bg-zinc-100 rounded-lg p-1 animate-in fade-in zoom-in duration-200"
+        /* Removed flex items-center to allow the box to grow vertically 
+           if sizes wrap to a second line.
+        */
+        className="w-full flex justify-between bg-zinc-100 rounded-lg p-2 animate-in fade-in zoom-in duration-200 min-h-[44px]"
       >
-        <div className="flex flex-1 items-center justify-start gap-1 overflow-x-auto scrollbar-hide px-1">
-          {availableVariants.map(v => (
+        {/* 1. flex-wrap: The magic fix for the XXL problem.
+          2. gap-1.5: Adds space between rows and columns.
+          3. flex-1: Takes up the available space before the 'X' button.
+      */}
+        <div className="flex flex-wrap flex-1 items-center justify-start gap-1.5">
+          {availableVariants.map((v) => (
             <button
               key={v.size}
-              onClick={(e) => { e.preventDefault(); e.stopPropagation(); addToCartConfirmed(v.size); }}
-              className="flex-shrink-0 w-8 h-8 rounded-md bg-white border border-slate-200 text-xs font-bold text-zinc-900 hover:bg-primary hover:text-gold hover:border-primary transition-colors"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                addToCartConfirmed(v.size);
+              }}
+              /* w-9 h-9 is a better tap target for mobile thumbs */
+              className="flex-shrink-0 w-9 h-9 rounded-md bg-white border border-slate-200 text-xs font-bold text-zinc-900 hover:bg-primary hover:text-gold hover:border-primary transition-all active:scale-90"
             >
               {v.size}
             </button>
           ))}
         </div>
+
+        {/* Close Button: 
+          h-full and self-start ensures it stays aligned correctly 
+          even if the size list grows to 2 or 3 rows.
+      */}
         <button
-          onClick={(e) => { e.preventDefault(); e.stopPropagation(); setSelectingSize(false); }}
-          className="w-8 h-8 flex items-center justify-center text-zinc-400 hover:text-red-500 transition-colors flex-shrink-0 border-l border-slate-200 ml-1"
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            setSelectingSize(false);
+          }}
+          className="w-8 h-9 flex items-center justify-center text-zinc-400 hover:text-red-500 transition-colors flex-shrink-0 border-l border-slate-200 ml-2"
         >
           <X className="w-4 h-4" />
         </button>
       </div>
     );
   }
+
+  // if (selectingSize) {
+  //   return (
+  //     <div
+  //       onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
+  //       className="w-full flex items-center justify-between bg-zinc-100 rounded-lg p-1 animate-in fade-in zoom-in duration-200"
+  //     >
+  //       <div className="flex flex-1 items-center justify-start gap-1  scrollbar-hide px-1">
+  //         {availableVariants.map(v => (
+  //           <button
+  //             key={v.size}
+  //             onClick={(e) => { e.preventDefault(); e.stopPropagation(); addToCartConfirmed(v.size); }}
+  //             className="flex-shrink-0 w-8 h-8 rounded-md bg-white border border-slate-200 text-xs font-bold text-zinc-900 hover:bg-primary hover:text-gold hover:border-primary transition-colors"
+  //           >
+  //             {v.size}
+  //           </button>
+  //         ))}
+  //       </div>
+  //       <button
+  //         onClick={(e) => { e.preventDefault(); e.stopPropagation(); setSelectingSize(false); }}
+  //         className="w-8 h-8 flex items-center justify-center text-zinc-400 hover:text-red-500 transition-colors flex-shrink-0 border-l border-slate-200 ml-1"
+  //       >
+  //         <X className="w-4 h-4" />
+  //       </button>
+  //     </div>
+  //   );
+  // }
 
   return (
     <button
