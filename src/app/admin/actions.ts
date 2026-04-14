@@ -57,7 +57,6 @@ export async function createProduct(data: {
   });
 
   revalidatePath("/admin/products");
-  revalidatePath("/shop");
   redirect("/admin/products");
 }
 
@@ -105,7 +104,6 @@ export async function updateProduct(id: string, data: {
 
   revalidatePath("/admin/products");
   revalidatePath(`/product/${id}`);
-  revalidatePath("/shop");
   redirect("/admin/products");
 }
 
@@ -114,7 +112,6 @@ export async function deleteProduct(id: string) {
     where: { id },
   });
   revalidatePath("/admin/products");
-  revalidatePath("/shop");
 }
 
 export async function updateOrderStatus(orderId: string, status: OrderStatus) {

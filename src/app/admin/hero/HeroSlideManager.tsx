@@ -47,7 +47,7 @@ export default function HeroSlideManager({ initialSlides }: { initialSlides: Sli
   const [showAddPanel, setShowAddPanel] = useState(false);
   const [addingPending, startAddTransition] = useTransition();
 
-  const [newSlide, setNewSlide] = useState({ image: "", link: "/shop", label: "" });
+  const [newSlide, setNewSlide] = useState({ image: "", link: "/", label: "" });
   const [editData, setEditData] = useState<Partial<Slide>>({});
 
   const handleImageUpload = async (file: File, target: "new" | string) => {
@@ -65,13 +65,13 @@ export default function HeroSlideManager({ initialSlides }: { initialSlides: Sli
     startAddTransition(async () => {
       const created = await createHeroSlide({
         image: newSlide.image,
-        link: newSlide.link || "/shop",
+        link: newSlide.link || "/",
         label: newSlide.label || undefined,
         sortOrder: slides.length,
       });
       // Optimistically append the real slide returned from the server
       setSlides(prev => [...prev, created]);
-      setNewSlide({ image: "", link: "/shop", label: "" });
+      setNewSlide({ image: "", link: "/", label: "" });
       setShowAddPanel(false);
     });
   };
@@ -236,7 +236,7 @@ export default function HeroSlideManager({ initialSlides }: { initialSlides: Sli
                         <FieldRow label="Link URL" icon={<LinkIcon className="w-3 h-3" />}>
                           <input
                             type="text" value={editData.link || ""} onChange={e => setEditData(s => ({ ...s, link: e.target.value }))}
-                            placeholder="/shop or https://..."
+                            placeholder="/ or https://..."
                             className="w-full text-sm px-3 py-2.5 border border-slate-200 rounded-md focus:outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-200 font-mono"
                           />
                         </FieldRow>
@@ -284,7 +284,7 @@ export default function HeroSlideManager({ initialSlides }: { initialSlides: Sli
               <Plus className="w-4 h-4 text-slate-500" />
               <h3 className="text-sm font-bold text-slate-800">New Hero Slide</h3>
             </div>
-            <button onClick={() => { setShowAddPanel(false); setNewSlide({ image: "", link: "/shop", label: "" }); }} className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded transition-colors">
+            <button onClick={() => { setShowAddPanel(false); setNewSlide({ image: "", link: "/", label: "" }); }} className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded transition-colors">
               <X className="w-4 h-4" />
             </button>
           </div>
@@ -315,7 +315,7 @@ export default function HeroSlideManager({ initialSlides }: { initialSlides: Sli
               <FieldRow label="Link URL" icon={<LinkIcon className="w-3 h-3" />}>
                 <input
                   type="text" value={newSlide.link} onChange={e => setNewSlide(s => ({ ...s, link: e.target.value }))}
-                  placeholder="/shop or https://example.com"
+                  placeholder="/ or https://example.com"
                   className="w-full text-sm px-3 py-2.5 border border-slate-200 rounded-md focus:outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-200 font-mono"
                 />
                 <p className="text-[11px] text-slate-400 mt-1">Where should this slide take the user when clicked?</p>
@@ -338,7 +338,7 @@ export default function HeroSlideManager({ initialSlides }: { initialSlides: Sli
                   {addingPending ? "Adding..." : "Add Slide"}
                 </button>
                 <button
-                  onClick={() => { setShowAddPanel(false); setNewSlide({ image: "", link: "/shop", label: "" }); }}
+                  onClick={() => { setShowAddPanel(false); setNewSlide({ image: "", link: "/", label: "" }); }}
                   className="px-4 py-2.5 border border-slate-200 text-slate-600 text-sm font-semibold rounded-md hover:bg-slate-50 transition"
                 >
                   Cancel

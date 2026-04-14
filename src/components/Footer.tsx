@@ -36,21 +36,7 @@ export default function Footer() {
             </div>
           </div>
 
-          {/* Links Columns */}
-          <div className="md:col-span-3">
-            <h4 className="text-zinc-800 text-xs font-bold uppercase tracking-[0.2em] mb-5">Shop</h4>
-            <ul className="space-y-3">
-              {["New Arrivals", "Best Sellers", "All Products", "Custom Orders"].map((item) => (
-                <li key={item}>
-                  <Link href="/shop" className="text-sm text-zinc-400 hover:text-primary transition-colors duration-200">
-                    {item}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          <div className="md:col-span-2">
+          <div className="md:col-span-4">
             <h4 className="text-zinc-800 text-xs font-bold uppercase tracking-[0.2em] mb-5">Company</h4>
             <ul className="space-y-3">
               {["About", "Contact", "FAQ"].map((item) => (
@@ -63,7 +49,7 @@ export default function Footer() {
             </ul>
           </div>
 
-          <div className="md:col-span-2">
+          <div className="md:col-span-3">
             <h4 className="text-zinc-800 text-xs font-bold uppercase tracking-[0.2em] mb-5">Reach Us</h4>
             <ul className="space-y-3 text-sm text-zinc-400">
               <li>hello@mysticfashion.com</li>
