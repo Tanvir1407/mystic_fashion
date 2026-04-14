@@ -1,21 +1,31 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Search, Menu, X, Phone, MapPin } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useCartStore } from "../store/cartStore";
 
 export default function Header() {
+  const router = useRouter();
   const [mounted, setMounted] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
   const { getTotalItems, toggleCart } = useCartStore();
   const pathname = usePathname();
 
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      router.push(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
+      setIsMobileMenuOpen(false);
+    }
+  };
 
   // Hide header elements completely in the admin panel to avoid conflict
   const isAdminPath = pathname.startsWith("/admin");
@@ -37,16 +47,18 @@ export default function Header() {
           </Link>
 
           {/* Search Bar (Hidden on Mobile) */}
-          <div className="hidden md:flex flex-1 max-w-2xl relative">
+          <form onSubmit={handleSearch} className="hidden md:flex flex-1 max-w-2xl relative">
             <input
               type="text"
               placeholder="Search for jerseys, teams, players..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full h-12 pl-6 pr-14 rounded-full bg-slate-100 dark:bg-zinc-900 border-2 border-primary focus:outline-none focus:bg-white text-sm  text-foreground transition-all"
             />
-            <button className="absolute right-1 top-1 w-10 h-10 rounded-full bg-foreground text-background flex items-center justify-center bg-primary hover:text-white transition-colors">
+            <button type="submit" className="absolute right-1 top-1 w-10 h-10 rounded-full bg-foreground text-background flex items-center justify-center bg-primary hover:text-white transition-colors">
               <Search className="w-4 h-4" />
             </button>
-          </div>
+          </form>
 
           {/* Right Utilities */}
           <div className="flex items-center gap-4 md:gap-6 ml-auto">
@@ -79,20 +91,22 @@ export default function Header() {
             className="md:hidden overflow-hidden bg-white dark:bg-zinc-950 border-t border-slate-100 dark:border-zinc-900"
           >
             <div className="p-4 space-y-4">
-              <div className="relative">
+              <form onSubmit={handleSearch} className="relative">
                 <input
                   type="text"
                   placeholder="Search..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
                   className="w-full h-12 pl-6 pr-14 rounded-xl bg-slate-100 dark:bg-zinc-900 border-2 border-primary focus:outline-none text-sm font-bold text-foreground transition-all"
                 />
-                <button className="absolute right-1 top-1 w-10 h-10 rounded-xl bg-foreground text-background flex items-center justify-center hover:bg-primary hover:text-white transition-colors">
+                <button type="submit" className="absolute right-1 top-1 w-10 h-10 rounded-xl bg-foreground text-background flex items-center justify-center hover:bg-primary hover:text-white transition-colors">
                   <Search className="w-4 h-4" />
                 </button>
-              </div>
+              </form>
 
               <div className="mt-6 pt-6 border-t border-slate-100 dark:border-zinc-900 flex justify-between items-center text-sm font-bold text-foreground/70">
                 <Link href="/stores" className="flex items-center gap-2"><MapPin className="w-4 h-4" /> Stores</Link>
-                <div className="flex items-center gap-2 text-primary font-black"><Phone className="w-4 h-4" /> 01700-MYSTIC</div>
+                <div className="flex items-center gap-2 text-primary font-black"><Phone className="w-4 h-4" />01700-MYSTIC</div>
               </div>
             </div>
           </motion.div>
