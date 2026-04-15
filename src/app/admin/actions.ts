@@ -234,6 +234,50 @@ export async function updateDeliverySettings(insideDhaka: number, outsideDhaka: 
   revalidatePath("/product/[id]", "page");
 }
 
+export async function getInventorySettings() {
+  const setting = await prisma.inventorySetting.findUnique({
+    where: { id: "default" },
+  });
+  if (!setting) {
+    return await prisma.inventorySetting.create({
+      data: { id: "default", lowStockThreshold: 5 },
+    });
+  }
+  return setting;
+}
+
+export async function updateInventorySettings(lowStockThreshold: number) {
+  await prisma.inventorySetting.upsert({
+    where: { id: "default" },
+    update: { lowStockThreshold },
+    create: { id: "default", lowStockThreshold },
+  });
+  revalidatePath("/admin/inventory");
+}
+
+export async function getLowStockProducts() {
+  const setting = await getInventorySettings();
+  const threshold = setting.lowStockThreshold;
+
+  return await prisma.product.findMany({
+    where: {
+      variants: {
+        some: {
+          stock: {
+            lte: threshold,
+          },
+        },
+      },
+    },
+    include: {
+      variants: true,
+    },
+    orderBy: {
+      updatedAt: "desc",
+    },
+  });
+}
+
 export async function getProductsForOrder() {
   return await prisma.product.findMany({
     include: {

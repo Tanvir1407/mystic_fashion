@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { adminLogout } from "./actions";
-import { Package, ShoppingCart, LogOut, Search, Bell, User, Users, Truck, Settings, ImagePlay, Tag } from "lucide-react";
+import { Package, ShoppingCart, LogOut, Search, Bell, User, Users, Truck, Settings, ImagePlay, Tag, AlertTriangle } from "lucide-react";
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -109,6 +109,17 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           >
             <Users className="w-4 h-4" />
             Staff
+          </Link>
+
+          <Link
+            href="/admin/inventory"
+            className={`flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-colors ${pathname.includes("/admin/inventory")
+              ? "bg-maroon text-white shadow-md shadow-maroon/20"
+              : "hover:bg-slate-800 hover:text-white"
+              }`}
+          >
+            <AlertTriangle className="w-4 h-4 text-amber-500" />
+            Inventory Alerts
           </Link>
 
           <Link

@@ -41,15 +41,35 @@ export default function CreateOrderClient({ products }: { products: any[] }) {
   const [selectedProductId, setSelectedProductId] = useState("");
   const [selectedSize, setSelectedSize] = useState("");
   const [quantity, setQuantity] = useState(1);
+  const [focusedIndex, setFocusedIndex] = useState(-1);
 
   // Filtered products for search
   const filteredProducts = useMemo(() => {
-    if (!searchQuery) return [];
+    if (!searchQuery || selectedProductId === products.find(p => p.name === searchQuery)?.id) return [];
     return products.filter(p =>
       p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      p.team?.toLowerCase().includes(searchQuery.toLowerCase())
-    ).slice(0, 5);
-  }, [products, searchQuery]);
+      p.team?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      p.category?.toLowerCase().includes(searchQuery.toLowerCase())
+    ).slice(0, 8);
+  }, [products, searchQuery, selectedProductId]);
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (filteredProducts.length === 0) return;
+
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setFocusedIndex(prev => (prev + 1) % filteredProducts.length);
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setFocusedIndex(prev => (prev - 1 + filteredProducts.length) % filteredProducts.length);
+    } else if (e.key === "Enter" && focusedIndex >= 0) {
+      e.preventDefault();
+      const p = filteredProducts[focusedIndex];
+      setSelectedProductId(p.id);
+      setSearchQuery(p.name);
+      setFocusedIndex(-1);
+    }
+  };
 
   // Selected Product Details
   const selectedProduct = useMemo(() =>
@@ -226,40 +246,61 @@ export default function CreateOrderClient({ products }: { products: any[] }) {
             <h2 className="text-sm font-bold text-slate-800 uppercase tracking-wider">Add Products</h2>
           </div>
           <div className="p-6 space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-12 items-start gap-4">
               {/* Product Search */}
               <div className="md:col-span-5 relative">
                 <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1.5">Search Product</label>
                 <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 font-bold" />
                   <input
                     type="text"
                     value={searchQuery}
-                    onChange={e => setSearchQuery(e.target.value)}
-                    placeholder="Search by name or team..."
-                    className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
+                    onChange={e => {
+                      setSearchQuery(e.target.value);
+                      setFocusedIndex(-1);
+                    }}
+                    onKeyDown={handleKeyDown}
+                    placeholder="Search name, team, or category..."
+                    className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm font-medium focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all outline-none"
                   />
                 </div>
                 {/* Search Results Dropdown */}
-                {searchQuery && filteredProducts.length > 0 && (
-                  <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-slate-200 rounded-lg shadow-xl z-20 overflow-hidden">
-                    {filteredProducts.map(p => (
-                      <button
-                        key={p.id}
-                        type="button"
-                        onClick={() => {
-                          setSelectedProductId(p.id);
-                          setSearchQuery(p.name);
-                        }}
-                        className="w-full text-left px-4 py-3 hover:bg-slate-50 flex items-center justify-between transition-colors border-b last:border-0 border-slate-100"
-                      >
-                        <div className="flex flex-col">
-                          <span className="text-sm font-bold text-slate-800">{p.name}</span>
-                          <span className="text-[10px] text-slate-400 uppercase font-semibold">{p.team}</span>
-                        </div>
-                        <span className="text-sm font-mono font-bold text-indigo-600">৳{p.price.toLocaleString()}</span>
-                      </button>
-                    ))}
+                {filteredProducts.length > 0 && (
+                  <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-slate-200 rounded-xl shadow-2xl z-20 overflow-hidden ring-1 ring-black/5 animate-in fade-in slide-in-from-top-2 duration-200">
+                    <div className="max-h-[150px] overflow-y-auto custom-scrollbar">
+                      {filteredProducts.map((p, idx) => (
+                        <button
+                          key={p.id}
+                          type="button"
+                          onMouseEnter={() => setFocusedIndex(idx)}
+                          onClick={() => {
+                            setSelectedProductId(p.id);
+                            setSearchQuery(p.name);
+                            setFocusedIndex(-1);
+                          }}
+                          className={`w-full text-left px-4 py-3 flex items-center gap-3 transition-colors border-b last:border-0 border-slate-50 ${focusedIndex === idx ? "bg-indigo-50" : "hover:bg-slate-50"
+                            }`}
+                        >
+                          <div className="w-10 h-10 rounded bg-slate-100 flex-shrink-0 overflow-hidden border border-slate-200">
+                            {p.images?.[0] ? (
+                              <img src={p.images[0]} alt="" className="w-full h-full object-cover" />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center text-[10px] text-slate-400 font-bold">NO IMG</div>
+                            )}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center justify-between gap-2">
+                              <span className="text-sm font-bold text-slate-800 truncate">{p.name}</span>
+                              <span className="text-sm font-mono font-black text-indigo-600">৳{p.price.toLocaleString()}</span>
+                            </div>
+                            <div className="flex items-center gap-2 mt-0.5">
+                              <span className="text-[10px] text-slate-400 uppercase font-bold tracking-tight bg-slate-100 px-1.5 py-0.5 rounded leading-none">{p.team || "General"}</span>
+                              <span className="text-[10px] text-slate-400 font-medium">| {p.category}</span>
+                            </div>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
                   </div>
                 )}
               </div>
@@ -307,13 +348,15 @@ export default function CreateOrderClient({ products }: { products: any[] }) {
               </div>
 
               {/* Add Button */}
-              <div className="md:col-span-1 flex items-end">
+              <div className="md:col-span-1 ">
+                <h1 className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1.5">Add</h1>
                 <button
                   type="button"
                   onClick={addToOrder}
                   disabled={!selectedProductId || !selectedSize}
                   className="w-full h-[38px] flex items-center justify-center bg-slate-900 text-white rounded-lg hover:bg-slate-700 disabled:bg-slate-100 disabled:text-slate-300 transition-all shadow-sm"
                 >
+
                   <Plus className="w-5 h-5" />
                 </button>
               </div>

@@ -139,6 +139,12 @@ model DeliverySetting {
   updatedAt    DateTime @updatedAt
 }
 
+model InventorySetting {
+  id                String   @id @default("default")
+  lowStockThreshold Int      @default(5)
+  updatedAt         DateTime @updatedAt
+}
+
 model HeroSlide {
   id        String   @id @default(uuid())
   image     String
