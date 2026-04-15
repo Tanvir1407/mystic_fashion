@@ -21,6 +21,17 @@ async function main() {
     },
   });
   console.log('Default staff member created.');
+  
+  // Create default inventory settings
+  await prisma.inventorySetting.upsert({
+    where: { id: 'default' },
+    update: {},
+    create: {
+      id: 'default',
+      lowStockThreshold: 5,
+    },
+  });
+  console.log('Default inventory settings created.');
 
   // Create products
   const products = [

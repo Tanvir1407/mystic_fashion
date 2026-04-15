@@ -35,7 +35,7 @@ export async function placeOrderAction(payload: {
       // 2. Decrement physical stock dynamically in the ProductVariant table
       for (const item of payload.items) {
         if (!item.size) continue;
-        
+
         const variant = await tx.productVariant.findFirst({
           where: {
             productId: item.id,
@@ -44,20 +44,20 @@ export async function placeOrderAction(payload: {
         });
 
         if (variant) {
-           if (variant.stock < item.quantity) {
-             throw new Error(`Insufficient stock for ${item.name} (${item.size}). Available: ${variant.stock}`);
-           }
-           await tx.productVariant.update({
-             where: { id: variant.id },
-             data: { stock: { decrement: item.quantity } }
-           });
+          if (variant.stock < item.quantity) {
+            throw new Error(`Insufficient stock for ${item.name} (${item.size}). Available: ${variant.stock}`);
+          }
+          await tx.productVariant.update({
+            where: { id: variant.id },
+            data: { stock: { decrement: item.quantity } }
+          });
         }
       }
 
       revalidatePath("/admin/products");
       revalidatePath("/admin/orders");
       revalidatePath("/");
-      
+
       return { success: true, orderId: order.id };
     });
   } catch (error: any) {
