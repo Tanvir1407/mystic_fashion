@@ -20,7 +20,7 @@ export async function adminLogin(email: string, password: string) {
       maxAge: 60 * 60 * 24 * 7, // 1 week
       path: "/",
     });
-    
+
     // Store staff info if needed, but for now simple true/false auth is used across app
     return { success: true };
   } else {
@@ -119,19 +119,86 @@ export async function deleteProduct(id: string) {
 }
 
 export async function updateOrderStatus(orderId: string, status: OrderStatus) {
-  await prisma.order.update({
-    where: { id: orderId },
-    data: { status },
-  });
-  revalidatePath("/admin/orders");
+  try {
+    await prisma.$transaction(async (tx) => {
+      const order = await tx.order.findUnique({
+        where: { id: orderId },
+        include: { items: true },
+      });
+
+      if (!order) throw new Error("Order not found");
+
+      const oldStatus = order.status;
+      const newStatus = status;
+
+      // If already the same status, do nothing
+      if (oldStatus === newStatus) return;
+
+      // 1. If moving TO Confirmed, check and decrement stock
+      if (newStatus === "CONFIRMED" || newStatus === "SHIPPED" || newStatus === "DELIVERED" || newStatus === "PACKAGING") {
+        for (const item of order.items) {
+          const product = await tx.product.findUnique({
+            where: { id: item.productId },
+          }); const variant = await tx.productVariant.findUnique({
+            where: {
+              productId_size: {
+                productId: item.productId,
+                size: item.size
+              }
+            }
+          });
+
+          if (!variant || variant.stock < item.quantity) {
+            throw new Error(`Insufficient stock for product: ${product?.name} | size: ${item.size}`);
+          }
+
+          await tx.productVariant.update({
+            where: { id: variant.id },
+            data: { stock: { decrement: item.quantity } }
+          });
+        }
+      }
+
+      // 2. If moving FROM Confirmed TO something else, restore stock
+      if (oldStatus === "CONFIRMED" && newStatus !== "CONFIRMED") {
+        for (const item of order.items) {
+          await tx.productVariant.update({
+            where: {
+              productId_size: {
+                productId: item.productId,
+                size: item.size
+              }
+            },
+            data: { stock: { increment: item.quantity } }
+          });
+        }
+      }
+
+      // Update the order status
+      await tx.order.update({
+        where: { id: orderId },
+        data: { status: newStatus },
+      });
+    });
+
+    revalidatePath("/admin/orders");
+    revalidatePath("/admin/products");
+    return { success: true };
+  } catch (error: any) {
+    console.error("Order update error:", error);
+    return { success: false, error: error.message };
+  }
 }
 
 export async function bulkUpdateOrderStatus(orderIds: string[], status: OrderStatus) {
-  await prisma.order.updateMany({
-    where: { id: { in: orderIds } },
-    data: { status },
-  });
-  revalidatePath("/admin/orders");
+  // For simplicity and to reuse the logic above, we iterate
+  // but in a production app with huge lists, this should be optimized.
+  const results = [];
+  for (const id of orderIds) {
+    const res = await updateOrderStatus(id, status);
+    results.push(res);
+  }
+  return results;
 }
 
 export async function saveSizeChart(category: string, data: any) {
@@ -211,14 +278,14 @@ export async function uploadImage(formData: FormData) {
   const buffer = Buffer.from(bytes);
 
   const uniqueName = `${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
-  
+
   // Ensure the uploads directory exists
   const publicUploadsDir = join(process.cwd(), "public", "uploads");
-  try { await mkdir(publicUploadsDir, { recursive: true }); } catch (e) {}
-  
+  try { await mkdir(publicUploadsDir, { recursive: true }); } catch (e) { }
+
   const filePath = join(publicUploadsDir, uniqueName);
   await writeFile(filePath, buffer);
-  
+
   return `/uploads/${uniqueName}`;
 }
 

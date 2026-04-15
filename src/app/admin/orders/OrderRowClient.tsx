@@ -26,9 +26,14 @@ export default function OrderRowClient({
 
   const handleStatusChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
     const newStatus = e.target.value as OrderStatus;
+    const oldStatus = status;
     setStatus(newStatus);
     setLoading(true);
-    await updateOrderStatus(order.id, newStatus);
+    const result = await updateOrderStatus(order.id, newStatus);
+    if (!result?.success) {
+      alert(result?.error || "Failed to update status");
+      setStatus(oldStatus);
+    }
     setLoading(false);
   };
 

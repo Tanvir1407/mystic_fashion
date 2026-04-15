@@ -21,7 +21,7 @@ export default function AddToBagButton({ product }: AddToBagButtonProps) {
   const [added, setAdded] = useState(false);
   const [selectingSize, setSelectingSize] = useState(false);
 
-  const availableVariants = product.variants?.filter(v => v.stock > 0) || [];
+  const availableVariants = product.variants || [];
 
   const handleAddClick = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -29,9 +29,10 @@ export default function AddToBagButton({ product }: AddToBagButtonProps) {
 
     // If we have sizes to choose from
     if (availableVariants.length > 0) {
-      if (availableVariants.length === 1) {
+      const inStock = availableVariants.filter(v => v.stock > 0);
+      if (inStock.length === 1) {
         // Just add the only available size
-        addToCartConfirmed(availableVariants[0].size);
+        addToCartConfirmed(inStock[0].size);
       } else {
         // Open size selector inline
         setSelectingSize(true);
@@ -61,15 +62,8 @@ export default function AddToBagButton({ product }: AddToBagButtonProps) {
     return (
       <div
         onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
-        /* Removed flex items-center to allow the box to grow vertically 
-           if sizes wrap to a second line.
-        */
         className="w-full flex justify-between bg-zinc-100 rounded-lg p-2 animate-in fade-in zoom-in duration-200 min-h-[44px]"
       >
-        {/* 1. flex-wrap: The magic fix for the XXL problem.
-          2. gap-1.5: Adds space between rows and columns.
-          3. flex-1: Takes up the available space before the 'X' button.
-      */}
         <div className="flex flex-wrap flex-1 items-center justify-start gap-1.5">
           {availableVariants.map((v) => (
             <button
@@ -79,7 +73,6 @@ export default function AddToBagButton({ product }: AddToBagButtonProps) {
                 e.stopPropagation();
                 addToCartConfirmed(v.size);
               }}
-              /* w-9 h-9 is a better tap target for mobile thumbs */
               className="flex-shrink-0 w-9 h-9 rounded-md bg-white border border-slate-200 text-xs font-bold text-zinc-900 hover:bg-primary hover:text-gold hover:border-primary transition-all active:scale-90"
             >
               {v.size}

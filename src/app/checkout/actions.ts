@@ -32,26 +32,26 @@ export async function placeOrderAction(payload: {
         },
       });
 
-      // 2. Decrement physical stock dynamically in the ProductVariant table
+      // 2. Validate stock availability but don't decrement yet
       for (const item of payload.items) {
-        if (!item.size) continue;
+        if (!item.size) {
+           throw new Error(`Size not selected for ${item.name}`);
+        }
 
-        const variant = await tx.productVariant.findFirst({
+        const variant = await tx.productVariant.findUnique({
           where: {
-            productId: item.id,
-            size: item.size
+            productId_size: {
+              productId: item.id,
+              size: item.size
+            }
           }
         });
 
-        if (variant) {
-          if (variant.stock < item.quantity) {
-            throw new Error(`Insufficient stock for ${item.name} (${item.size}). Available: ${variant.stock}`);
-          }
-          await tx.productVariant.update({
-            where: { id: variant.id },
-            data: { stock: { decrement: item.quantity } }
-          });
+        if (!variant) {
+          throw new Error(`Variant not found for ${item.name} (${item.size})`);
         }
+        
+        // Stock will only be validated and decremented when admin moves status to CONFIRMED
       }
 
       revalidatePath("/admin/products");

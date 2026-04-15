@@ -171,15 +171,6 @@ export default function ProductClient({ product, sizeChartData, deliveryData }: 
           <div className="w-full lg:w-1/2 flex flex-col justify-center">
 
             <div className="flex items-center gap-4 mb-3">
-              {totalStock > 0 ? (
-                <span className="bg-green-50 text-green-700 text-[10px] font-black uppercase px-2 py-1 rounded-sm tracking-widest">
-                  In Stock
-                </span>
-              ) : (
-                <span className="bg-red-50 text-red-700 text-[10px] font-black uppercase px-2 py-1 rounded-sm tracking-widest">
-                  Out of Stock
-                </span>
-              )}
             </div>
 
             <h1 className="text-2xl font-black text-zinc-900 mb-2  leading-[1.1] ">
@@ -213,12 +204,9 @@ export default function ProductClient({ product, sizeChartData, deliveryData }: 
                         setSelectedSize(v.size);
                         setQuantity(1);
                       }}
-                      disabled={v.stock <= 0}
-                      className={`w-14 h-14 rounded-xl flex flex-col items-center justify-center font-bold text-base transition-all duration-200 border-2 ${v.stock <= 0
-                        ? 'bg-slate-50 text-slate-300 border-slate-100 cursor-not-allowed'
-                        : selectedSize === v.size
-                          ? 'bg-primary text-[#FFD700] border-primary shadow-lg shadow-primary/20 scale-105'
-                          : 'bg-white text-zinc-900 border-slate-200 hover:border-primary'
+                      className={`w-14 h-14 rounded-xl flex flex-col items-center justify-center font-bold text-base transition-all duration-200 border-2 ${selectedSize === v.size
+                        ? 'bg-primary text-[#FFD700] border-primary shadow-lg shadow-primary/20 scale-105'
+                        : 'bg-white text-zinc-900 border-slate-200 hover:border-primary'
                         }`}
                     >
                       <span>{v.size}</span>
