@@ -8,19 +8,23 @@ import { revalidatePath } from "next/cache";
 import { writeFile, mkdir } from "fs/promises";
 import { join, dirname } from "path";
 
-export async function adminLogin(password: string) {
-  const correctPassword = process.env.ADMIN_PASSWORD;
+export async function adminLogin(email: string, password: string) {
+  const staff = await prisma.staff.findUnique({
+    where: { email },
+  });
 
-  if (password === correctPassword) {
+  if (staff && staff.password === password) {
     cookies().set("admin-auth", "true", {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       maxAge: 60 * 60 * 24 * 7, // 1 week
       path: "/",
     });
+    
+    // Store staff info if needed, but for now simple true/false auth is used across app
     return { success: true };
   } else {
-    return { success: false, error: "Invalid password" };
+    return { success: false, error: "Invalid email or password" };
   }
 }
 
@@ -228,4 +232,68 @@ export async function updateDeliverySettings(insideDhaka: number, outsideDhaka: 
   revalidatePath("/");
   revalidatePath("/checkout");
   revalidatePath("/product/[id]", "page");
+}
+
+export async function getProductsForOrder() {
+  return await prisma.product.findMany({
+    include: {
+      variants: true,
+      discount: true,
+    },
+    orderBy: { name: "asc" },
+  });
+}
+
+export async function createAdminOrder(data: {
+  customerName: string;
+  phone: string;
+  district: string;
+  address: string;
+  items: { productId: string; size: string; quantity: number; price: number }[];
+  totalAmount: number;
+}) {
+  const order = await prisma.$transaction(async (tx) => {
+    // 1. Create the order
+    const newOrder = await tx.order.create({
+      data: {
+        customerName: data.customerName,
+        phone: data.phone,
+        district: data.district,
+        address: data.address,
+        totalAmount: data.totalAmount,
+        status: "CONFIRMED", // Admin orders are usually confirmed immediately
+        items: {
+          create: data.items.map((item) => ({
+            productId: item.productId,
+            size: item.size,
+            quantity: item.quantity,
+            price: item.price,
+          })),
+        },
+      },
+    });
+
+    // 2. Update stock for each item
+    for (const item of data.items) {
+      await tx.productVariant.update({
+        where: {
+          productId_size: {
+            productId: item.productId,
+            size: item.size,
+          },
+        },
+        data: {
+          stock: {
+            decrement: item.quantity,
+          },
+        },
+      });
+    }
+
+    return newOrder;
+  });
+
+  revalidatePath("/admin/orders");
+  revalidatePath("/admin/products");
+  return { success: true, orderId: order.id };
 }

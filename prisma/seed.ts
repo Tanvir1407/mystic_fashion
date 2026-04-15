@@ -10,12 +10,24 @@ const prisma = new PrismaClient({ adapter });
 async function main() {
   console.log('Seeding the database...');
 
+  // Create default staff
+  await prisma.staff.upsert({
+    where: { email: 'mystic@gmail.com' },
+    update: {},
+    create: {
+      username: 'admin',
+      email: 'mystic@gmail.com',
+      password: '123456',
+    },
+  });
+  console.log('Default staff member created.');
+
   // Create products
   const products = [
     {
       name: 'Aurum Factory Home Kit 2026',
       description: 'The official home kit of Aurum FC for the 2026 season. Engineered for champions.',
-      price: 12500, // 12,500 BDT
+      price: 12500,
       images: ['/images/hero_jersey_1775987082211.png'],
       sizes: ['S', 'M', 'L', 'XL'],
       team: 'Aurum FC',
@@ -75,8 +87,17 @@ async function main() {
   ];
 
   for (const p of products) {
+    const { sizes, stock, ...rest } = p;
     await prisma.product.create({
-      data: p,
+      data: {
+        ...rest,
+        variants: {
+          create: sizes.map(size => ({
+            size,
+            stock: Math.floor(stock / sizes.length)
+          }))
+        }
+      },
     });
   }
 

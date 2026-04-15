@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import OrderRowClient from "./OrderRowClient";
 import type { OrderStatus } from "@/generated/prisma/client";
 import { bulkUpdateOrderStatus } from "../actions";
-import { Filter } from "lucide-react";
+import { Filter, Plus } from "lucide-react";
 
 import { useRouter } from "next/navigation";
 import { AdminPagination } from "@/components/AdminPagination";
@@ -77,6 +77,13 @@ export default function OrderListClient({
           <h1 className="text-2xl font-semibold tracking-tight text-slate-900">Orders</h1>
           <p className="text-sm text-slate-500 mt-1">Manage customer orders and fulfillments.</p>
         </div>
+        <button
+          onClick={() => router.push("/admin/orders/create")}
+          className="flex items-center gap-2 px-4 py-2.5 bg-slate-900 text-white text-xs font-bold rounded-md hover:bg-slate-700 transition-colors shadow-sm"
+        >
+          <Plus className="w-4 h-4" />
+          Create Order
+        </button>
       </div>
 
       {/* Toolbar */}
