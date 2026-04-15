@@ -15,7 +15,6 @@ export default function CheckoutClient({ deliveryData }: { deliveryData: { insid
   const [errorMsg, setErrorMsg] = useState("");
   const [districtOpen, setDistrictOpen] = useState(false);
   const [selectedDistrict, setSelectedDistrict] = useState("");
-
   // Format BDT utility
   const formatBDT = (price: number) => {
     return price === 0 ? "Free" : `৳${price.toLocaleString("en-IN")}`;
@@ -23,11 +22,11 @@ export default function CheckoutClient({ deliveryData }: { deliveryData: { insid
 
   const isDhaka = selectedDistrict === "Dhaka";
   const deliveryFee = selectedDistrict ? (isDhaka ? deliveryData.insideDhaka : deliveryData.outsideDhaka) : 0;
-  
+
   const subtotal = getTotalPrice(); // Total after discounts
   const originalSubtotal = items.reduce((total, item) => total + (item.originalPrice || item.price) * item.quantity, 0);
   const totalDiscount = originalSubtotal - subtotal;
-  
+
   const total = subtotal + (items.length > 0 ? deliveryFee : 0);
 
   const [isPending, startTransition] = useTransition();
@@ -52,23 +51,23 @@ export default function CheckoutClient({ deliveryData }: { deliveryData: { insid
     }
 
     setErrorMsg("");
-    
-    startTransition(async () => {
-       const result = await placeOrderAction({
-         fullName,
-         phone,
-         district,
-         address,
-         items,
-         totalAmount: total
-       });
 
-       if (result.success) {
-         setIsSubmitted(true);
-         clearCart();
-       } else {
-         setErrorMsg(result.error || "Failed to finalize order. Items may be out of stock.");
-       }
+    startTransition(async () => {
+      const result = await placeOrderAction({
+        fullName,
+        phone,
+        district,
+        address,
+        items,
+        totalAmount: total
+      });
+
+      if (result.success) {
+        setIsSubmitted(true);
+        clearCart();
+      } else {
+        setErrorMsg(result.error || "Failed to finalize order. Items may be out of stock.");
+      }
     });
   };
 
@@ -196,13 +195,13 @@ export default function CheckoutClient({ deliveryData }: { deliveryData: { insid
                         {item.image && (
                           <Image src={item.image} alt={item.name} fill className="object-cover" />
                         )}
-                        <span className="absolute -top-2 -right-2 w-5 h-5 bg-zinc-600 text-white text-[10px] font-bold flex items-center justify-center rounded-full z-10">
-                          {item.quantity}
-                        </span>
                       </div>
                       <div className="flex-1">
                         <h4 className="font-bold text-sm leading-snug line-clamp-2">{item.name}</h4>
-                        {item.size && <span className="text-xs text-zinc-500 mt-1 block">Size: {item.size}</span>}
+                        <div className="flex items-center gap-2 mt-1">
+                          {item.size && <span className="text-xs text-zinc-500 mt-1 block">Size: {item.size}</span>}
+                          <span className="text-xs font-bold text-zinc-500 mt-1 block">Qty: {item.quantity}</span>
+                        </div>
                         <div className="flex items-center gap-2 mt-1">
                           {item.originalPrice && item.originalPrice > item.price && (
                             <span className="text-xs font-bold text-zinc-400 line-through">{formatBDT(item.originalPrice)}</span>
@@ -260,7 +259,7 @@ export default function CheckoutClient({ deliveryData }: { deliveryData: { insid
                   className="w-full bg-[#800020] text-[#FFD700] py-4 rounded-xl font-black uppercase tracking-widest hover:bg-[#600018] transition-all transform active:scale-[0.98] shadow-lg shadow-black/10 flex items-center justify-center gap-2 disabled:opacity-75 disabled:cursor-not-allowed"
                 >
                   {isPending ? (
-                     <div className="w-5 h-5 border-2 border-white/50 border-t-white rounded-full animate-spin" />
+                    <div className="w-5 h-5 border-2 border-white/50 border-t-white rounded-full animate-spin" />
                   ) : "Place Order"}
                 </button>
               </div>

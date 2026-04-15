@@ -232,9 +232,6 @@ export default function ProductClient({ product, sizeChartData, deliveryData }: 
             <div className="mb-10">
               <div className="flex justify-between items-center mb-4">
                 <h3 className="font-bold text-zinc-900 text-sm uppercase tracking-widest">Quantity</h3>
-                {selectedSize && (
-                  <span className="text-xs font-semibold text-slate-500">{selectedVariantStock} units available</span>
-                )}
               </div>
               <div className="flex items-center inline-flex bg-slate-100 dark:bg-zinc-900 rounded-xl p-1 gap-1">
                 <button
