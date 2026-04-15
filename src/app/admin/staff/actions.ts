@@ -31,6 +31,12 @@ export async function updateStaff(id: string, data: { username?: string; email?:
 }
 
 export async function deleteStaff(id: string) {
+  const staff = await prisma.staff.findUnique({ where: { id } });
+  
+  if (staff?.username === "admin") {
+    throw new Error("The primary 'admin' account cannot be deleted.");
+  }
+
   await prisma.staff.delete({
     where: { id },
   });

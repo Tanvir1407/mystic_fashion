@@ -257,8 +257,12 @@ export default function StaffClient({ initialStaff }: { initialStaff: Staff[] })
                             impacts={[{ label: "Remove access to administrative tools" }, { label: "Deletion of account data" }]}
                             onConfirm={async () => {
                               startTransition(async () => {
-                                await deleteStaff(s.id);
-                                setStaffList(prev => prev.filter(item => item.id !== s.id));
+                                try {
+                                  await deleteStaff(s.id);
+                                  setStaffList(prev => prev.filter(item => item.id !== s.id));
+                                } catch (error: any) {
+                                  alert(error.message || "Failed to delete staff.");
+                                }
                               });
                             }}
                           />
