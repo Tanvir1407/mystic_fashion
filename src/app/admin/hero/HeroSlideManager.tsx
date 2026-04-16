@@ -83,7 +83,8 @@ export default function HeroSlideManager({ initialSlides }: { initialSlides: Sli
 
   const handleSave = (id: string) => {
     startTransition(async () => {
-      await updateHeroSlide(id, { ...editData, label: editData.label ?? undefined }); setEditingId(null);
+      await updateHeroSlide(id, { ...editData, label: editData.label ?? undefined });
+      setEditingId(null);
     });
   };
 
