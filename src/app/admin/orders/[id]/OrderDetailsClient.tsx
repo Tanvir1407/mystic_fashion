@@ -212,7 +212,7 @@ export default function OrderDetailsClient({ order }: { order: any }) {
                   </div>
                 ) : (
                   <span className="text-lg font-black text-rose-600 block">
-                    - {formatBDT(order.advancePaid || 0)}
+                    {formatBDT(order.advancePaid || 0)}
                   </span>
                 )}
               </div>

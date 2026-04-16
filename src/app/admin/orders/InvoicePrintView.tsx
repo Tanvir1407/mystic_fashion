@@ -346,11 +346,11 @@ export default function InvoicePrintView({ orders }: { orders: Order[] }) {
                     </div>
                     <div className="w-full flex justify-between py-1 px-2 uppercase">
                       <span>Advance Paid</span>
-                      <span>৳0</span>
+                      <span>৳{order.advancePaid.toLocaleString("en-IN")}</span>
                     </div>
                     <div className="w-full flex justify-between py-1 px-2 mt-1 font-bold text-sm uppercase">
                       <span>Balance Due</span>
-                      <span>৳{order.totalAmount.toLocaleString("en-IN")}</span>
+                      <span>৳{(order.totalAmount - order.advancePaid).toLocaleString("en-IN")}</span>
                     </div>
                   </div>
                 </div>
