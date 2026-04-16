@@ -4,17 +4,18 @@ import { useState, useEffect } from "react";
 import OrderRowClient from "./OrderRowClient";
 import type { OrderStatus } from "@/generated/prisma/client";
 import { bulkUpdateOrderStatus } from "../actions";
-import { Filter, Plus } from "lucide-react";
+import { Filter, Plus, Printer } from "lucide-react";
+import InvoicePrintView from "./InvoicePrintView";
 
 import { useRouter } from "next/navigation";
 import { AdminPagination } from "@/components/AdminPagination";
 
-export default function OrderListClient({ 
+export default function OrderListClient({
   initialOrders,
   currentPage = 1,
   totalPages = 1,
   currentFilter = "ALL"
-}: { 
+}: {
   initialOrders: any[],
   currentPage?: number,
   totalPages?: number,
@@ -52,7 +53,7 @@ export default function OrderListClient({
     setLoading(true);
 
     // Optimistic Update
-    setOptimisticOrders(prev => prev.map(o => 
+    setOptimisticOrders(prev => prev.map(o =>
       selectedIds.has(o.id) ? { ...o, status: bulkStatus } : o
     ));
 
@@ -69,8 +70,15 @@ export default function OrderListClient({
     }
   };
 
+  const handlePrintSelected = () => {
+    if (selectedIds.size === 0) return;
+    window.print();
+  };
+
+  const selectedOrdersToPrint = filteredOrders.filter(o => selectedIds.has(o.id));
   return (
     <div className="flex flex-col gap-6">
+      <InvoicePrintView orders={selectedOrdersToPrint} />
       {/* Header */}
       <div className="flex items-start sm:items-center justify-between flex-col sm:flex-row gap-4">
         <div>
@@ -90,8 +98,8 @@ export default function OrderListClient({
       <div className="flex flex-wrap items-center justify-between gap-4 p-4 bg-white border border-slate-200 rounded-lg shadow-sm">
         <div className="flex items-center gap-3">
           <Filter className="w-4 h-4 text-slate-400" />
-          <select 
-            value={currentFilter} 
+          <select
+            value={currentFilter}
             onChange={e => {
               const newFilter = e.target.value;
               setSelectedIds(new Set());
@@ -126,7 +134,14 @@ export default function OrderListClient({
               <option value="DELIVERED">Set Delivered</option>
               <option value="CANCELLED">Set Cancelled</option>
             </select>
-            <button 
+            <button
+              onClick={handlePrintSelected}
+              className="flex items-center gap-1.5 text-xs font-bold text-indigo-600 bg-white border border-indigo-200 px-3 py-1 rounded hover:bg-slate-50 transition"
+            >
+              <Printer className="w-3.5 h-3.5" />
+              Print Selected
+            </button>
+            <button
               onClick={handleBulkUpdate}
               disabled={loading}
               className="text-xs font-bold text-white bg-indigo-600 px-3 py-1 rounded hover:bg-indigo-700 transition"
@@ -144,8 +159,8 @@ export default function OrderListClient({
             <thead>
               <tr className="border-b border-slate-200 bg-slate-50">
                 <th className="px-6 py-3 w-10">
-                  <input 
-                    type="checkbox" 
+                  <input
+                    type="checkbox"
                     onChange={handleSelectAll}
                     checked={filteredOrders.length > 0 && selectedIds.size === filteredOrders.length}
                     className="rounded border-slate-300 text-indigo-600 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
@@ -161,12 +176,12 @@ export default function OrderListClient({
             </thead>
             <tbody className="divide-y divide-slate-200">
               {filteredOrders.map((order) => (
-                <OrderRowClient 
-                   key={order.id} 
-                   order={order} 
-                   items={order.items} 
-                   isSelected={selectedIds.has(order.id)}
-                   onSelect={() => handleSelect(order.id)}
+                <OrderRowClient
+                  key={order.id}
+                  order={order}
+                  items={order.items}
+                  isSelected={selectedIds.has(order.id)}
+                  onSelect={() => handleSelect(order.id)}
                 />
               ))}
               {filteredOrders.length === 0 && (
