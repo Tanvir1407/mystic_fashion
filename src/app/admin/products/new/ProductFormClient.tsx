@@ -34,12 +34,18 @@ export default function ProductFormClient({
         const formData = new FormData();
         formData.append("file", file);
         const url = await uploadImage(formData);
-        newImages.push(url);
+
+        // ✅ FIX 1: Shudhu valid url ashlei push korbe, undefined ashle korbe na
+        if (url && typeof url === 'string') {
+          newImages.push(url);
+        } else {
+          console.warn("Upload response did not return a valid URL:", url);
+        }
       }
       setImages((prev) => [...prev, ...newImages]);
     } catch (err) {
-      alert("Failed to upload image.");
-      console.error(err);
+      alert("Failed to upload image. Please try again.");
+      console.error("Image upload error:", err);
     } finally {
       setIsUploading(false);
     }
@@ -86,11 +92,14 @@ export default function ProductFormClient({
       return alert("Duplicate size names found. Each variant must have a unique size.");
     }
 
+    // ✅ FIX 2: Filter out any undefined, null, or empty strings from images array
+    const validImages = images.filter((img) => typeof img === 'string' && img.trim() !== "");
+
     const productPayload = {
       name: name.trim(),
       description: description.trim(),
       price: parseFloat(price),
-      images: images,
+      images: validImages, // Send the cleaned array
       team: team.trim(),
       category: category.trim(),
       sizeChartId: sizeChartId || undefined,
@@ -98,10 +107,19 @@ export default function ProductFormClient({
       variants: variants.map(({ size, stock }) => ({ size: size.trim(), stock }))
     };
 
-    if (initialData?.id) {
-      await updateProduct(initialData.id, productPayload);
-    } else {
-      await createProduct(productPayload);
+    try {
+      if (initialData?.id) {
+        await updateProduct(initialData.id, productPayload);
+      } else {
+        await createProduct(productPayload);
+      }
+      // Success hole page redirect korbe ba reset hobe, apni apnar moto manage korte paren
+      router.push("/admin/products");
+      // Loading off korar proyojon nai jodi page change hoye jay
+    } catch (error) {
+      console.error("Failed to save product:", error);
+      alert("Failed to save product. Check the server logs.");
+      setLoading(false); // ✅ FIX 3: Error hole button loading state off korbe
     }
   };
 

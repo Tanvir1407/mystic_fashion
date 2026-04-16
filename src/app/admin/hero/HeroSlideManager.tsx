@@ -18,7 +18,7 @@ interface Slide {
 const SPEC_BADGE = (
   <div className="flex items-start gap-2 bg-blue-50 border border-blue-150 rounded-md px-3 py-2.5 mt-1">
     <div className="w-4 h-4 mt-0.5 flex-shrink-0 text-blue-500">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><circle cx="12" cy="12" r="10" /><path d="M12 16v-4M12 8h.01" /></svg>
     </div>
     <div>
       <p className="text-xs font-bold text-blue-700">Recommended: 1920 × 480 px &nbsp;(4:1 ratio)</p>
@@ -83,8 +83,7 @@ export default function HeroSlideManager({ initialSlides }: { initialSlides: Sli
 
   const handleSave = (id: string) => {
     startTransition(async () => {
-      await updateHeroSlide(id, editData);
-      setEditingId(null);
+      await updateHeroSlide(id, { ...editData, label: editData.label ?? undefined }); setEditingId(null);
     });
   };
 
