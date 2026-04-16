@@ -66,7 +66,7 @@ export default function CheckoutClient({ deliveryData }: { deliveryData: { insid
         setIsSubmitted(true);
         clearCart();
       } else {
-        setErrorMsg(result.error || "Failed to finalize order. Items may be out of stock.");
+        setErrorMsg(result.error || "Failed to finalize order. Please try again or contact support.");
       }
     });
   };

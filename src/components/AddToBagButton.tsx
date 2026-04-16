@@ -28,15 +28,12 @@ export default function AddToBagButton({ product }: AddToBagButtonProps) {
     e.stopPropagation();
 
     // If we have sizes to choose from
-    if (availableVariants.length > 0) {
-      const inStock = availableVariants.filter(v => v.stock > 0);
-      if (inStock.length === 1) {
-        // Just add the only available size
-        addToCartConfirmed(inStock[0].size);
-      } else {
-        // Open size selector inline
-        setSelectingSize(true);
-      }
+    if (availableVariants.length > 1) {
+      // Open size selector inline
+      setSelectingSize(true);
+    } else if (availableVariants.length === 1) {
+      // Just add the only size
+      addToCartConfirmed(availableVariants[0].size);
     } else {
       // Fallback if no sizes configured
       addToCartConfirmed("M");

@@ -88,11 +88,7 @@ export default function ProductClient({ product, sizeChartData, deliveryData }: 
   };
 
   const incrementQuantity = () => {
-    if (selectedSize) {
-      if (quantity < selectedVariantStock) setQuantity(q => q + 1);
-    } else {
-      setQuantity(q => q + 1); // allow guessing before size select
-    }
+    setQuantity(q => q + 1);
   };
 
   const decrementQuantity = () => {
@@ -244,8 +240,8 @@ export default function ProductClient({ product, sizeChartData, deliveryData }: 
             <div className="flex flex-col sm:flex-row gap-3 mt-8">
               <button
                 onClick={handleAddToCart}
-                disabled={!selectedSize || totalStock <= 0}
-                className={`md:flex-1 h-14 md:h-16 font-black text-xs md:text-sm uppercase tracking-[0.15em] flex items-center justify-center gap-3 transition-all duration-300 border-2 rounded-xl ${(!selectedSize || totalStock <= 0)
+                disabled={!selectedSize}
+                className={`md:flex-1 h-14 md:h-16 font-black text-xs md:text-sm uppercase tracking-[0.15em] flex items-center justify-center gap-3 transition-all duration-300 border-2 rounded-xl ${(!selectedSize)
                   ? 'border-slate-200 bg-slate-50 text-slate-400 cursor-not-allowed'
                   : addedEffect
                     ? 'border-green-600 bg-green-50 text-green-700'
@@ -267,8 +263,8 @@ export default function ProductClient({ product, sizeChartData, deliveryData }: 
 
               <button
                 onClick={handleBuyNow}
-                disabled={!selectedSize || totalStock <= 0}
-                className={`md:flex-1 h-14 md:h-16 font-black text-xs md:text-sm uppercase tracking-[0.15em] flex items-center justify-center gap-3 transition-all duration-300 rounded-xl shadow-lg shadow-primary/10 ${(!selectedSize || totalStock <= 0)
+                disabled={!selectedSize}
+                className={`md:flex-1 h-14 md:h-16 font-black text-xs md:text-sm uppercase tracking-[0.15em] flex items-center justify-center gap-3 transition-all duration-300 rounded-xl shadow-lg shadow-primary/10 ${(!selectedSize)
                   ? 'bg-slate-200 text-slate-400 cursor-not-allowed shadow-none'
                   : 'bg-primary text-[#FFD700] hover:bg-[#600018] active:scale-[0.98]'
                   }`}
@@ -277,7 +273,7 @@ export default function ProductClient({ product, sizeChartData, deliveryData }: 
                 Buy it Now
               </button>
             </div>
-            {!selectedSize && totalStock > 0 && <p className="text-xs text-red-500 font-bold uppercase tracking-widest px-1 mt-2">Please select a size to continue</p>}
+            {!selectedSize && <p className="text-xs text-red-500 font-bold uppercase tracking-widest px-1 mt-2">Please select a size to continue</p>}
 
             {/* Size Chart Data Table */}
             {sizeChartData && Array.isArray(sizeChartData.data) && sizeChartData.data.length > 0 && (
