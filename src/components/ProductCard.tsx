@@ -54,6 +54,7 @@ export default function ProductCard({ product }: ProductCardProps) {
             <Image
               src={product.images[0]}
               alt={product.name}
+              unoptimized={true}
               fill
               className="object-cover transition-transform duration-500 group-hover:scale-105"
             />

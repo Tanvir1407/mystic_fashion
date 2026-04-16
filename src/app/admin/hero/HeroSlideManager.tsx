@@ -157,8 +157,7 @@ export default function HeroSlideManager({ initialSlides }: { initialSlides: Sli
                   {/* Thumbnail */}
                   <div className="relative w-24 flex-shrink-0" style={{ aspectRatio: "4/1" }}>
                     <div className="relative w-full h-full rounded overflow-hidden border border-slate-200 bg-slate-100">
-                      {slide.image && <Image src={slide.image} alt={slide.label || "Slide"} fill className="object-cover" />}
-                    </div>
+                      {slide.image && <Image src={slide.image} alt={slide.label || "Slide"} fill className="object-cover" unoptimized={true} />}                    </div>
                   </div>
 
                   {/* Info */}
@@ -220,7 +219,7 @@ export default function HeroSlideManager({ initialSlides }: { initialSlides: Sli
                         <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Slide Image</p>
                         <div className="relative w-full rounded-lg overflow-hidden border border-slate-200 bg-slate-100" style={{ aspectRatio: "4/1" }}>
                           {editData.image
-                            ? <Image src={editData.image} alt="Preview" fill className="object-cover" />
+                            ? <Image src={editData.image} alt="Preview" fill className="object-cover" unoptimized={true} />
                             : <div className="absolute inset-0 flex items-center justify-center text-slate-400 text-xs">No image</div>
                           }
                         </div>
@@ -295,7 +294,7 @@ export default function HeroSlideManager({ initialSlides }: { initialSlides: Sli
               <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Slide Image</p>
               <div className="relative w-full rounded-lg overflow-hidden border-2 border-dashed border-slate-200 bg-slate-50" style={{ aspectRatio: "4/1" }}>
                 {newSlide.image
-                  ? <Image src={newSlide.image} alt="Preview" fill className="object-cover rounded-lg" />
+                  ? <Image src={newSlide.image} alt="Preview" fill className="object-cover rounded-lg" unoptimized={true} />
                   : (
                     <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-slate-400">
                       <ImagePlus className="w-6 h-6" />
