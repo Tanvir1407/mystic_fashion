@@ -32,6 +32,7 @@ export default function CreateOrderClient({ products }: { products: any[] }) {
   const [phone, setPhone] = useState("");
   const [district, setDistrict] = useState("Dhaka");
   const [address, setAddress] = useState("");
+  const [advancePaid, setAdvancePaid] = useState(0);
 
   // Items in current order
   const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
@@ -98,11 +99,6 @@ export default function CreateOrderClient({ products }: { products: any[] }) {
     const variant = selectedProduct.variants.find((v: any) => v.size === selectedSize);
     if (!variant) return;
 
-    if (variant.stock < quantity) {
-      alert(`Insufficient stock. Available: ${variant.stock}`);
-      return;
-    }
-
     const unitPrice = getDiscountedPrice(selectedProduct);
 
     // Check if item already exists
@@ -157,6 +153,7 @@ export default function CreateOrderClient({ products }: { products: any[] }) {
           district,
           address,
           totalAmount,
+          advancePaid,
           items: orderItems.map(item => ({
             productId: item.productId,
             size: item.size,
@@ -167,9 +164,12 @@ export default function CreateOrderClient({ products }: { products: any[] }) {
 
         if (res.success) {
           router.push(`/admin/orders`);
+        } else {
+          alert(res.error || "Failed to create order.");
         }
       } catch (error) {
-        alert("Error creating order. Please check stock levels.");
+        console.error(error);
+        alert("An unexpected error occurred.");
       }
     });
   };
@@ -226,7 +226,7 @@ export default function CreateOrderClient({ products }: { products: any[] }) {
                 </select>
               </div>
             </div>
-            <div className="space-y-1.5 flex-1">
+            <div className="space-y-1.5 ">
               <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Full Address</label>
               <input
                 type="text"
@@ -235,6 +235,19 @@ export default function CreateOrderClient({ products }: { products: any[] }) {
                 placeholder="Village, Post, Thana, District"
                 className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
               />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-bold text-red-500 uppercase tracking-wider">Advance Paid (BDT)</label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-bold text-slate-400">৳</span>
+                <input
+                  type="number"
+                  value={advancePaid}
+                  onChange={e => setAdvancePaid(parseFloat(e.target.value) || 0)}
+                  className="w-full pl-8 pr-4 py-2 bg-red-50/50 border border-red-100 rounded-lg text-sm font-bold text-red-600 focus:bg-white focus:ring-2 focus:ring-red-500/20 focus:border-red-500 transition-all outline-none"
+                  placeholder="0"
+                />
+              </div>
             </div>
           </div>
         </div>
@@ -419,14 +432,28 @@ export default function CreateOrderClient({ products }: { products: any[] }) {
               <span className="font-mono font-bold text-slate-800">৳{deliveryCharge.toLocaleString()}</span>
             </div>
 
-            <div className="pt-4 border-t border-dashed border-slate-200">
-              <div className="flex justify-between items-center mb-1">
-                <span className="text-sm font-bold text-slate-900 uppercase tracking-tighter">Grand Total</span>
-                <span className="text-2xl font-black text-indigo-600 font-mono tracking-tighter">
+            <div className="pt-4 border-t border-dashed border-slate-200 space-y-2">
+              <div className="flex justify-between items-center">
+                <span className="text-sm font-bold text-slate-500 uppercase tracking-tighter">Grand Total</span>
+                <span className="text-lg font-bold text-slate-800 font-mono">
                   ৳{totalAmount.toLocaleString()}
                 </span>
               </div>
-              <p className="text-[10px] text-slate-400 font-medium">Inclusive of all applicable taxes and charges</p>
+              <div className="flex justify-between items-center">
+                <span className="text-sm font-bold text-red-500 uppercase tracking-tighter">Advance Paid</span>
+                <span className="text-lg font-bold text-red-500 font-mono">
+                  - ৳{advancePaid.toLocaleString()}
+                </span>
+              </div>
+              <div className="pt-2 border-t border-slate-100">
+                <div className="flex justify-between items-center">
+                   <span className="text-sm font-black text-slate-900 uppercase tracking-widest">Net Due</span>
+                   <span className="text-2xl font-black text-indigo-600 font-mono tracking-tighter">
+                      ৳{(totalAmount - advancePaid).toLocaleString()}
+                   </span>
+                </div>
+              </div>
+              <p className="text-[10px] text-slate-400 font-medium pt-1">Inclusive of all applicable taxes and charges</p>
             </div>
 
             <div className="pt-6 space-y-3">

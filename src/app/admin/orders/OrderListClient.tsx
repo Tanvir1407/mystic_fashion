@@ -3,8 +3,8 @@
 import { useState, useEffect } from "react";
 import OrderRowClient from "./OrderRowClient";
 import type { OrderStatus } from "@/generated/prisma/client";
-import { bulkUpdateOrderStatus } from "../actions";
-import { Filter, Plus, Printer } from "lucide-react";
+import { bulkUpdateOrderStatus, bulkDeleteOrders } from "../actions";
+import { Filter, Plus, Printer, Trash2 } from "lucide-react";
 import InvoicePrintView from "./InvoicePrintView";
 
 import { useRouter } from "next/navigation";
@@ -64,6 +64,22 @@ export default function OrderListClient({
     } catch (error) {
       // Revert if error
       setOptimisticOrders(initialOrders);
+      console.error(error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedIds.size === 0) return;
+    if (!confirm(`Are you sure you want to delete ${selectedIds.size} orders? This cannot be undone.`)) return;
+
+    setLoading(true);
+    try {
+      await bulkDeleteOrders(Array.from(selectedIds));
+      setSelectedIds(new Set());
+      router.refresh();
+    } catch (error) {
       console.error(error);
     } finally {
       setLoading(false);
@@ -134,6 +150,14 @@ export default function OrderListClient({
               <option value="DELIVERED">Set Delivered</option>
               <option value="CANCELLED">Set Cancelled</option>
             </select>
+
+            <button
+              onClick={handleBulkUpdate}
+              disabled={loading}
+              className="text-xs font-bold text-white bg-indigo-600 px-3 py-1 rounded hover:bg-indigo-700 transition"
+            >
+              {loading ? "Updating..." : "Update Selected"}
+            </button>
             <button
               onClick={handlePrintSelected}
               className="flex items-center gap-1.5 text-xs font-bold text-indigo-600 bg-white border border-indigo-200 px-3 py-1 rounded hover:bg-slate-50 transition"
@@ -142,11 +166,12 @@ export default function OrderListClient({
               Print Selected
             </button>
             <button
-              onClick={handleBulkUpdate}
+              onClick={handleBulkDelete}
               disabled={loading}
-              className="text-xs font-bold text-white bg-indigo-600 px-3 py-1 rounded hover:bg-indigo-700 transition"
+              className="flex items-center gap-1.5 text-xs font-bold text-red-600 bg-white border border-red-200 px-3 py-1 rounded hover:bg-red-50 transition"
             >
-              {loading ? "Updating..." : "Update Selected"}
+              <Trash2 className="w-3.5 h-3.5" />
+              Delete Selected
             </button>
           </div>
         )}

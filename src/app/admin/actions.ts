@@ -191,14 +191,75 @@ export async function updateOrderStatus(orderId: string, status: OrderStatus) {
 }
 
 export async function bulkUpdateOrderStatus(orderIds: string[], status: OrderStatus) {
-  // For simplicity and to reuse the logic above, we iterate
-  // but in a production app with huge lists, this should be optimized.
   const results = [];
   for (const id of orderIds) {
     const res = await updateOrderStatus(id, status);
     results.push(res);
   }
   return results;
+}
+
+export async function deleteOrder(id: string) {
+  try {
+    await prisma.$transaction(async (tx) => {
+      await tx.orderItem.deleteMany({
+        where: { orderId: id },
+      });
+      await tx.order.delete({
+        where: { id },
+      });
+    });
+    revalidatePath("/admin/orders");
+    return { success: true };
+  } catch (error: any) {
+    console.error("Delete order error:", error);
+    return { success: false, error: error.message };
+  }
+}
+
+export async function bulkDeleteOrders(orderIds: string[]) {
+  try {
+    await prisma.$transaction(async (tx) => {
+      await tx.orderItem.deleteMany({
+        where: { orderId: { in: orderIds } },
+      });
+      await tx.order.deleteMany({
+        where: { id: { in: orderIds } },
+      });
+    });
+    revalidatePath("/admin/orders");
+    return { success: true };
+  } catch (error: any) {
+    console.error("Bulk delete orders error:", error);
+    return { success: false, error: error.message };
+  }
+}
+
+export async function updateOrderDetails(id: string, data: { 
+  customerName: string; 
+  phone: string; 
+  district: string; 
+  address: string;
+  advancePaid: number;
+}) {
+  try {
+    await prisma.order.update({
+      where: { id },
+      data: {
+        customerName: data.customerName,
+        phone: data.phone,
+        district: data.district,
+        address: data.address,
+        advancePaid: data.advancePaid,
+      },
+    });
+    revalidatePath("/admin/orders");
+    revalidatePath(`/admin/orders/${id}`);
+    return { success: true };
+  } catch (error: any) {
+    console.error("Update order error:", error);
+    return { success: false, error: error.message };
+  }
 }
 
 export async function saveSizeChart(category: string, data: any) {
@@ -362,49 +423,56 @@ export async function createAdminOrder(data: {
   address: string;
   items: { productId: string; size: string; quantity: number; price: number }[];
   totalAmount: number;
+  advancePaid: number;
 }) {
-  const order = await prisma.$transaction(async (tx) => {
-    // 1. Create the order
-    const newOrder = await tx.order.create({
-      data: {
-        customerName: data.customerName,
-        phone: data.phone,
-        district: data.district,
-        address: data.address,
-        totalAmount: data.totalAmount,
-        status: "CONFIRMED", // Admin orders are usually confirmed immediately
-        items: {
-          create: data.items.map((item) => ({
-            productId: item.productId,
-            size: item.size,
-            quantity: item.quantity,
-            price: item.price,
-          })),
-        },
-      },
-    });
-
-    // 2. Update stock for each item
-    for (const item of data.items) {
-      await tx.productVariant.update({
-        where: {
-          productId_size: {
-            productId: item.productId,
-            size: item.size,
-          },
-        },
+  try {
+    const order = await prisma.$transaction(async (tx) => {
+      // 1. Create the order
+      const newOrder = await tx.order.create({
         data: {
-          stock: {
-            decrement: item.quantity,
+          customerName: data.customerName,
+          phone: data.phone,
+          district: data.district,
+          address: data.address,
+          totalAmount: data.totalAmount,
+          advancePaid: data.advancePaid,
+          status: "CONFIRMED", // Admin orders are usually confirmed immediately
+          items: {
+            create: data.items.map((item) => ({
+              productId: item.productId,
+              size: item.size,
+              quantity: item.quantity,
+              price: item.price,
+            })),
           },
         },
       });
-    }
 
-    return newOrder;
-  });
+      // 2. Update stock for each item
+      for (const item of data.items) {
+        await tx.productVariant.update({
+          where: {
+            productId_size: {
+              productId: item.productId,
+              size: item.size,
+            },
+          },
+          data: {
+            stock: {
+              decrement: item.quantity,
+            },
+          },
+        });
+      }
 
-  revalidatePath("/admin/orders");
-  revalidatePath("/admin/products");
-  return { success: true, orderId: order.id };
+      return newOrder;
+    });
+
+    revalidatePath("/admin/orders");
+    revalidatePath("/admin/products");
+    return { success: true, orderId: order.id };
+  } catch (error: any) {
+    console.error("Create admin order error:", error);
+    return { success: false, error: error.message || "Failed to create order." };
+  }
 }

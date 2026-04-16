@@ -4,7 +4,9 @@ import type { OrderStatus } from "@/generated/prisma/client";
 import { updateOrderStatus } from "../actions";
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { Eye } from "lucide-react";
+import { Eye, Trash2 } from "lucide-react";
+import { deleteOrder } from "../actions";
+import { useRouter } from "next/navigation";
 
 export default function OrderRowClient({ 
   order, 
@@ -19,6 +21,7 @@ export default function OrderRowClient({
 }) {
   const [status, setStatus] = useState<OrderStatus>(order.status);
   const [loading, setLoading] = useState(false);
+  const router = useRouter();
 
   useEffect(() => {
     setStatus(order.status);
@@ -35,6 +38,19 @@ export default function OrderRowClient({
       setStatus(oldStatus);
     }
     setLoading(false);
+  };
+
+  const handleDelete = async () => {
+    if (!confirm("Are you sure you want to delete this order? This action cannot be undone.")) return;
+    
+    setLoading(true);
+    const result = await deleteOrder(order.id);
+    if (result.success) {
+      router.refresh();
+    } else {
+      alert(result.error || "Failed to delete order");
+      setLoading(false);
+    }
   };
 
   return (
@@ -95,13 +111,23 @@ export default function OrderRowClient({
         </select>
       </td>
       <td className="px-6 py-4 text-right">
-        <Link
-          href={`/admin/orders/${order.id}`}
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-indigo-600 bg-indigo-50 border border-indigo-200 rounded-md hover:bg-indigo-100 hover:border-indigo-300 transition-colors"
-        >
-          <Eye className="w-4 h-4" />
-          View
-        </Link>
+        <div className="flex items-center justify-end gap-2">
+          <Link
+            href={`/admin/orders/${order.id}`}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-indigo-600 bg-indigo-50 border border-indigo-200 rounded-md hover:bg-indigo-100 hover:border-indigo-300 transition-colors"
+          >
+            <Eye className="w-4 h-4" />
+            View
+          </Link>
+          <button
+            onClick={handleDelete}
+            disabled={loading}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-red-600 bg-red-50 border border-red-200 rounded-md hover:bg-red-100 hover:border-red-300 transition-colors disabled:opacity-50"
+          >
+            <Trash2 className="w-4 h-4" />
+            Delete
+          </button>
+        </div>
       </td>
     </tr>
   );
