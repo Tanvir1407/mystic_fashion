@@ -275,7 +275,7 @@ export default function InvoicePrintView({ orders }: { orders: Order[] }) {
                       <span className="text-right">{formatDate(order.createdAt)}</span>
 
                       <span className="font-bold text-left">Order No:</span>
-                      <span className="text-right">{order.id.slice(-6).toUpperCase()}</span>
+                      <span className="text-right">{order.id.toUpperCase()}</span>
 
                       <span className="font-bold text-left">Delivery Mode:</span>
                       <span className="text-right">COD</span>

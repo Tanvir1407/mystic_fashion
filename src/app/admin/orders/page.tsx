@@ -3,12 +3,23 @@ import OrderListClient from "./OrderListClient";
 
 export const dynamic = "force-dynamic";
 
-export default async function AdminOrdersPage({ searchParams }: { searchParams: { page?: string, filter?: string } }) {
+export default async function AdminOrdersPage({ searchParams }: { searchParams: { page?: string, filter?: string, search?: string } }) {
   const page = Number(searchParams?.page) || 1;
   const filter = searchParams?.filter || "ALL";
+  const search = searchParams?.search || "";
   const PER_PAGE = 10;
 
-  const whereClause = filter !== "ALL" ? { status: filter as any } : {};
+  const whereClause: any = {};
+  if (filter !== "ALL") {
+    whereClause.status = filter as any;
+  }
+  if (search) {
+    whereClause.OR = [
+      { id: { contains: search, mode: 'insensitive' } },
+      { customerName: { contains: search, mode: 'insensitive' } },
+      { phone: { contains: search, mode: 'insensitive' } },
+    ];
+  }
 
   let orders: any[] = [];
   let totalCount = 0;
@@ -37,5 +48,13 @@ export default async function AdminOrdersPage({ searchParams }: { searchParams: 
 
   const totalPages = Math.ceil(totalCount / PER_PAGE);
 
-  return <OrderListClient initialOrders={orders} currentPage={page} totalPages={totalPages} currentFilter={filter} />;
+  return (
+    <OrderListClient 
+      initialOrders={orders} 
+      currentPage={page} 
+      totalPages={totalPages} 
+      currentFilter={filter}
+      currentSearch={search}
+    />
+  );
 }
