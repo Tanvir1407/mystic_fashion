@@ -39,7 +39,7 @@ export default async function SingleOrderPage({ params }: { params: { id: string
         </Link>
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-slate-900 flex items-center gap-3">
-            Order #{order.id.slice(0, 8).toUpperCase()}
+            Order #{order.id}
             <span className={`text-[10px] px-2.5 py-1 rounded-sm uppercase tracking-wider font-black ${
                order.status === 'DELIVERED'  ? 'bg-green-100 text-green-700' :
                order.status === 'PENDING'    ? 'bg-amber-100 text-amber-700' :

@@ -64,6 +64,11 @@ export default function OrderRowClient({
         />
       </td>
       <td className="px-6 py-4">
+        <span className="font-mono text-[10px] font-bold text-slate-400 bg-slate-50 px-2 py-1 rounded border border-slate-100 uppercase tracking-tighter">
+          {order.id}
+        </span>
+      </td>
+      <td className="px-6 py-4">
         <div className="flex flex-col">
           <span className="font-medium text-sm text-slate-900">{order.customerName}</span>
           <span className="text-xs text-slate-500 mt-0.5">{order.phone}</span>

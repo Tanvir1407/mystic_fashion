@@ -416,6 +416,27 @@ export async function getProductsForOrder() {
   });
 }
 
+async function generateOrderIdInternal(tx: any) {
+  const now = new Date();
+  const year = now.getFullYear().toString().slice(-2);
+  const month = (now.getMonth() + 1).toString().padStart(2, '0');
+  const date = now.getDate().toString().padStart(2, '0');
+  const datePrefix = `MJEPE-${year}${month}${date}`;
+
+  const lastOrder = await tx.order.findFirst({
+    where: { id: { startsWith: datePrefix } },
+    orderBy: { id: 'desc' },
+    select: { id: true }
+  });
+
+  let nextNum = 1;
+  if (lastOrder) {
+    const lastNumStr = lastOrder.id.replace(datePrefix, "");
+    nextNum = parseInt(lastNumStr) + 1;
+  }
+  return `${datePrefix}${nextNum.toString().padStart(2, '0')}`;
+}
+
 export async function createAdminOrder(data: {
   customerName: string;
   phone: string;
@@ -427,9 +448,12 @@ export async function createAdminOrder(data: {
 }) {
   try {
     const order = await prisma.$transaction(async (tx) => {
+      const customId = await generateOrderIdInternal(tx);
+
       // 1. Create the order
       const newOrder = await tx.order.create({
         data: {
+          id: customId,
           customerName: data.customerName,
           phone: data.phone,
           district: data.district,

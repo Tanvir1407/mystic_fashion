@@ -13,9 +13,30 @@ export async function placeOrderAction(payload: {
 }) {
   try {
     return await prisma.$transaction(async (tx) => {
+      // Generate Custom Order ID
+      const now = new Date();
+      const year = now.getFullYear().toString().slice(-2);
+      const month = (now.getMonth() + 1).toString().padStart(2, '0');
+      const date = now.getDate().toString().padStart(2, '0');
+      const datePrefix = `MJEPE-${year}${month}${date}`;
+
+      const lastOrder = await tx.order.findFirst({
+        where: { id: { startsWith: datePrefix } },
+        orderBy: { id: 'desc' },
+        select: { id: true }
+      });
+
+      let nextNum = 1;
+      if (lastOrder) {
+        const lastNumStr = lastOrder.id.replace(datePrefix, "");
+        nextNum = parseInt(lastNumStr) + 1;
+      }
+      const customId = `${datePrefix}${nextNum.toString().padStart(2, '0')}`;
+
       // 1. Create the order & items
       const order = await tx.order.create({
         data: {
+          id: customId,
           customerName: payload.fullName,
           phone: payload.phone,
           district: payload.district,

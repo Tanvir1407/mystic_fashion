@@ -191,6 +191,7 @@ export default function OrderListClient({
                     className="rounded border-slate-300 text-indigo-600 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
                   />
                 </th>
+                <th className="px-6 py-3 font-semibold text-xs text-slate-500 uppercase tracking-wider">ID</th>
                 <th className="px-6 py-3 font-semibold text-xs text-slate-500 uppercase tracking-wider">Customer</th>
                 <th className="px-6 py-3 font-semibold text-xs text-slate-500 uppercase tracking-wider">Address</th>
                 <th className="px-6 py-3 font-semibold text-xs text-slate-500 uppercase tracking-wider">Items</th>
@@ -211,7 +212,7 @@ export default function OrderListClient({
               ))}
               {filteredOrders.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="px-6 py-12 text-center">
+                  <td colSpan={8} className="px-6 py-12 text-center">
                     <p className="text-sm text-slate-500 font-medium">No orders matched.</p>
                   </td>
                 </tr>
