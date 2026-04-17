@@ -10,6 +10,7 @@ export async function placeOrderAction(payload: {
   address: string;
   items: any[];
   totalAmount: number;
+  remarks?: string;
 }) {
   try {
     return await prisma.$transaction(async (tx) => {
@@ -42,6 +43,7 @@ export async function placeOrderAction(payload: {
           district: payload.district,
           address: payload.address,
           totalAmount: payload.totalAmount,
+          remarks: payload.remarks,
           items: {
             create: payload.items.map((item) => ({
               productId: item.id,

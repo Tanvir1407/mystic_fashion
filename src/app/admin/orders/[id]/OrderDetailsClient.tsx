@@ -291,7 +291,7 @@ export default function OrderDetailsClient({ order }: { order: any }) {
             </div>
             Administrative Remarks
           </h3>
-          
+
           {!isEditingRemark ? (
             <button
               onClick={() => setIsEditingRemark(true)}
@@ -335,7 +335,7 @@ export default function OrderDetailsClient({ order }: { order: any }) {
             autoFocus
           />
         ) : (
-          <div 
+          <div
             onClick={() => setIsEditingRemark(true)}
             className="w-full min-h-[100px] bg-slate-50/50 border border-slate-100 rounded-xl px-4 py-3 text-slate-700 text-sm leading-relaxed cursor-pointer hover:bg-slate-50 transition-colors"
           >
@@ -347,10 +347,7 @@ export default function OrderDetailsClient({ order }: { order: any }) {
           </div>
         )}
 
-        <div className="mt-3 flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-tight">
-          <div className="w-1.5 h-1.5 rounded-full bg-blue-400" />
-          Internal Use Only • Visible to Admins and Staff
-        </div>
+
       </div>
     </div>
   );

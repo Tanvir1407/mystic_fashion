@@ -66,7 +66,8 @@ export default function CheckoutClient({
         district,
         address,
         items,
-        totalAmount: total
+        totalAmount: total,
+        remarks: formData.get("remarks") as string
       });
 
       if (result.success) {
@@ -183,6 +184,11 @@ export default function CheckoutClient({
                     <div className="space-y-2">
                       <label className="text-sm font-bold text-zinc-700">Full or Detail Address *</label>
                       <textarea name="address" rows={3} className="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-3 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all resize-none" placeholder="House no, Road no, Area etc..." />
+                    </div>
+
+                    <div className="space-y-2 pt-2">
+                      <label className="text-sm font-bold text-zinc-700">Order Remarks (Optional)</label>
+                      <textarea name="remarks" rows={2} className="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-3 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all resize-none text-sm" placeholder="Special instructions, gate codes, etc..." />
                     </div>
                   </div>
 

@@ -460,6 +460,7 @@ export async function createAdminOrder(data: {
   items: { productId: string; size: string; quantity: number; price: number }[];
   totalAmount: number;
   advancePaid: number;
+  remarks?: string;
 }) {
   try {
     const order = await prisma.$transaction(async (tx) => {
@@ -475,6 +476,7 @@ export async function createAdminOrder(data: {
           address: data.address,
           totalAmount: data.totalAmount,
           advancePaid: data.advancePaid,
+          remarks: data.remarks,
           status: "CONFIRMED", // Admin orders are usually confirmed immediately
           items: {
             create: data.items.map((item) => ({

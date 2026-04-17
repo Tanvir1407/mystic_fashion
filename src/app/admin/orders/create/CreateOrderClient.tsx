@@ -33,6 +33,7 @@ export default function CreateOrderClient({ products }: { products: any[] }) {
   const [district, setDistrict] = useState("Dhaka");
   const [address, setAddress] = useState("");
   const [advancePaid, setAdvancePaid] = useState(0);
+  const [remarks, setRemarks] = useState("");
 
   // Items in current order
   const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
@@ -154,6 +155,7 @@ export default function CreateOrderClient({ products }: { products: any[] }) {
           address,
           totalAmount,
           advancePaid,
+          remarks,
           items: orderItems.map(item => ({
             productId: item.productId,
             size: item.size,
@@ -248,6 +250,16 @@ export default function CreateOrderClient({ products }: { products: any[] }) {
                   placeholder="0"
                 />
               </div>
+            </div>
+            <div className="space-y-1.5 md:col-span-2">
+              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Administrative Remarks</label>
+              <textarea
+                value={remarks}
+                onChange={e => setRemarks(e.target.value)}
+                placeholder="Add any internal notes, packaging instructions, or customer requests..."
+                rows={3}
+                className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all resize-none"
+              />
             </div>
           </div>
         </div>
