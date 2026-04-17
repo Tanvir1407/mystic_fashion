@@ -11,10 +11,10 @@ import { useState, useTransition } from "react";
 import { placeOrderAction, validateCoupon } from "./actions";
 import { Ticket, Loader2, CheckCircle, Tag } from "lucide-react";
 
-export default function CheckoutClient({ 
-  deliveryData, 
-  footerData 
-}: { 
+export default function CheckoutClient({
+  deliveryData,
+  footerData
+}: {
   deliveryData: { insideDhaka: number, outsideDhaka: number },
   footerData: FooterData
 }) {
@@ -23,7 +23,7 @@ export default function CheckoutClient({
   const [errorMsg, setErrorMsg] = useState("");
   const [districtOpen, setDistrictOpen] = useState(false);
   const [selectedDistrict, setSelectedDistrict] = useState("");
-  
+
   // Coupon States
   const [couponCode, setCouponCode] = useState("");
   const [couponDiscount, setCouponDiscount] = useState(0);
@@ -50,7 +50,7 @@ export default function CheckoutClient({
     setIsValidating(true);
     setCouponError("");
     setCouponSuccess("");
-    
+
     const res = await validateCoupon(couponCode, subtotal);
     if (res.success && res.discountAmount !== undefined) {
       setCouponDiscount(res.discountAmount);
@@ -229,27 +229,32 @@ export default function CheckoutClient({
             {/* Right Side: Order Summary */}
             <div className="w-full lg:w-2/5">
               <div className="bg-white p-6 md:p-8 rounded-2xl border border-slate-200 shadow-sm sticky top-32">
-                <h2 className="text-xl font-bold uppercase tracking-wide mb-6 pb-4 border-b border-slate-100">Order Summary</h2>
+                <h2 className="text-sm font-black uppercase tracking-[0.2em] text-slate-900 mb-8 pb-4 border-b border-slate-100 flex items-center justify-between">
+                  <span>Order Summary</span>
+                  <span className="text-[10px] bg-slate-100 px-2 py-0.5 rounded text-slate-500">{items.length} Items</span>
+                </h2>
 
-                <div className="space-y-4 mb-6 max-h-[40vh] overflow-y-auto pr-2">
+                <div className="space-y-5 mb-8 max-h-[40vh] overflow-y-auto pr-2 custom-scrollbar">
                   {items.map((item) => (
-                    <div key={`${item.id}-${item.size}`} className="flex gap-4">
-                      <div className="relative w-16 h-20 bg-slate-100 rounded-md overflow-hidden flex-shrink-0 border border-slate-200">
+                    <div key={`${item.id}-${item.size}`} className="flex gap-4 group">
+                      <div className="relative w-16 h-20 bg-slate-50 rounded-xl overflow-hidden flex-shrink-0 border border-slate-100 group-hover:border-slate-300 transition-colors">
                         {item.image && (
                           <Image src={item.image} alt={item.name} fill className="object-cover" />
                         )}
                       </div>
-                      <div className="flex-1">
-                        <h4 className="font-bold text-sm leading-snug line-clamp-2">{item.name}</h4>
-                        <div className="flex items-center gap-2 mt-1">
-                          {item.size && <span className="text-xs text-zinc-500 mt-1 block">Size: {item.size}</span>}
-                          <span className="text-xs font-bold text-zinc-500 mt-1 block">Qty: {item.quantity}</span>
+                      <div className="flex-1 flex flex-col justify-between py-0.5">
+                        <div>
+                          <h4 className="font-bold text-xs uppercase tracking-tight text-slate-800 line-clamp-1 group-hover:text-black transition-colors">{item.name}</h4>
+                          <div className="flex items-center gap-3 mt-1.5">
+                            {item.size && <span className="text-[10px] font-black uppercase bg-slate-100 px-1.5 py-0.5 rounded text-slate-500">Size: {item.size}</span>}
+                            <span className="text-[10px] font-bold text-slate-400 uppercase">Qty: {item.quantity}</span>
+                          </div>
                         </div>
-                        <div className="flex items-center gap-2 mt-1">
+                        <div className="flex items-center gap-2">
                           {item.originalPrice && item.originalPrice > item.price && (
-                            <span className="text-xs font-bold text-zinc-400 line-through">{formatBDT(item.originalPrice)}</span>
+                            <span className="text-[10px] font-bold text-slate-300 line-through">৳{item.originalPrice.toLocaleString()}</span>
                           )}
-                          <p className="font-bold text-primary text-sm">{formatBDT(item.price)}</p>
+                          <p className="font-black text-slate-900 text-xs">৳{item.price.toLocaleString()}</p>
                         </div>
                       </div>
                     </div>
@@ -257,22 +262,21 @@ export default function CheckoutClient({
                 </div>
 
                 {/* Coupon Section */}
-                <div className="mb-6 pt-2">
-                  <label className="text-xs font-black uppercase tracking-widest text-zinc-500 mb-2 block">Promo Code</label>
+                <div className="mb-8 p-5 bg-slate-50 rounded-2xl border border-slate-100">
                   <div className="flex gap-2">
                     <div className="relative flex-1">
-                      <Tag className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
-                      <input 
-                        type="text" 
+                      <Tag className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                      <input
+                        type="text"
                         value={couponCode}
                         onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
                         placeholder="ENTER CODE"
                         disabled={!!appliedCoupon}
-                        className="w-full pl-9 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-black tracking-widest focus:bg-white focus:border-primary focus:ring-1 focus:ring-primary transition-all outline-none disabled:bg-white disabled:text-zinc-400" 
+                        className="w-full pl-10 pr-4 py-3 bg-white border border-slate-200 rounded-xl text-xs font-black tracking-widest focus:ring-4 focus:ring-slate-900/5 focus:border-slate-900 transition-all outline-none disabled:text-slate-400"
                       />
                     </div>
                     {appliedCoupon ? (
-                      <button 
+                      <button
                         type="button"
                         onClick={() => {
                           setAppliedCoupon("");
@@ -280,66 +284,62 @@ export default function CheckoutClient({
                           setCouponCode("");
                           setCouponSuccess("");
                         }}
-                        className="px-4 py-3 border border-red-200 text-red-500 text-xs font-bold rounded-xl hover:bg-red-50 transition-all"
+                        className="px-5 py-3 bg-white border border-slate-200 text-slate-900 text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-slate-50 transition-all"
                       >
-                        REMOVE
+                        Remove
                       </button>
                     ) : (
-                      <button 
+                      <button
                         type="button"
                         onClick={handleApplyCoupon}
                         disabled={isValidating || !couponCode}
-                        className="px-6 py-3 bg-zinc-900 text-white text-xs font-black rounded-xl hover:bg-black transition-all disabled:opacity-50 flex items-center gap-2"
+                        className="px-6 py-3 bg-slate-900 text-white text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-black transition-all disabled:opacity-50 flex items-center gap-2"
                       >
-                        {isValidating ? <Loader2 className="w-4 h-4 animate-spin" /> : "APPLY"}
+                        {isValidating ? <Loader2 className="w-4 h-4 animate-spin text-white" /> : "Apply"}
                       </button>
                     )}
                   </div>
-                  {couponError && <p className="text-[10px] font-bold text-red-500 mt-2 ml-1">{couponError}</p>}
-                  {couponSuccess && <p className="text-[10px] font-bold text-green-600 mt-2 ml-1 flex items-center gap-1"><CheckCircle className="w-3 h-3" /> {couponSuccess}</p>}
+                  {couponError && <p className="text-[9px] font-black uppercase text-slate-500 mt-3 ml-1 flex items-center gap-1.5"><X className="w-3 h-3 text-red-500" /> {couponError}</p>}
+                  {couponSuccess && <p className="text-[9px] font-black uppercase text-slate-900 mt-3 ml-1 flex items-center gap-1.5"><CheckCircle className="w-3 h-3 text-green-500" /> {couponSuccess}</p>}
                 </div>
 
-                <div className="border-t border-slate-100 pt-4 space-y-3 mb-6">
+                <div className="space-y-3.5 mb-8">
                   {totalItemDiscount > 0 && (
-                    <>
-                      <div className="flex justify-between text-zinc-500 text-sm">
-                        <span>Original Subtotal</span>
-                        <span className="font-medium line-through">{formatBDT(originalSubtotal)}</span>
-                      </div>
-                      <div className="flex justify-between text-green-600 text-sm font-bold">
-                        <span>Sale Savings</span>
-                        <span>-{formatBDT(totalItemDiscount)}</span>
-                      </div>
-                    </>
+                    <div className="flex justify-between text-slate-400 text-xs font-bold uppercase tracking-tight">
+                      <span>Item Savings</span>
+                      <span className="">-{formatBDT(totalItemDiscount)}</span>
+                    </div>
                   )}
                   {couponDiscount > 0 && (
-                    <div className="flex justify-between text-indigo-600 text-sm font-bold">
-                      <span className="flex items-center gap-1.5"><Ticket className="w-3.5 h-3.5" /> Coupon ({appliedCoupon})</span>
+                    <div className="flex justify-between text-slate-900 text-xs font-black uppercase tracking-tight">
+                      <span className="flex items-center gap-1.5">Coupon ({appliedCoupon})</span>
                       <span>-{formatBDT(couponDiscount)}</span>
                     </div>
                   )}
-                  <div className="flex justify-between text-zinc-600 text-sm">
+                  <div className="flex justify-between text-slate-500 text-xs font-bold uppercase tracking-tight">
                     <span>Subtotal</span>
-                    <span className="font-bold text-zinc-900">{formatBDT(subtotal)}</span>
+                    <span className="text-slate-900">{formatBDT(subtotal)}</span>
                   </div>
-                  <div className="flex justify-between text-zinc-600 text-sm">
-                    <span>Delivery Fee {selectedDistrict && `(${selectedDistrict})`}</span>
-                    <span className={`font-bold ${deliveryFee === 0 && selectedDistrict ? 'text-green-600' : 'text-zinc-900'}`}>
-                      {selectedDistrict ? formatBDT(deliveryFee) : "Select District..."}
+                  <div className="flex justify-between text-slate-500 text-xs font-bold uppercase tracking-tight">
+                    <span>Delivery</span>
+                    <span className="text-slate-900">
+                      {selectedDistrict ? formatBDT(deliveryFee) : "--"}
                     </span>
                   </div>
                 </div>
 
-                <div className="border-t border-slate-200 pt-4 mb-8 flex justify-between items-center">
-                  <span className="text-lg font-bold uppercase tracking-widest text-zinc-800">Total</span>
-                  <span className="text-2xl font-black text-primary">{formatBDT(total)}</span>
+                <div className="border-t border-slate-100 pt-6 mb-8 flex justify-between items-end">
+                  <div className="flex justify-between w-full">
+                    <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-1">Grand Total</span>
+                    <span className="text-3xl font-black text-slate-900 tracking-tighter">{formatBDT(total)}</span>
+                  </div>
                 </div>
 
                 {errorMsg && (
-                  <div className="bg-red-50 text-red-600 p-4 rounded-lg text-sm font-bold mb-6 border border-red-200 shadow-sm flex items-start justify-between gap-3">
-                    <p>{errorMsg}</p>
-                    <button onClick={() => setErrorMsg("")} className="text-red-400 hover:text-red-600 transition-colors flex-shrink-0">
-                      <X className="w-5 h-5" />
+                  <div className="bg-slate-950 text-white p-4 rounded-xl text-[10px] font-black uppercase tracking-widest mb-6 border border-slate-800 flex items-start justify-between gap-3 animate-in fade-in slide-in-from-top-2">
+                    <p className="leading-relaxed">{errorMsg}</p>
+                    <button onClick={() => setErrorMsg("")} className="text-slate-400 hover:text-white transition-colors flex-shrink-0">
+                      <X className="w-4 h-4" />
                     </button>
                   </div>
                 )}
@@ -348,12 +348,21 @@ export default function CheckoutClient({
                   type="submit"
                   form="checkout-form"
                   disabled={isPending || items.length === 0}
-                  className="w-full bg-[#800020] text-[#FFD700] py-4 rounded-xl font-black uppercase tracking-widest hover:bg-[#600018] transition-all transform active:scale-[0.98] shadow-lg shadow-black/10 flex items-center justify-center gap-2 disabled:opacity-75 disabled:cursor-not-allowed"
+                  className="w-full bg-primary text-white py-5 rounded-xl font-black uppercase tracking-[0.25em] text-xs hover:bg-black transition-all transform active:scale-[0.98] shadow-2xl shadow-slate-200 flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed group"
                 >
                   {isPending ? (
-                    <div className="w-5 h-5 border-2 border-white/50 border-t-white rounded-full animate-spin" />
-                  ) : "Place Order"}
+                    <Loader2 className="w-5 h-5 animate-spin text-white" />
+                  ) : (
+                    <>
+                      Place Order
+                    </>
+                  )}
                 </button>
+                <div className="mt-6 flex items-center justify-center gap-4 text-slate-300">
+                  <div className="h-[1px] flex-1 bg-slate-100"></div>
+                  <span className="text-[8px] font-black uppercase tracking-widest">SECURE CHECKOUT</span>
+                  <div className="h-[1px] flex-1 bg-slate-100"></div>
+                </div>
               </div>
             </div>
 

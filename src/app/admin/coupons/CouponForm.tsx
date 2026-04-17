@@ -88,9 +88,8 @@ export function CouponForm({ coupon, onClose, onSuccess }: CouponFormProps) {
                   <button
                     type="button"
                     onClick={() => setFormData({ ...formData, type: "FLAT" })}
-                    className={`flex items-center justify-center gap-2 py-2.5 rounded-lg text-xs font-bold transition-all ${
-                      formData.type === "FLAT" ? "bg-white text-indigo-600 shadow-sm ring-1 ring-black/5" : "text-slate-500 hover:text-slate-700"
-                    }`}
+                    className={`flex items-center justify-center gap-2 py-2.5 rounded-lg text-xs font-bold transition-all ${formData.type === "FLAT" ? "bg-white text-indigo-600 shadow-sm ring-1 ring-black/5" : "text-slate-500 hover:text-slate-700"
+                      }`}
                   >
                     <Banknote className="w-3.5 h-3.5" />
                     Flat
@@ -98,12 +97,11 @@ export function CouponForm({ coupon, onClose, onSuccess }: CouponFormProps) {
                   <button
                     type="button"
                     onClick={() => setFormData({ ...formData, type: "PERCENTAGE" })}
-                    className={`flex items-center justify-center gap-2 py-2.5 rounded-lg text-xs font-bold transition-all ${
-                      formData.type === "PERCENTAGE" ? "bg-white text-indigo-600 shadow-sm ring-1 ring-black/5" : "text-slate-500 hover:text-slate-700"
-                    }`}
+                    className={`flex items-center justify-center gap-2 py-2.5 rounded-lg text-xs font-bold transition-all ${formData.type === "PERCENTAGE" ? "bg-white text-indigo-600 shadow-sm ring-1 ring-black/5" : "text-slate-500 hover:text-slate-700"
+                      }`}
                   >
                     <Percent className="w-3.5 h-3.5" />
-                    % Off
+                    Percentage
                   </button>
                 </div>
               </div>
