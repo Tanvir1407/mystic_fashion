@@ -6,10 +6,9 @@ import Footer from "@/components/Footer";
 import { FooterData } from "@/lib/footer";
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowLeft, CheckCircle2, X, ChevronDown } from "lucide-react";
+import { ArrowLeft, CheckCircle2, X, ChevronDown, Ticket, Loader2, CheckCircle, Tag, Edit2, Sparkles } from "lucide-react";
 import { useState, useTransition } from "react";
 import { placeOrderAction, validateCoupon } from "./actions";
-import { Ticket, Loader2, CheckCircle, Tag } from "lucide-react";
 
 export default function CheckoutClient({
   deliveryData,
@@ -18,7 +17,7 @@ export default function CheckoutClient({
   deliveryData: { insideDhaka: number, outsideDhaka: number },
   footerData: FooterData
 }) {
-  const { items, getTotalPrice, clearCart } = useCartStore();
+  const { items, getTotalPrice, clearCart, updateItem } = useCartStore();
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
   const [districtOpen, setDistrictOpen] = useState(false);
@@ -31,6 +30,16 @@ export default function CheckoutClient({
   const [isValidating, setIsValidating] = useState(false);
   const [couponError, setCouponError] = useState("");
   const [couponSuccess, setCouponSuccess] = useState("");
+
+  // DTF Modal State
+  const [showDTFModal, setShowDTFModal] = useState(false);
+  const [activeItem, setActiveItem] = useState<{ id: string, size: string | undefined } | null>(null);
+  const [dtfForm, setDtfForm] = useState({
+    type: "messi" as "messi" | "ronaldo" | "neymar" | "custom",
+    name: "",
+    number: ""
+  });
+
   // Format BDT utility
   const formatBDT = (price: number) => {
     return price === 0 ? "Free" : `৳${price.toLocaleString("en-IN")}`;
@@ -39,11 +48,13 @@ export default function CheckoutClient({
   const isDhaka = selectedDistrict === "Dhaka";
   const deliveryFee = selectedDistrict ? (isDhaka ? deliveryData.insideDhaka : deliveryData.outsideDhaka) : 0;
 
-  const subtotal = getTotalPrice(); // Total after products discounts
-  const originalSubtotal = items.reduce((total, item) => total + (item.originalPrice || item.price) * item.quantity, 0);
-  const totalItemDiscount = originalSubtotal - subtotal;
+  // Pricing Logic (Excluding DTF from discounts)
+  const baseSubtotal = getTotalPrice();
+  const totalDTFCost = items.reduce((sum, item) => sum + (item.requiresPrint ? 300 * item.quantity : 0), 0);
+  const total = baseSubtotal - couponDiscount + totalDTFCost + (items.length > 0 ? deliveryFee : 0);
 
-  const total = subtotal + (items.length > 0 ? deliveryFee : 0) - couponDiscount;
+  const originalBaseSubtotal = items.reduce((total, item) => total + (item.originalPrice || item.price) * item.quantity, 0);
+  const totalItemDiscount = originalBaseSubtotal - baseSubtotal;
 
   const handleApplyCoupon = async () => {
     if (!couponCode) return;
@@ -51,11 +62,11 @@ export default function CheckoutClient({
     setCouponError("");
     setCouponSuccess("");
 
-    const res = await validateCoupon(couponCode, subtotal);
+    const res = await validateCoupon(couponCode, baseSubtotal);
     if (res.success && res.discountAmount !== undefined) {
       setCouponDiscount(res.discountAmount);
       setAppliedCoupon(res.couponCode || couponCode);
-      setCouponSuccess(`Coupon applied! You saved ${formatBDT(res.discountAmount)}`);
+      setCouponSuccess(`Coupon applied! Saved ${formatBDT(res.discountAmount)}`);
     } else {
       setCouponError(res.error || "Invalid coupon code.");
       setCouponDiscount(0);
@@ -74,7 +85,6 @@ export default function CheckoutClient({
     const district = formData.get("district") as string;
     const address = formData.get("address") as string;
 
-    // Custom validation
     if (!fullName || !phone || !district || !address) {
       setErrorMsg("Please fill out all required fields before placing your order.");
       return;
@@ -109,6 +119,41 @@ export default function CheckoutClient({
     });
   };
 
+  const handleDTFToggle = (id: string, size: string | undefined, checked: boolean) => {
+    if (checked) {
+      setActiveItem({ id, size });
+      setDtfForm({ type: "messi", name: "Messi", number: "10" });
+      setShowDTFModal(true);
+    } else {
+      updateItem(id, size, {
+        requiresPrint: false,
+        printName: "",
+        printNumber: "",
+        printCost: 0
+      });
+    }
+  };
+
+  const saveDTF = () => {
+    if (!activeItem) return;
+    const { type, name, number } = dtfForm;
+    let finalName = name;
+    let finalNumber = number;
+
+    if (type === "messi") { finalName = "Messi"; finalNumber = "10"; }
+    if (type === "ronaldo") { finalName = "Ronaldo"; finalNumber = "7"; }
+    if (type === "neymar") { finalName = "Neymar"; finalNumber = "10"; }
+
+    updateItem(activeItem.id, activeItem.size, {
+      requiresPrint: true,
+      printName: finalName,
+      printNumber: finalNumber,
+      printCost: 300
+    });
+    setShowDTFModal(false);
+    setActiveItem(null);
+  };
+
   if (isSubmitted) {
     return (
       <main className="min-h-screen bg-slate-50 flex flex-col">
@@ -119,7 +164,7 @@ export default function CheckoutClient({
           <p className="text-zinc-500 max-w-sm mb-8 leading-relaxed">
             Thank you for shopping with Mystic Fashion. Your order has been placed successfully and will be delivered soon.
           </p>
-          <Link href="/" className="bg-primary text-white px-8 py-4 rounded-xl font-bold uppercase tracking-widest hover:bg-[#600018] transition-all active:scale-[0.98]">
+          <Link href="/" className="bg-primary text-white px-8 py-4 rounded-lg font-bold uppercase tracking-widest hover:bg-[#600018] transition-all active:scale-[0.98]">
             Continue Shopping
           </Link>
         </div>
@@ -132,7 +177,10 @@ export default function CheckoutClient({
     <main className="min-h-screen bg-slate-50 flex flex-col">
       <Header />
 
-      <div className="flex-1 container mx-auto py-10 md:py-10">
+      <div className="flex-1 container mx-auto px-4 md:px-0">
+
+
+
         <div className="mb-10 flex justify-between">
           <h1 className="text-3xl md:text-4xl font-black uppercase tracking-tight mt-6">Checkout</h1>
           <Link href="/" className="inline-flex items-center gap-2 text-sm font-bold text-zinc-500 hover:text-primary transition-colors">
@@ -141,6 +189,21 @@ export default function CheckoutClient({
           </Link>
         </div>
 
+        {/* DTF Instruction Banner (Classic & Modern) */}
+        {items.length > 0 && (
+          <div className="mb-10 overflow-hidden bg-white border border-slate-200 rounded-lg shadow-sm flex items-stretch animate-in fade-in slide-in-from-top-4 duration-500">
+            <div className="w-1.5 bg-primary" />
+            <div className="p-5 flex items-center gap-5">
+
+              <div>
+                <h3 className="text-sm font-black uppercase tracking-[0.15em] text-zinc-900 leading-none mb-1.5">Elite Customization</h3>
+                <p className="text-[13px] font-medium text-zinc-500 leading-relaxed max-w-2xl">
+                  Want to customize your jersey? Turn on the <span className="text-primary font-bold italic border-b border-primary/20 pb-0.5">DTF Print toggle</span> below to add your favorite player or your own custom name and number.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
         {items.length === 0 ? (
           <div className="bg-white p-12 rounded-2xl border border-slate-200 text-center flex flex-col items-center">
             <div className="w-24 h-24 bg-slate-100 rounded-full flex items-center justify-center mb-6">
@@ -148,7 +211,7 @@ export default function CheckoutClient({
             </div>
             <h2 className="text-2xl font-bold mb-4">Your cart is empty</h2>
             <p className="text-zinc-500 mb-8 max-w-sm">Looks like you haven't added anything to your cart yet.</p>
-            <Link href="/" className="bg-primary text-white px-8 py-4 rounded-xl font-bold uppercase tracking-widest hover:bg-[#600018] transition-all">
+            <Link href="/" className="bg-primary text-white px-8 py-4 rounded-lg font-bold uppercase tracking-widest hover:bg-[#600018] transition-all">
               Start Shopping
             </Link>
           </div>
@@ -165,11 +228,11 @@ export default function CheckoutClient({
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <label className="text-sm font-bold text-zinc-700">Full Name *</label>
-                      <input name="fullName" type="text" className="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-3 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all" placeholder="Enter your full name" />
+                      <input name="fullName" type="text" className="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-3 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all font-medium" placeholder="Enter your full name" />
                     </div>
                     <div className="space-y-2">
                       <label className="text-sm font-bold text-zinc-700">Phone Number *</label>
-                      <input name="phone" type="tel" className="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-3 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all" placeholder="+880 1..." />
+                      <input name="phone" type="tel" className="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-3 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all font-medium" placeholder="+880 1..." />
                     </div>
                   </div>
 
@@ -213,7 +276,7 @@ export default function CheckoutClient({
 
                     <div className="space-y-2">
                       <label className="text-sm font-bold text-zinc-700">Full or Detail Address *</label>
-                      <textarea name="address" rows={3} className="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-3 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all resize-none" placeholder="House no, Road no, Area etc..." />
+                      <textarea name="address" rows={3} className="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-3 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all resize-none font-medium" placeholder="House no, Road no, Area etc..." />
                     </div>
 
                     <div className="space-y-2 pt-2">
@@ -231,36 +294,70 @@ export default function CheckoutClient({
               <div className="bg-white p-6 md:p-8 rounded-2xl border border-slate-200 shadow-sm sticky top-32">
                 <h2 className="text-sm font-black uppercase tracking-[0.2em] text-slate-900 mb-8 pb-4 border-b border-slate-100 flex items-center justify-between">
                   <span>Order Summary</span>
-                  <span className="text-[10px] bg-slate-100 px-2 py-0.5 rounded text-slate-500">{items.length} Items</span>
+                  <span className="hidden md:block text-[10px] bg-slate-100 px-2 py-0.5 rounded text-slate-500">{items.length} Items</span>
                 </h2>
 
                 <div className="space-y-5 mb-8 max-h-[40vh] overflow-y-auto pr-2 custom-scrollbar">
                   {items.map((item) => (
-                    <div key={`${item.id}-${item.size}`} className="flex gap-4 group">
-                      <div className="relative w-16 h-20 bg-slate-50 rounded-xl overflow-hidden flex-shrink-0 border border-slate-100 group-hover:border-slate-300 transition-colors">
-                        {item.image && (
-                          <Image src={item.image} alt={item.name} fill className="object-cover" />
-                        )}
-                      </div>
-                      <div className="flex-1 flex flex-col justify-between py-0.5">
-                        <div>
-                          <h4 className="font-bold text-xs uppercase tracking-tight text-slate-800 line-clamp-1 group-hover:text-black transition-colors">{item.name}</h4>
-                          <div className="flex items-center gap-3 mt-1.5">
-                            {item.size && <span className="text-[10px] font-black uppercase bg-slate-100 px-1.5 py-0.5 rounded text-slate-500">Size: {item.size}</span>}
-                            <span className="text-[10px] font-bold text-slate-400 uppercase">Qty: {item.quantity}</span>
+                    <div key={`${item.id}-${item.size}`} className="flex flex-col gap-3 pb-5 border-b border-slate-50 last:border-0 last:pb-0">
+                      <div className="flex gap-4 group">
+                        <div className="relative w-16 h-20 bg-slate-50 rounded-lg overflow-hidden flex-shrink-0 border border-slate-100 group-hover:border-slate-300 transition-colors">
+                          {item.image && (
+                            <Image src={item.image} alt={item.name} fill className="object-cover" />
+                          )}
+                        </div>
+                        <div className="flex-1 flex flex-col justify-between py-0.5">
+                          <div>
+                            <h4 className="font-bold text-xs uppercase tracking-tight text-slate-800 line-clamp-1 group-hover:text-black transition-colors">{item.name}</h4>
+                            <div className="flex items-center gap-3 mt-1.5">
+                              {item.size && <span className="text-[10px] font-black uppercase bg-slate-100 px-1.5 py-0.5 rounded text-slate-500">Size: {item.size}</span>}
+                              <span className="text-[10px] font-bold text-slate-400 uppercase">Qty: {item.quantity}</span>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            {item.originalPrice && item.originalPrice > item.price && (
+                              <span className="text-[10px] font-bold text-slate-300 line-through">৳{item.originalPrice.toLocaleString()}</span>
+                            )}
+                            <p className="font-black text-slate-900 text-xs">৳{item.price.toLocaleString()}</p>
                           </div>
                         </div>
-                        <div className="flex items-center gap-2">
-                          {item.originalPrice && item.originalPrice > item.price && (
-                            <span className="text-[10px] font-bold text-slate-300 line-through">৳{item.originalPrice.toLocaleString()}</span>
-                          )}
-                          <p className="font-black text-slate-900 text-xs">৳{item.price.toLocaleString()}</p>
-                        </div>
+                      </div>
+
+                      {/* DTF Toggle Case */}
+                      <div className="flex flex-col gap-2 pl-2">
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={item.requiresPrint}
+                            onChange={(e) => handleDTFToggle(item.id, item.size, e.target.checked)}
+                            className="w-4 h-4 rounded border-slate-300 text-primary focus:ring-primary"
+                          />
+                          <span className="text-[10px] font-bold text-slate-600 uppercase">Add DTF Print (+৳300)</span>
+                        </label>
+                        {item.requiresPrint && item.printName && (
+                          <div className="flex items-center gap-3 bg-slate-50 p-2 rounded-lg border border-slate-100">
+                            <div className="flex flex-col">
+                              <span className="text-[8px] font-bold text-slate-400 uppercase tracking-widest">Print Details</span>
+                              <span className="text-[10px] font-black uppercase text-slate-900">{item.printName} ({item.printNumber})</span>
+                            </div>
+                            <button
+                              onClick={() => {
+                                setActiveItem({ id: item.id, size: item.size });
+                                setDtfForm({ type: "custom", name: item.printName || "", number: item.printNumber || "" });
+                                setShowDTFModal(true);
+                              }}
+                              className="ml-auto text-primary hover:scale-110 transition-transform"
+                            >
+                              <Edit2 className="w-3 h-3" />
+                            </button>
+                          </div>
+                        )}
                       </div>
                     </div>
                   ))}
                 </div>
-                {/* Coupon Section */}
+
+                {/* Coupon Section (Classic style restored) */}
                 <div className="mb-8 border-t border-slate-100 pt-4">
                   <div className="flex gap-2">
                     <div className="relative flex-1">
@@ -271,7 +368,7 @@ export default function CheckoutClient({
                         onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
                         placeholder="COUPON CODE"
                         disabled={!!appliedCoupon}
-                        className="w-full pl-10 pr-4 py-3 bg-white border border-slate-200 rounded-xl text-xs font-black tracking-widest focus:ring-4 focus:ring-slate-900/5 focus:border-slate-900 transition-all outline-none disabled:text-slate-400"
+                        className="w-full pl-10 pr-4 py-3 bg-white border border-slate-200 rounded-lg text-xs font-black tracking-widest focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none disabled:text-slate-400"
                       />
                     </div>
                     {appliedCoupon ? (
@@ -283,7 +380,7 @@ export default function CheckoutClient({
                           setCouponCode("");
                           setCouponSuccess("");
                         }}
-                        className="px-5 py-3 bg-white border border-slate-200 text-slate-900 text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-slate-50 transition-all"
+                        className="px-5 py-3 bg-white border border-slate-200 text-slate-900 text-[10px] font-black uppercase tracking-widest rounded-lg hover:bg-slate-50 transition-all font-bold"
                       >
                         Remove
                       </button>
@@ -292,21 +389,31 @@ export default function CheckoutClient({
                         type="button"
                         onClick={handleApplyCoupon}
                         disabled={isValidating || !couponCode}
-                        className="px-6 py-3 bg-slate-900 text-white text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-black transition-all disabled:opacity-50 flex items-center gap-2"
+                        className="px-6 py-3 bg-slate-900 text-white text-[10px] font-black uppercase tracking-widest rounded-lg hover:bg-black transition-all disabled:opacity-50 flex items-center gap-2 font-bold"
                       >
-                        {isValidating ? <Loader2 className="w-4 h-4 animate-spin text-white" /> : "Apply"}
+                        {isValidating ? <Loader2 className="w-4 h-4 animate-spin" /> : "Apply"}
                       </button>
                     )}
                   </div>
-                  {couponError && <p className="text-[9px] font-black uppercase text-slate-500 mt-3 ml-1 flex items-center gap-1.5"><X className="w-3 h-3 text-red-500" /> {couponError}</p>}
-                  {couponSuccess && <p className="text-[9px] font-black uppercase text-slate-900 mt-3 ml-1 flex items-center gap-1.5"><CheckCircle className="w-3 h-3 text-green-500" /> {couponSuccess}</p>}
+                  {couponError && <p className="text-[9px] font-bold uppercase text-red-500 mt-3 ml-1 flex items-center gap-1.5"><X className="w-3 h-3" /> {couponError}</p>}
+                  {couponSuccess && <p className="text-[9px] font-bold uppercase text-green-600 mt-3 ml-1 flex items-center gap-1.5"><CheckCircle className="w-3 h-3" /> {couponSuccess}</p>}
                 </div>
 
                 <div className="space-y-3.5 mb-8">
+                  <div className="flex justify-between text-slate-500 text-xs font-bold uppercase tracking-tight">
+                    <span>Base Subtotal</span>
+                    <span className="text-slate-900">{formatBDT(baseSubtotal)}</span>
+                  </div>
+                  {totalDTFCost > 0 && (
+                    <div className="flex justify-between text-primary text-xs font-bold uppercase tracking-tight">
+                      <span>DTF Printing Cost</span>
+                      <span>+{formatBDT(totalDTFCost)}</span>
+                    </div>
+                  )}
                   {totalItemDiscount > 0 && (
                     <div className="flex justify-between text-slate-400 text-xs font-bold uppercase tracking-tight">
                       <span>Item Savings</span>
-                      <span className="">-{formatBDT(totalItemDiscount)}</span>
+                      <span>-{formatBDT(totalItemDiscount)}</span>
                     </div>
                   )}
                   {couponDiscount > 0 && (
@@ -315,10 +422,6 @@ export default function CheckoutClient({
                       <span>-{formatBDT(couponDiscount)}</span>
                     </div>
                   )}
-                  <div className="flex justify-between text-slate-500 text-xs font-bold uppercase tracking-tight">
-                    <span>Subtotal</span>
-                    <span className="text-slate-900">{formatBDT(subtotal)}</span>
-                  </div>
                   <div className="flex justify-between text-slate-500 text-xs font-bold uppercase tracking-tight">
                     <span>Delivery</span>
                     <span className="text-slate-900">
@@ -335,7 +438,7 @@ export default function CheckoutClient({
                 </div>
 
                 {errorMsg && (
-                  <div className="bg-slate-950 text-white p-4 rounded-xl text-[10px] font-black uppercase tracking-widest mb-6 border border-slate-800 flex items-start justify-between gap-3 animate-in fade-in slide-in-from-top-2">
+                  <div className="bg-red-500/10 text-red-500 p-4 rounded-lg text-[10px] font-black uppercase tracking-widest mb-6  flex items-start justify-between gap-3">
                     <p className="leading-relaxed">{errorMsg}</p>
                     <button onClick={() => setErrorMsg("")} className="text-slate-400 hover:text-white transition-colors flex-shrink-0">
                       <X className="w-4 h-4" />
@@ -347,14 +450,12 @@ export default function CheckoutClient({
                   type="submit"
                   form="checkout-form"
                   disabled={isPending || items.length === 0}
-                  className="w-full bg-primary text-white py-5 rounded-xl font-black uppercase tracking-[0.25em] text-xs hover:bg-black transition-all transform active:scale-[0.98] shadow-2xl shadow-slate-200 flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed group"
+                  className="w-full bg-primary text-white py-5 rounded-lg font-black uppercase tracking-[0.25em] text-xs hover:bg-black transition-all transform active:scale-[0.98] shadow-2xl shadow-slate-200 flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {isPending ? (
-                    <Loader2 className="w-5 h-5 animate-spin text-white" />
+                    <Loader2 className="w-5 h-5 animate-spin" />
                   ) : (
-                    <>
-                      Place Order
-                    </>
+                    "Place Order"
                   )}
                 </button>
                 <div className="mt-6 flex items-center justify-center gap-4 text-slate-300">
@@ -368,6 +469,84 @@ export default function CheckoutClient({
           </div>
         )}
       </div>
+
+      {/* DTF MODAL (Classic Aesthetic restored) */}
+      {showDTFModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center px-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-300">
+          <div className="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden p-6 md:p-8 relative animate-in zoom-in-95 duration-300">
+            <button onClick={() => setShowDTFModal(false)} className="absolute top-4 right-4 text-slate-400 hover:text-zinc-900 transition-colors">
+              <X className="w-5 h-5" />
+            </button>
+            <h3 className="text-xl font-bold uppercase tracking-tight mb-6">Jersey Customization</h3>
+
+            <div className="space-y-6">
+              <div className="space-y-2">
+                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Select Player or Custom</label>
+                <div className="grid grid-cols-2 gap-2">
+                  {[
+                    { id: "messi", name: "Messi (10)" },
+                    { id: "ronaldo", name: "Ronaldo (7)" },
+                    { id: "neymar", name: "Neymar (10)" },
+                    { id: "custom", name: "Custom Name" },
+                  ].map((opt) => (
+                    <button
+                      key={opt.id}
+                      onClick={() => setDtfForm({
+                        type: opt.id as any,
+                        name: opt.name.includes("(") ? opt.name.split(" (")[0] : "",
+                        number: opt.name.includes("(") ? opt.name.split("(")[1].replace(")", "") : ""
+                      })}
+                      className={`px-3 py-3 rounded-lg border text-[10px] font-bold uppercase tracking-wider transition-all ${dtfForm.type === opt.id ? 'bg-primary border-primary text-white shadow-lg shadow-primary/20' : 'border-slate-200 hover:border-primary hover:text-primary text-slate-600'}`}
+                    >
+                      {opt.name}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {dtfForm.type === "custom" && (
+                <div className="grid grid-cols-2 gap-4 animate-in fade-in slide-in-from-top-2 duration-300 bg-slate-50 p-4 rounded-lg border border-slate-100">
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Name</label>
+                    <input
+                      type="text"
+                      value={dtfForm.name}
+                      onChange={(e) => setDtfForm({ ...dtfForm, name: e.target.value.toUpperCase() })}
+                      className="w-full bg-white border border-slate-200 rounded-lg px-4 py-2 text-xs font-bold focus:border-primary outline-none transition-colors"
+                      placeholder="NAME"
+                      maxLength={12}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">No.</label>
+                    <input
+                      type="text"
+                      value={dtfForm.number}
+                      onChange={(e) => setDtfForm({ ...dtfForm, number: e.target.value.replace(/\D/g, '') })}
+                      className="w-full bg-white border border-slate-200 rounded-lg px-4 py-2 text-xs font-bold focus:border-primary outline-none transition-colors"
+                      placeholder="00"
+                      maxLength={2}
+                    />
+                  </div>
+                </div>
+              )}
+
+              <div className="p-4 bg-slate-50 rounded-lg flex justify-between items-center text-[10px] font-black uppercase tracking-widest border border-slate-100">
+                <span className="text-slate-400">Customization Fee</span>
+                <span className="text-primary italic animate-pulse">৳300</span>
+              </div>
+
+              <button
+                onClick={saveDTF}
+                disabled={dtfForm.type === "custom" && (!dtfForm.name || !dtfForm.number)}
+                className="w-full bg-zinc-900 text-white py-4 rounded-lg font-bold uppercase tracking-[0.2em] text-xs hover:bg-black transition-all disabled:opacity-50"
+              >
+                Save Changes
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <Footer config={footerData} />
     </main>

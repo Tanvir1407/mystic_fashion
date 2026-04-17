@@ -10,6 +10,11 @@ export interface CartItem {
   category?: string;
   size?: string;
   originalPrice?: number;
+  // DTF Printing Fields
+  requiresPrint?: boolean;
+  printName?: string;
+  printNumber?: string;
+  printCost?: number;
 }
 
 interface CartStore {
@@ -18,6 +23,7 @@ interface CartStore {
   addItem: (product: any, size?: string, quantity?: number) => void;
   removeItem: (id: string, size?: string) => void;
   updateQuantity: (id: string, quantity: number, size?: string) => void;
+  updateItem: (id: string, size: string | undefined, updates: Partial<CartItem>) => void;
   clearCart: () => void;
   toggleCart: () => void;
   getTotalItems: () => number;
@@ -59,6 +65,13 @@ export const useCartStore = create<CartStore>()(
           items: get().items.map((item) =>
             item.id === id && item.size === size ? { ...item, quantity: Math.max(0, quantity) } : item
           ).filter(item => item.quantity > 0),
+        });
+      },
+      updateItem: (id, size, updates) => {
+        set({
+          items: get().items.map((item) =>
+            item.id === id && item.size === size ? { ...item, ...updates } : item
+          ),
         });
       },
       clearCart: () => set({ items: [] }),

@@ -153,6 +153,12 @@ model OrderItem {
   quantity  Int
   price     Float    // Storing price at time of purchase
 
+  // DTF Printing Fields
+  requiresPrint Boolean @default(false)
+  printName     String?
+  printNumber   String?
+  printCost     Float   @default(0)
+
   order   Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
   product Product @relation(fields: [productId], references: [id])
 }

@@ -181,6 +181,10 @@ interface OrderItem {
   product: {
     name: string;
   };
+  requiresPrint?: boolean;
+  printName?: string;
+  printNumber?: string;
+  printCost?: number;
 }
 
 interface Order {
@@ -190,6 +194,9 @@ interface Order {
   address: string;
   district: string;
   totalAmount: number;
+  discountAmount: number;
+  couponCode?: string;
+  advancePaid: number;
   createdAt: string | Date;
   items: OrderItem[];
 }
@@ -247,8 +254,10 @@ export default function InvoicePrintView({ orders }: { orders: Order[] }) {
         <div key={pageIdx} className="invoice-page">
           {orders.slice(pageIdx * 2, pageIdx * 2 + 2).map((order) => {
             // Calculations
-            const subtotal = order.items.reduce((acc, item) => acc + item.price * item.quantity, 0);
-            const deliveryCharge = order.totalAmount > subtotal ? order.totalAmount - subtotal : 0;
+            const baseSubtotal = order.items.reduce((acc, item) => acc + item.price * item.quantity, 0);
+            const dtfTotal = order.items.reduce((acc, item) => acc + (item.requiresPrint ? (item.printCost || 0) * item.quantity : 0), 0);
+            const discount = order.discountAmount || 0;
+            const deliveryCharge = order.totalAmount - (baseSubtotal + dtfTotal - discount);
 
             return (
               <div key={order.id} className="invoice-item">
@@ -300,7 +309,12 @@ export default function InvoicePrintView({ orders }: { orders: Order[] }) {
                         <tr key={idx} className="border-b border-transparent">
                           <td className="py-2 px-2 text-center align-top">{idx + 1}</td>
                           <td className="py-2 px-2 align-top">
-                            {item.product.name} - <strong>Size {item.size}</strong>
+                            <p className="font-bold leading-tight">{item.product.name} - Size {item.size}</p>
+                            {item.requiresPrint && (
+                              <div className="mt-1 text-[9px] font-bold text-gray-700 bg-gray-50 border border-gray-100 p-1 rounded-sm">
+                                CUSTOM PRINTING: {item.printName} (#{item.printNumber})
+                              </div>
+                            )}
                           </td>
                           <td className="py-2 px-2 text-center align-top">{item.quantity}</td>
                           <td className="py-2 px-2 text-center align-top">৳{item.price.toLocaleString("en-IN")}</td>
@@ -313,8 +327,8 @@ export default function InvoicePrintView({ orders }: { orders: Order[] }) {
 
                 {/* Subtotal Bar */}
                 <div className="w-full bg-[#E5E7EB] flex text-xs text-black mt-2">
-                  <div className="flex-1 text-right py-1.5 pr-8 font-normal uppercase">Subtotal</div>
-                  <div className="w-[15%] text-right py-1.5 px-2">৳{subtotal.toLocaleString("en-IN")}</div>
+                  <div className="flex-1 text-right py-1.5 pr-8 font-normal uppercase">Base Subtotal</div>
+                  <div className="w-[15%] text-right py-1.5 px-2">৳{baseSubtotal.toLocaleString("en-IN")}</div>
                 </div>
 
                 {/* Bottom Section: Wash Care & Summary */}
@@ -332,9 +346,15 @@ export default function InvoicePrintView({ orders }: { orders: Order[] }) {
 
                   {/* Pricing Summary */}
                   <div className="w-2/5 flex flex-col items-end pt-1">
+                    {dtfTotal > 0 && (
+                      <div className="w-full flex justify-between py-1 px-2 uppercase font-bold text-gray-700">
+                        <span>Printing Cost</span>
+                        <span>৳{dtfTotal.toLocaleString("en-IN")}</span>
+                      </div>
+                    )}
                     <div className="w-full flex justify-between py-1 px-2 uppercase">
-                      <span>Discount</span>
-                      <span>৳0</span>
+                      <span>Discount {order.couponCode && `(${order.couponCode})`}</span>
+                      <span>৳{discount.toLocaleString("en-IN")}</span>
                     </div>
                     <div className="w-full flex justify-between py-1 px-2 uppercase">
                       <span>Delivery Charge</span>

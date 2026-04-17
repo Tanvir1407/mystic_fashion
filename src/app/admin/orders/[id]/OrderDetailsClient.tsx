@@ -38,8 +38,10 @@ export default function OrderDetailsClient({ order }: { order: any }) {
     return price === 0 ? "Free" : `৳${price.toLocaleString("en-IN")}`;
   };
 
-  const itemSubtotal = order.items.reduce((acc: number, item: any) => acc + (item.price * item.quantity), 0);
-  const deliveryDelta = order.totalAmount - itemSubtotal;
+  const baseSubtotal = order.items.reduce((acc: number, item: any) => acc + (item.price * item.quantity), 0);
+  const totalDTFCost = order.items.reduce((acc: number, item: any) => acc + (item.requiresPrint ? item.printCost * item.quantity : 0), 0);
+  const discount = order.discountAmount || 0;
+  const deliveryCharge = order.totalAmount - (baseSubtotal + totalDTFCost - discount);
 
   const handleSaveRemark = async () => {
     setRemarkLoading(true);
@@ -198,18 +200,31 @@ export default function OrderDetailsClient({ order }: { order: any }) {
             </div>
             Financial Breakdown
           </h3>
-          <div className="space-y-6">
+          <div className="space-y-4">
             <div className="flex justify-between items-center text-sm">
-              <span className="text-slate-500 font-medium">Order Subtotal</span>
-              <span className="font-bold text-slate-900">{formatBDT(itemSubtotal)}</span>
+              <span className="text-slate-500 font-medium whitespace-nowrap">Base Subtotal</span>
+              <span className="font-bold text-slate-800">{formatBDT(baseSubtotal)}</span>
             </div>
+            {totalDTFCost > 0 && (
+              <div className="flex justify-between items-center text-sm text-indigo-600">
+                <span className="font-medium">DTF Printing Cost</span>
+                <span className="font-bold">{formatBDT(totalDTFCost)}</span>
+              </div>
+            )}
+            {discount > 0 && (
+              <div className="flex justify-between items-center text-sm text-red-500">
+                <span className="font-medium">Coupon Discount {order.couponCode && `(${order.couponCode})`}</span>
+                <span className="font-bold">-{formatBDT(discount)}</span>
+              </div>
+            )}
             <div className="flex justify-between items-center text-sm">
               <span className="text-slate-500 font-medium">Delivery Charge</span>
-              <span className="font-bold text-slate-900">{formatBDT(deliveryDelta)}</span>
+              <span className="font-bold text-slate-800">{formatBDT(deliveryCharge)}</span>
             </div>
-            <div className="pt-4 border-t border-slate-50 flex justify-between items-center">
-              <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Grand Total</span>
-              <span className="text-2xl font-black text-slate-900">{formatBDT(order.totalAmount)}</span>
+            
+            <div className="pt-4 border-t-2 border-dashed border-slate-100 flex justify-between items-center">
+              <span className="text-[10px] uppercase font-black text-slate-400 tracking-[0.2em]">Grand Total</span>
+              <span className="text-3xl font-black text-slate-900 tracking-tighter">{formatBDT(order.totalAmount)}</span>
             </div>
 
             <div className="bg-slate-50 rounded-xl p-5 space-y-4 border border-slate-100">
@@ -263,17 +278,29 @@ export default function OrderDetailsClient({ order }: { order: any }) {
                   <h4 className="font-bold text-slate-900 text-sm leading-tight truncate mb-2">
                     {item.product.name}
                   </h4>
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className="font-mono bg-slate-900 text-[10px] px-2 py-0.5 rounded font-black text-white tracking-widest">
-                      {item.size}
-                    </span>
-                    <span className="text-[10px] bg-slate-100 text-slate-500 px-2 py-0.5 rounded font-bold uppercase">
-                      Qty: {item.quantity}
-                    </span>
+                  <div className="flex flex-col gap-1.5 mb-2">
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono bg-slate-900 text-[10px] px-2 py-0.5 rounded font-black text-white tracking-widest">
+                        {item.size}
+                      </span>
+                      <span className="text-[10px] bg-slate-100 text-slate-500 px-2 py-0.5 rounded font-bold uppercase">
+                        Qty: {item.quantity}
+                      </span>
+                    </div>
+
+                    {item.requiresPrint && (
+                      <div className="flex flex-col gap-1 p-2 bg-indigo-50/50 rounded-lg border border-indigo-100/50">
+                        <span className="text-[8px] font-black text-indigo-400 uppercase tracking-widest leading-none">Jersey Customization</span>
+                        <div className="flex items-center justify-between">
+                          <span className="text-[10px] font-black text-indigo-700 uppercase">{item.printName} <span className="text-indigo-400">#{item.printNumber}</span></span>
+                          <span className="text-[10px] font-bold text-indigo-600">+{formatBDT(item.printCost)}</span>
+                        </div>
+                      </div>
+                    )}
                   </div>
-                  <div className="flex items-center justify-between mt-auto">
+                  <div className="flex items-center justify-between mt-auto pt-1">
                     <span className="text-xs text-slate-400 font-medium">@ {formatBDT(item.price)}</span>
-                    <span className="font-bold text-slate-900 text-sm">{formatBDT(item.price * item.quantity)}</span>
+                    <span className="font-bold text-slate-900 text-sm">{formatBDT((item.price + (item.requiresPrint ? item.printCost : 0)) * item.quantity)}</span>
                   </div>
                 </div>
               </div>

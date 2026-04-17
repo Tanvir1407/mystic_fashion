@@ -36,6 +36,9 @@ export async function placeOrderAction(payload: {
       }
       const customId = `${datePrefix}${nextNum.toString().padStart(2, '0')}`;
 
+      // Sanitize couponCode (Convert "" to null)
+      const sanitizedCoupon = payload.couponCode?.trim() ? payload.couponCode.trim().toUpperCase() : null;
+
       // 1. Create the order & items
       const order = await tx.order.create({
         data: {
@@ -46,7 +49,7 @@ export async function placeOrderAction(payload: {
           address: payload.address,
           totalAmount: payload.totalAmount,
           remarks: payload.remarks,
-          couponCode: payload.couponCode,
+          couponCode: sanitizedCoupon,
           discountAmount: payload.discountAmount || 0,
           items: {
             create: payload.items.map((item) => ({
@@ -54,6 +57,10 @@ export async function placeOrderAction(payload: {
               size: item.size || "M",
               quantity: item.quantity,
               price: item.price,
+              requiresPrint: item.requiresPrint || false,
+              printName: item.printName || null,
+              printNumber: item.printNumber || null,
+              printCost: item.printCost || 0,
             })),
           },
         },
@@ -92,7 +99,7 @@ export async function placeOrderAction(payload: {
   }
 }
 
-export async function validateCoupon(code: string, cartTotal: number) {
+export async function validateCoupon(code: string, baseSubtotal: number) {
   try {
     const coupon = await prisma.coupon.findUnique({
       where: { code: code.toUpperCase() },
@@ -112,13 +119,13 @@ export async function validateCoupon(code: string, cartTotal: number) {
 
     let discountAmount = 0;
     if (coupon.type === "PERCENTAGE") {
-      discountAmount = (coupon.value / 100) * cartTotal;
+      discountAmount = (coupon.value / 100) * baseSubtotal;
     } else {
       discountAmount = coupon.value;
     }
 
-    // Ensure discount doesn't exceed total
-    discountAmount = Math.min(discountAmount, cartTotal);
+    // Ensure discount doesn't exceed base subtotal
+    discountAmount = Math.min(discountAmount, baseSubtotal);
 
     return {
       success: true,
