@@ -3,13 +3,20 @@
 import { useCartStore } from "@/store/cartStore";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import { FooterData } from "@/lib/footer";
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowLeft, CheckCircle2, X, ChevronDown } from "lucide-react";
 import { useState, useTransition } from "react";
 import { placeOrderAction } from "./actions";
 
-export default function CheckoutClient({ deliveryData }: { deliveryData: { insideDhaka: number, outsideDhaka: number } }) {
+export default function CheckoutClient({ 
+  deliveryData, 
+  footerData 
+}: { 
+  deliveryData: { insideDhaka: number, outsideDhaka: number },
+  footerData: FooterData
+}) {
   const { items, getTotalPrice, clearCart } = useCartStore();
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
@@ -85,7 +92,7 @@ export default function CheckoutClient({ deliveryData }: { deliveryData: { insid
             Continue Shopping
           </Link>
         </div>
-        <Footer />
+        <Footer config={footerData} />
       </main>
     );
   }
@@ -269,7 +276,7 @@ export default function CheckoutClient({ deliveryData }: { deliveryData: { insid
         )}
       </div>
 
-      <Footer />
+      <Footer config={footerData} />
     </main>
   );
 }

@@ -180,3 +180,20 @@ model PurchaseItem {
   product       Product        @relation(fields: [productId], references: [id])
   variant       ProductVariant @relation(fields: [variantId], references: [id])
 }
+
+model FooterConfig {
+  id            String   @id @default("default")
+  aboutText     String   @default("Premium authentic jerseys and sportswear. Crafted for those who live and breathe the game.")
+  facebookUrl   String   @default("#")
+  instagramUrl  String   @default("#")
+  whatsappPhone String?  @default("")
+  
+  // Quick Links (JSON)
+  companyLinks  Json     @default("[{\"label\": \"About\", \"url\": \"/about\"}, {\"label\": \"Contact\", \"url\": \"/contact\"}, {\"label\": \"FAQ\", \"url\": \"/faq\"}]")
+  
+  contactEmail   String   @default("hello@mysticfashion.com")
+  contactPhone   String   @default("01700-MYSTIC")
+  contactAddress String   @default("Dhaka, Bangladesh")
+
+  updatedAt     DateTime @updatedAt
+}

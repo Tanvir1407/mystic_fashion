@@ -3,6 +3,7 @@ import Footer from "@/components/Footer";
 import SidebarCart from "@/components/SidebarCart";
 import ProductCard from "@/components/ProductCard";
 import { prisma } from "@/lib/prisma";
+import { getFooterData } from "@/lib/footer";
 
 export const dynamic = "force-dynamic";
 
@@ -13,25 +14,23 @@ export default async function SearchPage({
 }) {
   const query = searchParams.q || "";
 
-  let products: any[] = [];
-  if (query) {
-    try {
-      products = await prisma.product.findMany({
-        where: {
-          OR: [
-            { name: { contains: query, mode: 'insensitive' } },
-            { team: { contains: query, mode: 'insensitive' } },
-            { category: { contains: query, mode: 'insensitive' } },
-            { description: { contains: query, mode: 'insensitive' } },
-          ],
-        },
-        orderBy: { createdAt: "desc" },
-        include: { discount: true, variants: true },
-      });
-    } catch (error) {
-      console.error("Error fetching search results:", error);
-    }
-  }
+  const [productsRes, footerData] = await Promise.all([
+    query ? prisma.product.findMany({
+      where: {
+        OR: [
+          { name: { contains: query, mode: 'insensitive' } },
+          { team: { contains: query, mode: 'insensitive' } },
+          { category: { contains: query, mode: 'insensitive' } },
+          { description: { contains: query, mode: 'insensitive' } },
+        ],
+      },
+      orderBy: { createdAt: "desc" },
+      include: { discount: true, variants: true },
+    }).catch(e => { console.error(e); return []; }) : Promise.resolve([]),
+    getFooterData()
+  ]);
+
+  const products = productsRes;
 
   return (
     <main className="min-h-screen bg-white dark:bg-zinc-950">
@@ -72,7 +71,7 @@ export default async function SearchPage({
         )}
       </div>
 
-      <Footer />
+      <Footer config={footerData} />
       <SidebarCart />
     </main>
   );

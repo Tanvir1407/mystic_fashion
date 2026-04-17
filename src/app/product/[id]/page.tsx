@@ -4,11 +4,12 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import SidebarCart from "@/components/SidebarCart";
 import { prisma } from "@/lib/prisma";
+import { getFooterData } from "@/lib/footer";
 
 export const dynamic = "force-dynamic";
 
 export default async function ProductPage({ params }: { params: { id: string } }) {
-  const [product, delivery] = await Promise.all([
+  const [product, delivery, footerData] = await Promise.all([
     prisma.product.findUnique({
       where: { id: params.id },
       include: {
@@ -19,7 +20,8 @@ export default async function ProductPage({ params }: { params: { id: string } }
     }),
     prisma.deliverySetting.findUnique({
       where: { id: "default" }
-    })
+    }),
+    getFooterData()
   ]);
 
   if (!product) {
@@ -34,7 +36,7 @@ export default async function ProductPage({ params }: { params: { id: string } }
       <main className="w-full">
         <ProductClient product={product} sizeChartData={product.sizeChart || null} deliveryData={deliveryData} />
       </main>
-      <Footer />
+      <Footer config={footerData} />
       <SidebarCart />
     </div>
   );

@@ -124,13 +124,24 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
           <Link
             href="/admin/settings"
-            className={`flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-colors ${pathname.includes("/admin/settings")
+            className={`flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-colors ${pathname === "/admin/settings"
               ? "bg-maroon text-white shadow-md shadow-maroon/20"
               : "hover:bg-slate-800 hover:text-white"
               }`}
           >
             <Settings className="w-4 h-4" />
-            Settings
+            General Settings
+          </Link>
+
+          <Link
+            href="/admin/settings/footer"
+            className={`flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-colors ${pathname.includes("/admin/settings/footer")
+              ? "bg-maroon text-white shadow-md shadow-maroon/20"
+              : "hover:bg-slate-800 hover:text-white"
+              }`}
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-panel-bottom"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M3 15h18"/></svg>
+            Footer Settings
           </Link>
 
         </nav>
