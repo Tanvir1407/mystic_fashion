@@ -2,8 +2,8 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import SidebarCart from "@/components/SidebarCart";
 import ProductCard from "@/components/ProductCard";
-import { prisma } from "@/lib/prisma";
 import { getFooterData } from "@/lib/footer";
+import prisma from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
 

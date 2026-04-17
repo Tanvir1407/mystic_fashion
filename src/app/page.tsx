@@ -5,7 +5,7 @@ import SidebarCart from "@/components/SidebarCart";
 import ProductCard from "@/components/ProductCard";
 import Link from "next/link";
 import Image from "next/image";
-import { prisma } from "@/lib/prisma";
+import prisma from "@/lib/prisma";
 import { getFooterData } from "@/lib/footer";
 
 export const dynamic = "force-dynamic";
