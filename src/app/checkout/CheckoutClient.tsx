@@ -270,7 +270,7 @@ export default function CheckoutClient({
                         type="text"
                         value={couponCode}
                         onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
-                        placeholder="ENTER CODE"
+                        placeholder="COUPON CODE"
                         disabled={!!appliedCoupon}
                         className="w-full pl-10 pr-4 py-3 bg-white border border-slate-200 rounded-xl text-xs font-black tracking-widest focus:ring-4 focus:ring-slate-900/5 focus:border-slate-900 transition-all outline-none disabled:text-slate-400"
                       />
