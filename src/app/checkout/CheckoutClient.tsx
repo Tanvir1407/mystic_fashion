@@ -8,7 +8,8 @@ import Image from "next/image";
 import Link from "next/link";
 import { ArrowLeft, CheckCircle2, X, ChevronDown } from "lucide-react";
 import { useState, useTransition } from "react";
-import { placeOrderAction } from "./actions";
+import { placeOrderAction, validateCoupon } from "./actions";
+import { Ticket, Loader2, CheckCircle, Tag } from "lucide-react";
 
 export default function CheckoutClient({ 
   deliveryData, 
@@ -22,6 +23,14 @@ export default function CheckoutClient({
   const [errorMsg, setErrorMsg] = useState("");
   const [districtOpen, setDistrictOpen] = useState(false);
   const [selectedDistrict, setSelectedDistrict] = useState("");
+  
+  // Coupon States
+  const [couponCode, setCouponCode] = useState("");
+  const [couponDiscount, setCouponDiscount] = useState(0);
+  const [appliedCoupon, setAppliedCoupon] = useState("");
+  const [isValidating, setIsValidating] = useState(false);
+  const [couponError, setCouponError] = useState("");
+  const [couponSuccess, setCouponSuccess] = useState("");
   // Format BDT utility
   const formatBDT = (price: number) => {
     return price === 0 ? "Free" : `৳${price.toLocaleString("en-IN")}`;
@@ -30,11 +39,30 @@ export default function CheckoutClient({
   const isDhaka = selectedDistrict === "Dhaka";
   const deliveryFee = selectedDistrict ? (isDhaka ? deliveryData.insideDhaka : deliveryData.outsideDhaka) : 0;
 
-  const subtotal = getTotalPrice(); // Total after discounts
+  const subtotal = getTotalPrice(); // Total after products discounts
   const originalSubtotal = items.reduce((total, item) => total + (item.originalPrice || item.price) * item.quantity, 0);
-  const totalDiscount = originalSubtotal - subtotal;
+  const totalItemDiscount = originalSubtotal - subtotal;
 
-  const total = subtotal + (items.length > 0 ? deliveryFee : 0);
+  const total = subtotal + (items.length > 0 ? deliveryFee : 0) - couponDiscount;
+
+  const handleApplyCoupon = async () => {
+    if (!couponCode) return;
+    setIsValidating(true);
+    setCouponError("");
+    setCouponSuccess("");
+    
+    const res = await validateCoupon(couponCode, subtotal);
+    if (res.success && res.discountAmount !== undefined) {
+      setCouponDiscount(res.discountAmount);
+      setAppliedCoupon(res.couponCode || couponCode);
+      setCouponSuccess(`Coupon applied! You saved ${formatBDT(res.discountAmount)}`);
+    } else {
+      setCouponError(res.error || "Invalid coupon code.");
+      setCouponDiscount(0);
+      setAppliedCoupon("");
+    }
+    setIsValidating(false);
+  };
 
   const [isPending, startTransition] = useTransition();
 
@@ -67,7 +95,9 @@ export default function CheckoutClient({
         address,
         items,
         totalAmount: total,
-        remarks: formData.get("remarks") as string
+        remarks: formData.get("remarks") as string,
+        couponCode: appliedCoupon,
+        discountAmount: couponDiscount
       });
 
       if (result.success) {
@@ -226,18 +256,67 @@ export default function CheckoutClient({
                   ))}
                 </div>
 
+                {/* Coupon Section */}
+                <div className="mb-6 pt-2">
+                  <label className="text-xs font-black uppercase tracking-widest text-zinc-500 mb-2 block">Promo Code</label>
+                  <div className="flex gap-2">
+                    <div className="relative flex-1">
+                      <Tag className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
+                      <input 
+                        type="text" 
+                        value={couponCode}
+                        onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+                        placeholder="ENTER CODE"
+                        disabled={!!appliedCoupon}
+                        className="w-full pl-9 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-black tracking-widest focus:bg-white focus:border-primary focus:ring-1 focus:ring-primary transition-all outline-none disabled:bg-white disabled:text-zinc-400" 
+                      />
+                    </div>
+                    {appliedCoupon ? (
+                      <button 
+                        type="button"
+                        onClick={() => {
+                          setAppliedCoupon("");
+                          setCouponDiscount(0);
+                          setCouponCode("");
+                          setCouponSuccess("");
+                        }}
+                        className="px-4 py-3 border border-red-200 text-red-500 text-xs font-bold rounded-xl hover:bg-red-50 transition-all"
+                      >
+                        REMOVE
+                      </button>
+                    ) : (
+                      <button 
+                        type="button"
+                        onClick={handleApplyCoupon}
+                        disabled={isValidating || !couponCode}
+                        className="px-6 py-3 bg-zinc-900 text-white text-xs font-black rounded-xl hover:bg-black transition-all disabled:opacity-50 flex items-center gap-2"
+                      >
+                        {isValidating ? <Loader2 className="w-4 h-4 animate-spin" /> : "APPLY"}
+                      </button>
+                    )}
+                  </div>
+                  {couponError && <p className="text-[10px] font-bold text-red-500 mt-2 ml-1">{couponError}</p>}
+                  {couponSuccess && <p className="text-[10px] font-bold text-green-600 mt-2 ml-1 flex items-center gap-1"><CheckCircle className="w-3 h-3" /> {couponSuccess}</p>}
+                </div>
+
                 <div className="border-t border-slate-100 pt-4 space-y-3 mb-6">
-                  {totalDiscount > 0 && (
+                  {totalItemDiscount > 0 && (
                     <>
                       <div className="flex justify-between text-zinc-500 text-sm">
                         <span>Original Subtotal</span>
                         <span className="font-medium line-through">{formatBDT(originalSubtotal)}</span>
                       </div>
                       <div className="flex justify-between text-green-600 text-sm font-bold">
-                        <span>Discount Savings</span>
-                        <span>-{formatBDT(totalDiscount)}</span>
+                        <span>Sale Savings</span>
+                        <span>-{formatBDT(totalItemDiscount)}</span>
                       </div>
                     </>
+                  )}
+                  {couponDiscount > 0 && (
+                    <div className="flex justify-between text-indigo-600 text-sm font-bold">
+                      <span className="flex items-center gap-1.5"><Ticket className="w-3.5 h-3.5" /> Coupon ({appliedCoupon})</span>
+                      <span>-{formatBDT(couponDiscount)}</span>
+                    </div>
                   )}
                   <div className="flex justify-between text-zinc-600 text-sm">
                     <span>Subtotal</span>

@@ -11,6 +11,8 @@ export async function placeOrderAction(payload: {
   items: any[];
   totalAmount: number;
   remarks?: string;
+  couponCode?: string;
+  discountAmount?: number;
 }) {
   try {
     return await prisma.$transaction(async (tx) => {
@@ -44,6 +46,8 @@ export async function placeOrderAction(payload: {
           address: payload.address,
           totalAmount: payload.totalAmount,
           remarks: payload.remarks,
+          couponCode: payload.couponCode,
+          discountAmount: payload.discountAmount || 0,
           items: {
             create: payload.items.map((item) => ({
               productId: item.id,
@@ -85,5 +89,43 @@ export async function placeOrderAction(payload: {
     });
   } catch (error: any) {
     return { success: false, error: error.message || "Failed to place order." };
+  }
+}
+
+export async function validateCoupon(code: string, cartTotal: number) {
+  try {
+    const coupon = await prisma.coupon.findUnique({
+      where: { code: code.toUpperCase() },
+    });
+
+    if (!coupon || !coupon.isActive) {
+      return { success: false, error: "Invalid or inactive coupon code." };
+    }
+
+    const now = new Date();
+    if (coupon.startDate && now < coupon.startDate) {
+      return { success: false, error: "This coupon is not yet active." };
+    }
+    if (coupon.endDate && now > coupon.endDate) {
+      return { success: false, error: "This coupon has expired." };
+    }
+
+    let discountAmount = 0;
+    if (coupon.type === "PERCENTAGE") {
+      discountAmount = (coupon.value / 100) * cartTotal;
+    } else {
+      discountAmount = coupon.value;
+    }
+
+    // Ensure discount doesn't exceed total
+    discountAmount = Math.min(discountAmount, cartTotal);
+
+    return { 
+      success: true, 
+      discountAmount: Math.round(discountAmount), 
+      couponCode: coupon.code 
+    };
+  } catch (error: any) {
+    return { success: false, error: "Failed to validate coupon." };
   }
 }
