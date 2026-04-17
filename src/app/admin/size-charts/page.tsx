@@ -1,4 +1,4 @@
-import { prisma } from "@/lib/prisma";
+import prisma from "@/lib/prisma";
 import Link from "next/link";
 import { deleteSizeChart } from "../actions";
 import { Plus, Edit2, Trash2, Ruler } from "lucide-react";

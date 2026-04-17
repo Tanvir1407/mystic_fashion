@@ -5,15 +5,11 @@ import { revalidatePath } from "next/cache";
 
 export async function getFooterConfig() {
   try {
-    let config = await prisma.footerConfig.findUnique({
+    const config = await prisma.footerConfig.upsert({
       where: { id: "default" },
+      update: {},
+      create: { id: "default" },
     });
-
-    if (!config) {
-      config = await prisma.footerConfig.create({
-        data: { id: "default" },
-      });
-    }
 
     return config;
   } catch (error) {

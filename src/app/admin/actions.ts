@@ -2,7 +2,7 @@
 
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { prisma } from "@/lib/prisma";
+import prisma from "@/lib/prisma";
 import { OrderStatus } from "@/generated/prisma/client";
 import { revalidatePath } from "next/cache";
 import { writeFile, mkdir } from "fs/promises";
@@ -363,15 +363,11 @@ export async function updateDeliverySettings(insideDhaka: number, outsideDhaka: 
 }
 
 export async function getInventorySettings() {
-  const setting = await prisma.inventorySetting.findUnique({
+  return await prisma.inventorySetting.upsert({
     where: { id: "default" },
+    update: {},
+    create: { id: "default", lowStockThreshold: 5 },
   });
-  if (!setting) {
-    return await prisma.inventorySetting.create({
-      data: { id: "default", lowStockThreshold: 5 },
-    });
-  }
-  return setting;
 }
 
 export async function updateInventorySettings(lowStockThreshold: number) {

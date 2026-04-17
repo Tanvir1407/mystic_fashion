@@ -1,4 +1,4 @@
-import { prisma } from "@/lib/prisma";
+import prisma from "@/lib/prisma";
 import PurchaseRowClient from "./PurchaseRowClient";
 import { Filter, Plus } from "lucide-react";
 import Link from "next/link";

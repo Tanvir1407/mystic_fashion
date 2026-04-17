@@ -1,4 +1,4 @@
-import { prisma } from "@/lib/prisma";
+import prisma from "@/lib/prisma";
 import ProductFormClient from "../../new/ProductFormClient";
 import { notFound } from "next/navigation";
 

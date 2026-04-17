@@ -1,4 +1,4 @@
-import { prisma } from "@/lib/prisma";
+import prisma from "@/lib/prisma";
 import DashboardClient from "./DashboardClient";
 
 export const dynamic = "force-dynamic";
