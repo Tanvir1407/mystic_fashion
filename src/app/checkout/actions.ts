@@ -62,7 +62,7 @@ export async function placeOrderAction(payload: {
       // 2. Validate stock availability but don't decrement yet
       for (const item of payload.items) {
         if (!item.size) {
-           throw new Error(`Size not selected for ${item.name}`);
+          throw new Error(`Size not selected for ${item.name}`);
         }
 
         const variant = await tx.productVariant.findUnique({
@@ -77,7 +77,7 @@ export async function placeOrderAction(payload: {
         if (!variant) {
           throw new Error(`Variant not found for ${item.name} (${item.size})`);
         }
-        
+
         // Stock will only be validated and decremented when admin moves status to CONFIRMED
       }
 
@@ -120,10 +120,10 @@ export async function validateCoupon(code: string, cartTotal: number) {
     // Ensure discount doesn't exceed total
     discountAmount = Math.min(discountAmount, cartTotal);
 
-    return { 
-      success: true, 
-      discountAmount: Math.round(discountAmount), 
-      couponCode: coupon.code 
+    return {
+      success: true,
+      discountAmount: Math.round(discountAmount),
+      couponCode: coupon.code
     };
   } catch (error: any) {
     return { success: false, error: "Failed to validate coupon." };
