@@ -116,6 +116,7 @@ model Order {
   totalAmount  Float
   advancePaid  Float       @default(0)
   status       OrderStatus @default(PENDING)
+  remarks      String?
   createdAt    DateTime    @default(now())
   updatedAt    DateTime    @updatedAt
 

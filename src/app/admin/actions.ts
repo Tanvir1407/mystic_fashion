@@ -266,6 +266,21 @@ export async function updateOrderDetails(id: string, data: {
   }
 }
 
+export async function updateOrderRemark(orderId: string, remarks: string) {
+  try {
+    await prisma.order.update({
+      where: { id: orderId },
+      data: { remarks },
+    });
+    revalidatePath("/admin/orders");
+    revalidatePath(`/admin/orders/${orderId}`);
+    return { success: true };
+  } catch (error: any) {
+    console.error("Update order remark error:", error);
+    return { success: false, error: error.message };
+  }
+}
+
 export async function saveSizeChart(category: string, data: any) {
   await prisma.sizeChart.upsert({
     where: { category },

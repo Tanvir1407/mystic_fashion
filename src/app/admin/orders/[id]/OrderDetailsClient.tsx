@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { User, MapPin, Phone, Edit2, Check, X, Package, Wallet } from "lucide-react";
-import { updateOrderDetails } from "../../actions";
+import { User, MapPin, Phone, Edit2, Check, X, Package, Wallet, StickyNote, Save } from "lucide-react";
+import { updateOrderDetails, updateOrderRemark } from "../../actions";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 
@@ -10,6 +10,9 @@ export default function OrderDetailsClient({ order }: { order: any }) {
   const router = useRouter();
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [remarkLoading, setRemarkLoading] = useState(false);
+  const [isEditingRemark, setIsEditingRemark] = useState(false);
+  const [remarks, setRemarks] = useState(order.remarks || "");
 
   const [formData, setFormData] = useState({
     customerName: order.customerName,
@@ -37,6 +40,18 @@ export default function OrderDetailsClient({ order }: { order: any }) {
 
   const itemSubtotal = order.items.reduce((acc: number, item: any) => acc + (item.price * item.quantity), 0);
   const deliveryDelta = order.totalAmount - itemSubtotal;
+
+  const handleSaveRemark = async () => {
+    setRemarkLoading(true);
+    const result = await updateOrderRemark(order.id, remarks);
+    if (!result.success) {
+      alert(result.error || "Failed to update remark");
+    } else {
+      setIsEditingRemark(false);
+      router.refresh();
+    }
+    setRemarkLoading(false);
+  };
 
   return (
     <div className="space-y-2">
@@ -264,6 +279,77 @@ export default function OrderDetailsClient({ order }: { order: any }) {
               </div>
             ))}
           </div>
+        </div>
+      </div>
+
+      {/* Row 3: Administrative Remarks */}
+      <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
+        <div className="flex items-center justify-between mb-6 pb-4 border-b border-slate-50">
+          <h3 className="font-bold text-slate-900 uppercase tracking-widest text-[11px] flex items-center gap-2.5">
+            <div className="p-1.5 bg-blue-50 rounded-md">
+              <StickyNote className="w-4 h-4 text-blue-500" />
+            </div>
+            Administrative Remarks
+          </h3>
+          
+          {!isEditingRemark ? (
+            <button
+              onClick={() => setIsEditingRemark(true)}
+              className="flex items-center gap-2 px-3 py-1.5 text-[10px] font-black uppercase tracking-wider bg-white border border-slate-200 text-slate-600 rounded-md hover:text-indigo-600 hover:border-indigo-200 transition-all group"
+            >
+              <Edit2 className="w-3 h-3 group-hover:scale-110 transition-transform" />
+              Edit Remark
+            </button>
+          ) : (
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handleSaveRemark}
+                disabled={remarkLoading}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-black uppercase tracking-wider bg-slate-900 text-white rounded-md hover:bg-slate-800 transition-all disabled:opacity-50 shadow-sm"
+              >
+                <Check className="w-3.5 h-3.5" />
+                {remarkLoading ? "Saving..." : "Save"}
+              </button>
+              <button
+                onClick={() => {
+                  setIsEditingRemark(false);
+                  setRemarks(order.remarks || "");
+                }}
+                disabled={remarkLoading}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-black uppercase tracking-wider bg-white border border-slate-200 text-slate-600 rounded-md hover:bg-slate-50 transition-all disabled:opacity-50"
+              >
+                <X className="w-3.5 h-3.5" />
+                Cancel
+              </button>
+            </div>
+          )}
+        </div>
+
+        {isEditingRemark ? (
+          <textarea
+            value={remarks}
+            onChange={(e) => setRemarks(e.target.value)}
+            placeholder="Add internal notes about this order, tracking info, or customer communication history..."
+            rows={4}
+            className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500/10 focus:border-blue-400 text-slate-700 resize-none font-medium transition-all text-sm leading-relaxed"
+            autoFocus
+          />
+        ) : (
+          <div 
+            onClick={() => setIsEditingRemark(true)}
+            className="w-full min-h-[100px] bg-slate-50/50 border border-slate-100 rounded-xl px-4 py-3 text-slate-700 text-sm leading-relaxed cursor-pointer hover:bg-slate-50 transition-colors"
+          >
+            {order.remarks ? (
+              <p className="whitespace-pre-wrap font-medium">{order.remarks}</p>
+            ) : (
+              <p className="text-slate-400 italic">No internal remarks added yet. Click to add notes...</p>
+            )}
+          </div>
+        )}
+
+        <div className="mt-3 flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-tight">
+          <div className="w-1.5 h-1.5 rounded-full bg-blue-400" />
+          Internal Use Only • Visible to Admins and Staff
         </div>
       </div>
     </div>
