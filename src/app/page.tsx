@@ -16,10 +16,10 @@ function formatBDT(price: number) {
 export default async function Home() {
   let products: any[] = [];
   try {
-    products = await prisma.product.findMany({ 
-      take: 12, 
-      orderBy: { createdAt: "desc" }, 
-      include: { discount: true, variants: true } 
+    products = await prisma.product.findMany({
+      take: 12,
+      orderBy: { createdAt: "desc" },
+      include: { discount: true, variants: true }
     });
   } catch (error) {
     console.error("Error fetching products:", error);
@@ -27,9 +27,9 @@ export default async function Home() {
 
   let heroSlides: any[] = [];
   try {
-    heroSlides = await prisma.heroSlide.findMany({ 
-      where: { active: true }, 
-      orderBy: { sortOrder: "asc" } 
+    heroSlides = await prisma.heroSlide.findMany({
+      where: { active: true },
+      orderBy: { sortOrder: "asc" }
     });
   } catch (error) {
     console.error("Error fetching heroSlides:", error);
@@ -41,9 +41,9 @@ export default async function Home() {
       <HeroCarousel slides={heroSlides} />
 
       <section className="container mx-auto py-20 px-4 md:px-0">
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4 md:gap-6">
           {products.map((product) => (
-             <ProductCard key={product.id} product={product} />
+            <ProductCard key={product.id} product={product} />
           ))}
 
           {products.length === 0 && (

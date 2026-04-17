@@ -59,7 +59,7 @@ export default function AddToBagButton({ product }: AddToBagButtonProps) {
     return (
       <div
         onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
-        className="w-full flex justify-between bg-zinc-100 rounded-lg p-2 animate-in fade-in zoom-in duration-200 min-h-[44px]"
+        className="w-full flex justify-between bg-zinc-100 p-2 animate-in fade-in zoom-in duration-200 min-h-[44px]"
       >
         <div className="flex flex-wrap flex-1 items-center justify-start gap-1.5">
           {availableVariants.map((v) => (
@@ -125,7 +125,7 @@ export default function AddToBagButton({ product }: AddToBagButtonProps) {
   return (
     <button
       onClick={handleAddClick}
-      className={`w-full text-white py-2.5 rounded-lg font-bold text-xs md:text-sm uppercase tracking-wider transition-all duration-300 flex items-center justify-center gap-2 active:scale-[0.97] ${added ? 'bg-green-600 text-white' : 'bg-primary text-gold hover:bg-[#600018]'}`}
+      className={`w-full text-white py-2.5 font-bold text-xs md:text-sm uppercase tracking-wider transition-all duration-300 flex items-center justify-center gap-2 active:scale-[0.97] ${added ? 'bg-green-600 text-white' : 'bg-primary text-gold hover:bg-[#600018]'}`}
     >
       {added ? (
         <>
