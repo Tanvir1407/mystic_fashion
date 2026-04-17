@@ -18,7 +18,10 @@ export default async function Home() {
   const [productsRes, heroSlidesRes, footerData] = await Promise.all([
     prisma.product.findMany({
       take: 12,
-      orderBy: { createdAt: "desc" },
+      orderBy: [
+        { isFeatured: "desc" },
+        { createdAt: "desc" }
+      ],
       include: { discount: true, variants: true }
     }).catch(e => { console.error(e); return []; }),
     prisma.heroSlide.findMany({

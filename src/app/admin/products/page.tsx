@@ -1,7 +1,7 @@
 import prisma from "@/lib/prisma";
 import Link from "next/link";
 import { deleteProduct } from "../actions";
-import { Plus, Edit2, Filter } from "lucide-react";
+import { Plus, Edit2, Filter, Star } from "lucide-react";
 import { ProductDeleteButton } from "./ProductDeleteButton";
 
 import { AdminPagination } from "@/components/AdminPagination";
@@ -76,9 +76,17 @@ export default async function AdminProductsPage({ searchParams }: { searchParams
                 return (
                   <tr key={product.id} className="hover:bg-slate-50/50 transition-colors group">
                     <td className="px-6 py-4">
-                      <div className="flex flex-col">
-                        <span className="font-medium text-sm text-slate-900">{product.name}</span>
-                        <span className="text-xs text-slate-500 mt-0.5">{product.category}</span>
+                      <div className="flex flex-col gap-1">
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium text-sm text-slate-900">{product.name}</span>
+                          {product.isFeatured && (
+                            <div className="flex items-center gap-1 px-1.5 py-0.5 bg-amber-100 text-amber-700 rounded text-[10px] font-bold uppercase tracking-wider border border-amber-200">
+                              <Star className="w-2.5 h-2.5 fill-amber-500 text-amber-500" />
+                              Featured
+                            </div>
+                          )}
+                        </div>
+                        <span className="text-xs text-slate-500">{product.category}</span>
                       </div>
                     </td>
                     <td className="px-6 py-4 text-sm text-slate-600 font-mono">

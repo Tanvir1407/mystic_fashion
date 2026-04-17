@@ -22,6 +22,7 @@ export default function ProductFormClient({
   const [price, setPrice] = useState(initialData?.price || "");
   const [images, setImages] = useState<string[]>(initialData?.images || []);
   const [isUploading, setIsUploading] = useState(false);
+  const [isFeatured, setIsFeatured] = useState(initialData?.isFeatured || false);
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -104,6 +105,7 @@ export default function ProductFormClient({
       category: category.trim(),
       sizeChartId: sizeChartId || undefined,
       discountId: discountId || null,
+      isFeatured,
       variants: variants.map(({ size, stock }) => ({ size: size.trim(), stock }))
     };
 
@@ -229,6 +231,20 @@ export default function ProductFormClient({
               className="w-full px-4 py-2 border border-slate-300 rounded-md focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 text-sm"
               required
             />
+          </div>
+
+          <div className="flex items-center gap-3 p-4 bg-amber-50 border border-amber-100 rounded-lg col-span-1 md:col-span-2">
+            <input
+              type="checkbox"
+              id="isFeatured"
+              checked={isFeatured}
+              onChange={(e) => setIsFeatured(e.target.checked)}
+              className="w-5 h-5 text-amber-600 border-amber-300 rounded focus:ring-amber-500 cursor-pointer"
+            />
+            <label htmlFor="isFeatured" className="flex flex-col cursor-pointer">
+              <span className="text-sm font-bold text-amber-900">Featured Product</span>
+              <span className="text-xs text-amber-700">Pin this product to the top of the homepage collection</span>
+            </label>
           </div>
 
           <div className="col-span-1 md:col-span-2">

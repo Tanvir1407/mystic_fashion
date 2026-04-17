@@ -42,6 +42,7 @@ export async function createProduct(data: {
   category: string;
   sizeChartId?: string;
   discountId?: string | null;
+  isFeatured: boolean;
   variants: { size: string; stock: number }[];
 }) {
   await prisma.product.create({
@@ -52,6 +53,7 @@ export async function createProduct(data: {
       images: data.images,
       team: data.team,
       category: data.category,
+      isFeatured: data.isFeatured,
       sizeChartId: data.sizeChartId,
       discountId: data.discountId,
       variants: {
@@ -73,6 +75,7 @@ export async function updateProduct(id: string, data: {
   category: string;
   sizeChartId?: string;
   discountId?: string | null;
+  isFeatured: boolean;
   variants: { size: string; stock: number }[];
 }) {
   await prisma.product.update({
@@ -84,6 +87,7 @@ export async function updateProduct(id: string, data: {
       images: data.images,
       team: data.team,
       category: data.category,
+      isFeatured: data.isFeatured,
       sizeChartId: data.sizeChartId,
       discountId: data.discountId,
     },

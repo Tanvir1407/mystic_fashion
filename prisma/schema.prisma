@@ -79,6 +79,7 @@ model Product {
   images        String[]
   team          String
   category      String
+  isFeatured    Boolean  @default(false)
   
   sizeChartId   String?
   sizeChart     SizeChart? @relation(fields: [sizeChartId], references: [id])
