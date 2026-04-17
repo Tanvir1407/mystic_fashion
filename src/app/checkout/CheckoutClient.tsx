@@ -260,9 +260,8 @@ export default function CheckoutClient({
                     </div>
                   ))}
                 </div>
-
                 {/* Coupon Section */}
-                <div className="mb-8 p-5 bg-slate-50 rounded-2xl border border-slate-100">
+                <div className="mb-8 border-t border-slate-100 pt-4">
                   <div className="flex gap-2">
                     <div className="relative flex-1">
                       <Tag className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
