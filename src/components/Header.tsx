@@ -11,6 +11,7 @@ export default function Header() {
   const router = useRouter();
   const [mounted, setMounted] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const { getTotalItems, toggleCart } = useCartStore();
   const pathname = usePathname();
@@ -24,6 +25,7 @@ export default function Header() {
     if (searchQuery.trim()) {
       router.push(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
       setIsMobileMenuOpen(false);
+      setIsSearchOpen(false);
     }
   };
 
@@ -32,40 +34,77 @@ export default function Header() {
 
 
   return (
-    <header className="sticky top-0 w-full z-50 bg-white dark:bg-zinc-950 border-b border-slate-200 dark:border-zinc-800 shadow-sm flex flex-col">
+    <header className="sticky top-0 w-full z-50 bg-white dark:bg-zinc-950 border-b border-slate-200 flex flex-col">
 
-      {/* Tier 2: Main Header Row */}
-      <div className="w-full">
-        <div className="container mx-auto h-20 md:h-24 flex justify-between items-center gap-4 md:gap-8 lg:gap-16">
-
-          {/* Logo */}
-          <Link
-            href="/"
-            className="text-2xl md:text-4xl font-black font-serif italic text-primary tracking-tighter"
+      {/* Search Overlay */}
+      <AnimatePresence>
+        {isSearchOpen && (
+          <motion.div
+            initial={{ y: -100, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: -100, opacity: 0 }}
+            className="absolute top-0 left-0 w-full bg-white dark:bg-zinc-950 z-[60]  border-b border-slate-200 dark:border-zinc-800"
           >
-            Mystic Fashion
-          </Link>
+            <div className="container mx-auto h-20 flex items-center px-4">
+              <form onSubmit={handleSearch} className="flex-1 flex items-center gap-4">
+                <Search className="w-5 h-5 md:w-6 md:h-6 text-primary flex-shrink-0" />
+                <input
+                  autoFocus
+                  type="text"
+                  placeholder="Search for jerseys, teams, apparel..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="flex-1 bg-transparent border-none outline-none text-lg md:text-2xl font-bold text-foreground placeholder:text-slate-300"
+                />
+                <button
+                  type="button"
+                  onClick={() => setIsSearchOpen(false)}
+                  className="p-2 hover:bg-slate-100 dark:hover:bg-zinc-900 rounded-full transition-colors"
+                >
+                  <X className="w-6 h-6 md:w-8 md:h-8 text-slate-400" />
+                </button>
+              </form>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-          {/* Search Bar (Hidden on Mobile) */}
-          <form onSubmit={handleSearch} className="hidden md:flex flex-1 max-w-2xl relative">
-            <input
-              type="text"
-              placeholder="Search for jerseys, teams, players..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full h-12 pl-6 pr-14 rounded-full bg-slate-100 dark:bg-zinc-900 border-2 border-primary focus:outline-none focus:bg-white text-sm  text-foreground transition-all"
-            />
-            <button type="submit" className="absolute right-1 top-1 w-10 h-10 rounded-full bg-foreground text-background flex items-center justify-center bg-primary hover:text-white transition-colors">
-              <Search className="w-4 h-4" />
+      {/* Main Header Row */}
+      <div className="w-full relative">
+        <div className="container mx-auto h-20 md:h-24 grid grid-cols-3 items-center px-2 md:px-4">
+
+          {/* Left: Search Trigger */}
+          <div className="flex justify-start">
+            <button
+              onClick={() => setIsSearchOpen(true)}
+              className="p-2 text-foreground hover:text-primary transition-colors flex items-center gap-2 group"
+            >
+              <Search className="w-6 h-6 group-hover:scale-110 transition-transform" />
             </button>
-          </form>
+          </div>
 
-          {/* Right Utilities */}
-          <div className="flex items-center gap-4 md:gap-6 ml-auto">
+          {/* Center: Logo */}
+          <div className="flex justify-center">
+            <Link
+              href="/"
+              className="text-2xl mm:text-3xl md:text-4xl font-black font-serif italic text-primary tracking-tighter text-center whitespace-nowrap"
+            >
+              Mystic Fashion
+            </Link>
+          </div>
+
+          {/* Right: Utilities */}
+          <div className="flex justify-end items-center gap-2 md:gap-4 lg:gap-6">
             <button
               onClick={toggleCart}
               className="relative p-2 text-foreground rounded-full transition-colors flex items-center justify-center group"
-            > <svg width="21" height="22" viewBox="0 0 21 22" fill="none" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" clip-rule="evenodd" d="M6.48626 20.5H14.8341C17.9004 20.5 20.2528 19.3924 19.5847 14.9348L18.8066 8.89359C18.3947 6.66934 16.976 5.81808 15.7311 5.81808H5.55262C4.28946 5.81808 2.95308 6.73341 2.4771 8.89359L1.69907 14.9348C1.13157 18.889 3.4199 20.5 6.48626 20.5Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></path><path d="M6.34902 5.5984C6.34902 3.21232 8.28331 1.27803 10.6694 1.27803V1.27803C11.8184 1.27316 12.922 1.72619 13.7362 2.53695C14.5504 3.3477 15.0081 4.44939 15.0081 5.5984V5.5984" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></path><path d="M7.70365 10.1018H7.74942" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></path><path d="M13.5343 10.1018H13.5801" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+            >
+              <svg width="21" height="22" viewBox="0 0 21 22" fill="none" xmlns="http://www.w3.org/2000/svg" className="group-hover:scale-110 transition-transform">
+                <path fill-rule="evenodd" clip-rule="evenodd" d="M6.48626 20.5H14.8341C17.9004 20.5 20.2528 19.3924 19.5847 14.9348L18.8066 8.89359C18.3947 6.66934 16.976 5.81808 15.7311 5.81808H5.55262C4.28946 5.81808 2.95308 6.73341 2.4771 8.89359L1.69907 14.9348C1.13157 18.889 3.4199 20.5 6.48626 20.5Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></path>
+                <path d="M6.34902 5.5984C6.34902 3.21232 8.28331 1.27803 10.6694 1.27803V1.27803C11.8184 1.27316 12.922 1.72619 13.7362 2.53695C14.5504 3.3477 15.0081 4.44939 15.0081 5.5984V5.5984" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></path>
+                <path d="M7.70365 10.1018H7.74942" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></path>
+                <path d="M13.5343 10.1018H13.5801" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></path>
+              </svg>
               <span className="absolute top-0 right-0 w-4 h-4 md:w-5 md:h-5 rounded-full bg-red-600 text-[10px] md:text-xs font-black text-white flex items-center justify-center border-2 border-white dark:border-zinc-950">
                 {mounted ? getTotalItems() : 0}
               </span>
@@ -90,19 +129,19 @@ export default function Header() {
             exit={{ height: 0, opacity: 0 }}
             className="md:hidden overflow-hidden bg-white dark:bg-zinc-950 border-t border-slate-100 dark:border-zinc-900"
           >
-            <div className="p-4 space-y-4">
-              <form onSubmit={handleSearch} className="relative">
-                <input
-                  type="text"
-                  placeholder="Search..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full h-12 pl-6 pr-14 rounded-xl bg-slate-100 dark:bg-zinc-900 border-2 border-primary focus:outline-none text-sm font-bold text-foreground transition-all"
-                />
-                <button type="submit" className="absolute right-0 top-0 bottom-0 w-12 rounded-r-xl bg-primary text-background flex items-center justify-center hover:bg-primary hover:text-white transition-colors">
-                  <Search className="w-4 h-4" />
+            <div className="p-2 space-y-4">
+              <div className="bg-slate-50 dark:bg-zinc-900 p-2 rounded-xl mb-6">
+                <button
+                  onClick={() => {
+                    setIsMobileMenuOpen(false);
+                    setIsSearchOpen(true);
+                  }}
+                  className="w-full h-12 flex items-center gap-3 px-4 text-slate-500 font-bold"
+                >
+                  <Search className="w-5 h-5" />
+                  Search...
                 </button>
-              </form>
+              </div>
             </div>
           </motion.div>
         )}

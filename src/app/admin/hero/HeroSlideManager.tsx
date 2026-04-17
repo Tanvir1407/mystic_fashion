@@ -21,8 +21,8 @@ const SPEC_BADGE = (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><circle cx="12" cy="12" r="10" /><path d="M12 16v-4M12 8h.01" /></svg>
     </div>
     <div>
-      <p className="text-xs font-bold text-blue-700">Recommended: 1920 × 480 px &nbsp;(4:1 ratio)</p>
-      <p className="text-[11px] text-blue-500 mt-0.5">Minimum 1280 × 480 px · JPEG or WebP · Wider images crop gracefully on mobile</p>
+      <p className="text-xs font-bold text-blue-700">Recommended: 1920 × 1080 px &nbsp;(16:9 ratio)</p>
+      <p className="text-[11px] text-blue-500 mt-0.5">Minimum 1280 × 1080 px · JPEG or WebP · Wider images crop gracefully on mobile</p>
     </div>
   </div>
 );
@@ -155,7 +155,7 @@ export default function HeroSlideManager({ initialSlides }: { initialSlides: Sli
                   <span className="w-6 text-center text-xs font-mono font-bold text-slate-400 flex-shrink-0">{index + 1}</span>
 
                   {/* Thumbnail */}
-                  <div className="relative w-24 flex-shrink-0" style={{ aspectRatio: "4/1" }}>
+                  <div className="relative w-24 flex-shrink-0" style={{ aspectRatio: "16/9" }}>
                     <div className="relative w-full h-full rounded overflow-hidden border border-slate-200 bg-slate-100">
                       {slide.image && <Image src={slide.image} alt={slide.label || "Slide"} fill className="object-cover" unoptimized={true} />}                    </div>
                   </div>
@@ -181,23 +181,34 @@ export default function HeroSlideManager({ initialSlides }: { initialSlides: Sli
                   </span>
 
                   {/* Actions */}
-                  <div className="flex items-center gap-1 flex-shrink-0">
+                  <div className="flex items-center gap-2 flex-shrink-0">
                     <button
                       onClick={() => handleToggleActive(slide)}
-                      title={slide.active ? "Hide slide" : "Show slide"}
-                      className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded transition-colors"
+                      title={slide.active ? "Deactivate slide" : "Activate slide"}
+                      className={`p-2 rounded-md border transition-all ${
+                        slide.active 
+                        ? "text-slate-400 bg-slate-50 border-slate-200 hover:bg-slate-100 hover:text-slate-600" 
+                        : "text-amber-600 bg-amber-50 border-amber-200 hover:bg-amber-100"
+                      }`}
                     >
                       {slide.active ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </button>
+                    
                     <button
+                      disabled={!!uploading || editingId === slide.id}
                       onClick={() => editingId === slide.id ? setEditingId(null) : startEdit(slide)}
-                      className={`px-3 py-1.5 text-xs font-semibold rounded border transition-colors ${editingId === slide.id ? "bg-indigo-600 text-white border-indigo-600" : "border-slate-200 text-slate-600 hover:bg-slate-50"}`}
+                      className={`inline-flex items-center gap-1.5 px-3 py-2 text-xs font-bold rounded-md border transition-all ${
+                        editingId === slide.id 
+                        ? "bg-slate-100 text-slate-400 border-slate-200 cursor-default" 
+                        : "text-indigo-600 bg-indigo-50 border-indigo-200 hover:bg-indigo-100 hover:border-indigo-300 active:scale-95"
+                      }`}
                     >
-                      {editingId === slide.id ? "Editing" : "Edit"}
+                      {editingId === slide.id ? "Editing..." : "Edit"}
                     </button>
+
                     <button
                       onClick={() => handleDelete(slide.id)}
-                      className="p-1.5 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded transition-colors"
+                      className="p-2 text-red-600 bg-red-50 border border-red-200 rounded-md hover:bg-red-100 hover:border-red-300 transition-all active:scale-95"
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
@@ -217,7 +228,7 @@ export default function HeroSlideManager({ initialSlides }: { initialSlides: Sli
                       {/* Image */}
                       <div className="space-y-2">
                         <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Slide Image</p>
-                        <div className="relative w-full rounded-lg overflow-hidden border border-slate-200 bg-slate-100" style={{ aspectRatio: "4/1" }}>
+                        <div className="relative w-full rounded-lg overflow-hidden border border-slate-200 bg-slate-100" style={{ aspectRatio: "16/9" }}>
                           {editData.image
                             ? <Image src={editData.image} alt="Preview" fill className="object-cover" unoptimized={true} />
                             : <div className="absolute inset-0 flex items-center justify-center text-slate-400 text-xs">No image</div>
@@ -292,7 +303,7 @@ export default function HeroSlideManager({ initialSlides }: { initialSlides: Sli
             {/* Image upload */}
             <div className="space-y-2">
               <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Slide Image</p>
-              <div className="relative w-full rounded-lg overflow-hidden border-2 border-dashed border-slate-200 bg-slate-50" style={{ aspectRatio: "4/1" }}>
+              <div className="relative w-full rounded-lg overflow-hidden border-2 border-dashed border-slate-200 bg-slate-50" style={{ aspectRatio: "16/9" }}>
                 {newSlide.image
                   ? <Image src={newSlide.image} alt="Preview" fill className="object-cover rounded-lg" unoptimized={true} />
                   : (
