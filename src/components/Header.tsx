@@ -97,7 +97,7 @@ export default function Header() {
           <div className="flex justify-end items-center gap-2 md:gap-4 lg:gap-6">
             <button
               onClick={toggleCart}
-              className="relative p-2 text-foreground rounded-full transition-colors flex items-center justify-center group"
+              className="hidden md:flex relative p-2 text-foreground rounded-full transition-colors items-center justify-center group"
             >
               <svg width="21" height="22" viewBox="0 0 21 22" fill="none" xmlns="http://www.w3.org/2000/svg" className="group-hover:scale-110 transition-transform">
                 <path fill-rule="evenodd" clip-rule="evenodd" d="M6.48626 20.5H14.8341C17.9004 20.5 20.2528 19.3924 19.5847 14.9348L18.8066 8.89359C18.3947 6.66934 16.976 5.81808 15.7311 5.81808H5.55262C4.28946 5.81808 2.95308 6.73341 2.4771 8.89359L1.69907 14.9348C1.13157 18.889 3.4199 20.5 6.48626 20.5Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></path>
@@ -144,6 +144,29 @@ export default function Header() {
               </div>
             </div>
           </motion.div>
+        )}
+      </AnimatePresence>
+      {/* Mobile Fixed Cart FAB */}
+      <AnimatePresence>
+        {mounted && (
+          <motion.button
+            initial={{ scale: 0, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            onClick={toggleCart}
+            className="md:hidden fixed bottom-6 right-6 z-50 w-14 h-14 bg-primary text-white rounded-full shadow-[0_8px_30px_rgb(128,0,32,0.4)] flex items-center justify-center active:scale-90 transition-transform"
+          >
+            <div className="relative">
+              <svg width="28" height="28" viewBox="0 0 21 22" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path fill-rule="evenodd" clip-rule="evenodd" d="M6.48626 20.5H14.8341C17.9004 20.5 20.2528 19.3924 19.5847 14.9348L18.8066 8.89359C18.3947 6.66934 16.976 5.81808 15.7311 5.81808H5.55262C4.28946 5.81808 2.95308 6.73341 2.4771 8.89359L1.69907 14.9348C1.13157 18.889 3.4199 20.5 6.48626 20.5Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
+                <path d="M6.34902 5.5984C6.34902 3.21232 8.28331 1.27803 10.6694 1.27803V1.27803C11.8184 1.27316 12.922 1.72619 13.7362 2.53695C14.5504 3.3477 15.0081 4.44939 15.0081 5.5984V5.5984" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
+              </svg>
+
+              <span className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-white text-[11px] font-black text-primary flex items-center justify-center border-2 border-primary shadow-lg">
+                {getTotalItems()}
+              </span>
+
+            </div>
+          </motion.button>
         )}
       </AnimatePresence>
     </header>
