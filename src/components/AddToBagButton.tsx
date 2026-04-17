@@ -95,37 +95,13 @@ export default function AddToBagButton({ product }: AddToBagButtonProps) {
     );
   }
 
-  // if (selectingSize) {
-  //   return (
-  //     <div
-  //       onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
-  //       className="w-full flex items-center justify-between bg-zinc-100 rounded-lg p-1 animate-in fade-in zoom-in duration-200"
-  //     >
-  //       <div className="flex flex-1 items-center justify-start gap-1  scrollbar-hide px-1">
-  //         {availableVariants.map(v => (
-  //           <button
-  //             key={v.size}
-  //             onClick={(e) => { e.preventDefault(); e.stopPropagation(); addToCartConfirmed(v.size); }}
-  //             className="flex-shrink-0 w-8 h-8 rounded-md bg-white border border-slate-200 text-xs font-bold text-zinc-900 hover:bg-primary hover:text-gold hover:border-primary transition-colors"
-  //           >
-  //             {v.size}
-  //           </button>
-  //         ))}
-  //       </div>
-  //       <button
-  //         onClick={(e) => { e.preventDefault(); e.stopPropagation(); setSelectingSize(false); }}
-  //         className="w-8 h-8 flex items-center justify-center text-zinc-400 hover:text-red-500 transition-colors flex-shrink-0 border-l border-slate-200 ml-1"
-  //       >
-  //         <X className="w-4 h-4" />
-  //       </button>
-  //     </div>
-  //   );
-  // }
-
   return (
     <button
       onClick={handleAddClick}
-      className={`w-full text-white py-2.5 font-bold text-xs md:text-sm uppercase tracking-wider transition-all duration-300 flex items-center justify-center gap-2 active:scale-[0.97] ${added ? 'bg-green-600 text-white' : 'bg-primary text-gold hover:bg-[#600018]'}`}
+      className={`w-full py-2.5 font-bold text-xs md:text-sm uppercase tracking-wider transition-all duration-300 flex items-center justify-center gap-2 active:scale-[0.97] ${added
+        ? 'text-primary bg-white border border-primary'
+        : 'bg-white text-primary border border-primary'
+        }`}
     >
       {added ? (
         <>
