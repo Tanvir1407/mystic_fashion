@@ -34,6 +34,8 @@ export default function CreateOrderClient({ products }: { products: any[] }) {
   const [address, setAddress] = useState("");
   const [advancePaid, setAdvancePaid] = useState(0);
   const [remarks, setRemarks] = useState("");
+  const [manualDiscountValue, setManualDiscountValue] = useState(0);
+  const [manualDiscountType, setManualDiscountType] = useState<"FLAT" | "PERCENTAGE">("FLAT");
 
   // Items in current order
   const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
@@ -139,7 +141,15 @@ export default function CreateOrderClient({ products }: { products: any[] }) {
   );
 
   const deliveryCharge = district === "Dhaka" ? 80 : 150;
-  const totalAmount = subtotal + deliveryCharge;
+
+  const calculatedDiscount = useMemo(() => {
+    if (manualDiscountType === "PERCENTAGE") {
+      return (subtotal * manualDiscountValue) / 100;
+    }
+    return manualDiscountValue;
+  }, [subtotal, manualDiscountValue, manualDiscountType]);
+
+  const totalAmount = (subtotal + deliveryCharge) - calculatedDiscount;
 
   const handleSubmit = () => {
     if (!customerName || !phone || !address || orderItems.length === 0) {
@@ -155,6 +165,7 @@ export default function CreateOrderClient({ products }: { products: any[] }) {
           address,
           totalAmount,
           advancePaid,
+          discountAmount: calculatedDiscount,
           remarks,
           items: orderItems.map(item => ({
             productId: item.productId,
@@ -249,6 +260,31 @@ export default function CreateOrderClient({ products }: { products: any[] }) {
                   className="w-full pl-8 pr-4 py-2 bg-red-50/50 border border-red-100 rounded-lg text-sm font-bold text-red-600 focus:bg-white focus:ring-2 focus:ring-red-500/20 focus:border-red-500 transition-all outline-none"
                   placeholder="0"
                 />
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-bold text-indigo-500 uppercase tracking-wider">Manual Discount</label>
+              <div className="flex gap-2">
+                <div className="relative flex-1">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-bold text-slate-400">
+                    {manualDiscountType === "FLAT" ? "৳" : "%"}
+                  </span>
+                  <input
+                    type="number"
+                    value={manualDiscountValue}
+                    onChange={e => setManualDiscountValue(parseFloat(e.target.value) || 0)}
+                    className="w-full pl-8 pr-4 py-2 bg-indigo-50/50 border border-indigo-100 rounded-lg text-sm font-bold text-indigo-600 focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all outline-none"
+                    placeholder="0"
+                  />
+                </div>
+                <select
+                  value={manualDiscountType}
+                  onChange={e => setManualDiscountType(e.target.value as "FLAT" | "PERCENTAGE")}
+                  className="px-2 py-2 bg-indigo-50/50 border border-indigo-100 rounded-lg text-[10px] font-bold uppercase focus:bg-white focus:ring-2 focus:ring-indigo-500/20 outline-none"
+                >
+                  <option value="FLAT">Flat</option>
+                  <option value="PERCENTAGE">%</option>
+                </select>
               </div>
             </div>
             <div className="space-y-1.5 md:col-span-2">
@@ -445,24 +481,33 @@ export default function CreateOrderClient({ products }: { products: any[] }) {
             </div>
 
             <div className="pt-4 border-t border-dashed border-slate-200 space-y-2">
+
+              {calculatedDiscount > 0 && (
+                <div className="flex justify-between items-center">
+                  <span className="text-sm ">Manual Discount</span>
+                  <span className="text-lg font-bold font-mono">
+                    - ৳{calculatedDiscount.toLocaleString()}
+                  </span>
+                </div>
+              )}
+              <div className="flex justify-between items-center">
+                <span className="text-sm">Advance Paid</span>
+                <span className="text-lg font-bold font-mono">
+                  - ৳{advancePaid.toLocaleString()}
+                </span>
+              </div>
               <div className="flex justify-between items-center">
                 <span className="text-sm font-bold text-slate-500 uppercase tracking-tighter">Grand Total</span>
                 <span className="text-lg font-bold text-slate-800 font-mono">
                   ৳{totalAmount.toLocaleString()}
                 </span>
               </div>
-              <div className="flex justify-between items-center">
-                <span className="text-sm font-bold text-red-500 uppercase tracking-tighter">Advance Paid</span>
-                <span className="text-lg font-bold text-red-500 font-mono">
-                  - ৳{advancePaid.toLocaleString()}
-                </span>
-              </div>
               <div className="pt-2 border-t border-slate-100">
                 <div className="flex justify-between items-center">
-                   <span className="text-sm font-black text-slate-900 uppercase tracking-widest">Net Due</span>
-                   <span className="text-2xl font-black text-indigo-600 font-mono tracking-tighter">
-                      ৳{(totalAmount - advancePaid).toLocaleString()}
-                   </span>
+                  <span className="text-sm font-black text-slate-900 uppercase tracking-widest">Net Due</span>
+                  <span className="text-2xl font-black text-indigo-600 font-mono tracking-tighter">
+                    ৳{(totalAmount - advancePaid).toLocaleString()}
+                  </span>
                 </div>
               </div>
               <p className="text-[10px] text-slate-400 font-medium pt-1">Inclusive of all applicable taxes and charges</p>

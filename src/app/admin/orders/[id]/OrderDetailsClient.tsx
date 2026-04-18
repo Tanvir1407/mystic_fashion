@@ -20,6 +20,7 @@ export default function OrderDetailsClient({ order }: { order: any }) {
     district: order.district,
     address: order.address,
     advancePaid: order.advancePaid || 0,
+    discountAmount: order.discountAmount || 0,
   });
 
   const handleSave = async () => {
@@ -211,17 +212,34 @@ export default function OrderDetailsClient({ order }: { order: any }) {
                 <span className="font-bold">{formatBDT(totalDTFCost)}</span>
               </div>
             )}
-            {discount > 0 && (
+            {discount > 0 && !isEditing && (
               <div className="flex justify-between items-center text-sm text-red-500">
-                <span className="font-medium">Coupon Discount {order.couponCode && `(${order.couponCode})`}</span>
+                <span className="font-medium">Discount {order.couponCode && `(${order.couponCode})`}</span>
                 <span className="font-bold">-{formatBDT(discount)}</span>
+              </div>
+            )}
+
+            {isEditing && (
+              <div className="space-y-4 pt-2 border-t border-slate-100">
+                <div>
+                  <span className="block text-[10px] uppercase font-bold text-slate-500 mb-2 tracking-wider">Manual Discount</span>
+                  <div className="relative">
+                    <span className="absolute left-4 top-1/2 -translate-y-1/2 font-bold text-slate-400">৳</span>
+                    <input
+                      type="number"
+                      value={formData.discountAmount}
+                      onChange={(e) => setFormData({ ...formData, discountAmount: parseFloat(e.target.value) || 0 })}
+                      className="w-full bg-slate-50 border border-slate-200 rounded-lg pl-8 pr-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-400 font-bold text-indigo-600 transition-all font-mono"
+                    />
+                  </div>
+                </div>
               </div>
             )}
             <div className="flex justify-between items-center text-sm">
               <span className="text-slate-500 font-medium">Delivery Charge</span>
               <span className="font-bold text-slate-800">{formatBDT(deliveryCharge)}</span>
             </div>
-            
+
             <div className="pt-4 border-t-2 border-dashed border-slate-100 flex justify-between items-center">
               <span className="text-[10px] uppercase font-black text-slate-400 tracking-[0.2em]">Grand Total</span>
               <span className="text-3xl font-black text-slate-900 tracking-tighter">{formatBDT(order.totalAmount)}</span>

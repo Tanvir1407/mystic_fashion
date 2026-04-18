@@ -245,6 +245,7 @@ export async function updateOrderDetails(id: string, data: {
   district: string; 
   address: string;
   advancePaid: number;
+  discountAmount: number;
 }) {
   try {
     await prisma.order.update({
@@ -255,6 +256,7 @@ export async function updateOrderDetails(id: string, data: {
         district: data.district,
         address: data.address,
         advancePaid: data.advancePaid,
+        discountAmount: data.discountAmount,
       },
     });
     revalidatePath("/admin/orders");
@@ -460,6 +462,7 @@ export async function createAdminOrder(data: {
   items: { productId: string; size: string; quantity: number; price: number }[];
   totalAmount: number;
   advancePaid: number;
+  discountAmount: number;
   remarks?: string;
 }) {
   try {
@@ -476,6 +479,7 @@ export async function createAdminOrder(data: {
           address: data.address,
           totalAmount: data.totalAmount,
           advancePaid: data.advancePaid,
+          discountAmount: data.discountAmount,
           remarks: data.remarks,
           status: "CONFIRMED", // Admin orders are usually confirmed immediately
           items: {
