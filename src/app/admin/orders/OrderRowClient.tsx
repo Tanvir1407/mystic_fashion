@@ -94,23 +94,26 @@ export default function OrderRowClient({
         ৳{order.totalAmount.toLocaleString("en-IN")}
       </td>
       <td className="px-6 py-4 text-right">
-        <CustomSelect
-          options={[
-            { value: "PENDING", label: "Pending", colorClass: "bg-amber-50 text-amber-700 border-amber-200" },
-            { value: "CONFIRMED", label: "Confirmed", colorClass: "bg-blue-50 text-blue-700 border-blue-200" },
-            { value: "PACKAGING", label: "Packaging", colorClass: "bg-purple-50 text-purple-700 border-purple-200" },
-            { value: "SHIPPED", label: "Shipped", colorClass: "bg-indigo-50 text-indigo-700 border-indigo-200" },
-            { value: "DELIVERED", label: "Delivered", colorClass: "bg-green-50 text-green-700 border-green-200" },
-            { value: "CANCELLED", label: "Cancelled", colorClass: "bg-red-50 text-red-700 border-red-200" },
-          ]}
+        <select
           value={status}
-          onChange={(val) => {
-            const e = { target: { value: val } } as React.ChangeEvent<HTMLSelectElement>;
-            handleStatusChange(e);
-          }}
+          onChange={handleStatusChange}
           disabled={loading}
-          className="w-32"
-        />
+          className={`w-32 text-[11px] font-black uppercase tracking-wider px-2 py-1.5 rounded-md border transition-all cursor-pointer outline-none focus:ring-2 focus:ring-opacity-50 ${
+            status === "PENDING" ? "bg-amber-50 text-amber-700 border-amber-200 focus:ring-amber-500" :
+            status === "CONFIRMED" ? "bg-blue-50 text-blue-700 border-blue-200 focus:ring-blue-500" :
+            status === "PACKAGING" ? "bg-purple-50 text-purple-700 border-purple-200 focus:ring-purple-500" :
+            status === "SHIPPED" ? "bg-indigo-50 text-indigo-700 border-indigo-200 focus:ring-indigo-500" :
+            status === "DELIVERED" ? "bg-green-50 text-green-700 border-green-200 focus:ring-green-500" :
+            "bg-red-50 text-red-700 border-red-200 focus:ring-red-500"
+          }`}
+        >
+          <option value="PENDING">Pending</option>
+          <option value="CONFIRMED">Confirmed</option>
+          <option value="PACKAGING">Packaging</option>
+          <option value="SHIPPED">Shipped</option>
+          <option value="DELIVERED">Delivered</option>
+          <option value="CANCELLED">Cancelled</option>
+        </select>
       </td>
       <td className="px-6 py-4 text-right">
         <div className="flex items-center justify-end gap-2">
