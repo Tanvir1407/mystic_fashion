@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { Search, Menu, X, Phone, MapPin } from "lucide-react";
+import { Search, Menu, X } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useCartStore } from "../store/cartStore";
 

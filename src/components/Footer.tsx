@@ -92,8 +92,8 @@ export default function Footer({ config }: { config: FooterData }) {
           <span>&copy; {new Date().getFullYear()} All rights reserved by Mystic Fashion</span>
           <div className="text-center">Developed by <Link href="https://solution.omega.ac" target="_blank" rel="noopener noreferrer" className="hover:text-primary transition-colors">Omega Solution</Link></div>
           <div className="flex justify-end gap-5">
-            <Link href="#" className="hover:text-primary transition-colors">Privacy</Link>
-            <Link href="#" className="hover:text-primary transition-colors">Terms</Link>
+            <Link href="/privacy" className="hover:text-primary transition-colors">Privacy</Link>
+            <Link href="/terms" className="hover:text-primary transition-colors">Terms</Link>
           </div>
         </div>
       </div>

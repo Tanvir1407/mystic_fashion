@@ -521,3 +521,30 @@ export async function createAdminOrder(data: {
     return { success: false, error: error.message || "Failed to create order." };
   }
 }
+
+export async function getPageBySlug(slug: string) {
+  return await prisma.page.findUnique({
+    where: { slug },
+  });
+}
+
+export async function updatePage(slug: string, data: { title: string; content: string }) {
+  const page = await prisma.page.upsert({
+    where: { slug },
+    update: {
+      title: data.title,
+      content: data.content,
+    },
+    create: {
+      slug,
+      title: data.title,
+      content: data.content,
+    },
+  });
+
+  revalidatePath(`/${slug}`);
+  revalidatePath(`/admin/pages/${slug}`);
+  revalidatePath("/admin/pages");
+  
+  return { success: true, page };
+}

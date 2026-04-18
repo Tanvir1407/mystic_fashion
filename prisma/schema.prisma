@@ -227,3 +227,12 @@ model FooterConfig {
 
   updatedAt     DateTime @updatedAt
 }
+
+model Page {
+  id        String   @id @default(uuid())
+  slug      String   @unique // about, contact, faq, privacy, terms
+  title     String
+  content   String   @db.Text
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
