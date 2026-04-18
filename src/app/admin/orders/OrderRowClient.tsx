@@ -8,6 +8,7 @@ import { Eye, Trash2 } from "lucide-react";
 import { deleteOrder } from "../actions";
 import { useRouter } from "next/navigation";
 import { CustomSelect } from "@/components/CustomSelect";
+import { StatusAlertModal } from "@/components/StatusAlertModal";
 
 export default function OrderRowClient({ 
   order, 
@@ -22,6 +23,12 @@ export default function OrderRowClient({
 }) {
   const [status, setStatus] = useState<OrderStatus>(order.status);
   const [loading, setLoading] = useState(false);
+  const [alert, setAlert] = useState<{ isOpen: boolean; title: string; message: string; type: "error" | "warning" }>({
+    isOpen: false,
+    title: "",
+    message: "",
+    type: "error"
+  });
   const router = useRouter();
 
   useEffect(() => {
@@ -35,7 +42,12 @@ export default function OrderRowClient({
     setLoading(true);
     const result = await updateOrderStatus(order.id, newStatus);
     if (!result?.success) {
-      alert(result?.error || "Failed to update status");
+      setAlert({
+        isOpen: true,
+        title: "Status Update Restricted",
+        message: result?.error || "We encountered an issue while attempting to update the order status. Please verify the transition rules and try again.",
+        type: "error"
+      });
       setStatus(oldStatus);
     }
     setLoading(false);
@@ -134,6 +146,13 @@ export default function OrderRowClient({
           </button>
         </div>
       </td>
+      <StatusAlertModal 
+        isOpen={alert.isOpen}
+        onClose={() => setAlert({ ...alert, isOpen: false })}
+        title={alert.title}
+        message={alert.message}
+        type={alert.type}
+      />
     </tr>
   );
 }

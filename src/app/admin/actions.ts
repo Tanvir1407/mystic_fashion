@@ -138,22 +138,41 @@ export async function updateOrderStatus(orderId: string, status: OrderStatus) {
       // If already the same status, do nothing
       if (oldStatus === newStatus) return;
 
-      // 1. If moving TO Confirmed, check and decrement stock
-      if (newStatus === "CONFIRMED" || newStatus === "SHIPPED" || newStatus === "DELIVERED" || newStatus === "PACKAGING") {
+      // Define Active States
+      const activeStatuses: OrderStatus[] = ["CONFIRMED", "PACKAGING", "SHIPPED", "DELIVERED"];
+      const isActive = (s: OrderStatus) => activeStatuses.includes(s);
+
+      // Rule 2: Once an order status has moved away from 'Pending', it should be impossible to set it back to 'Pending'
+      if (oldStatus !== "PENDING" && newStatus === "PENDING") {
+        throw new Error("Cannot revert order status back to Pending once it has been processed.");
+      }
+
+      // Determine Stock Action
+      let stockAction: "REDUCE" | "RESTORE" | "NONE" = "NONE";
+
+      if ((oldStatus === "PENDING" || oldStatus === "CANCELLED") && isActive(newStatus)) {
+        // Pending/Canceled -> Active: Reduction
+        stockAction = "REDUCE";
+      } else if (isActive(oldStatus) && newStatus === "CANCELLED") {
+        // Active -> Canceled: Restoration
+        stockAction = "RESTORE";
+      }
+
+      // Execute Stock Action
+      if (stockAction === "REDUCE") {
         for (const item of order.items) {
-          const product = await tx.product.findUnique({
-            where: { id: item.productId },
-          }); const variant = await tx.productVariant.findUnique({
+          const variant = await tx.productVariant.findUnique({
             where: {
               productId_size: {
                 productId: item.productId,
                 size: item.size
               }
-            }
+            },
+            include: { product: true }
           });
 
           if (!variant || variant.stock < item.quantity) {
-            throw new Error(`Insufficient stock for product: ${product?.name} | size: ${item.size}`);
+            throw new Error(`Insufficient stock for product: ${variant?.product.name || 'Unknown'} | size: ${item.size}`);
           }
 
           await tx.productVariant.update({
@@ -161,10 +180,7 @@ export async function updateOrderStatus(orderId: string, status: OrderStatus) {
             data: { stock: { decrement: item.quantity } }
           });
         }
-      }
-
-      // 2. If moving FROM Confirmed TO something else, restore stock
-      if (oldStatus === "CONFIRMED" && newStatus !== "CONFIRMED") {
+      } else if (stockAction === "RESTORE") {
         for (const item of order.items) {
           await tx.productVariant.update({
             where: {

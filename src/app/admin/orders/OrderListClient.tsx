@@ -10,6 +10,7 @@ import InvoicePrintView from "./InvoicePrintView";
 import { useRouter } from "next/navigation";
 import { AdminPagination } from "@/components/AdminPagination";
 import { CustomSelect } from "@/components/CustomSelect";
+import { StatusAlertModal } from "@/components/StatusAlertModal";
 
 export default function OrderListClient({
   initialOrders,
@@ -30,6 +31,12 @@ export default function OrderListClient({
   const [bulkStatus, setBulkStatus] = useState<OrderStatus>("PENDING");
   const [loading, setLoading] = useState(false);
   const [optimisticOrders, setOptimisticOrders] = useState(initialOrders);
+  const [alert, setAlert] = useState<{ isOpen: boolean; title: string; message: string; type: "error" | "warning" }>({
+    isOpen: false,
+    title: "",
+    message: "",
+    type: "error"
+  });
 
   useEffect(() => {
     setOptimisticOrders(initialOrders);
@@ -79,11 +86,28 @@ export default function OrderListClient({
     );
 
     try {
-      await bulkUpdateOrderStatus(Array.from(selectedIds), bulkStatus);
+      const results = await bulkUpdateOrderStatus(Array.from(selectedIds), bulkStatus);
+      const failures = results.filter(r => !r.success);
+      
+      if (failures.length > 0) {
+        setAlert({
+          isOpen: true,
+          title: "Bulk Update Notice",
+          message: `${failures.length} order(s) could not be updated due to status transition restrictions or inventory issues. Others may have succeeded.`,
+          type: "warning"
+        });
+      }
+
       setSelectedIds(new Set());
       router.refresh();
     } catch (error) {
       setOptimisticOrders(initialOrders);
+      setAlert({
+        isOpen: true,
+        title: "System Error",
+        message: "A critical error occurred during the bulk update. Please refresh the page and try again.",
+        type: "error"
+      });
       console.error(error);
     } finally {
       setLoading(false);
@@ -330,6 +354,13 @@ export default function OrderListClient({
           </div>
         )}
       </div>
+      <StatusAlertModal 
+        isOpen={alert.isOpen}
+        onClose={() => setAlert({ ...alert, isOpen: false })}
+        title={alert.title}
+        message={alert.message}
+        type={alert.type}
+      />
     </div>
   );
 }
