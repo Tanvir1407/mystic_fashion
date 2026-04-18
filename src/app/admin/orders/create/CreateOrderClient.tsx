@@ -23,7 +23,7 @@ interface OrderItem {
   stock: number;
 }
 
-export default function CreateOrderClient({ products }: { products: any[] }) {
+export default function CreateOrderClient({ products, deliverySettings }: { products: any[]; deliverySettings: any }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
 
@@ -140,7 +140,11 @@ export default function CreateOrderClient({ products }: { products: any[] }) {
     [orderItems]
   );
 
-  const deliveryCharge = district === "Dhaka" ? 80 : district === "Self Pickup" ? 0 : 150;
+  const deliveryCharge = useMemo(() => {
+    if (district === "Dhaka") return deliverySettings.insideDhaka;
+    if (district === "Self Pickup") return 0;
+    return deliverySettings.outsideDhaka;
+  }, [district, deliverySettings]);
 
   const calculatedDiscount = useMemo(() => {
     if (manualDiscountType === "PERCENTAGE") {

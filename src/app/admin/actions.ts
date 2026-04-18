@@ -264,17 +264,52 @@ export async function updateOrderDetails(id: string, data: {
   discountAmount: number;
 }) {
   try {
-    await prisma.order.update({
-      where: { id },
-      data: {
-        customerName: data.customerName,
-        phone: data.phone,
-        district: data.district,
-        address: data.address,
-        advancePaid: data.advancePaid,
-        discountAmount: data.discountAmount,
-      },
+    await prisma.$transaction(async (tx) => {
+      // 1. Fetch current order items and delivery settings
+      const order = await tx.order.findUnique({
+        where: { id },
+        include: { items: true },
+      });
+
+      if (!order) throw new Error("Order not found");
+
+      const deliverySettings = await tx.deliverySetting.upsert({
+        where: { id: "default" },
+        update: {},
+        create: { id: "default", insideDhaka: 70, outsideDhaka: 120 },
+      });
+
+      // 2. Calculate Subtotal (Base + Print Costs)
+      const subtotal = order.items.reduce((acc, item) => {
+        const itemTotal = (item.price * item.quantity) + (item.requiresPrint ? (item.printCost || 0) * item.quantity : 0);
+        return acc + itemTotal;
+      }, 0);
+
+      // 3. Determine Delivery Charge base on NEW district
+      const deliveryCharge = data.district === "Dhaka" 
+        ? deliverySettings.insideDhaka 
+        : data.district === "Self Pickup" 
+          ? 0 
+          : deliverySettings.outsideDhaka;
+
+      // 4. Calculate Final Total
+      const newTotalAmount = (subtotal + deliveryCharge) - data.discountAmount;
+
+      // 5. Update Record
+      await tx.order.update({
+        where: { id },
+        data: {
+          customerName: data.customerName,
+          phone: data.phone,
+          district: data.district,
+          address: data.address,
+          advancePaid: data.advancePaid,
+          discountAmount: data.discountAmount,
+          totalAmount: newTotalAmount, // Explicitly saved
+        },
+      });
     });
+
     revalidatePath("/admin/orders");
     revalidatePath(`/admin/orders/${id}`);
     return { success: true };
@@ -385,6 +420,14 @@ export async function uploadImage(formData: FormData) {
   await writeFile(filePath, buffer);
 
   return `/uploads/${uniqueName}`;
+}
+
+export async function getDeliverySettings() {
+  return await prisma.deliverySetting.upsert({
+    where: { id: "default" },
+    update: {},
+    create: { id: "default", insideDhaka: 70, outsideDhaka: 120 },
+  });
 }
 
 export async function updateDeliverySettings(insideDhaka: number, outsideDhaka: number) {

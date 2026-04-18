@@ -1,8 +1,9 @@
-import { getProductsForOrder } from "../../actions";
+import { getProductsForOrder, getDeliverySettings } from "../../actions";
 import CreateOrderClient from "./CreateOrderClient";
 
 export default async function CreateOrderPage() {
   const products = await getProductsForOrder();
+  const deliverySettings = await getDeliverySettings();
 
   return (
     <div className="space-y-6">
@@ -13,7 +14,7 @@ export default async function CreateOrderPage() {
         </div>
       </div>
 
-      <CreateOrderClient products={products} />
+      <CreateOrderClient products={products} deliverySettings={deliverySettings} />
     </div>
   );
 }

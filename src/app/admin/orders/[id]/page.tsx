@@ -1,4 +1,5 @@
 import prisma from "@/lib/prisma";
+import { getDeliverySettings } from "../../actions";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Package, User, MapPin, Phone, CalendarDays, Wallet } from "lucide-react";
@@ -18,6 +19,7 @@ export default async function SingleOrderPage({ params }: { params: { id: string
       }
     }
   });
+  const deliverySettings = await getDeliverySettings();
 
   if (!order) {
     notFound();
@@ -60,7 +62,7 @@ export default async function SingleOrderPage({ params }: { params: { id: string
       </div>
 
       <div className="w-full">
-        <OrderDetailsClient order={order} />
+        <OrderDetailsClient order={order} deliverySettings={deliverySettings} />
       </div>
     </div>
   );

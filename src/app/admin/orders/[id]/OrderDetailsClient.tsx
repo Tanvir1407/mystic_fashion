@@ -7,15 +7,14 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { CustomSelect } from "@/components/CustomSelect";
 
-export default function OrderDetailsClient({ order }: { order: any }) {
-  console.log(order)
+export default function OrderDetailsClient({ order, deliverySettings }: { order: any; deliverySettings: any }) {
   const router = useRouter();
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(false);
   const [remarkLoading, setRemarkLoading] = useState(false);
   const [isEditingRemark, setIsEditingRemark] = useState(false);
   const [remarks, setRemarks] = useState(order.remarks || "");
-
+  console.log(order)
   const [formData, setFormData] = useState({
     customerName: order.customerName,
     phone: order.phone,
@@ -44,7 +43,13 @@ export default function OrderDetailsClient({ order }: { order: any }) {
   const baseSubtotal = order.items.reduce((acc: number, item: any) => acc + (item.price * item.quantity), 0);
   const totalDTFCost = order.items.reduce((acc: number, item: any) => acc + (item.requiresPrint ? item.printCost * item.quantity : 0), 0);
   const discount = order.discountAmount || 0;
-  const deliveryCharge = order.totalAmount - (baseSubtotal + totalDTFCost - discount);
+
+  // Logic: district focus, not total focus
+  const deliveryCharge = order.district === "Dhaka"
+    ? deliverySettings.insideDhaka
+    : order.district === "Self Pickup"
+      ? 0
+      : deliverySettings.outsideDhaka;
 
   const handleSaveRemark = async () => {
     setRemarkLoading(true);
