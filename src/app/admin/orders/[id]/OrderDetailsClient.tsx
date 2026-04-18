@@ -8,6 +8,7 @@ import Image from "next/image";
 import { CustomSelect } from "@/components/CustomSelect";
 
 export default function OrderDetailsClient({ order }: { order: any }) {
+  console.log(order)
   const router = useRouter();
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(false);
