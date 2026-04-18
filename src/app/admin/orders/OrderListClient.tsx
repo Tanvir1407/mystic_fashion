@@ -9,6 +9,7 @@ import InvoicePrintView from "./InvoicePrintView";
 
 import { useRouter } from "next/navigation";
 import { AdminPagination } from "@/components/AdminPagination";
+import { CustomSelect } from "../components/CustomSelect";
 
 export default function OrderListClient({
   initialOrders,
@@ -179,26 +180,26 @@ export default function OrderListClient({
                 <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none mb-1">
                   Status Filter
                 </span>
-                <select
+                <CustomSelect
+                  options={[
+                    { value: "ALL", label: "All Statuses" },
+                    { value: "PENDING", label: "Pending" },
+                    { value: "CONFIRMED", label: "Confirmed" },
+                    { value: "PACKAGING", label: "Packaging" },
+                    { value: "SHIPPED", label: "Shipped" },
+                    { value: "DELIVERED", label: "Delivered" },
+                    { value: "CANCELLED", label: "Cancelled" },
+                  ]}
                   value={currentFilter}
-                  onChange={(e) => {
-                    const newFilter = e.target.value;
+                  onChange={(val) => {
                     const params = new URLSearchParams(window.location.search);
-                    params.set("filter", newFilter);
+                    params.set("filter", val);
                     params.set("page", "1");
                     setSelectedIds(new Set());
                     router.push(`/admin/orders?${params.toString()}`);
                   }}
-                  className="text-sm border-0 font-bold text-slate-900 bg-transparent p-0 focus:ring-0 cursor-pointer focus:outline-none pr-6"
-                >
-                  <option value="ALL">All Statuses</option>
-                  <option value="PENDING">Pending</option>
-                  <option value="CONFIRMED">Confirmed</option>
-                  <option value="PACKAGING">Packaging</option>
-                  <option value="SHIPPED">Shipped</option>
-                  <option value="DELIVERED">Delivered</option>
-                  <option value="CANCELLED">Cancelled</option>
-                </select>
+                  className="w-40"
+                />
               </div>
             </div>
           </div>
@@ -211,18 +212,19 @@ export default function OrderListClient({
               </span>
 
               <div className="flex items-center gap-2 flex-wrap">
-                <select
+                <CustomSelect
+                  options={[
+                    { value: "PENDING", label: "Set Pending" },
+                    { value: "CONFIRMED", label: "Set Confirmed" },
+                    { value: "PACKAGING", label: "Set Packaging" },
+                    { value: "SHIPPED", label: "Set Shipped" },
+                    { value: "DELIVERED", label: "Set Delivered" },
+                    { value: "CANCELLED", label: "Set Cancelled" },
+                  ]}
                   value={bulkStatus}
-                  onChange={(e) => setBulkStatus(e.target.value as OrderStatus)}
-                  className="px-2 py-1.5 text-xs font-medium border border-indigo-200 rounded-md text-indigo-700 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
-                >
-                  <option value="PENDING">Set Pending</option>
-                  <option value="CONFIRMED">Set Confirmed</option>
-                  <option value="PACKAGING">Set Packaging</option>
-                  <option value="SHIPPED">Set Shipped</option>
-                  <option value="DELIVERED">Set Delivered</option>
-                  <option value="CANCELLED">Set Cancelled</option>
-                </select>
+                  onChange={(val) => setBulkStatus(val as OrderStatus)}
+                  className="w-36"
+                />
 
                 <button
                   onClick={handleBulkUpdate}

@@ -5,6 +5,7 @@ import { User, MapPin, Phone, Edit2, Check, X, Package, Wallet, StickyNote, Save
 import { updateOrderDetails, updateOrderRemark } from "../../actions";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
+import { CustomSelect } from "../../components/CustomSelect";
 
 export default function OrderDetailsClient({ order }: { order: any }) {
   const router = useRouter();
@@ -154,17 +155,14 @@ export default function OrderDetailsClient({ order }: { order: any }) {
             <div>
               <span className="block text-[10px] uppercase font-bold text-slate-400 mb-2 tracking-wider">District</span>
               {isEditing ? (
-                <select
-                  value={formData.district}
-                  onChange={(e) => setFormData({ ...formData, district: e.target.value })}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-400 font-semibold text-slate-800 transition-all"
-                >
-                  {[
+                <CustomSelect
+                  options={[
                     "Bagerhat", "Bandarban", "Barguna", "Barisal", "Bhola", "Bogra", "Brahmanbaria", "Chandpur", "Chapainawabganj", "Chattogram", "Chuadanga", "Comilla", "Cox's Bazar", "Dhaka", "Dinajpur", "Faridpur", "Feni", "Gaibandha", "Gazipur", "Gopalganj", "Habiganj", "Jamalpur", "Jashore", "Jhalokati", "Jhenaidah", "Joypurhat", "Khagrachhari", "Khulna", "Kishoreganj", "Kurigram", "Kushtia", "Lakshmipur", "Lalmonirhat", "Madaripur", "Magura", "Manikganj", "Meherpur", "Moulvibazar", "Munshiganj", "Mymensingh", "Naogaon", "Narail", "Narayanganj", "Narsingdi", "Natore", "Netrokona", "Nilphamari", "Noakhali", "Pabna", "Panchagarh", "Patuakhali", "Pirojpur", "Rajbari", "Rajshahi", "Rangamati", "Rangpur", "Satkhira", "Shariatpur", "Sherpur", "Sirajganj", "Sunamganj", "Sylhet", "Tangail", "Thakurgaon", "Self Pickup"
-                  ].sort().map(d => (
-                    <option key={d} value={d}>{d}</option>
-                  ))}
-                </select>
+                  ].sort().map(d => ({ value: d, label: d }))}
+                  value={formData.district}
+                  onChange={(val) => setFormData({ ...formData, district: val })}
+                  searchable={true}
+                />
               ) : (
                 <span className="inline-block bg-[#800020] text-[#FFD700] px-4 py-1.5 rounded-md text-[10px] font-black tracking-[0.2em] uppercase   border border-[#600010]">
                   {order.district}

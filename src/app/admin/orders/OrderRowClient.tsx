@@ -7,6 +7,7 @@ import Link from "next/link";
 import { Eye, Trash2 } from "lucide-react";
 import { deleteOrder } from "../actions";
 import { useRouter } from "next/navigation";
+import { CustomSelect } from "../components/CustomSelect";
 
 export default function OrderRowClient({ 
   order, 
@@ -93,27 +94,23 @@ export default function OrderRowClient({
         ৳{order.totalAmount.toLocaleString("en-IN")}
       </td>
       <td className="px-6 py-4 text-right">
-        <select
+        <CustomSelect
+          options={[
+            { value: "PENDING", label: "Pending", colorClass: "bg-amber-50 text-amber-700 border-amber-200" },
+            { value: "CONFIRMED", label: "Confirmed", colorClass: "bg-blue-50 text-blue-700 border-blue-200" },
+            { value: "PACKAGING", label: "Packaging", colorClass: "bg-purple-50 text-purple-700 border-purple-200" },
+            { value: "SHIPPED", label: "Shipped", colorClass: "bg-indigo-50 text-indigo-700 border-indigo-200" },
+            { value: "DELIVERED", label: "Delivered", colorClass: "bg-green-50 text-green-700 border-green-200" },
+            { value: "CANCELLED", label: "Cancelled", colorClass: "bg-red-50 text-red-700 border-red-200" },
+          ]}
           value={status}
-          onChange={handleStatusChange}
+          onChange={(val) => {
+            const e = { target: { value: val } } as React.ChangeEvent<HTMLSelectElement>;
+            handleStatusChange(e);
+          }}
           disabled={loading}
-          className={`px-3 py-1.5 rounded-md text-xs font-medium border focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors shadow-sm ${
-            status === 'DELIVERED'  ? 'bg-green-50 text-green-700 border-green-200' :
-            status === 'PENDING'    ? 'bg-amber-50 text-amber-700 border-amber-200' :
-            status === 'CONFIRMED'   ? 'bg-blue-50 text-blue-700 border-blue-200' :
-            status === 'PACKAGING'  ? 'bg-purple-50 text-purple-700 border-purple-200' :
-            status === 'SHIPPED'    ? 'bg-indigo-50 text-indigo-700 border-indigo-200' :
-            status === 'CANCELLED'  ? 'bg-red-50 text-red-700 border-red-200' :
-            'bg-slate-50 text-slate-700 border-slate-200'
-          }`}
-        >
-          <option value="PENDING">Pending</option>
-          <option value="CONFIRMED">Confirmed</option>
-          <option value="PACKAGING">Packaging</option>
-          <option value="SHIPPED">Shipped</option>
-          <option value="DELIVERED">Delivered</option>
-          <option value="CANCELLED">Cancelled</option>
-        </select>
+          className="w-32"
+        />
       </td>
       <td className="px-6 py-4 text-right">
         <div className="flex items-center justify-end gap-2">
