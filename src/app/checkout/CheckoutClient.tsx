@@ -380,7 +380,7 @@ export default function CheckoutClient({
 
                 <div className="space-y-3.5 mb-8">
                   <div className="flex justify-between text-slate-500 text-xs font-bold uppercase tracking-tight">
-                    <span>Base Subtotal</span>
+                    <span>Subtotal</span>
                     <span className="text-slate-900">{formatBDT(baseSubtotal)}</span>
                   </div>
                   {totalDTFCost > 0 && (

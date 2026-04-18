@@ -124,7 +124,7 @@ export async function validateCoupon(code: string, baseSubtotal: number) {
       discountAmount = coupon.value;
     }
 
-    // Ensure discount doesn't exceed base subtotal
+    // Ensure discount doesn't exceed Subtotal
     discountAmount = Math.min(discountAmount, baseSubtotal);
 
     return {

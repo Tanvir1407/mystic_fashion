@@ -201,7 +201,7 @@ export default function OrderDetailsClient({ order }: { order: any }) {
           </h3>
           <div className="space-y-4">
             <div className="flex justify-between items-center text-sm">
-              <span className="text-slate-500 font-medium whitespace-nowrap">Base Subtotal</span>
+              <span className="text-slate-500 font-medium whitespace-nowrap">Subtotal</span>
               <span className="font-bold text-slate-800">{formatBDT(baseSubtotal)}</span>
             </div>
             {totalDTFCost > 0 && (

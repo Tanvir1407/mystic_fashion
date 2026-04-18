@@ -327,7 +327,7 @@ export default function InvoicePrintView({ orders }: { orders: Order[] }) {
 
                 {/* Subtotal Bar */}
                 <div className="w-full bg-[#E5E7EB] flex text-xs text-black mt-2">
-                  <div className="flex-1 text-right py-1.5 pr-8 font-normal uppercase">Base Subtotal</div>
+                  <div className="flex-1 text-right py-1.5 pr-8 font-normal uppercase">Subtotal</div>
                   <div className="w-[15%] text-right py-1.5 px-2">৳{baseSubtotal.toLocaleString("en-IN")}</div>
                 </div>
 
