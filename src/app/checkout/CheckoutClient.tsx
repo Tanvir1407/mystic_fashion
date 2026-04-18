@@ -9,6 +9,7 @@ import Link from "next/link";
 import { ArrowLeft, CheckCircle2, X, ChevronDown, Ticket, Loader2, CheckCircle, Tag, Edit2, Sparkles } from "lucide-react";
 import { useState, useTransition } from "react";
 import { placeOrderAction, validateCoupon } from "./actions";
+import { CustomSelect } from "@/components/CustomSelect";
 
 export default function CheckoutClient({
   deliveryData,
@@ -20,7 +21,6 @@ export default function CheckoutClient({
   const { items, getTotalPrice, clearCart, updateItem } = useCartStore();
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
-  const [districtOpen, setDistrictOpen] = useState(false);
   const [selectedDistrict, setSelectedDistrict] = useState("");
 
   // Coupon States
@@ -240,38 +240,17 @@ export default function CheckoutClient({
                   <div className="space-y-4">
                     <div className="space-y-2">
                       <label className="text-sm font-bold text-zinc-700">Select District *</label>
-                      <div className="relative z-20">
-                        <div
-                          onClick={() => setDistrictOpen(!districtOpen)}
-                          className={`w-full bg-slate-50 border ${districtOpen ? 'border-primary ring-1 ring-primary' : 'border-slate-200'} rounded-lg pl-4 pr-12 py-3 ${selectedDistrict ? 'text-zinc-900 font-medium' : 'text-zinc-500'} transition-all cursor-pointer hover:bg-slate-100 flex items-center justify-between`}
-                        >
-                          <span className="truncate">{selectedDistrict || "-- Select your District --"}</span>
-                          <ChevronDown className={`w-5 h-5 text-zinc-500 transition-transform ${districtOpen ? 'rotate-180' : ''}`} />
-                        </div>
-
-                        {districtOpen && (
-                          <>
-                            <div className="fixed inset-0 z-10" onClick={() => setDistrictOpen(false)}></div>
-                            <div className="absolute w-full mt-2 bg-white border border-slate-200 rounded-lg shadow-xl z-20 max-h-60 overflow-y-auto">
-                              {[
-                                "Bagerhat", "Bandarban", "Barguna", "Barisal", "Bhola", "Bogra", "Brahmanbaria", "Chandpur", "Chapainawabganj", "Chattogram", "Chuadanga", "Comilla", "Cox's Bazar", "Dhaka", "Dinajpur", "Faridpur", "Feni", "Gaibandha", "Gazipur", "Gopalganj", "Habiganj", "Jamalpur", "Jashore", "Jhalokati", "Jhenaidah", "Joypurhat", "Khagrachhari", "Khulna", "Kishoreganj", "Kurigram", "Kushtia", "Lakshmipur", "Lalmonirhat", "Madaripur", "Magura", "Manikganj", "Meherpur", "Moulvibazar", "Munshiganj", "Mymensingh", "Naogaon", "Narail", "Narayanganj", "Narsingdi", "Natore", "Netrokona", "Nilphamari", "Noakhali", "Pabna", "Panchagarh", "Patuakhali", "Pirojpur", "Rajbari", "Rajshahi", "Rangamati", "Rangpur", "Satkhira", "Shariatpur", "Sherpur", "Sirajganj", "Sunamganj", "Sylhet", "Tangail", "Thakurgaon"
-                              ].sort().map((district) => (
-                                <div
-                                  key={district}
-                                  onClick={() => {
-                                    setSelectedDistrict(district);
-                                    setDistrictOpen(false);
-                                  }}
-                                  className={`px-4 py-3 cursor-pointer transition-colors ${selectedDistrict === district ? 'bg-primary/10 text-primary font-bold' : 'hover:bg-slate-50 text-zinc-700'}`}
-                                >
-                                  {district}
-                                </div>
-                              ))}
-                            </div>
-                          </>
-                        )}
-                        <input type="hidden" name="district" value={selectedDistrict} />
-                      </div>
+                      <CustomSelect
+                        options={[
+                          "Bagerhat", "Bandarban", "Barguna", "Barisal", "Bhola", "Bogra", "Brahmanbaria", "Chandpur", "Chapainawabganj", "Chattogram", "Chuadanga", "Comilla", "Cox's Bazar", "Dhaka", "Dinajpur", "Faridpur", "Feni", "Gaibandha", "Gazipur", "Gopalganj", "Habiganj", "Jamalpur", "Jashore", "Jhalokati", "Jhenaidah", "Joypurhat", "Khagrachhari", "Khulna", "Kishoreganj", "Kurigram", "Kushtia", "Lakshmipur", "Lalmonirhat", "Madaripur", "Magura", "Manikganj", "Meherpur", "Moulvibazar", "Munshiganj", "Mymensingh", "Naogaon", "Narail", "Narayanganj", "Narsingdi", "Natore", "Netrokona", "Nilphamari", "Noakhali", "Pabna", "Panchagarh", "Patuakhali", "Pirojpur", "Rajbari", "Rajshahi", "Rangamati", "Rangpur", "Satkhira", "Shariatpur", "Sherpur", "Sirajganj", "Sunamganj", "Sylhet", "Tangail", "Thakurgaon"
+                        ].sort().map(d => ({ value: d, label: d }))}
+                        value={selectedDistrict}
+                        onChange={setSelectedDistrict}
+                        placeholder="-- Select your District --"
+                        searchable={true}
+                        className=""
+                      />
+                      <input type="hidden" name="district" value={selectedDistrict} />
                     </div>
 
                     <div className="space-y-2">

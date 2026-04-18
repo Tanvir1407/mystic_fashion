@@ -5,7 +5,7 @@ import { User, MapPin, Phone, Edit2, Check, X, Package, Wallet, StickyNote, Save
 import { updateOrderDetails, updateOrderRemark } from "../../actions";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
-import { CustomSelect } from "../../components/CustomSelect";
+import { CustomSelect } from "@/components/CustomSelect";
 
 export default function OrderDetailsClient({ order }: { order: any }) {
   const router = useRouter();

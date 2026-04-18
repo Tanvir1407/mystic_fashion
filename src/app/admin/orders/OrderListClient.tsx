@@ -9,7 +9,7 @@ import InvoicePrintView from "./InvoicePrintView";
 
 import { useRouter } from "next/navigation";
 import { AdminPagination } from "@/components/AdminPagination";
-import { CustomSelect } from "../components/CustomSelect";
+import { CustomSelect } from "@/components/CustomSelect";
 
 export default function OrderListClient({
   initialOrders,

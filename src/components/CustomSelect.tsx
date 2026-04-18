@@ -63,10 +63,10 @@ export function CustomSelect({
         type="button"
         disabled={disabled}
         onClick={() => !disabled && setIsOpen(!isOpen)}
-        className={`w-full h-12 flex items-center justify-between px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm transition-all focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none ${disabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer"
+        className={`w-full h-12 flex items-center justify-between px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm transition-all focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none ${disabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer"
           } ${selectedOption?.colorClass || "text-slate-900"}`}
       >
-        <span className="truncate font-semibold">
+        <span className="truncate font-semibold text-slate-400">
           {selectedOption ? selectedOption.label : placeholder}
         </span>
         <ChevronDown
@@ -93,7 +93,7 @@ export function CustomSelect({
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
                     placeholder="Search..."
-                    className="w-full pl-9 pr-4 py-2 text-xs bg-white border border-slate-200 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all font-medium"
+                    className="w-full pl-9 pr-4 py-2 text-xs bg-white border border-slate-200 rounded-md focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all font-medium"
                     autoFocus
                   />
                 </div>
@@ -112,12 +112,12 @@ export function CustomSelect({
                       setSearch("");
                     }}
                     className={`w-full text-left px-4 py-2.5 text-sm transition-colors flex items-center justify-between group ${value === opt.value
-                      ? "bg-indigo-50 text-indigo-700 font-bold"
+                      ? "bg-primary/5 text-primary font-bold"
                       : "hover:bg-slate-50 text-slate-700"
                       } ${opt.colorClass || ""}`}
                   >
                     <span>{opt.label}</span>
-                    {value === opt.value && <Check className="w-4 h-4 text-indigo-500" />}
+                    {value === opt.value && <Check className="w-4 h-4 text-primary" />}
                   </button>
                 ))
               ) : (

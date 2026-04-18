@@ -7,7 +7,7 @@ import Link from "next/link";
 import { Eye, Trash2 } from "lucide-react";
 import { deleteOrder } from "../actions";
 import { useRouter } from "next/navigation";
-import { CustomSelect } from "../components/CustomSelect";
+import { CustomSelect } from "@/components/CustomSelect";
 
 export default function OrderRowClient({ 
   order, 
