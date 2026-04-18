@@ -140,7 +140,7 @@ export default function CreateOrderClient({ products }: { products: any[] }) {
     [orderItems]
   );
 
-  const deliveryCharge = district === "Dhaka" ? 80 : 150;
+  const deliveryCharge = district === "Dhaka" ? 80 : district === "Self Pickup" ? 0 : 150;
 
   const calculatedDiscount = useMemo(() => {
     if (manualDiscountType === "PERCENTAGE") {
@@ -236,6 +236,7 @@ export default function CreateOrderClient({ products }: { products: any[] }) {
                 >
                   <option value="Dhaka">Dhaka (Inside)</option>
                   <option value="Outside Dhaka">Outside Dhaka</option>
+                  <option value="Self Pickup">Self Pickup</option>
                 </select>
               </div>
             </div>
