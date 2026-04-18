@@ -7,6 +7,8 @@ import { Search, Menu, X } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useCartStore } from "../store/cartStore";
 
+import Image from "next/image";
+
 export default function Header() {
   const router = useRouter();
   const [mounted, setMounted] = useState(false);
@@ -85,11 +87,14 @@ export default function Header() {
 
           {/* Center: Logo */}
           <div className="flex justify-center">
-            <Link
-              href="/"
-              className="text-2xl mm:text-3xl md:text-4xl font-black font-serif italic text-primary tracking-tighter text-center whitespace-nowrap"
-            >
-              Mystic Fashion
+            <Link href="/" className="relative h-12 w-48 mm:h-14 mm:w-56 md:h-16 md:w-64">
+              <Image
+                src="/images/logo.png"
+                alt="Mystic Fashion"
+                fill
+                priority
+                className="object-contain"
+              />
             </Link>
           </div>
 
@@ -127,21 +132,30 @@ export default function Header() {
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: "auto", opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
-            className="md:hidden overflow-hidden bg-white dark:bg-zinc-950 border-t border-slate-100 dark:border-zinc-900"
+            className="md:hidden overflow-hidden bg-white dark:bg-zinc-950 border-t border-slate-100 dark:border-zinc-900 shadow-xl"
           >
-            <div className="p-2 space-y-4">
-              <div className="bg-slate-50 dark:bg-zinc-900 p-2 rounded-xl mb-6">
-                <button
-                  onClick={() => {
-                    setIsMobileMenuOpen(false);
-                    setIsSearchOpen(true);
-                  }}
-                  className="w-full h-12 flex items-center gap-3 px-4 text-slate-500 font-bold"
+            <div className="py-6 px-4 space-y-1">
+              {[
+                { label: "Home", href: "/" },
+                { label: "About Us", href: "/about" },
+                { label: "Contact Us", href: "/contact" },
+                { label: "FAQ", href: "/faq" },
+                { label: "Privacy Policy", href: "/privacy" },
+                { label: "Terms & Conditions", href: "/terms" },
+              ].map((link) => (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className={`block px-4 py-3 rounded-lg text-lg font-bold transition-colors ${
+                    pathname === link.href 
+                      ? "bg-maroon/5 text-maroon" 
+                      : "text-slate-600 hover:bg-slate-50"
+                  }`}
                 >
-                  <Search className="w-5 h-5" />
-                  Search...
-                </button>
-              </div>
+                  {link.label}
+                </Link>
+              ))}
             </div>
           </motion.div>
         )}
