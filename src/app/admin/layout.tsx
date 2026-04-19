@@ -16,7 +16,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   return (
     <div className="flex h-screen bg-slate-50 dark:bg-zinc-950 overflow-hidden">
       {/* Sidebar - Dark Enterprise Theme */}
-      <aside className="w-64 bg-slate-900 border-r border-slate-800 text-slate-300 flex-col hidden md:flex flex-shrink-0 shadow-lg z-10">
+      <aside className="w-64 bg-slate-900 border-r border-slate-800 text-slate-300 flex-col hidden md:flex flex-shrink-0 shadow-lg z-10 print:hidden">
         <div className="h-16 flex items-center px-6 border-b border-slate-800">
           <Link href="/admin" className="font-bold text-lg tracking-tight text-white flex items-center gap-3">
             <div className="w-8 h-8 bg-gold rounded-md flex items-center justify-center text-slate-900 font-black shadow-sm">M</div>
@@ -182,7 +182,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {/* Topbar */}
-        <header className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-6 flex-shrink-0 z-0">
+        <header className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-6 flex-shrink-0 z-0 print:hidden">
           <div className="flex-1 flex items-center">
             <div className="relative w-72">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
@@ -205,8 +205,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         </header>
 
         {/* Page Content */}
-        <main className="flex-1 overflow-y-auto bg-slate-50">
-          <div className="p-6 md:p-8 max-w-7xl mx-auto">
+        <main className="flex-1 overflow-y-auto bg-slate-50 print:bg-white print:overflow-visible">
+          <div className="p-6 md:p-8 max-w-7xl mx-auto print:p-0 print:max-w-none">
             {children}
           </div>
         </main>

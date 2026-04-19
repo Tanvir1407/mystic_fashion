@@ -9,7 +9,7 @@ export default async function InventoryPage() {
 
   return (
     <div className="space-y-8">
-      <div>
+      <div className="print:hidden">
         <h1 className="text-2xl font-bold tracking-tight text-slate-900 font-serif">Low Stock Alerts</h1>
         <p className="text-sm text-slate-500 mt-1">Monitor and manage products with critically low inventory levels.</p>
       </div>
