@@ -119,9 +119,11 @@ model Order {
   district     String      @default("Dhaka")
   address      String
   totalAmount  Float
-  advancePaid  Float       @default(0)
-  status       OrderStatus @default(PENDING)
-  remarks      String?
+  advancePaid    Float       @default(0)
+  status         OrderStatus @default(PENDING)
+  bkashNumber    String?
+  bkashTrxId     String?
+  remarks        String?
   couponCode   String?
   discountAmount Float       @default(0)
   createdAt    DateTime    @default(now())

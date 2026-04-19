@@ -30,7 +30,8 @@ export default function CheckoutClient({
   const [isValidating, setIsValidating] = useState(false);
   const [couponError, setCouponError] = useState("");
   const [couponSuccess, setCouponSuccess] = useState("");
-
+  const [bkashNumber, setBkashNumber] = useState("");
+  const [bkashTrxId, setBkashTrxId] = useState("");
   // DTF Modal State
   const [showDTFModal, setShowDTFModal] = useState(false);
   const [activeItem, setActiveItem] = useState<{ id: string, size: string | undefined } | null>(null);
@@ -80,13 +81,17 @@ export default function CheckoutClient({
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
-    const fullName = formData.get("fullName") as string;
-    const phone = formData.get("phone") as string;
-    const district = formData.get("district") as string;
-    const address = formData.get("address") as string;
+    const fullName = (formData.get("fullName") as string).trim();
+    const phone = (formData.get("phone") as string).trim();
+    const district = (formData.get("district") as string).trim();
+    const address = (formData.get("address") as string).trim();
 
     if (!fullName || !phone || !district || !address) {
-      setErrorMsg("Please fill out all required fields before placing your order.");
+      setErrorMsg("Please provide all the required information (Name, Phone, District and Address).");
+      return;
+    }
+    if (totalDTFCost > 0 && (!bkashNumber || !bkashTrxId)) {
+      setErrorMsg("Please provide your bKash Number and Transaction ID for the DTF advance payment.");
       return;
     }
 
@@ -107,7 +112,9 @@ export default function CheckoutClient({
         totalAmount: total,
         remarks: formData.get("remarks") as string,
         couponCode: appliedCoupon,
-        discountAmount: couponDiscount
+        discountAmount: couponDiscount,
+        bkashNumber,
+        bkashTrxId
       });
 
       if (result.success) {
@@ -417,11 +424,65 @@ export default function CheckoutClient({
                 </div>
 
                 {errorMsg && (
-                  <div className="bg-red-500/10 text-red-500 p-4 rounded-lg text-[10px] font-black uppercase tracking-widest mb-6  flex items-start justify-between gap-3">
+                  <div className="bg-red-500/10 text-red-500 p-4 rounded-lg mb-6  flex items-start justify-between gap-3">
                     <p className="leading-relaxed">{errorMsg}</p>
                     <button onClick={() => setErrorMsg("")} className="text-slate-400 hover:text-white transition-colors flex-shrink-0">
                       <X className="w-4 h-4" />
                     </button>
+                  </div>
+                )}
+
+                {/* bKash Advance Section for DTF */}
+                {totalDTFCost > 0 && (
+                  <div className="mb-8 bg-white border-t border-slate-100 pt-6 relative overflow-hidden">
+                    <div className="flex items-center gap-4 mb-6">
+                      <div className="w-12 h-12 bg-slate-900 rounded-full flex items-center justify-center text-white font-black italic text-xl ">b</div>
+                      <div>
+                        <h3 className="text-sm font-black uppercase tracking-[0.2em] text-slate-900">Advance Verification</h3>
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Required for Custom Orders</p>
+                      </div>
+                    </div>
+
+                    <div className="mb-8 space-y-4">
+                      <p className="text-xs font-medium text-slate-600 leading-relaxed">
+                        Jersey customization requires a <span className="font-black text-slate-900 underline decoration-slate-200 underline-offset-4">{formatBDT(totalDTFCost)} advance payment</span>. Please use "Send Money" to the number below:
+                      </p>
+                      <div className="flex flex-col gap-1">
+                        <span className="text-[14px] font-black text-slate-500 ">bKash Number (Send Money Only)</span>
+                        <span className="text-2xl font-black text-slate-900 tracking-tighter tabular-nums">01920240230 </span>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Paid From</label>
+                        <input
+                          onChange={(e) => {
+                            setBkashNumber(e.target.value);
+                            setErrorMsg("");
+                          }}
+                          name="bkashNumber"
+                          type="tel"
+                          placeholder="Your bKash No."
+                          className="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-4 text-xs font-bold focus:bg-white focus:ring-0 focus:border-slate-900 outline-none transition-all placeholder:text-slate-300"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Transaction ID</label>
+                        <input
+                          onChange={(e) => {
+                            setBkashTrxId(e.target.value);
+                            setErrorMsg("");
+                          }}
+                          name="bkashTrxId"
+                          type="text"
+                          placeholder="TrxID"
+                          className="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-4 text-xs font-bold focus:bg-white focus:ring-0 focus:border-slate-900 outline-none transition-all placeholder:text-slate-300"
+                        />
+                      </div>
+                    </div>
+
+
                   </div>
                 )}
 

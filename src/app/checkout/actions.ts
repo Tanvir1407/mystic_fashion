@@ -13,9 +13,14 @@ export async function placeOrderAction(payload: {
   remarks?: string;
   couponCode?: string;
   discountAmount?: number;
+  bkashNumber?: string;
+  bkashTrxId?: string;
 }) {
   try {
     return await prisma.$transaction(async (tx) => {
+      const printQuantity = payload.items.reduce((sum, item) => sum + (item.requiresPrint ? item.quantity : 0), 0);
+      const calculatedAdvance = printQuantity * 300;
+
       // Generate Custom Order ID
       const now = new Date();
       const year = now.getFullYear().toString().slice(-2);
@@ -48,6 +53,9 @@ export async function placeOrderAction(payload: {
           district: payload.district,
           address: payload.address,
           totalAmount: payload.totalAmount,
+          advancePaid: calculatedAdvance,
+          bkashNumber: payload.bkashNumber,
+          bkashTrxId: payload.bkashTrxId,
           remarks: payload.remarks,
           couponCode: sanitizedCoupon,
           discountAmount: payload.discountAmount || 0,

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { User, MapPin, Phone, Edit2, Check, X, Package, Wallet, StickyNote, Save } from "lucide-react";
+import { User, MapPin, Phone, Edit2, Check, X, Package, Wallet, StickyNote, Save, Minus, VerifiedIcon } from "lucide-react";
 import { updateOrderDetails, updateOrderRemark } from "../../actions";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
@@ -246,35 +246,65 @@ export default function OrderDetailsClient({ order, deliverySettings }: { order:
 
             <div className="pt-4 border-t-2 border-dashed border-slate-100 flex justify-between items-center">
               <span className="text-[10px] uppercase font-black text-slate-400 tracking-[0.2em]">Grand Total</span>
-              <span className="text-3xl font-black text-slate-900 tracking-tighter">{formatBDT(order.totalAmount)}</span>
+              <span className="text-2xl font-black text-slate-900 tracking-tighter">{formatBDT(order.totalAmount)}</span>
             </div>
 
-            <div className="bg-slate-50 rounded-xl p-5 space-y-4 border border-slate-100">
-              <div>
-                <span className="block text-[10px] uppercase font-bold text-slate-500 mb-2 tracking-wider">Advance Paid</span>
-                {isEditing ? (
-                  <div className="relative">
-                    <span className="absolute left-4 top-1/2 -translate-y-1/2 font-bold text-slate-400">৳</span>
-                    <input
-                      type="number"
-                      value={formData.advancePaid}
-                      onChange={(e) => setFormData({ ...formData, advancePaid: parseFloat(e.target.value) || 0 })}
-                      className="w-full bg-white border border-slate-200 rounded-lg pl-8 pr-4 py-3 focus:outline-none focus:ring-2 focus:ring-rose-500/10 focus:border-rose-400 font-bold text-rose-600 transition-all"
-                    />
-                  </div>
-                ) : (
-                  <span className="text-lg font-black text-rose-600 block">
-                    {formatBDT(order.advancePaid || 0)}
+            <div className="space-y-6 ">
+              <div className="">
+                <div className="flex justify-between">
+                  <span className="text-slate-500 font-medium">Advance Paid</span>
+                  <span>
+                    {isEditing ? (
+                      <div className="relative">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 font-bold text-slate-300 text-xs">৳</span>
+                        <input
+                          type="number"
+                          value={formData.advancePaid}
+                          onChange={(e) => setFormData({ ...formData, advancePaid: parseFloat(e.target.value) || 0 })}
+                          className="w-32 bg-white border border-slate-200 rounded-lg pl-6 pr-3 py-2 focus:outline-none focus:ring-2 focus:ring-slate-900/5 focus:border-slate-900 font-black text-slate-900 text-sm transition-all"
+                        />
+                      </div>
+                    ) : (
+                      <span className="flex items-center gap-1 text-xl font-bold text-slate-900 block tracking-tight">
+                        <Minus className="w-4 h-4 text-slate-500" /> {formatBDT(order.advancePaid || 0)}
+                      </span>
+                    )}
                   </span>
-                )}
+                </div>
+
               </div>
-              <div className="pt-3 border-t border-slate-200/60">
-                <span className="block text-[10px] uppercase font-bold text-indigo-400 mb-1 tracking-wider">Due Balance</span>
-                <span className="text-3xl font-black text-indigo-600 tracking-tighter">
+
+              <div className="border-b border-slate-200  flex justify-between items-center py-6 border-t border-slate-200 border-dashed">
+                <span className="block text-sm uppercase font-black text-slate-400 mb-1.5 tracking-widest">Total Due</span>
+                <span className="text-3xl font-black text-slate-900 tracking-tighter tabular-nums leading-none">
                   {formatBDT(order.totalAmount - (order.advancePaid || 0))}
                 </span>
               </div>
             </div>
+
+            {/* bKash Payment Details */}
+            {order.bkashNumber && (
+              <div className="mt-4 ">
+                <h3 className="font-bold text-slate-900 mb-6 uppercase tracking-widest text-[11px] flex items-center gap-2.5 pb-4 border-b border-slate-50">
+                  <div className="p-1.5 bg-emerald-50 rounded-md">
+                    <VerifiedIcon className="w-4 h-4 text-emerald-500" />
+                  </div>
+                  Manual Verification
+                </h3>
+                <div className="space-y-4">
+                  <div className="flex  justify-between gap-1 border-b border-slate-100 pb-3">
+                    <span className="text-[11px] text-slate-400 font-black uppercase tracking-widest">Customer bKash No.</span>
+                    <span className="text-sm font-black text-slate-900 font-mono tracking-tighter">{order.bkashNumber}</span>
+                  </div>
+                  <div className="flex  justify-between gap-1">
+                    <span className="text-[9px] text-slate-400 font-black uppercase tracking-widest">Transaction ID</span>
+                    <span className="text-sm font-black text-slate-900 uppercase tracking-widest flex items-center justify-between">
+                      {order.bkashTrxId}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
@@ -315,7 +345,7 @@ export default function OrderDetailsClient({ order, deliverySettings }: { order:
                         <span className="text-[8px] font-black text-indigo-400 uppercase tracking-widest leading-none">Jersey Customization</span>
                         <div className="flex items-center justify-between">
                           <span className="text-[10px] font-black text-indigo-700 uppercase">{item.printName} <span className="text-indigo-400">#{item.printNumber}</span></span>
-                          <span className="text-[10px] font-bold text-indigo-600">+{formatBDT(item.printCost)}</span>
+                          <span className="text-[10px] font-bold text-indigo-600">+{formatBDT(item.printCost * item.quantity)}</span>
                         </div>
                       </div>
                     )}
