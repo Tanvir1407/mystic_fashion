@@ -20,6 +20,7 @@ export default function CheckoutClient({
 }) {
   const { items, getTotalPrice, clearCart, updateItem } = useCartStore();
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [confirmedOrderId, setConfirmedOrderId] = useState("");
   const [errorMsg, setErrorMsg] = useState("");
   const [selectedDistrict, setSelectedDistrict] = useState("");
 
@@ -118,6 +119,7 @@ export default function CheckoutClient({
       });
 
       if (result.success) {
+        setConfirmedOrderId(result.orderId || "");
         setIsSubmitted(true);
         clearCart();
       } else {
@@ -163,18 +165,35 @@ export default function CheckoutClient({
 
   if (isSubmitted) {
     return (
-      <main className="min-h-screen bg-slate-50 flex flex-col">
+      <main className="min-h-screen bg-white flex flex-col">
         <Header />
-        <div className="flex-1 flex flex-col items-center justify-center p-6 text-center">
-          <CheckCircle2 className="w-20 h-20 text-green-500 mb-6" />
-          <h1 className="text-4xl font-black text-zinc-900 mb-4 tracking-tight">Order Confirmed!</h1>
-          <p className="text-zinc-500 max-w-sm mb-8 leading-relaxed">
-            Thank you for shopping with Mystic Fashion. Your order has been placed successfully and will be delivered soon.
-          </p>
-          <Link href="/" className="bg-primary text-white px-8 py-4 rounded-lg font-bold uppercase tracking-widest hover:bg-[#600018] transition-all active:scale-[0.98]">
+
+        <div className="flex-1 flex flex-col items-center justify-center p-6 text-center animate-in fade-in duration-700">
+          <div className="mb-10">
+            <CheckCircle2 className="w-16 h-16 text-emerald-500 mx-auto" strokeWidth={1.5} />
+          </div>
+
+          <h1 className="text-3xl font-black text-slate-900 mb-6 tracking-tight ">Order Confirmed!</h1>
+
+          <div className="max-w-md mx-auto space-y-4">
+            <p className="text-slate-600 leading-relaxed font-medium">
+              Thank you for shopping with <span className="text-slate-900 font-bold">Mystic Fashion</span>.
+              Your order (<span className="text-primary font-black tracking-tight underline decoration-slate-200 underline-offset-4">{confirmedOrderId}</span>) has been placed successfully and will be delivered soon.
+            </p>
+
+            <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest italic">
+              take this id for any future query about order
+            </p>
+          </div>
+
+          <Link
+            href="/"
+            className="mt-12 bg-primary text-white px-12 py-4 rounded-full font-black uppercase tracking-[0.2em] text-[10px] transition-all shadow-xl shadow-slate-200 active:scale-[0.98]"
+          >
             Continue Shopping
           </Link>
         </div>
+
         <Footer config={footerData} />
       </main>
     );
