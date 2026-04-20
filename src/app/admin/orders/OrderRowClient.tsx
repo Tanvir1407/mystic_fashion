@@ -7,19 +7,18 @@ import Link from "next/link";
 import { Eye, Trash2 } from "lucide-react";
 import { deleteOrder } from "../actions";
 import { useRouter } from "next/navigation";
-import { CustomSelect } from "@/components/CustomSelect";
 import { StatusAlertModal } from "@/components/StatusAlertModal";
 
-export default function OrderRowClient({ 
-  order, 
-  items, 
-  isSelected, 
-  onSelect 
-}: { 
-  order: any, 
-  items: any[], 
-  isSelected?: boolean, 
-  onSelect?: () => void 
+export default function OrderRowClient({
+  order,
+  items,
+  isSelected,
+  onSelect
+}: {
+  order: any,
+  items: any[],
+  isSelected?: boolean,
+  onSelect?: () => void
 }) {
   const [status, setStatus] = useState<OrderStatus>(order.status);
   const [loading, setLoading] = useState(false);
@@ -55,7 +54,7 @@ export default function OrderRowClient({
 
   const handleDelete = async () => {
     if (!confirm("Are you sure you want to delete this order? This action cannot be undone.")) return;
-    
+
     setLoading(true);
     const result = await deleteOrder(order.id);
     if (result.success) {
@@ -69,8 +68,8 @@ export default function OrderRowClient({
   return (
     <tr className="hover:bg-slate-50/50 transition-colors group">
       <td className="px-6 py-4">
-        <input 
-          type="checkbox" 
+        <input
+          type="checkbox"
           checked={isSelected || false}
           onChange={onSelect}
           className="rounded border-slate-300 text-indigo-600 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 cursor-pointer"
@@ -103,6 +102,12 @@ export default function OrderRowClient({
         </div>
       </td>
       <td className="px-6 py-4 text-sm text-slate-900 font-mono font-medium">
+        ৳{order.advancePaid.toLocaleString("en-IN")}
+      </td>
+      <td className="px-6 py-4 text-sm text-red-600 font-mono font-medium">
+        ৳{(order.totalAmount - order.advancePaid).toLocaleString("en-IN")}
+      </td>
+      <td className="px-6 py-4 text-sm text-slate-900 font-mono font-medium">
         ৳{order.totalAmount.toLocaleString("en-IN")}
       </td>
       <td className="px-6 py-4 text-right">
@@ -110,14 +115,13 @@ export default function OrderRowClient({
           value={status}
           onChange={handleStatusChange}
           disabled={loading}
-          className={`w-32 text-[11px] font-black uppercase tracking-wider px-2 py-1.5 rounded-md border transition-all cursor-pointer outline-none focus:ring-2 focus:ring-opacity-50 ${
-            status === "PENDING" ? "bg-amber-50 text-amber-700 border-amber-200 focus:ring-amber-500" :
+          className={`w-32 text-[11px] font-black uppercase tracking-wider px-2 py-1.5 rounded-md border transition-all cursor-pointer outline-none focus:ring-2 focus:ring-opacity-50 ${status === "PENDING" ? "bg-amber-50 text-amber-700 border-amber-200 focus:ring-amber-500" :
             status === "CONFIRMED" ? "bg-blue-50 text-blue-700 border-blue-200 focus:ring-blue-500" :
-            status === "PACKAGING" ? "bg-purple-50 text-purple-700 border-purple-200 focus:ring-purple-500" :
-            status === "SHIPPED" ? "bg-indigo-50 text-indigo-700 border-indigo-200 focus:ring-indigo-500" :
-            status === "DELIVERED" ? "bg-green-50 text-green-700 border-green-200 focus:ring-green-500" :
-            "bg-red-50 text-red-700 border-red-200 focus:ring-red-500"
-          }`}
+              status === "PACKAGING" ? "bg-purple-50 text-purple-700 border-purple-200 focus:ring-purple-500" :
+                status === "SHIPPED" ? "bg-indigo-50 text-indigo-700 border-indigo-200 focus:ring-indigo-500" :
+                  status === "DELIVERED" ? "bg-green-50 text-green-700 border-green-200 focus:ring-green-500" :
+                    "bg-red-50 text-red-700 border-red-200 focus:ring-red-500"
+            }`}
         >
           <option value="PENDING">Pending</option>
           <option value="CONFIRMED">Confirmed</option>
@@ -146,7 +150,7 @@ export default function OrderRowClient({
           </button>
         </div>
       </td>
-      <StatusAlertModal 
+      <StatusAlertModal
         isOpen={alert.isOpen}
         onClose={() => setAlert({ ...alert, isOpen: false })}
         title={alert.title}

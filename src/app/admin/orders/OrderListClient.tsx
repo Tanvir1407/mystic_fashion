@@ -52,7 +52,7 @@ export default function OrderListClient({
       const params = new URLSearchParams(window.location.search);
       if (searchValue) params.set("search", searchValue);
       else params.delete("search");
-      
+
       params.set("page", "1");
       router.push(`/admin/orders?${params.toString()}`);
     }, 400); // 400ms delay for a snappy feel
@@ -88,7 +88,7 @@ export default function OrderListClient({
     try {
       const results = await bulkUpdateOrderStatus(Array.from(selectedIds), bulkStatus);
       const failures = results.filter(r => !r.success);
-      
+
       if (failures.length > 0) {
         setAlert({
           isOpen: true,
@@ -142,6 +142,7 @@ export default function OrderListClient({
 
   const selectedOrdersToPrint = filteredOrders.filter((o) => selectedIds.has(o.id));
 
+  console.log(filteredOrders)
   return (
     <div className="flex flex-col gap-6">
       <InvoicePrintView orders={selectedOrdersToPrint} />
@@ -310,6 +311,8 @@ export default function OrderListClient({
                 <th className="px-6 py-4 font-semibold text-xs text-slate-500 uppercase tracking-wider">Customer</th>
                 <th className="px-6 py-4 font-semibold text-xs text-slate-500 uppercase tracking-wider">Address</th>
                 <th className="px-6 py-4 font-semibold text-xs text-slate-500 uppercase tracking-wider">Items</th>
+                <th className="px-6 py-4 font-semibold text-xs text-slate-500 uppercase tracking-wider">Advance</th>
+                <th className="px-6 py-4 font-semibold text-xs text-slate-500 uppercase tracking-wider">Due</th>
                 <th className="px-6 py-4 font-semibold text-xs text-slate-500 uppercase tracking-wider">Total</th>
                 <th className="px-6 py-4 font-semibold text-xs text-slate-500 uppercase tracking-wider text-right">Status</th>
                 <th className="px-6 py-4 font-semibold text-xs text-slate-500 uppercase tracking-wider text-right">Actions</th>
@@ -354,7 +357,7 @@ export default function OrderListClient({
           </div>
         )}
       </div>
-      <StatusAlertModal 
+      <StatusAlertModal
         isOpen={alert.isOpen}
         onClose={() => setAlert({ ...alert, isOpen: false })}
         title={alert.title}
