@@ -193,11 +193,12 @@ model Purchase {
   id            String   @id @default(uuid())
   supplierName  String
   invoiceNumber String?
-  totalAmount   Float
-  status        String   @default("PENDING") // PENDING, COMPLETED, CANCELLED
-  items         PurchaseItem[]
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  totalAmount    Float
+  discountAmount Float    @default(0)
+  status         String   @default("PENDING") // PENDING, COMPLETED, CANCELLED
+  items          PurchaseItem[]
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 }
 
 model PurchaseItem {

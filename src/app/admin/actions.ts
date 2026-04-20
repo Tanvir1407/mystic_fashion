@@ -355,6 +355,7 @@ export async function createPurchase(
   supplierName: string,
   invoiceNumber: string,
   totalAmount: number,
+  discountAmount: number,
   items: { productId: string; variantId: string; quantity: number; unitPrice: number }[]
 ) {
   const purchase = await prisma.purchase.create({
@@ -362,6 +363,7 @@ export async function createPurchase(
       supplierName,
       invoiceNumber,
       totalAmount,
+      discountAmount,
       status: "COMPLETED", // Assuming immediate stock update on creation
       items: {
         create: items.map((i) => ({
