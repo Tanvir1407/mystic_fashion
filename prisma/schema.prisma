@@ -239,3 +239,46 @@ model Page {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
+
+enum AccountType {
+  INCOME
+  EXPENSE
+  ASSET
+  LIABILITY
+}
+
+enum AccountStatus {
+  ACTIVE
+  INACTIVE
+}
+
+model ChartOfAccount {
+  id           String          @id @default(uuid())
+  name         String          @unique
+  type         AccountType
+  status       AccountStatus   @default(ACTIVE)
+  transactions Transaction[]
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+}
+
+enum TransactionType {
+  DEBIT
+  CREDIT
+}
+
+model Transaction {
+  id            String         @id @default(uuid())
+  accountId     String
+  amount        Float
+  date          DateTime
+  type          TransactionType
+  description   String
+  referenceId   String?
+  referenceType String?        // "ORDER", "PURCHASE"
+
+  account       ChartOfAccount  @relation(fields: [accountId], references: [id]) // No cascade delete
+
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+}

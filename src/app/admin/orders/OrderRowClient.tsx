@@ -37,6 +37,29 @@ export default function OrderRowClient({
   const handleStatusChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
     const newStatus = e.target.value as OrderStatus;
     const oldStatus = status;
+
+    // Validate Status Transitions -> Must be CONFIRMED before Packaging, Shipped, etc.
+    if (oldStatus === "PENDING" && ["PACKAGING", "SHIPPED", "DELIVERED"].includes(newStatus)) {
+      setAlert({
+        isOpen: true,
+        title: "Action Restricted",
+        message: "A Pending order must be 'Confirmed' before it can be marked as Packaging, Shipped, or Delivered.",
+        type: "warning"
+      });
+      // React controlled component will snap back naturally since `status` state didn't change
+      return;
+    }
+
+    if (oldStatus === "CANCELLED" && ["PENDING", "CONFIRMED", "PACKAGING", "SHIPPED", "DELIVERED"].includes(newStatus)) {
+      setAlert({
+        isOpen: true,
+        title: "Action Restricted",
+        message: "A Cancelled order can only be marked as 'Confirmed' if you wish to reactivate it.",
+        type: "warning"
+      });
+      return;
+    }
+
     setStatus(newStatus);
     setLoading(true);
     const result = await updateOrderStatus(order.id, newStatus);
@@ -123,11 +146,11 @@ export default function OrderRowClient({
                     "bg-red-50 text-red-700 border-red-200 focus:ring-red-500"
             }`}
         >
-          <option value="PENDING">Pending</option>
-          <option value="CONFIRMED">Confirmed</option>
-          <option value="PACKAGING">Packaging</option>
-          <option value="SHIPPED">Shipped</option>
-          <option value="DELIVERED">Delivered</option>
+          <option value="PENDING" disabled={status === "CANCELLED" || status === "CONFIRMED" || status === "PACKAGING" || status === "SHIPPED" || status === "DELIVERED"}>Pending</option>
+          <option value="CONFIRMED" disabled={status === "CANCELLED"}>Confirmed</option>
+          <option value="PACKAGING" disabled={status === "PENDING" || status === "CANCELLED"}>Packaging</option>
+          <option value="SHIPPED" disabled={status === "PENDING" || status === "CANCELLED"}>Shipped</option>
+          <option value="DELIVERED" disabled={status === "PENDING" || status === "CANCELLED"}>Delivered</option>
           <option value="CANCELLED">Cancelled</option>
         </select>
       </td>

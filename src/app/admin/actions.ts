@@ -8,6 +8,16 @@ import { revalidatePath } from "next/cache";
 import { writeFile, mkdir } from "fs/promises";
 import { join, dirname } from "path";
 
+async function getOrCreateSystemAccount(tx: any, name: string, type: "INCOME" | "EXPENSE") {
+  let account = await tx.chartOfAccount.findUnique({ where: { name } });
+  if (!account) {
+    account = await tx.chartOfAccount.create({
+      data: { name, type, status: "ACTIVE" },
+    });
+  }
+  return account;
+}
+
 export async function adminLogin(email: string, password: string) {
   const staff = await prisma.staff.findUnique({
     where: { email },
@@ -199,6 +209,37 @@ export async function updateOrderStatus(orderId: string, status: OrderStatus) {
         where: { id: orderId },
         data: { status: newStatus },
       });
+
+      // --- AUTO ACCOUNTING LOGIC ---
+      if (oldStatus === "PENDING" && newStatus === "CONFIRMED") {
+        const account = await getOrCreateSystemAccount(tx, "Sales Revenue", "INCOME");
+        await tx.transaction.create({
+          data: {
+            accountId: account.id,
+            amount: order.totalAmount,
+            date: new Date(),
+            type: "CREDIT",
+            description: `Order confirmation sale for ${order.id}`,
+            referenceId: order.id,
+            referenceType: "ORDER",
+          }
+        });
+      }
+
+      if (isActive(oldStatus) && newStatus === "CANCELLED") {
+        const account = await getOrCreateSystemAccount(tx, "Sales Refunds", "EXPENSE");
+        await tx.transaction.create({
+          data: {
+            accountId: account.id,
+            amount: order.totalAmount,
+            date: new Date(),
+            type: "DEBIT",
+            description: `Order cancellation refund for ${order.id}`,
+            referenceId: order.id,
+            referenceType: "ORDER",
+          }
+        });
+      }
     });
 
     revalidatePath("/admin/orders");
@@ -358,34 +399,49 @@ export async function createPurchase(
   discountAmount: number,
   items: { productId: string; variantId: string; quantity: number; unitPrice: number }[]
 ) {
-  const purchase = await prisma.purchase.create({
-    data: {
-      supplierName,
-      invoiceNumber,
-      totalAmount,
-      discountAmount,
-      status: "COMPLETED", // Assuming immediate stock update on creation
-      items: {
-        create: items.map((i) => ({
-          productId: i.productId,
-          variantId: i.variantId,
-          quantity: i.quantity,
-          unitPrice: i.unitPrice,
-        })),
+  await prisma.$transaction(async (tx) => {
+    const purchase = await tx.purchase.create({
+      data: {
+        supplierName,
+        invoiceNumber,
+        totalAmount,
+        discountAmount,
+        status: "COMPLETED", // Assuming immediate stock update on creation
+        items: {
+          create: items.map((i) => ({
+            productId: i.productId,
+            variantId: i.variantId,
+            quantity: i.quantity,
+            unitPrice: i.unitPrice,
+          })),
+        },
       },
-    },
-  });
+    });
 
-  for (const item of items) {
-    await prisma.productVariant.update({
-      where: { id: item.variantId },
-      data: { stock: { increment: item.quantity } },
+    for (const item of items) {
+      await tx.productVariant.update({
+        where: { id: item.variantId },
+        data: { stock: { increment: item.quantity } },
+      });
+      await tx.product.update({
+        where: { id: item.productId },
+        data: { purchasePrice: item.unitPrice },
+      });
+    }
+
+    const account = await getOrCreateSystemAccount(tx, "Inventory Purchases", "EXPENSE");
+    await tx.transaction.create({
+      data: {
+        accountId: account.id,
+        amount: totalAmount,
+        date: new Date(),
+        type: "DEBIT",
+        description: `Inventory purchase from ${supplierName}`,
+        referenceId: purchase.id,
+        referenceType: "PURCHASE",
+      }
     });
-    await prisma.product.update({
-      where: { id: item.productId },
-      data: { purchasePrice: item.unitPrice },
-    });
-  }
+  });
 
   revalidatePath("/admin/purchases");
   revalidatePath("/admin/products");
@@ -570,6 +626,20 @@ export async function createAdminOrder(data: {
           },
         });
       }
+
+      // 3. Accounting Automation
+      const account = await getOrCreateSystemAccount(tx, "Sales Revenue", "INCOME");
+      await tx.transaction.create({
+        data: {
+          accountId: account.id,
+          amount: data.totalAmount,
+          date: new Date(),
+          type: "CREDIT",
+          description: `Order confirmation sale for ${newOrder.id}`,
+          referenceId: newOrder.id,
+          referenceType: "ORDER",
+        }
+      });
 
       return newOrder;
     });
