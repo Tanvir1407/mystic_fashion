@@ -1,13 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { User, MapPin, Phone, Edit2, Check, X, Package, Wallet, StickyNote, Save, Minus, VerifiedIcon } from "lucide-react";
+import { User, MapPin, Phone, Edit2, Check, X, Package, Wallet, StickyNote, Save, Minus, VerifiedIcon, Trash2, Plus } from "lucide-react";
 import { updateOrderDetails, updateOrderRemark } from "../../actions";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { CustomSelect } from "@/components/CustomSelect";
 
-export default function OrderDetailsClient({ order, deliverySettings }: { order: any; deliverySettings: any }) {
+export default function OrderDetailsClient({ order, deliverySettings, products = [] }: { order: any; deliverySettings: any; products?: any[] }) {
   const router = useRouter();
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -21,13 +21,44 @@ export default function OrderDetailsClient({ order, deliverySettings }: { order:
     address: order.address,
     advancePaid: order.advancePaid || 0,
     discountAmount: order.discountAmount || 0,
+    items: order.items || [],
+  });
+
+  const [isAddingProduct, setIsAddingProduct] = useState(false);
+  const [newProductData, setNewProductData] = useState({
+    productId: "",
+    size: "",
+    quantity: 1,
+    requiresPrint: false,
+    printName: "",
+    printNumber: "",
+    printCost: 300,
   });
 
   const handleSave = async () => {
     setLoading(true);
-    const result = await updateOrderDetails(order.id, formData);
+    const result = await updateOrderDetails(order.id, {
+      customerName: formData.customerName,
+      phone: formData.phone,
+      district: formData.district,
+      address: formData.address,
+      advancePaid: formData.advancePaid,
+      discountAmount: formData.discountAmount,
+      items: formData.items.map((i: any) => ({
+         id: i.id,
+         productId: i.productId,
+         size: i.size,
+         quantity: i.quantity,
+         price: i.price,
+         requiresPrint: i.requiresPrint,
+         printName: i.printName,
+         printNumber: i.printNumber,
+         printCost: i.printCost
+      }))
+    });
     if (result.success) {
       setIsEditing(false);
+      setIsAddingProduct(false);
       router.refresh();
     } else {
       alert(result.error || "Failed to update order");
@@ -39,16 +70,65 @@ export default function OrderDetailsClient({ order, deliverySettings }: { order:
     return price === 0 ? "Free" : `৳${price.toLocaleString("en-IN")}`;
   };
 
-  const baseSubtotal = order.items.reduce((acc: number, item: any) => acc + (item.price * item.quantity), 0);
-  const totalDTFCost = order.items.reduce((acc: number, item: any) => acc + (item.requiresPrint ? item.printCost * item.quantity : 0), 0);
-  const discount = order.discountAmount || 0;
+  const baseSubtotal = formData.items.reduce((acc: number, item: any) => acc + (item.price * item.quantity), 0);
+  const totalDTFCost = formData.items.reduce((acc: number, item: any) => acc + (item.requiresPrint ? item.printCost * item.quantity : 0), 0);
+  const discount = formData.discountAmount || 0;
 
   // Logic: district focus, not total focus
-  const deliveryCharge = order.district === "Dhaka"
+  const deliveryCharge = formData.district === "Dhaka"
     ? deliverySettings.insideDhaka
-    : order.district === "Self Pickup"
+    : formData.district === "Self Pickup"
       ? 0
       : deliverySettings.outsideDhaka;
+
+  const currentTotalAmount = (baseSubtotal + totalDTFCost + deliveryCharge) - discount;
+
+  const updateItemQuantity = (index: number, delta: number) => {
+    const newItems = [...formData.items];
+    const newQuantity = newItems[index].quantity + delta;
+    if (newQuantity > 0) {
+      newItems[index].quantity = newQuantity;
+      setFormData({ ...formData, items: newItems });
+    }
+  };
+
+  const removeItem = (index: number) => {
+    const newItems = formData.items.filter((_: any, i: number) => i !== index);
+    setFormData({ ...formData, items: newItems });
+  };
+
+  const handleAddNewProduct = () => {
+    if (!newProductData.productId || !newProductData.size) {
+      alert("Please select a product and size.");
+      return;
+    }
+    const product = products.find(p => p.id === newProductData.productId);
+    let price = product.price;
+    if (product.discount) {
+      if (product.discount.discountType === "PERCENTAGE") {
+         price = price - (price * (product.discount.value / 100));
+      } else {
+         price = price - product.discount.value;
+      }
+    }
+
+    const newItem = {
+      id: `new-${Date.now()}`,
+      productId: product.id,
+      product: product,
+      size: newProductData.size,
+      quantity: newProductData.quantity,
+      price: price,
+      requiresPrint: newProductData.requiresPrint,
+      printName: newProductData.requiresPrint ? newProductData.printName : "",
+      printNumber: newProductData.requiresPrint ? newProductData.printNumber : "",
+      printCost: newProductData.requiresPrint ? newProductData.printCost : 0,
+    };
+
+    setFormData({ ...formData, items: [...formData.items, newItem] });
+    setIsAddingProduct(false);
+    setNewProductData({ productId: "", size: "", quantity: 1, requiresPrint: false, printName: "", printNumber: "", printCost: 300 });
+  };
 
   const handleSaveRemark = async () => {
     setRemarkLoading(true);
@@ -93,7 +173,10 @@ export default function OrderDetailsClient({ order, deliverySettings }: { order:
                   district: order.district,
                   address: order.address,
                   advancePaid: order.advancePaid || 0,
+                  discountAmount: order.discountAmount || 0,
+                  items: order.items || [],
                 });
+                setIsAddingProduct(false);
               }}
               disabled={loading}
               className="flex items-center gap-1.5 px-4 py-2 text-xs font-bold bg-white border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50 transition-all   disabled:opacity-50"
@@ -310,7 +393,7 @@ export default function OrderDetailsClient({ order, deliverySettings }: { order:
 
             <div className="pt-4 border-t-2 border-dashed border-slate-100 flex justify-between items-center">
               <span className="text-sm uppercase font-black text-slate-400 tracking-[0.2em]">Grand Total</span>
-              <span className="font-bold text-slate-800">{formatBDT(order.totalAmount)}</span>
+              <span className="font-bold text-slate-800">{formatBDT(isEditing ? currentTotalAmount : order.totalAmount)}</span>
             </div>
 
             <div className="space-y-6 ">
@@ -341,7 +424,7 @@ export default function OrderDetailsClient({ order, deliverySettings }: { order:
               <div className=" flex justify-between items-center py-6 border-t border-slate-200 border-dashed">
                 <span className="block text-sm uppercase font-black text-slate-400 mb-1.5 tracking-widest">Total Due</span>
                 <span className="text-3xl font-bold text-rose-500 tracking-tighter tabular-nums leading-none">
-                  {formatBDT(order.totalAmount - (order.advancePaid || 0))}
+                  {formatBDT((isEditing ? currentTotalAmount : order.totalAmount) - (formData.advancePaid || 0))}
                 </span>
               </div>
             </div>
@@ -383,7 +466,7 @@ export default function OrderDetailsClient({ order, deliverySettings }: { order:
             </h3>
           </div>
           <div className="divide-y divide-slate-50 max-h-[480px] overflow-y-auto custom-scrollbar">
-            {order.items.map((item: any) => (
+            {formData.items.map((item: any, index: number) => (
               <div key={item.id} className="p-5 flex gap-4 hover:bg-slate-50/50 transition-colors group">
                 <div className="w-16 h-20 relative bg-slate-50 rounded-lg overflow-hidden border border-slate-100 flex-shrink-0 group-hover:scale-[1.02] transition-transform">
                   {item.product.images[0] && (
@@ -399,9 +482,17 @@ export default function OrderDetailsClient({ order, deliverySettings }: { order:
                       <span className="font-mono bg-slate-900 text-[10px] px-2 py-0.5 rounded font-black text-white tracking-widest">
                         {item.size}
                       </span>
-                      <span className="text-[10px] bg-slate-100 text-slate-500 px-2 py-0.5 rounded font-bold uppercase">
-                        Qty: {item.quantity}
-                      </span>
+                      {isEditing ? (
+                        <div className="flex items-center bg-slate-100 rounded border border-slate-200 overflow-hidden">
+                          <button onClick={() => updateItemQuantity(index, -1)} className="px-2 py-0.5 hover:bg-slate-200 text-slate-600 transition-colors cursor-pointer font-bold">-</button>
+                          <span className="text-[10px] bg-white px-2 py-0.5 font-bold uppercase text-slate-800 min-w-[24px] text-center">{item.quantity}</span>
+                          <button onClick={() => updateItemQuantity(index, 1)} className="px-2 py-0.5 hover:bg-slate-200 text-slate-600 transition-colors cursor-pointer font-bold">+</button>
+                        </div>
+                      ) : (
+                        <span className="text-[10px] bg-slate-100 text-slate-500 px-2 py-0.5 rounded font-bold uppercase">
+                          Qty: {item.quantity}
+                        </span>
+                      )}
                     </div>
 
                     {item.requiresPrint && (
@@ -414,14 +505,120 @@ export default function OrderDetailsClient({ order, deliverySettings }: { order:
                       </div>
                     )}
                   </div>
-                  <div className="flex items-center justify-between mt-auto pt-1">
-                    <span className="text-xs text-slate-400 font-medium">@ {formatBDT(item.price)}</span>
-                    <span className="font-bold text-slate-900 text-sm">{formatBDT((item.price + (item.requiresPrint ? item.printCost : 0)) * item.quantity)}</span>
+                  <div className="flex flex-col gap-2 mt-auto pt-2 border-t border-slate-50">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-slate-400 font-medium">@ {formatBDT(item.price)}</span>
+                      <span className="font-bold text-slate-900 text-sm">{formatBDT((item.price + (item.requiresPrint ? item.printCost : 0)) * item.quantity)}</span>
+                    </div>
+                    {isEditing && (
+                      <div className="flex justify-end">
+                        <button onClick={() => removeItem(index)} className="flex items-center gap-1 text-[10px] font-bold text-red-500 hover:text-red-700 hover:bg-red-50 px-2 py-1 rounded transition-colors">
+                          <Trash2 className="w-3 h-3" /> Remove Item
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
             ))}
           </div>
+          {isEditing && (
+            <div className="p-5 bg-slate-50 border-t border-slate-100">
+              {!isAddingProduct ? (
+                 <button
+                  onClick={() => setIsAddingProduct(true)}
+                  className="flex items-center justify-center gap-2 w-full py-3 border-2 border-dashed border-slate-300 rounded-xl text-slate-500 font-bold hover:bg-slate-100 hover:text-slate-800 hover:border-slate-400 transition-all"
+                >
+                  <Plus className="w-4 h-4" /> Add Product to Order
+                </button>
+              ) : (
+                <div className="space-y-4 bg-white p-4 rounded-xl border border-slate-200 shadow-sm animate-in fade-in slide-in-from-bottom-2 duration-300">
+                  <div className="flex items-center justify-between border-b border-slate-100 pb-3 mb-3">
+                    <h4 className="font-bold text-slate-800 text-sm">Add New Product</h4>
+                    <button onClick={() => setIsAddingProduct(false)} className="text-slate-400 hover:text-slate-600 transition-colors">
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                  
+                  <div className="space-y-3">
+                    <div>
+                      <label className="text-[10px] font-bold uppercase text-slate-500 block mb-1">Select Product</label>
+                      <CustomSelect
+                        options={products.map((p) => ({ value: p.id, label: p.name }))}
+                        value={newProductData.productId}
+                        onChange={(val) => setNewProductData({...newProductData, productId: val})}
+                        searchable={true}
+                      />
+                    </div>
+                    
+                    {newProductData.productId && (
+                      <div>
+                        <label className="text-[10px] font-bold uppercase text-slate-500 block mb-1">Select Size</label>
+                        <CustomSelect
+                           options={(products.find(p => p.id === newProductData.productId)?.variants || []).map((v: any) => ({ value: v.size, label: `${v.size} (Stock: ${v.stock})` }))}
+                           value={newProductData.size}
+                           onChange={(val) => setNewProductData({...newProductData, size: val})}
+                        />
+                      </div>
+                    )}
+                    
+                    <div className="flex items-center gap-4">
+                      <div>
+                        <label className="text-[10px] font-bold uppercase text-slate-500 block mb-1">Quantity</label>
+                        <div className="flex items-center bg-slate-100 rounded border border-slate-200 overflow-hidden">
+                           <button onClick={() => setNewProductData({...newProductData, quantity: Math.max(1, newProductData.quantity - 1)})} className="px-3 py-1.5 hover:bg-slate-200 text-slate-600 font-bold">-</button>
+                           <span className="text-xs bg-white px-4 py-1.5 font-bold">{newProductData.quantity}</span>
+                           <button onClick={() => setNewProductData({...newProductData, quantity: newProductData.quantity + 1})} className="px-3 py-1.5 hover:bg-slate-200 text-slate-600 font-bold">+</button>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="p-3 bg-indigo-50/50 border border-indigo-100 rounded-lg">
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input 
+                          type="checkbox" 
+                          checked={newProductData.requiresPrint} 
+                          onChange={(e) => setNewProductData({...newProductData, requiresPrint: e.target.checked})}
+                          className="rounded text-indigo-600 focus:ring-indigo-500 scale-110"
+                        />
+                        <span className="text-xs font-bold text-slate-800">Add Jersey Customization (Name & Number)</span>
+                      </label>
+                      
+                      {newProductData.requiresPrint && (
+                        <div className="mt-3 grid grid-cols-2 gap-3">
+                          <div>
+                            <input 
+                              type="text" 
+                              placeholder="Print Name" 
+                              value={newProductData.printName}
+                              onChange={(e) => setNewProductData({...newProductData, printName: e.target.value})}
+                              className="w-full text-xs px-3 py-2 border border-slate-200 rounded focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                            />
+                          </div>
+                          <div>
+                            <input 
+                              type="text" 
+                              placeholder="Number" 
+                              value={newProductData.printNumber}
+                              onChange={(e) => setNewProductData({...newProductData, printNumber: e.target.value})}
+                              className="w-full text-xs px-3 py-2 border border-slate-200 rounded focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                            />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                    
+                    <button 
+                      onClick={handleAddNewProduct}
+                      className="w-full py-2 bg-slate-900 text-white font-bold text-xs rounded-lg hover:bg-slate-800 transition-colors shadow-sm mt-4 inline-flex items-center justify-center gap-2"
+                    >
+                      <Plus className="w-3 h-3" /> Add Item to Order
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
 

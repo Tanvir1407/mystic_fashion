@@ -303,6 +303,17 @@ export async function updateOrderDetails(id: string, data: {
   address: string;
   advancePaid: number;
   discountAmount: number;
+  items?: {
+    id: string;
+    productId: string;
+    size: string;
+    quantity: number;
+    price: number;
+    requiresPrint: boolean;
+    printName?: string;
+    printNumber?: string;
+    printCost: number;
+  }[];
 }) {
   try {
     await prisma.$transaction(async (tx) => {
@@ -314,6 +325,64 @@ export async function updateOrderDetails(id: string, data: {
 
       if (!order) throw new Error("Order not found");
 
+      // Handle items update and stock adjustment
+      if (data.items) {
+        const oldItemsMap = new Map(order.items.map(i => [i.id, i]));
+          
+        for (const newItem of data.items) {
+            const oldItem = oldItemsMap.get(newItem.id);
+            if (oldItem) {
+                // Determine if quantity changed on exact size
+                // (Note: For simplicity, we assume size doesn't change on existing item rows, 
+                // but just in case it did, wait, if they change product/size, it's safer to treat it as a new id).
+                // Our UI won't allow editing size, just quantity.
+                const diff = newItem.quantity - oldItem.quantity;
+                if (diff !== 0) {
+                    await tx.productVariant.update({
+                         where: { productId_size: { productId: newItem.productId, size: newItem.size } },
+                         data: { stock: { decrement: diff } } // If increased (diff > 0), decrement stock
+                    });
+                }
+                oldItemsMap.delete(newItem.id);
+            } else {
+                // New Item added
+                await tx.productVariant.update({
+                     where: { productId_size: { productId: newItem.productId, size: newItem.size } },
+                     data: { stock: { decrement: newItem.quantity } }
+                });
+            }
+        }
+        
+        // Remaining items in oldItemsMap are deleted items
+        for (const remainingOld of oldItemsMap.values()) {
+            await tx.productVariant.update({
+                where: { productId_size: { productId: remainingOld.productId, size: remainingOld.size } },
+                data: { stock: { increment: remainingOld.quantity } }
+            });
+        }
+
+        // Wipe old items and create new ones
+        await tx.orderItem.deleteMany({ where: { orderId: id } });
+        
+        for(const newItem of data.items) {
+           await tx.orderItem.create({
+               data: {
+                  orderId: id,
+                  productId: newItem.productId,
+                  size: newItem.size,
+                  quantity: newItem.quantity,
+                  price: newItem.price,
+                  requiresPrint: newItem.requiresPrint,
+                  printName: newItem.printName || null,
+                  printNumber: newItem.printNumber || null,
+                  printCost: newItem.printCost,
+               }
+           });
+        }
+      }
+
+      const activeItems = data.items || order.items;
+
       const deliverySettings = await tx.deliverySetting.upsert({
         where: { id: "default" },
         update: {},
@@ -321,7 +390,7 @@ export async function updateOrderDetails(id: string, data: {
       });
 
       // 2. Calculate Subtotal (Base + Print Costs)
-      const subtotal = order.items.reduce((acc, item) => {
+      const subtotal = activeItems.reduce((acc, item) => {
         const itemTotal = (item.price * item.quantity) + (item.requiresPrint ? (item.printCost || 0) * item.quantity : 0);
         return acc + itemTotal;
       }, 0);
@@ -349,6 +418,18 @@ export async function updateOrderDetails(id: string, data: {
           totalAmount: newTotalAmount, // Explicitly saved
         },
       });
+
+      // 6. Automatically update Accounting Ledger (since totalAmount may have shifted)
+      // Only updates if the transaction had already been created (e.g. order moved past PENDING)
+      const existingTx = await tx.transaction.findFirst({
+         where: { referenceId: id, referenceType: "ORDER" }
+      });
+      if (existingTx) {
+          await tx.transaction.update({
+             where: { id: existingTx.id },
+             data: { amount: newTotalAmount }
+          });
+      }
     });
 
     revalidatePath("/admin/orders");

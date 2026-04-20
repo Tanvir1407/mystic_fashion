@@ -1,5 +1,5 @@
 import prisma from "@/lib/prisma";
-import { getDeliverySettings } from "../../actions";
+import { getDeliverySettings, getProductsForOrder } from "../../actions";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Package, User, MapPin, Phone, CalendarDays, Wallet } from "lucide-react";
@@ -32,6 +32,7 @@ export default async function SingleOrderPage({ params }: { params: { id: string
 
   const itemSubtotal = order.items.reduce((acc, item) => acc + (item.price * item.quantity), 0);
   const deliveryDelta = order.totalAmount - itemSubtotal;
+  const products = await getProductsForOrder();
 
   return (
     <div className="flex flex-col gap-6 max-w-5xl mx-auto pb-10">
@@ -62,7 +63,7 @@ export default async function SingleOrderPage({ params }: { params: { id: string
       </div>
 
       <div className="w-full">
-        <OrderDetailsClient order={order} deliverySettings={deliverySettings} />
+        <OrderDetailsClient order={order} deliverySettings={deliverySettings} products={products} />
       </div>
     </div>
   );
