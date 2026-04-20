@@ -15,14 +15,14 @@ export default function PurchaseFormClient({ products, initialData }: { products
   const [loading, setLoading] = useState(false);
 
   // Initialize items or default to one blank item
-  const defaultItems = initialData?.items?.length > 0 
+  const defaultItems = initialData?.items?.length > 0
     ? initialData.items.map((i: any) => ({
-        id: i.id,
-        productId: i.productId,
-        variantId: i.variantId,
-        quantity: i.quantity,
-        unitPrice: i.unitPrice
-      }))
+      id: i.id,
+      productId: i.productId,
+      variantId: i.variantId,
+      quantity: i.quantity,
+      unitPrice: i.unitPrice
+    }))
     : [{ id: "1", productId: "", variantId: "", quantity: 1, unitPrice: 0 }];
 
   const [items, setItems] = useState<{ id: string, productId: string, variantId: string, quantity: number, unitPrice: number }[]>(defaultItems);
@@ -171,8 +171,7 @@ export default function PurchaseFormClient({ products, initialData }: { products
                       </td>
                       <td className="px-4 py-2">
                         <input
-                          type="number"
-                          min="1"
+                          type="text"
                           value={item.quantity}
                           onChange={(e) => updateItem(item.id, "quantity", parseInt(e.target.value) || 1)}
                           className="w-full px-3 py-1.5 border border-slate-200 rounded text-sm focus:outline-none focus:border-indigo-500 font-mono"
@@ -180,9 +179,7 @@ export default function PurchaseFormClient({ products, initialData }: { products
                       </td>
                       <td className="px-4 py-2">
                         <input
-                          type="number"
-                          min="0"
-                          step="0.01"
+                          type="text"
                           value={item.unitPrice}
                           onChange={(e) => updateItem(item.id, "unitPrice", parseFloat(e.target.value) || 0)}
                           className="w-full px-3 py-1.5 border border-slate-200 rounded text-sm focus:outline-none focus:border-indigo-500 font-mono"
