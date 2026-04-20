@@ -14,7 +14,6 @@ export default function OrderDetailsClient({ order, deliverySettings }: { order:
   const [remarkLoading, setRemarkLoading] = useState(false);
   const [isEditingRemark, setIsEditingRemark] = useState(false);
   const [remarks, setRemarks] = useState(order.remarks || "");
-  console.log(order)
   const [formData, setFormData] = useState({
     customerName: order.customerName,
     phone: order.phone,
@@ -192,6 +191,71 @@ export default function OrderDetailsClient({ order, deliverySettings }: { order:
             </div>
           </div>
         </div>
+
+        {/* Row 3: Administrative Remarks */}
+        <div className="col-span-2 px-5">
+          <div className="flex items-center justify-between mb-1 pt-4 border-t border-slate-50">
+            <h3 className="block text-[10px] uppercase font-bold text-slate-400 tracking-wider">
+              Administrative Remarks
+            </h3>
+
+            {!isEditingRemark ? (
+              <button
+                onClick={() => setIsEditingRemark(true)}
+                className="flex items-center gap-2 px-3 py-1.5 text-[10px] font-black uppercase tracking-wider bg-white border border-slate-200 text-slate-600 rounded-md hover:text-indigo-600 hover:border-indigo-200 transition-all group"
+              >
+                <Edit2 className="w-3 h-3 group-hover:scale-110 transition-transform" />
+                Edit Remark
+              </button>
+            ) : (
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={handleSaveRemark}
+                  disabled={remarkLoading}
+                  className="flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-black uppercase tracking-wider bg-slate-900 text-white rounded-md hover:bg-slate-800 transition-all disabled:opacity-50 shadow-sm"
+                >
+                  <Check className="w-3.5 h-3.5" />
+                  {remarkLoading ? "Saving..." : "Save"}
+                </button>
+                <button
+                  onClick={() => {
+                    setIsEditingRemark(false);
+                    setRemarks(order.remarks || "");
+                  }}
+                  disabled={remarkLoading}
+                  className="flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-black uppercase tracking-wider bg-white border border-slate-200 text-slate-600 rounded-md hover:bg-slate-50 transition-all disabled:opacity-50"
+                >
+                  <X className="w-3.5 h-3.5" />
+                  Cancel
+                </button>
+              </div>
+            )}
+          </div>
+
+          {isEditingRemark ? (
+            <textarea
+              value={remarks}
+              onChange={(e) => setRemarks(e.target.value)}
+              placeholder="Add internal notes about this order, tracking info, or customer communication history..."
+              rows={4}
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500/10 focus:border-blue-400 text-slate-700 resize-none font-medium transition-all text-sm leading-relaxed"
+              autoFocus
+            />
+          ) : (
+            <div
+              onClick={() => setIsEditingRemark(true)}
+              className="w-full min-h-[50px] max-h-[150px] overflow-y-auto bg-slate-50/50 border border-slate-100 rounded-xl px-4 py-3 text-slate-700 text-sm leading-relaxed cursor-pointer hover:bg-slate-50 transition-colors"
+            >
+              {order.remarks ? (
+                <p className="whitespace-pre-wrap font-medium">{order.remarks}</p>
+              ) : (
+                <p className="text-slate-400 italic">No internal remarks added yet. Click to add notes...</p>
+              )}
+            </div>
+          )}
+
+
+        </div>
       </div>
 
       {/* Row 2: Financial Breakdown & Physical Artifacts */}
@@ -245,8 +309,8 @@ export default function OrderDetailsClient({ order, deliverySettings }: { order:
             </div>
 
             <div className="pt-4 border-t-2 border-dashed border-slate-100 flex justify-between items-center">
-              <span className="text-[10px] uppercase font-black text-slate-400 tracking-[0.2em]">Grand Total</span>
-              <span className="text-2xl font-black text-slate-900 tracking-tighter">{formatBDT(order.totalAmount)}</span>
+              <span className="text-sm uppercase font-black text-slate-400 tracking-[0.2em]">Grand Total</span>
+              <span className="font-bold text-slate-800">{formatBDT(order.totalAmount)}</span>
             </div>
 
             <div className="space-y-6 ">
@@ -274,9 +338,9 @@ export default function OrderDetailsClient({ order, deliverySettings }: { order:
 
               </div>
 
-              <div className="border-b border-slate-200  flex justify-between items-center py-6 border-t border-slate-200 border-dashed">
+              <div className=" flex justify-between items-center py-6 border-t border-slate-200 border-dashed">
                 <span className="block text-sm uppercase font-black text-slate-400 mb-1.5 tracking-widest">Total Due</span>
-                <span className="text-3xl font-black text-slate-900 tracking-tighter tabular-nums leading-none">
+                <span className="text-3xl font-bold text-rose-500 tracking-tighter tabular-nums leading-none">
                   {formatBDT(order.totalAmount - (order.advancePaid || 0))}
                 </span>
               </div>
@@ -361,73 +425,7 @@ export default function OrderDetailsClient({ order, deliverySettings }: { order:
         </div>
       </div>
 
-      {/* Row 3: Administrative Remarks */}
-      <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
-        <div className="flex items-center justify-between mb-6 pb-4 border-b border-slate-50">
-          <h3 className="font-bold text-slate-900 uppercase tracking-widest text-[11px] flex items-center gap-2.5">
-            <div className="p-1.5 bg-blue-50 rounded-md">
-              <StickyNote className="w-4 h-4 text-blue-500" />
-            </div>
-            Administrative Remarks
-          </h3>
 
-          {!isEditingRemark ? (
-            <button
-              onClick={() => setIsEditingRemark(true)}
-              className="flex items-center gap-2 px-3 py-1.5 text-[10px] font-black uppercase tracking-wider bg-white border border-slate-200 text-slate-600 rounded-md hover:text-indigo-600 hover:border-indigo-200 transition-all group"
-            >
-              <Edit2 className="w-3 h-3 group-hover:scale-110 transition-transform" />
-              Edit Remark
-            </button>
-          ) : (
-            <div className="flex items-center gap-2">
-              <button
-                onClick={handleSaveRemark}
-                disabled={remarkLoading}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-black uppercase tracking-wider bg-slate-900 text-white rounded-md hover:bg-slate-800 transition-all disabled:opacity-50 shadow-sm"
-              >
-                <Check className="w-3.5 h-3.5" />
-                {remarkLoading ? "Saving..." : "Save"}
-              </button>
-              <button
-                onClick={() => {
-                  setIsEditingRemark(false);
-                  setRemarks(order.remarks || "");
-                }}
-                disabled={remarkLoading}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-black uppercase tracking-wider bg-white border border-slate-200 text-slate-600 rounded-md hover:bg-slate-50 transition-all disabled:opacity-50"
-              >
-                <X className="w-3.5 h-3.5" />
-                Cancel
-              </button>
-            </div>
-          )}
-        </div>
-
-        {isEditingRemark ? (
-          <textarea
-            value={remarks}
-            onChange={(e) => setRemarks(e.target.value)}
-            placeholder="Add internal notes about this order, tracking info, or customer communication history..."
-            rows={4}
-            className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500/10 focus:border-blue-400 text-slate-700 resize-none font-medium transition-all text-sm leading-relaxed"
-            autoFocus
-          />
-        ) : (
-          <div
-            onClick={() => setIsEditingRemark(true)}
-            className="w-full min-h-[100px] bg-slate-50/50 border border-slate-100 rounded-xl px-4 py-3 text-slate-700 text-sm leading-relaxed cursor-pointer hover:bg-slate-50 transition-colors"
-          >
-            {order.remarks ? (
-              <p className="whitespace-pre-wrap font-medium">{order.remarks}</p>
-            ) : (
-              <p className="text-slate-400 italic">No internal remarks added yet. Click to add notes...</p>
-            )}
-          </div>
-        )}
-
-
-      </div>
     </div>
   );
 }
