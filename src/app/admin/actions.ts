@@ -441,10 +441,112 @@ export async function createPurchase(
         referenceType: "PURCHASE",
       }
     });
+    revalidatePath("/admin/accounting");
   });
 
   revalidatePath("/admin/purchases");
   revalidatePath("/admin/products");
+  redirect("/admin/purchases");
+}
+
+export async function updatePurchase(
+  purchaseId: string,
+  supplierName: string,
+  invoiceNumber: string,
+  totalAmount: number,
+  discountAmount: number,
+  items: { productId: string; variantId: string; quantity: number; unitPrice: number }[]
+) {
+  try {
+    await prisma.$transaction(async (tx) => {
+      // 1. Fetch existing purchase with its original items
+      const existingPurchase = await tx.purchase.findUnique({
+        where: { id: purchaseId },
+        include: { items: true },
+      });
+
+      if (!existingPurchase) throw new Error("Purchase not found");
+
+      // 2. Revert Old Items (Decrement Stock)
+      for (const oldItem of existingPurchase.items) {
+        await tx.productVariant.update({
+          where: { id: oldItem.variantId },
+          data: { stock: { decrement: oldItem.quantity } },
+        });
+      }
+
+      // 3. Wipe old relational items
+      await tx.purchaseItem.deleteMany({
+        where: { purchaseId },
+      });
+
+      // 4. Update the Purchase record and recreate items
+      await tx.purchase.update({
+        where: { id: purchaseId },
+        data: {
+          supplierName,
+          invoiceNumber,
+          totalAmount,
+          discountAmount,
+          items: {
+            create: items.map((i) => ({
+              productId: i.productId,
+              variantId: i.variantId,
+              quantity: i.quantity,
+              unitPrice: i.unitPrice,
+            })),
+          },
+        },
+      });
+
+      // 5. Apply New Items (Increment Stock and Update Product Price)
+      for (const item of items) {
+        await tx.productVariant.update({
+          where: { id: item.variantId },
+          data: { stock: { increment: item.quantity } },
+        });
+        await tx.product.update({
+          where: { id: item.productId },
+          data: { purchasePrice: item.unitPrice },
+        });
+      }
+
+      // 6. Update Accounting Ledger seamlessly
+      const existingTransaction = await tx.transaction.findFirst({
+        where: { referenceId: purchaseId, referenceType: "PURCHASE" }
+      });
+      if (existingTransaction) {
+        await tx.transaction.update({
+          where: { id: existingTransaction.id },
+          data: {
+            amount: totalAmount,
+            description: `Inventory purchase from ${supplierName} (Updated)`,
+          }
+        });
+      } else {
+        const account = await getOrCreateSystemAccount(tx, "Inventory Purchases", "EXPENSE");
+        await tx.transaction.create({
+          data: {
+            accountId: account.id,
+            amount: totalAmount,
+            date: new Date(),
+            type: "DEBIT",
+            description: `Inventory purchase from ${supplierName} (Created via Update)`,
+            referenceId: purchaseId,
+            referenceType: "PURCHASE",
+          }
+        });
+      }
+    });
+
+    revalidatePath("/admin/purchases");
+    revalidatePath("/admin/products");
+    revalidatePath("/admin/accounting");
+  } catch (error: any) {
+    console.error("Purchase update error:", error);
+    return { success: false, error: error.message };
+  }
+  
   redirect("/admin/purchases");
 }
 

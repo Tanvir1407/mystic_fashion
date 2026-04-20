@@ -1,22 +1,31 @@
 "use client";
 
 import { useState } from "react";
-import { createPurchase } from "../../actions";
+import { createPurchase, updatePurchase } from "../../actions";
 import { Plus, Trash2, Save, ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
-export default function PurchaseFormClient({ products }: { products: any[] }) {
+export default function PurchaseFormClient({ products, initialData }: { products: any[], initialData?: any }) {
   const router = useRouter();
-  const [supplierName, setSupplierName] = useState("");
-  const [invoiceNumber, setInvoiceNumber] = useState("");
-  const [totalDiscount, setTotalDiscount] = useState("0");
+  const isEditing = !!initialData;
+  const [supplierName, setSupplierName] = useState(initialData?.supplierName || "");
+  const [invoiceNumber, setInvoiceNumber] = useState(initialData?.invoiceNumber || "");
+  const [totalDiscount, setTotalDiscount] = useState((initialData?.discountAmount || 0).toString());
   const [loading, setLoading] = useState(false);
 
+  // Initialize items or default to one blank item
+  const defaultItems = initialData?.items?.length > 0 
+    ? initialData.items.map((i: any) => ({
+        id: i.id,
+        productId: i.productId,
+        variantId: i.variantId,
+        quantity: i.quantity,
+        unitPrice: i.unitPrice
+      }))
+    : [{ id: "1", productId: "", variantId: "", quantity: 1, unitPrice: 0 }];
 
-  const [items, setItems] = useState<{ id: string, productId: string, variantId: string, quantity: number, unitPrice: number }[]>([
-    { id: "1", productId: "", variantId: "", quantity: 1, unitPrice: 0 }
-  ]);
+  const [items, setItems] = useState<{ id: string, productId: string, variantId: string, quantity: number, unitPrice: number }[]>(defaultItems);
   const subtotal = items.reduce((acc, item) => acc + (item.quantity * item.unitPrice), 0);
   const grandTotal = subtotal - (parseFloat(totalDiscount) || 0);
 
@@ -53,13 +62,24 @@ export default function PurchaseFormClient({ products }: { products: any[] }) {
     setLoading(true);
     const cleanedItems = items.map(({ id, ...rest }) => rest);
 
-    await createPurchase(
-      supplierName.trim(),
-      invoiceNumber.trim() || "",
-      grandTotal,
-      parseFloat(totalDiscount || "0"),
-      cleanedItems
-    );
+    if (isEditing) {
+      await updatePurchase(
+        initialData.id,
+        supplierName.trim(),
+        invoiceNumber.trim() || "",
+        grandTotal,
+        parseFloat(totalDiscount || "0"),
+        cleanedItems
+      );
+    } else {
+      await createPurchase(
+        supplierName.trim(),
+        invoiceNumber.trim() || "",
+        grandTotal,
+        parseFloat(totalDiscount || "0"),
+        cleanedItems
+      );
+    }
   };
 
   return (
@@ -69,8 +89,8 @@ export default function PurchaseFormClient({ products }: { products: any[] }) {
           <ArrowLeft className="w-5 h-5" />
         </Link>
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-slate-900">Log New Purchase</h1>
-          <p className="text-sm text-slate-500 mt-1">Record inward inventory delivery to automatically boost stock counts.</p>
+          <h1 className="text-2xl font-semibold tracking-tight text-slate-900">{isEditing ? "Edit Purchase" : "Log New Purchase"}</h1>
+          <p className="text-sm text-slate-500 mt-1">{isEditing ? "Modify this invoice; inventory stock will be adjusted by recalculating differences." : "Record inward inventory delivery to automatically boost stock counts."}</p>
         </div>
       </div>
 
@@ -237,7 +257,7 @@ export default function PurchaseFormClient({ products }: { products: any[] }) {
             ) : (
               <Save className="w-4 h-4" />
             )}
-            Save Purchase & Dispatch Stock Updates
+            {isEditing ? "Save Changes & Update Stock" : "Save Purchase & Dispatch Stock Updates"}
           </button>
         </div>
       </div>

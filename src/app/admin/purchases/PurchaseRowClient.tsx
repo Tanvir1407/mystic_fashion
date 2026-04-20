@@ -3,6 +3,8 @@
 import { updatePurchaseStatus, deletePurchase } from "../actions";
 import { useState } from "react";
 import { DeleteWarningModal } from "@/components/DeleteWarningModal";
+import { Edit } from "lucide-react";
+import Link from "next/link";
 
 export default function PurchaseRowClient({ purchase }: { purchase: any }) {
   const [status, setStatus] = useState<string>(purchase.status);
@@ -61,6 +63,14 @@ export default function PurchaseRowClient({ purchase }: { purchase: any }) {
           ))}
         </select>
         
+        <Link
+          href={`/admin/purchases/${purchase.id}/edit`}
+          className="text-slate-400 hover:text-indigo-600 transition-colors p-1"
+          title="Edit Purchase"
+        >
+          <Edit className="w-5 h-5" />
+        </Link>
+
         <DeleteWarningModal
           title={`Delete purchase from "${purchase.supplierName}"?`}
           description={`Permanently removes invoice ${purchase.invoiceNumber || "N/A"} and all its line items. This cannot be undone.`}
