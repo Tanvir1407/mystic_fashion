@@ -4,26 +4,24 @@ import Footer from "@/components/Footer";
 import SidebarCart from "@/components/SidebarCart";
 import ProductCard from "@/components/ProductCard";
 import Link from "next/link";
-import Image from "next/image";
 import prisma from "@/lib/prisma";
 import { getFooterData } from "@/lib/footer";
 
 export const dynamic = "force-dynamic";
 
-function formatBDT(price: number) {
-  return `৳${price.toLocaleString("en-IN")}`;
-}
+export default async function Home({ searchParams }: { searchParams?: { limit?: string } }) {
+  const limit = searchParams?.limit ? parseInt(searchParams.limit) : 12;
 
-export default async function Home() {
-  const [productsRes, heroSlidesRes, footerData] = await Promise.all([
+  const [productsRes, totalCountRes, heroSlidesRes, footerData] = await Promise.all([
     prisma.product.findMany({
-      take: 12,
+      take: limit,
       orderBy: [
         { isFeatured: "desc" },
         { createdAt: "desc" }
       ],
       include: { discount: true, variants: true }
     }).catch(e => { console.error(e); return []; }),
+    prisma.product.count().catch(() => 0),
     prisma.heroSlide.findMany({
       where: { active: true },
       orderBy: { sortOrder: "asc" }
@@ -51,8 +49,19 @@ export default async function Home() {
             </div>
           )}
         </div>
-      </section>
 
+        {products.length < totalCountRes && (
+          <div className="flex justify-center mt-12">
+            <Link
+              href={`/?limit=${limit + 12}`}
+              scroll={false}
+              className="bg-slate-900 text-white hover:bg-slate-800 transition-colors px-10 py-3.5 rounded-full font-bold uppercase tracking-widest text-xs shadow-md"
+            >
+              View More Products
+            </Link>
+          </div>
+        )}
+      </section>
       <Footer config={footerData} />
       <SidebarCart />
     </main>

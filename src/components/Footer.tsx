@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { FooterData } from "@/lib/footer";
 
 export default function Footer({ config }: { config: FooterData }) {
@@ -12,8 +13,13 @@ export default function Footer({ config }: { config: FooterData }) {
 
           {/* Brand Column */}
           <div className="md:col-span-5">
-            <Link href="/" className="text-2xl font-black font-serif italic text-primary tracking-tighter inline-block">
-              Mystic Fashion
+            <Link href="/" className="relative block h-10 w-40 md:h-12 md:w-48 focus:outline-none">
+              <Image
+                src="/images/logo.png"
+                alt="Mystic Fashion"
+                fill
+                className="object-contain object-left"
+              />
             </Link>
             <p className="text-zinc-400 text-sm mt-4 leading-relaxed max-w-sm">
               {config.aboutText}
