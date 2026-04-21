@@ -7,7 +7,7 @@ export default async function AdminCouponsPage() {
   const coupons = await getCoupons();
 
   return (
-    <div className="max-w-7xl mx-auto">
+    <div>
       <CouponList initialCoupons={coupons} />
     </div>
   );

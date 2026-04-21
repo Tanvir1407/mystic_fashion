@@ -13,13 +13,13 @@ export default async function AccountingPage({
 }) {
   const accounts = await getAccounts();
   const summary = await getFinancialSummary(searchParams);
-  
+
   const page = searchParams.page ? parseInt(searchParams.page, 10) : 1;
   const limit = 15;
   const { transactions, total } = await getLedger(undefined, searchParams, page, limit);
 
   return (
-    <div className="max-w-7xl mx-auto space-y-8 p-4 sm:p-6 lg:p-8">
+    <div className=" mx-auto space-y-8 p-4 sm:p-6 lg:p-8">
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-gray-900">Accounting Dashboard</h1>
@@ -87,11 +87,11 @@ export default async function AccountingPage({
 
       <div className="grid grid-cols-1 gap-8">
         <div className="">
-          <LedgerTableClient 
-            transactions={transactions} 
-            total={total} 
-            currentPage={page} 
-            limit={limit} 
+          <LedgerTableClient
+            transactions={transactions}
+            total={total}
+            currentPage={page}
+            limit={limit}
           />
         </div>
       </div>
