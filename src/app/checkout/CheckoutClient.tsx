@@ -7,8 +7,8 @@ import { FooterData } from "@/lib/footer";
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowLeft, CheckCircle2, X, ChevronDown, Ticket, Loader2, CheckCircle, Tag, Edit2, Sparkles } from "lucide-react";
-import { useState, useTransition } from "react";
-import { placeOrderAction, validateCoupon } from "./actions";
+import { useState, useTransition, useEffect } from "react";
+import { placeOrderAction, validateCoupon, syncCartPrices } from "./actions";
 import { CustomSelect } from "@/components/CustomSelect";
 
 export default function CheckoutClient({
@@ -42,10 +42,25 @@ export default function CheckoutClient({
     number: ""
   });
 
-  // Format BDT utility
+// Format BDT utility
   const formatBDT = (price: number) => {
     return price === 0 ? "Free" : `৳${price.toLocaleString("en-IN")}`;
   };
+
+  useEffect(() => {
+    if (items.length > 0) {
+      const productIds = items.map(i => i.id);
+      syncCartPrices(productIds).then((updatedPrices) => {
+        updatedPrices.forEach(updated => {
+          items.forEach(item => {
+            if (item.id === updated.id && item.price !== updated.price) {
+              updateItem(item.id, item.size, { price: updated.price });
+            }
+          });
+        });
+      });
+    }
+  }, [items.length]);
 
   const isDhaka = selectedDistrict === "Dhaka";
   const deliveryFee = selectedDistrict ? (isDhaka ? deliveryData.insideDhaka : deliveryData.outsideDhaka) : 0;

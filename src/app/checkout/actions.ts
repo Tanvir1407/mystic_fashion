@@ -144,3 +144,27 @@ export async function validateCoupon(code: string, baseSubtotal: number) {
     return { success: false, error: "Failed to validate coupon." };
   }
 }
+
+export async function syncCartPrices(productIds: string[]) {
+  try {
+    const products = await prisma.product.findMany({
+      where: { id: { in: productIds } },
+      include: { discount: true }
+    });
+
+    return products.map(product => {
+      let finalPrice = product.price;
+      if (product.discount && product.discount.active) {
+        if (product.discount.discountType === "PERCENTAGE") {
+          finalPrice = finalPrice - (finalPrice * (product.discount.value / 100));
+        } else {
+          finalPrice = finalPrice - product.discount.value;
+        }
+      }
+      return { id: product.id, price: finalPrice };
+    });
+  } catch (error) {
+    console.error("Failed to sync cart prices:", error);
+    return [];
+  }
+}

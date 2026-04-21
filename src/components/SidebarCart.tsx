@@ -5,9 +5,11 @@ import { X, ShoppingBag, Trash2, Plus, Minus } from "lucide-react";
 import { useCartStore } from "../store/cartStore";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
+import { useEffect } from "react";
+import { syncCartPrices } from "@/app/checkout/actions";
 
 export default function SidebarCart() {
-  const { items, isOpen, toggleCart, updateQuantity, removeItem, getTotalPrice } = useCartStore();
+  const { items, isOpen, toggleCart, updateQuantity, removeItem, getTotalPrice, updateItem } = useCartStore();
   const router = useRouter();
 
   const handleCheckout = () => {
@@ -18,6 +20,21 @@ export default function SidebarCart() {
   const formatBDT = (price: number) => {
     return `৳${price.toLocaleString("en-IN")}`;
   };
+
+  useEffect(() => {
+    if (isOpen && items.length > 0) {
+      const productIds = items.map((i: any) => i.id);
+      syncCartPrices(productIds).then((updatedPrices) => {
+        updatedPrices.forEach((updated: any) => {
+          items.forEach((item: any) => {
+            if (item.id === updated.id && item.price !== updated.price) {
+              updateItem(item.id, item.size, { price: updated.price });
+            }
+          });
+        });
+      });
+    }
+  }, [isOpen, items.length]);
 
   return (
     <AnimatePresence>
