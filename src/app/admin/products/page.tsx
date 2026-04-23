@@ -5,32 +5,55 @@ import { Plus, Edit2, Filter, Star } from "lucide-react";
 import { ProductDeleteButton } from "./ProductDeleteButton";
 
 import { AdminPagination } from "@/components/AdminPagination";
+import ProductFilterClient from "./ProductFilterClient";
 
 export const dynamic = "force-dynamic";
 
-export default async function AdminProductsPage({ searchParams }: { searchParams: { page?: string } }) {
+export default async function AdminProductsPage({ searchParams }: { searchParams: { page?: string, search?: string, category?: string } }) {
   const page = Number(searchParams?.page) || 1;
+  const search = searchParams?.search || "";
+  const category = searchParams?.category || "ALL";
   const PER_PAGE = 10;
+
+  const whereClause: any = {};
+  if (category !== "ALL") {
+    whereClause.category = category;
+  }
+  if (search) {
+    whereClause.OR = [
+      { name: { contains: search, mode: 'insensitive' } },
+      { team: { contains: search, mode: 'insensitive' } },
+      { category: { contains: search, mode: 'insensitive' } },
+    ];
+  }
 
   let products: any[] = [];
   let totalCount = 0;
+  let fetchedCategories: any[] = [];
   try {
-    const [fetchedProducts, fetchedCount] = await Promise.all([
+    const [fetchedProducts, fetchedCount, distinctCategories] = await Promise.all([
       prisma.product.findMany({
+        where: whereClause,
         skip: (page - 1) * PER_PAGE,
         take: PER_PAGE,
         orderBy: { team: "asc" },
         include: { variants: true }
       }),
-      prisma.product.count()
+      prisma.product.count({ where: whereClause }),
+      prisma.product.findMany({
+        select: { category: true },
+        distinct: ['category'],
+      }),
     ]);
     products = fetchedProducts;
     totalCount = fetchedCount;
+    fetchedCategories = distinctCategories;
   } catch (error) {
     console.error("Error fetching products:", error);
   }
 
   const totalPages = Math.ceil(totalCount / PER_PAGE);
+  const categories = fetchedCategories.map((c) => c.category);
 
   return (
     <div className="flex flex-col gap-6">
@@ -50,11 +73,12 @@ export default async function AdminProductsPage({ searchParams }: { searchParams
       </div>
 
       {/* Toolbar */}
-      <div className="flex items-center gap-3">
-        <button className="h-9 px-3 bg-white border border-slate-200 text-slate-600 rounded-md text-sm font-medium flex items-center gap-2 hover:bg-slate-50 transition-colors shadow-sm">
-          <Filter className="w-4 h-4" />
-          Filter
-        </button>
+      <div className="flex items-center w-full">
+        <ProductFilterClient 
+          currentSearch={search} 
+          currentCategory={category} 
+          categories={categories} 
+        />
       </div>
 
       {/* Data Table */}
