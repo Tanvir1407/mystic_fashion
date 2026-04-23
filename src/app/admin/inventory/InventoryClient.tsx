@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { AlertTriangle, Settings2, Save, ShoppingCart, Loader2, PackageSearch, FileSpreadsheet, Printer } from "lucide-react";
 import { updateInventorySettings } from "../actions";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 
 export default function InventoryClient({ initialSettings, products }: { initialSettings: any, products: any[] }) {
   const router = useRouter();
@@ -150,7 +151,9 @@ export default function InventoryClient({ initialSettings, products }: { initial
                         )}
                       </div>
                       <div>
-                        <h4 className="font-bold text-slate-900 group-hover:text-amber-600 transition-colors uppercase tracking-tighter text-lg">{product.name}</h4>
+                        <Link href={`/admin/products/${product.id}/edit`}>
+                          <h4 className="font-bold text-slate-900 group-hover:text-amber-600 transition-colors uppercase tracking-tighter text-lg">{product.name}</h4>
+                        </Link>
                         <div className="flex items-center gap-2 mt-1">
                           <span className="text-[10px] bg-slate-100 px-2 py-0.5 rounded font-black text-slate-500">{product.team}</span>
                           <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">{product.category}</span>
@@ -165,8 +168,8 @@ export default function InventoryClient({ initialSettings, products }: { initial
                           <div
                             key={variant.id}
                             className={`flex flex-col items-center justify-center min-w-[60px] p-2 rounded-xl border transition-all ${isLow
-                                ? "bg-amber-50 border-amber-200 ring-2 ring-amber-500/10"
-                                : "bg-slate-50 border-slate-100 opacity-50"
+                              ? "bg-amber-50 border-amber-200 ring-2 ring-amber-500/10"
+                              : "bg-slate-50 border-slate-100 opacity-50"
                               }`}
                           >
                             <span className={`text-[10px] font-black uppercase mb-1 ${isLow ? "text-amber-700" : "text-slate-400"}`}>
