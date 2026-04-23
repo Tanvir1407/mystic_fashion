@@ -2,6 +2,8 @@ import prisma from "@/lib/prisma";
 import OrderListClient from "./OrderListClient";
 
 export const dynamic = "force-dynamic";
+export const fetchCache = "force-no-store";
+export const revalidate = 0;
 
 export default async function AdminOrdersPage({ searchParams }: { searchParams: { page?: string, filter?: string, search?: string } }) {
   const page = Number(searchParams?.page) || 1;

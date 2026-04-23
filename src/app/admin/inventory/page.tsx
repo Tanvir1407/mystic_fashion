@@ -1,6 +1,10 @@
 import { getInventorySettings, getLowStockProducts } from "../actions";
 import InventoryClient from "./InventoryClient";
 
+export const dynamic = "force-dynamic";
+export const fetchCache = "force-no-store";
+export const revalidate = 0;
+
 export default async function InventoryPage() {
   const [settings, lowStockProducts] = await Promise.all([
     getInventorySettings(),
@@ -14,9 +18,9 @@ export default async function InventoryPage() {
         <p className="text-sm text-slate-500 mt-1">Monitor and manage products with critically low inventory levels.</p>
       </div>
 
-      <InventoryClient 
-        initialSettings={settings} 
-        products={lowStockProducts} 
+      <InventoryClient
+        initialSettings={settings}
+        products={lowStockProducts}
       />
     </div>
   );

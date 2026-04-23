@@ -8,6 +8,8 @@ import { AdminPagination } from "@/components/AdminPagination";
 import ProductFilterClient from "./ProductFilterClient";
 
 export const dynamic = "force-dynamic";
+export const fetchCache = "force-no-store";
+export const revalidate = 0;
 
 export default async function AdminProductsPage({ searchParams }: { searchParams: { page?: string, search?: string, category?: string } }) {
   const page = Number(searchParams?.page) || 1;
@@ -74,10 +76,10 @@ export default async function AdminProductsPage({ searchParams }: { searchParams
 
       {/* Toolbar */}
       <div className="flex items-center w-full">
-        <ProductFilterClient 
-          currentSearch={search} 
-          currentCategory={category} 
-          categories={categories} 
+        <ProductFilterClient
+          currentSearch={search}
+          currentCategory={category}
+          categories={categories}
         />
       </div>
 
@@ -87,11 +89,12 @@ export default async function AdminProductsPage({ searchParams }: { searchParams
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="border-b border-slate-200 bg-slate-50">
-                <th className="px-6 py-3 font-semibold text-xs text-slate-500 uppercase tracking-wider">Product</th>
-                <th className="px-6 py-3 font-semibold text-xs text-slate-500 uppercase tracking-wider">Price (BDT)</th>
-                <th className="px-6 py-3 font-semibold text-xs text-slate-500 uppercase tracking-wider">Stock</th>
-                <th className="px-6 py-3 font-semibold text-xs text-slate-500 uppercase tracking-wider">Team</th>
-                <th className="px-6 py-3 font-semibold text-xs text-slate-500 uppercase tracking-wider text-right">Actions</th>
+                <th className="px-2 py-3 font-semibold text-xs text-slate-500 uppercase tracking-wider">Product</th>
+                <th className="px-2 py-3 font-semibold text-xs text-slate-500 uppercase tracking-wider">Price (BDT)</th>
+                <th className="px-2 py-3 font-semibold text-xs text-slate-500 uppercase tracking-wider">Stock</th>
+                <th className="px-2 py-3 font-semibold text-xs text-slate-500 uppercase tracking-wider">Team</th>
+                <th className="px-2 py-3 font-semibold text-xs text-slate-500 uppercase tracking-wider">Date Added</th>
+                <th className="px-2 py-3 font-semibold text-xs text-slate-500 uppercase tracking-wider text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200">
@@ -99,7 +102,7 @@ export default async function AdminProductsPage({ searchParams }: { searchParams
                 const totalStock = product.variants.reduce((acc: number, v: any) => acc + v.stock, 0);
                 return (
                   <tr key={product.id} className="hover:bg-slate-50/50 transition-colors group">
-                    <td className="px-6 py-4">
+                    <td className="px-2 py-4">
                       <div className="flex flex-col gap-1">
                         <div className="flex items-center gap-2">
                           <span className="font-medium text-sm text-slate-900">{product.name}</span>
@@ -113,7 +116,7 @@ export default async function AdminProductsPage({ searchParams }: { searchParams
                         <span className="text-xs text-slate-500">{product.category}</span>
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-sm text-slate-600 font-mono">
+                    <td className="px-2 py-4 text-sm text-slate-600 font-mono">
                       <div className="flex flex-col">
                         <span>৳{product.price.toLocaleString("en-IN")}</span>
                         {product.purchasePrice && (
@@ -121,17 +124,24 @@ export default async function AdminProductsPage({ searchParams }: { searchParams
                         )}
                       </div>
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-2 py-4">
                       <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${totalStock > 10 ? 'bg-green-100 text-green-800' : totalStock > 0 ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'}`}>
                         {totalStock} in stock
                       </span>
                     </td>
-                    <td className="px-6 py-4 text-sm text-slate-600">
+                    <td className="px-2 py-4 text-sm text-slate-600">
                       <span className="bg-slate-100 text-slate-700 px-2.5 py-1 rounded-full text-xs font-medium">
                         {product.team}
                       </span>
                     </td>
-                    <td className="px-6 py-4 text-right">
+                    <td className="px-2 py-4 text-sm text-slate-600 whitespace-nowrap">
+                      {new Date(product.createdAt).toLocaleDateString('en-GB', {
+                        day: 'numeric',
+                        month: 'short',
+                        year: 'numeric'
+                      })}
+                    </td>
+                    <td className="px-2 py-4 text-right">
                       <div className="flex items-center justify-end gap-2">
                         <Link
                           href={`/admin/products/${product.id}/edit`}
@@ -148,7 +158,7 @@ export default async function AdminProductsPage({ searchParams }: { searchParams
               })}
               {products.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="px-6 py-12 text-center">
+                  <td colSpan={6} className="px-6 py-12 text-center">
                     <p className="text-sm text-slate-500 font-medium">No products found. Add some jerseys!</p>
                   </td>
                 </tr>
