@@ -53,7 +53,11 @@ export default function DashboardClient({ filter, metrics, topProducts, recentOr
 
   const toPoints = (key: "revenue" | "sales") => {
     if (chartData.length === 0) return "";
-    const step = chartData.length > 1 ? (chartW - padX * 2) / (chartData.length - 1) : 0;
+    if (chartData.length === 1) {
+      const y = chartH - padY - ((chartData[0][key] / maxVal) * (chartH - padY * 2));
+      return `${padX},${y} ${chartW},${y}`;
+    }
+    const step = (chartW - padX * 2) / (chartData.length - 1);
     return chartData.map((d, i) => {
       const x = padX + i * step;
       const y = chartH - padY - ((d[key] / maxVal) * (chartH - padY * 2));
@@ -63,7 +67,11 @@ export default function DashboardClient({ filter, metrics, topProducts, recentOr
 
   const toArea = (key: "revenue" | "sales") => {
     if (chartData.length === 0) return "";
-    const step = chartData.length > 1 ? (chartW - padX * 2) / (chartData.length - 1) : 0;
+    if (chartData.length === 1) {
+      const y = chartH - padY - ((chartData[0][key] / maxVal) * (chartH - padY * 2));
+      return `${padX},${chartH - padY} ${padX},${y} ${chartW},${y} ${chartW},${chartH - padY}`;
+    }
+    const step = (chartW - padX * 2) / (chartData.length - 1);
     const points = chartData.map((d, i) => {
       const x = padX + i * step;
       const y = chartH - padY - ((d[key] / maxVal) * (chartH - padY * 2));
@@ -173,8 +181,7 @@ export default function DashboardClient({ filter, metrics, topProducts, recentOr
 
               {/* Dots */}
               {chartData.map((d, i) => {
-                const step = chartData.length > 1 ? (chartW) / (chartData.length - 1) : 0;
-                const x = i * step;
+                const x = chartData.length === 1 ? chartW / 2 : padX + i * ((chartW - padX * 2) / (chartData.length - 1));
                 const yRev = chartH - padY - ((d.revenue / maxVal) * (chartH - padY * 2));
                 const ySales = chartH - padY - ((d.sales / maxVal) * (chartH - padY * 2));
                 return (
@@ -188,11 +195,17 @@ export default function DashboardClient({ filter, metrics, topProducts, recentOr
 
             {/* X-axis labels */}
             <div className="flex justify-between mt-2 px-0">
-              {chartData.map((d, i) => (
-                <span key={i} className="text-[10px] font-semibold text-slate-400 text-center" style={{ width: `${100 / chartData.length}%` }}>
-                  {i % Math.ceil(chartData.length / 10) === 0 || chartData.length <= 12 ? d.name : ""}
+              {chartData.length === 1 ? (
+                <span className="text-[10px] font-semibold text-slate-400 text-center w-full">
+                  {chartData[0].name}
                 </span>
-              ))}
+              ) : (
+                chartData.map((d, i) => (
+                  <span key={i} className="text-[10px] font-semibold text-slate-400 text-center" style={{ width: `${100 / chartData.length}%` }}>
+                    {i % Math.ceil(chartData.length / 10) === 0 || chartData.length <= 12 ? d.name : ""}
+                  </span>
+                ))
+              )}
             </div>
           </div>
         )}
