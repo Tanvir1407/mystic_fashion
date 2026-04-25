@@ -3,10 +3,12 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { adminLogout } from "./actions";
-import { Package, ShoppingCart, LogOut, Search, Bell, User, Users, Truck, Settings, ImagePlay, Tag, AlertTriangle, TicketIcon, Banknote } from "lucide-react";
+import { useState } from "react";
+import { Package, ShoppingCart, LogOut, Search, Bell, User, Users, Truck, Settings, ImagePlay, Tag, AlertTriangle, TicketIcon, Banknote, Menu, X } from "lucide-react";
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   // Do not show sidebar on the login page
   if (pathname === "/admin/login") {
@@ -14,14 +16,30 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   }
 
   return (
-    <div className="flex h-screen bg-slate-50 dark:bg-zinc-950 overflow-hidden">
+    <div className="flex h-screen bg-slate-50 dark:bg-zinc-950 overflow-hidden relative">
+      {/* Mobile Backdrop */}
+      {isSidebarOpen && (
+        <div 
+          className="fixed inset-0 z-40 bg-black/50 md:hidden transition-opacity duration-300" 
+          onClick={() => setIsSidebarOpen(false)} 
+        />
+      )}
+
       {/* Sidebar - Dark Enterprise Theme */}
-      <aside className="w-64 bg-slate-900 border-r border-slate-800 text-slate-300 flex-col hidden md:flex flex-shrink-0 shadow-lg z-10 print:hidden">
-        <div className="h-16 flex items-center px-6 border-b border-slate-800">
+      <aside className={`fixed inset-y-0 left-0 z-50 w-64 bg-slate-900 border-r border-slate-800 text-slate-300 flex flex-col flex-shrink-0 shadow-lg transform transition-transform duration-300 ease-in-out md:relative md:translate-x-0 print:hidden ${
+        isSidebarOpen ? "translate-x-0" : "-translate-x-full"
+      }`}>
+        <div className="h-16 flex items-center justify-between px-6 border-b border-slate-800">
           <Link href="/admin" className="font-bold text-lg tracking-tight text-white flex items-center gap-3">
             <div className="w-8 h-8 bg-gold rounded-md flex items-center justify-center text-slate-900 font-black shadow-sm">M</div>
             Mystic Admin
           </Link>
+          <button 
+            className="md:hidden text-slate-400 hover:text-white transition-colors"
+            onClick={() => setIsSidebarOpen(false)}
+          >
+            <X className="w-6 h-6" />
+          </button>
         </div>
 
         <div className="px-5 py-6 font-semibold text-xs tracking-wider text-slate-500 uppercase">
@@ -192,9 +210,15 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {/* Topbar */}
-        <header className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-6 flex-shrink-0 z-0 print:hidden">
-          <div className="flex-1 flex items-center">
-            <div className="relative w-72">
+        <header className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-4 md:px-6 flex-shrink-0 z-10 print:hidden">
+          <div className="flex items-center gap-4 flex-1">
+            <button 
+              className="p-2 -ml-2 text-slate-600 hover:bg-slate-100 rounded-md md:hidden transition-colors"
+              onClick={() => setIsSidebarOpen(true)}
+            >
+              <Menu className="w-6 h-6" />
+            </button>
+            <div className="relative w-full max-w-72 hidden sm:block">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
               <input
                 type="text"
