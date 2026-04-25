@@ -301,10 +301,10 @@ export async function bulkDeleteOrders(orderIds: string[]) {
   }
 }
 
-export async function updateOrderDetails(id: string, data: { 
-  customerName: string; 
-  phone: string; 
-  district: string; 
+export async function updateOrderDetails(id: string, data: {
+  customerName: string;
+  phone: string;
+  district: string;
   address: string;
   advancePaid: number;
   discountAmount: number;
@@ -336,53 +336,53 @@ export async function updateOrderDetails(id: string, data: {
       // Handle items update and stock adjustment
       if (data.items) {
         const oldItemsMap = new Map(order.items.map(i => [i.id, i]));
-          
+
         for (const newItem of data.items) {
-            const oldItem = oldItemsMap.get(newItem.id);
-            if (oldItem) {
-                // Determine if quantity changed on exact size
-                const diff = newItem.quantity - oldItem.quantity;
-                if (diff !== 0) {
-                    await tx.productVariant.update({
-                         where: { productId_size: { productId: newItem.productId, size: newItem.size } },
-                         data: { stock: { decrement: diff } } // If increased (diff > 0), decrement stock
-                    });
-                }
-                oldItemsMap.delete(newItem.id);
-            } else {
-                // New Item added
-                await tx.productVariant.update({
-                     where: { productId_size: { productId: newItem.productId, size: newItem.size } },
-                     data: { stock: { decrement: newItem.quantity } }
-                });
+          const oldItem = oldItemsMap.get(newItem.id);
+          if (oldItem) {
+            // Determine if quantity changed on exact size
+            const diff = newItem.quantity - oldItem.quantity;
+            if (diff !== 0) {
+              await tx.productVariant.update({
+                where: { productId_size: { productId: newItem.productId, size: newItem.size } },
+                data: { stock: { decrement: diff } } // If increased (diff > 0), decrement stock
+              });
             }
+            oldItemsMap.delete(newItem.id);
+          } else {
+            // New Item added
+            await tx.productVariant.update({
+              where: { productId_size: { productId: newItem.productId, size: newItem.size } },
+              data: { stock: { decrement: newItem.quantity } }
+            });
+          }
         }
-        
+
         // Remaining items in oldItemsMap are deleted items
         for (const remainingOld of oldItemsMap.values()) {
-            await tx.productVariant.update({
-                where: { productId_size: { productId: remainingOld.productId, size: remainingOld.size } },
-                data: { stock: { increment: remainingOld.quantity } }
-            });
+          await tx.productVariant.update({
+            where: { productId_size: { productId: remainingOld.productId, size: remainingOld.size } },
+            data: { stock: { increment: remainingOld.quantity } }
+          });
         }
 
         // Wipe old items and create new ones
         await tx.orderItem.deleteMany({ where: { orderId: id } });
-        
-        for(const newItem of data.items) {
-           await tx.orderItem.create({
-               data: {
-                  orderId: id,
-                  productId: newItem.productId,
-                  size: newItem.size,
-                  quantity: newItem.quantity,
-                  price: newItem.price,
-                  requiresPrint: newItem.requiresPrint,
-                  printName: newItem.printName || null,
-                  printNumber: newItem.printNumber || null,
-                  printCost: newItem.printCost,
-               }
-           });
+
+        for (const newItem of data.items) {
+          await tx.orderItem.create({
+            data: {
+              orderId: id,
+              productId: newItem.productId,
+              size: newItem.size,
+              quantity: newItem.quantity,
+              price: newItem.price,
+              requiresPrint: newItem.requiresPrint,
+              printName: newItem.printName || null,
+              printNumber: newItem.printNumber || null,
+              printCost: newItem.printCost,
+            }
+          });
         }
       }
 
@@ -401,10 +401,10 @@ export async function updateOrderDetails(id: string, data: {
       }, 0);
 
       // 3. Determine Delivery Charge base on NEW district
-      const deliveryCharge = data.district === "Dhaka" 
-        ? deliverySettings.insideDhaka 
-        : data.district === "Self Pickup" 
-          ? 0 
+      const deliveryCharge = data.district === "Dhaka"
+        ? deliverySettings.insideDhaka
+        : data.district === "Self Pickup"
+          ? 0
           : deliverySettings.outsideDhaka;
 
       // 4. Calculate Final Total
@@ -430,13 +430,13 @@ export async function updateOrderDetails(id: string, data: {
       // 6. Automatically update Accounting Ledger (since totalAmount may have shifted)
       // Only updates if the transaction had already been created (e.g. order moved past PENDING)
       const existingTx = await tx.transaction.findFirst({
-         where: { referenceId: id, referenceType: "ORDER" }
+        where: { referenceId: id, referenceType: "ORDER" }
       });
       if (existingTx) {
-          await tx.transaction.update({
-             where: { id: existingTx.id },
-             data: { amount: newTotalAmount }
-          });
+        await tx.transaction.update({
+          where: { id: existingTx.id },
+          data: { amount: newTotalAmount }
+        });
       }
     });
 
@@ -635,7 +635,7 @@ export async function updatePurchase(
     console.error("Purchase update error:", error);
     return { success: false, error: error.message };
   }
-  
+
   redirect("/admin/purchases");
 }
 
@@ -873,7 +873,7 @@ export async function updatePage(slug: string, data: { title: string; content: s
   revalidatePath(`/${slug}`);
   revalidatePath(`/admin/pages/${slug}`);
   revalidatePath("/admin/pages");
-  
+
   return { success: true, page };
 }
 
@@ -887,7 +887,13 @@ export async function bulkSendToPathaoAction(orderIds: string[]) {
 
     const orders = await prisma.order.findMany({
       where: { id: { in: orderIds } },
-      include: { items: true },
+      include: {
+        items: {
+          include: {
+            product: true,
+          }
+        }
+      },
     });
 
     let successCount = 0;
@@ -908,14 +914,22 @@ export async function bulkSendToPathaoAction(orderIds: string[]) {
 
       try {
         const collectionAmount = Math.max(0, order.totalAmount - (order.advancePaid || 0));
-        
+
         const totalQuantity = order.items.reduce((sum, i) => sum + i.quantity, 0);
+
+        // Sanitize phone: strip +88 or 88 prefix to get the 11-digit local number
+        const sanitizePhone = (phone: string): string => {
+          let p = phone.trim();
+          if (p.startsWith("+88")) p = p.slice(3);
+          else if (p.startsWith("88") && p.length > 11) p = p.slice(2);
+          return p;
+        };
 
         const payload = {
           store_id: storeId,
           merchant_order_id: order.id,
           recipient_name: order.customerName,
-          recipient_phone: order.phone,
+          recipient_phone: sanitizePhone(order.phone),
           recipient_address: order.address,
           recipient_city: order.pathaoCityId,
           recipient_zone: order.pathaoZoneId,
@@ -923,9 +937,9 @@ export async function bulkSendToPathaoAction(orderIds: string[]) {
           delivery_type: 48,
           item_type: 2,
           item_quantity: totalQuantity,
-          item_weight: 0.5, 
+          item_weight: 0.5,
           amount_to_collect: collectionAmount,
-          item_description: order.items.map(i => `${i.productId} (${i.size}) x${i.quantity}`).join(", "),
+          item_description: order.items.map(i => `${i.product.name}, Size: ${i.size}, Qty: ${i.quantity}`).join(", "),
         };
 
         const res = await pathaoClient.createOrder(payload);
@@ -936,7 +950,7 @@ export async function bulkSendToPathaoAction(orderIds: string[]) {
             where: { id: order.id },
             data: {
               pathaoConsignmentId: res.consignment_id,
-              status: "SHIPPED", 
+              status: "SHIPPED",
             }
           });
           successCount++;
@@ -948,14 +962,14 @@ export async function bulkSendToPathaoAction(orderIds: string[]) {
     }
 
     revalidatePath("/admin/orders");
-    
+
     if (errors.length > 0 && successCount === 0) {
       return { success: false, error: `Failed to send orders: ${errors.join(", ")}` };
     }
 
-    return { 
-      success: true, 
-      message: `${successCount} orders sent to Pathao successfully.${errors.length > 0 ? ` Note: ${errors.length} failed.` : ""}` 
+    return {
+      success: true,
+      message: `${successCount} orders sent to Pathao successfully.${errors.length > 0 ? ` Note: ${errors.length} failed.` : ""}`
     };
   } catch (error: any) {
     console.error("Bulk Pathao action error:", error);
