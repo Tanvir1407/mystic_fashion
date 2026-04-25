@@ -939,7 +939,7 @@ export async function bulkSendToPathaoAction(orderIds: string[]) {
           item_quantity: totalQuantity,
           item_weight: 0.5,
           amount_to_collect: collectionAmount,
-          item_description: order.items.map(i => `${i.product.name}, Size: ${i.size}, Qty: ${i.quantity}`).join(", "),
+          item_description: order.items.map(i => `• ${i.product.name} (Size: ${i.size}, Qty: ${i.quantity})`).join("\n"),
         };
 
         const res = await pathaoClient.createOrder(payload);
