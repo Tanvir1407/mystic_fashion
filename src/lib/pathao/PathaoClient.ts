@@ -26,6 +26,21 @@ export interface PathaoErrorResponse {
   errors?: Record<string, string[]>;
 }
 
+export interface PathaoCity {
+  city_id: number;
+  city_name: string;
+}
+
+export interface PathaoZone {
+  zone_id: number;
+  zone_name: string;
+}
+
+export interface PathaoArea {
+  area_id: number;
+  area_name: string;
+}
+
 class PathaoClient {
   private baseUrl: string;
   private clientId: string;
@@ -197,6 +212,78 @@ class PathaoClient {
       // Last resort fallback
       const freshToken = await this.issueToken();
       return freshToken.access_token;
+    }
+  }
+
+  /**
+   * Fetches the list of cities from Pathao.
+   */
+  async getCities(): Promise<PathaoCity[]> {
+    const token = await this.getValidAccessToken();
+    const endpoint = `${this.baseUrl}/aladdin/api/v1/city-list`;
+
+    try {
+      const response = await fetch(endpoint, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Accept': 'application/json',
+        },
+      });
+
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message || 'Failed to fetch cities');
+      return data.data.data;
+    } catch (error) {
+      console.error('[PathaoClient] getCities Error:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Fetches the list of zones for a given city from Pathao.
+   */
+  async getZones(cityId: number): Promise<PathaoZone[]> {
+    const token = await this.getValidAccessToken();
+    const endpoint = `${this.baseUrl}/aladdin/api/v1/cities/${cityId}/zone-list`;
+
+    try {
+      const response = await fetch(endpoint, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Accept': 'application/json',
+        },
+      });
+
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message || 'Failed to fetch zones');
+      return data.data.data;
+    } catch (error) {
+      console.error('[PathaoClient] getZones Error:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Fetches the list of areas for a given zone from Pathao.
+   */
+  async getAreas(zoneId: number): Promise<PathaoArea[]> {
+    const token = await this.getValidAccessToken();
+    const endpoint = `${this.baseUrl}/aladdin/api/v1/zones/${zoneId}/area-list`;
+
+    try {
+      const response = await fetch(endpoint, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Accept': 'application/json',
+        },
+      });
+
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message || 'Failed to fetch areas');
+      return data.data.data;
+    } catch (error) {
+      console.error('[PathaoClient] getAreas Error:', error);
+      throw error;
     }
   }
 }

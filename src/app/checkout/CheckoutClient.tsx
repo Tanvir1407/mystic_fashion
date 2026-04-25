@@ -10,6 +10,7 @@ import { ArrowLeft, CheckCircle2, X, ChevronDown, Ticket, Loader2, CheckCircle, 
 import { useState, useTransition, useEffect } from "react";
 import { placeOrderAction, validateCoupon, syncCartPrices } from "./actions";
 import { CustomSelect } from "@/components/CustomSelect";
+import { getPathaoCities, getPathaoZones, getPathaoAreas } from "@/app/actions/pathao";
 
 export default function CheckoutClient({
   deliveryData,
@@ -42,7 +43,20 @@ export default function CheckoutClient({
     number: ""
   });
 
-// Format BDT utility
+  // Pathao Location States
+  const [cities, setCities] = useState<{ value: string, label: string }[]>([]);
+  const [zones, setZones] = useState<{ value: string, label: string }[]>([]);
+  const [areas, setAreas] = useState<{ value: string, label: string }[]>([]);
+
+  const [selectedCityId, setSelectedCityId] = useState<number | null>(null);
+  const [selectedZoneId, setSelectedZoneId] = useState<number | null>(null);
+  const [selectedAreaId, setSelectedAreaId] = useState<number | null>(null);
+
+  const [loadingCities, setLoadingCities] = useState(false);
+  const [loadingZones, setLoadingZones] = useState(false);
+  const [loadingAreas, setLoadingAreas] = useState(false);
+
+  // Format BDT utility
   const formatBDT = (price: number) => {
     return price === 0 ? "Free" : `৳${price.toLocaleString("en-IN")}`;
   };
@@ -61,6 +75,53 @@ export default function CheckoutClient({
       });
     }
   }, [items.length]);
+
+  // Fetch Pathao Cities on mount
+  useEffect(() => {
+    async function fetchCities() {
+      setLoadingCities(true);
+      const res = await getPathaoCities();
+      if (res.success && res.data) {
+        setCities(res.data.map((c: any) => ({ value: c.city_id.toString(), label: c.city_name })));
+      }
+      setLoadingCities(false);
+    }
+    fetchCities();
+  }, []);
+
+  // Fetch Zones when City changes
+  useEffect(() => {
+    async function fetchZones() {
+      if (!selectedCityId) {
+        setZones([]);
+        return;
+      }
+      setLoadingZones(true);
+      const res = await getPathaoZones(selectedCityId);
+      if (res.success && res.data) {
+        setZones(res.data.map((z: any) => ({ value: z.zone_id.toString(), label: z.zone_name })));
+      }
+      setLoadingZones(false);
+    }
+    fetchZones();
+  }, [selectedCityId]);
+
+  // Fetch Areas when Zone changes
+  useEffect(() => {
+    async function fetchAreas() {
+      if (!selectedZoneId) {
+        setAreas([]);
+        return;
+      }
+      setLoadingAreas(true);
+      const res = await getPathaoAreas(selectedZoneId);
+      if (res.success && res.data) {
+        setAreas(res.data.map((a: any) => ({ value: a.area_id.toString(), label: a.area_name })));
+      }
+      setLoadingAreas(false);
+    }
+    fetchAreas();
+  }, [selectedZoneId]);
 
   const isDhaka = selectedDistrict === "Dhaka";
   const deliveryFee = selectedDistrict ? (isDhaka ? deliveryData.insideDhaka : deliveryData.outsideDhaka) : 0;
@@ -97,13 +158,19 @@ export default function CheckoutClient({
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
-    const fullName = (formData.get("fullName") as string).trim();
-    const phone = (formData.get("phone") as string).trim();
-    const district = (formData.get("district") as string).trim();
-    const address = (formData.get("address") as string).trim();
+    
+    const fullName = (formData.get("fullName") as string || "").trim();
+    const phone = (formData.get("phone") as string || "").trim();
+    const specificAddress = (formData.get("address") as string || "").trim();
 
-    if (!fullName || !phone || !district || !address) {
-      setErrorMsg("Please provide all the required information (Name, Phone, District and Address).");
+    const cityName = cities.find(c => c.value === selectedCityId?.toString())?.label || "";
+    const zoneName = zones.find(z => z.value === selectedZoneId?.toString())?.label || "";
+    const areaName = areas.find(a => a.value === selectedAreaId?.toString())?.label || "";
+
+    const fullDeliveryAddress = `${specificAddress}, ${areaName}, ${zoneName}, ${cityName}`;
+
+    if (!fullName || !phone || !selectedCityId || !selectedZoneId || !selectedAreaId || !specificAddress) {
+      setErrorMsg("Please provide all the required information (Name, Phone, City, Zone, Area, and Detail Address).");
       return;
     }
     if (totalDTFCost > 0 && (!bkashNumber || !bkashTrxId)) {
@@ -122,15 +189,18 @@ export default function CheckoutClient({
       const result = await placeOrderAction({
         fullName,
         phone,
-        district,
-        address,
+        district: selectedDistrict, // Now using React state
+        address: fullDeliveryAddress,
         items,
         totalAmount: total,
-        remarks: formData.get("remarks") as string,
+        remarks: (formData.get("remarks") as string || "").trim(),
         couponCode: appliedCoupon,
         discountAmount: couponDiscount,
         bkashNumber,
-        bkashTrxId
+        bkashTrxId,
+        pathaoCityId: selectedCityId || undefined,
+        pathaoZoneId: selectedZoneId || undefined,
+        pathaoAreaId: selectedAreaId || undefined,
       });
 
       if (result.success) {
@@ -279,24 +349,69 @@ export default function CheckoutClient({
 
                   {/* Address Selection */}
                   <div className="space-y-4">
-                    <div className="space-y-2">
-                      <label className="text-sm font-bold text-zinc-700">Select District *</label>
-                      <CustomSelect
-                        options={[
-                          "Bagerhat", "Bandarban", "Barguna", "Barisal", "Bhola", "Bogra", "Brahmanbaria", "Chandpur", "Chapainawabganj", "Chattogram", "Chuadanga", "Comilla", "Cox's Bazar", "Dhaka", "Dinajpur", "Faridpur", "Feni", "Gaibandha", "Gazipur", "Gopalganj", "Habiganj", "Jamalpur", "Jashore", "Jhalokati", "Jhenaidah", "Joypurhat", "Khagrachhari", "Khulna", "Kishoreganj", "Kurigram", "Kushtia", "Lakshmipur", "Lalmonirhat", "Madaripur", "Magura", "Manikganj", "Meherpur", "Moulvibazar", "Munshiganj", "Mymensingh", "Naogaon", "Narail", "Narayanganj", "Narsingdi", "Natore", "Netrokona", "Nilphamari", "Noakhali", "Pabna", "Panchagarh", "Patuakhali", "Pirojpur", "Rajbari", "Rajshahi", "Rangamati", "Rangpur", "Satkhira", "Shariatpur", "Sherpur", "Sirajganj", "Sunamganj", "Sylhet", "Tangail", "Thakurgaon"
-                        ].sort().map(d => ({ value: d, label: d }))}
-                        value={selectedDistrict}
-                        onChange={setSelectedDistrict}
-                        placeholder="-- Select your District --"
-                        searchable={true}
-                        className=""
-                      />
-                      <input type="hidden" name="district" value={selectedDistrict} />
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <label className="text-sm font-bold text-zinc-700">Select City *</label>
+                        <CustomSelect
+                          options={cities}
+                          value={selectedCityId?.toString() || ""}
+                          onChange={(val) => {
+                            const id = parseInt(val);
+                            setSelectedCityId(id);
+                            setSelectedZoneId(null);
+                            setSelectedAreaId(null);
+                            // Auto-set district for delivery fee calculation
+                            const city = cities.find(c => c.value === val);
+                            if (city) setSelectedDistrict(city.label);
+                          }}
+                          placeholder={loadingCities ? "Loading cities..." : "-- Select City --"}
+                          searchable={true}
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <label className="text-sm font-bold text-zinc-700">Select Zone *</label>
+                        <CustomSelect
+                          options={zones}
+                          value={selectedZoneId?.toString() || ""}
+                          onChange={(val) => {
+                            setSelectedZoneId(parseInt(val));
+                            setSelectedAreaId(null);
+                          }}
+                          placeholder={loadingZones ? "Loading zones..." : (selectedCityId ? "-- Select Zone --" : "First select a city")}
+                          disabled={!selectedCityId || loadingZones}
+                          searchable={true}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <label className="text-sm font-bold text-zinc-700">Select Area *</label>
+                        <CustomSelect
+                          options={areas}
+                          value={selectedAreaId?.toString() || ""}
+                          onChange={(val) => setSelectedAreaId(parseInt(val))}
+                          placeholder={loadingAreas ? "Loading areas..." : (selectedZoneId ? "-- Select Area --" : "First select a zone")}
+                          disabled={!selectedZoneId || loadingAreas}
+                          searchable={true}
+                        />
+                      </div>
+
+                      {/* <div className="space-y-2">
+                        <label className="text-sm font-bold text-zinc-700">District (Auto-detected)</label>
+                        <input
+                          readOnly
+                          name="district"
+                          value={selectedDistrict}
+                          className="w-full bg-slate-100 border border-slate-200 rounded-lg px-4 py-3 focus:outline-none text-zinc-500 font-medium cursor-not-allowed"
+                        />
+                      </div> */}
                     </div>
 
                     <div className="space-y-2">
-                      <label className="text-sm font-bold text-zinc-700">Full or Detail Address *</label>
-                      <textarea name="address" rows={3} className="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-3 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all resize-none font-medium" placeholder="House no, Road no, Area etc..." />
+                      <label className="text-sm font-bold text-zinc-700">House / Road / Flat No. / Landmark *</label>
+                      <textarea name="address" rows={3} className="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-3 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all resize-none font-medium" placeholder="e.g., House 12, Road 4, Block C, near the central mosque" />
                     </div>
 
                     <div className="space-y-2 pt-2">

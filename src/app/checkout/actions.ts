@@ -15,6 +15,9 @@ export async function placeOrderAction(payload: {
   discountAmount?: number;
   bkashNumber?: string;
   bkashTrxId?: string;
+  pathaoCityId?: number;
+  pathaoZoneId?: number;
+  pathaoAreaId?: number;
 }) {
   try {
     return await prisma.$transaction(async (tx) => {
@@ -59,6 +62,9 @@ export async function placeOrderAction(payload: {
           remarks: payload.remarks,
           couponCode: sanitizedCoupon,
           discountAmount: payload.discountAmount || 0,
+          pathaoCityId: payload.pathaoCityId,
+          pathaoZoneId: payload.pathaoZoneId,
+          pathaoAreaId: payload.pathaoAreaId,
           items: {
             create: payload.items.map((item) => ({
               productId: item.id,
