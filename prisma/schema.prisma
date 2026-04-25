@@ -133,6 +133,7 @@ model Order {
   pathaoCityId   Int?
   pathaoZoneId   Int?
   pathaoAreaId   Int?
+  pathaoConsignmentId String?
 
   items OrderItem[]
   coupon   Coupon? @relation(fields: [couponCode], references: [code])

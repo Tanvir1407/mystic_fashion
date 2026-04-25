@@ -4,8 +4,9 @@ import { useState, useEffect } from "react";
 import OrderRowClient from "./OrderRowClient";
 import type { OrderStatus } from "@/generated/prisma/client";
 import { bulkUpdateOrderStatus, bulkDeleteOrders } from "../actions";
-import { Filter, Plus, Printer, Trash2, Search as SearchIcon, X } from "lucide-react";
+import { Filter, Plus, Printer, Trash2, Search as SearchIcon, X, Truck } from "lucide-react";
 import InvoicePrintView from "./InvoicePrintView";
+import PathaoReviewModal from "./PathaoReviewModal";
 
 import { useRouter } from "next/navigation";
 import { AdminPagination } from "@/components/AdminPagination";
@@ -37,6 +38,8 @@ export default function OrderListClient({
     message: "",
     type: "error"
   });
+
+  const [showPathaoModal, setShowPathaoModal] = useState(false);
 
   useEffect(() => {
     setOptimisticOrders(initialOrders);
@@ -284,6 +287,14 @@ export default function OrderListClient({
                   <Trash2 className="w-3.5 h-3.5" />
                   Delete
                 </button>
+                <button
+                  onClick={() => setShowPathaoModal(true)}
+                  disabled={loading}
+                  className="flex items-center gap-1.5 text-xs font-semibold text-white bg-[#ee2e24] px-3 py-1.5 rounded-md hover:bg-[#d1281f] transition disabled:opacity-50 shadow-sm"
+                >
+                  <Truck className="w-3.5 h-3.5" />
+                  Send to Pathao
+                </button>
               </div>
             </div>
           )}
@@ -363,6 +374,20 @@ export default function OrderListClient({
         title={alert.title}
         message={alert.message}
         type={alert.type}
+      />
+      <PathaoReviewModal 
+        isOpen={showPathaoModal}
+        onClose={() => setShowPathaoModal(false)}
+        selectedOrders={filteredOrders.filter(o => selectedIds.has(o.id))}
+        onSuccess={() => {
+          setSelectedIds(new Set());
+          setAlert({
+            isOpen: true,
+            title: "Success",
+            message: "Successfully processed Pathao consignments.",
+            type: "warning" 
+          });
+        }}
       />
     </div>
   );

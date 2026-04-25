@@ -41,6 +41,34 @@ export interface PathaoArea {
   area_name: string;
 }
 
+export interface PathaoStore {
+  store_id: number;
+  store_name: string;
+}
+
+export interface PathaoOrderPayload {
+  store_id: number;
+  merchant_order_id?: string;
+  recipient_name: string;
+  recipient_phone: string;
+  recipient_address: string;
+  recipient_city: number;
+  recipient_zone: number;
+  recipient_area?: number;
+  delivery_type: number; // 48: normal, 12: on demand
+  item_type: number; // 1: document, 2: parcel
+  special_instruction?: string;
+  item_quantity: number;
+  item_weight: number;
+  amount_to_collect: number;
+  item_description?: string;
+}
+
+export interface PathaoOrderResponse {
+  consignment_id: string;
+  order_status: string;
+}
+
 class PathaoClient {
   private baseUrl: string;
   private clientId: string;
@@ -95,7 +123,7 @@ class PathaoClient {
 
       const tokenData = data as PathaoTokenResponse;
       await this.upsertToken(tokenData);
-      
+
       return tokenData;
     } catch (error) {
       console.error('[PathaoClient] Token Generation Failed (Password Grant):', error);
@@ -149,7 +177,7 @@ class PathaoClient {
    */
   private async upsertToken(tokenData: PathaoTokenResponse) {
     const expiresAt = new Date(Date.now() + tokenData.expires_in * 1000);
-    
+
     try {
       await prisma.apiToken.upsert({
         where: { id: 'pathao' },
@@ -283,6 +311,61 @@ class PathaoClient {
       return data.data.data;
     } catch (error) {
       console.error('[PathaoClient] getAreas Error:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Fetches the list of stores for the merchant.
+   */
+  async getStores(): Promise<PathaoStore[]> {
+    const token = await this.getValidAccessToken();
+    const endpoint = `${this.baseUrl}/aladdin/api/v1/stores`;
+
+    try {
+      const response = await fetch(endpoint, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Accept': 'application/json',
+        },
+      });
+
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message || 'Failed to fetch stores');
+      return data.data.data;
+    } catch (error) {
+      console.error('[PathaoClient] getStores Error:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Creates a new order in Pathao.
+   */
+  async createOrder(payload: PathaoOrderPayload): Promise<PathaoOrderResponse> {
+    const token = await this.getValidAccessToken();
+    const endpoint = `${this.baseUrl}/aladdin/api/v1/orders`;
+
+    try {
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        console.error('[PathaoClient] Create Order API Error:', data);
+        throw new Error(data.message || 'Failed to create Pathao order');
+      }
+
+      return data.data as PathaoOrderResponse;
+    } catch (error) {
+      console.error('[PathaoClient] createOrder Error:', error);
       throw error;
     }
   }

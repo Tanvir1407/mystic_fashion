@@ -7,6 +7,7 @@ import { OrderStatus } from "@/generated/prisma/client";
 import { revalidatePath } from "next/cache";
 import { writeFile, mkdir } from "fs/promises";
 import { join, dirname } from "path";
+import { pathaoClient } from "@/lib/pathao/PathaoClient";
 
 async function getOrCreateSystemAccount(tx: any, name: string, type: "INCOME" | "EXPENSE") {
   let account = await tx.chartOfAccount.findUnique({ where: { name } });
@@ -861,4 +862,90 @@ export async function updatePage(slug: string, data: { title: string; content: s
   revalidatePath("/admin/pages");
   
   return { success: true, page };
+}
+
+export async function bulkSendToPathaoAction(orderIds: string[]) {
+  try {
+    const stores = await pathaoClient.getStores();
+    if (stores.length === 0) {
+      throw new Error("No Pathao stores found. Please create a store in Pathao Merchant Panel first.");
+    }
+    const storeId = stores[0].store_id;
+
+    const orders = await prisma.order.findMany({
+      where: { id: { in: orderIds } },
+      include: { items: true },
+    });
+
+    let successCount = 0;
+    let errors: string[] = [];
+
+    for (const order of orders) {
+      // 1. Strict Status & Consignment Checks
+      if (order.pathaoConsignmentId) continue;
+      if (order.status !== "PACKAGING") {
+        errors.push(`${order.id}: Order must be in PACKAGING status.`);
+        continue;
+      }
+
+      if (!order.pathaoCityId || !order.pathaoZoneId) {
+        errors.push(`${order.id}: Missing Pathao City or Zone ID.`);
+        continue;
+      }
+
+      try {
+        const collectionAmount = Math.max(0, order.totalAmount - (order.advancePaid || 0));
+        
+        const totalQuantity = order.items.reduce((sum, i) => sum + i.quantity, 0);
+
+        const payload = {
+          store_id: storeId,
+          merchant_order_id: order.id,
+          recipient_name: order.customerName,
+          recipient_phone: order.phone,
+          recipient_address: order.address,
+          recipient_city: order.pathaoCityId,
+          recipient_zone: order.pathaoZoneId,
+          recipient_area: order.pathaoAreaId || undefined,
+          delivery_type: 48,
+          item_type: 2,
+          item_quantity: totalQuantity,
+          item_weight: 0.5, 
+          amount_to_collect: collectionAmount,
+          item_description: order.items.map(i => `${i.productId} (${i.size}) x${i.quantity}`).join(", "),
+        };
+
+        const res = await pathaoClient.createOrder(payload);
+
+        if (res.consignment_id) {
+          // 2. Simultaneous Database Update (ID + Status)
+          await prisma.order.update({
+            where: { id: order.id },
+            data: {
+              pathaoConsignmentId: res.consignment_id,
+              status: "SHIPPED", 
+            }
+          });
+          successCount++;
+        }
+      } catch (err: any) {
+        console.error(`Failed to send order ${order.id} to Pathao:`, err);
+        errors.push(`${order.id}: ${err.message}`);
+      }
+    }
+
+    revalidatePath("/admin/orders");
+    
+    if (errors.length > 0 && successCount === 0) {
+      return { success: false, error: `Failed to send orders: ${errors.join(", ")}` };
+    }
+
+    return { 
+      success: true, 
+      message: `${successCount} orders sent to Pathao successfully.${errors.length > 0 ? ` Note: ${errors.length} failed.` : ""}` 
+    };
+  } catch (error: any) {
+    console.error("Bulk Pathao action error:", error);
+    return { success: false, error: error.message || "Failed to process bulk Pathao request." };
+  }
 }
