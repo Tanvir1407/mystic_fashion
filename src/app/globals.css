@@ -37,3 +37,85 @@ body {
     text-wrap: balance;
   }
 }
+
+/* ==========================================================================
+   GLOBAL PRINT OVERRIDES
+   Purpose: Strip ALL height constraints and overflow clipping from every
+   ancestor element so the browser print engine can flow content across
+   as many A4 pages as needed.
+   Root cause: The admin layout uses `h-screen overflow-hidden` (and nested
+   `overflow-hidden` / `overflow-y-auto`) for the responsive sidebar drawer.
+   These classes pin the layout to one viewport height in print mode, causing
+   the browser to clip everything beyond the first page.
+   IMPORTANT: All rules are scoped inside @media print — zero impact on the
+   normal desktop/mobile UI.
+   ========================================================================== */
+@media print {
+  /* --- Layer 1: html & body root reset --- */
+  html,
+  body {
+    height: auto !important;
+    min-height: 100% !important;
+    max-height: none !important;
+    overflow: visible !important;
+    overflow-x: visible !important;
+    overflow-y: visible !important;
+    position: static !important;
+    display: block !important;
+    /* Remove any CSS containment that can clip painted output */
+    contain: none !important;
+  }
+
+  /* --- Layer 2: Next.js root mount point (#__next / [data-nextjs-scroll-focus-boundary]) --- */
+  #__next,
+  [data-nextjs-scroll-focus-boundary] {
+    height: auto !important;
+    min-height: 100% !important;
+    max-height: none !important;
+    overflow: visible !important;
+    position: static !important;
+    display: block !important;
+    contain: none !important;
+  }
+
+  /* --- Layer 3: Every div / main / section / aside directly under body --- */
+  /* This covers the admin layout's root flex wrapper and main content wrapper */
+  body > div,
+  body > main,
+  body > section,
+  body > aside,
+  /* Next.js wraps children one level deeper */
+  body > div > div,
+  body > div > main {
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    overflow: visible !important;
+    position: static !important;
+    /* Flatten flex/grid so they don't create a new stacking / overflow context */
+    display: block !important;
+    contain: none !important;
+  }
+
+  /* --- Layer 4: Surgical override for Tailwind utility classes --- */
+  /* These target the exact classes used by the admin layout */
+  .h-screen      { height: auto !important; }
+  .overflow-hidden { overflow: visible !important; }
+  .overflow-x-hidden { overflow-x: visible !important; }
+  .overflow-y-auto  { overflow: visible !important; }
+  .overflow-clip    { overflow: visible !important; }
+  .flex-1          { flex: none !important; }
+
+  /* --- Layer 5: Hide all chrome and non-invoice UI during print --- */
+  aside,
+  header,
+  nav,
+  footer,
+  /* Tailwind print:hidden utility */
+  .print\:hidden,
+  [class*="print:hidden"],
+  /* Explicit no-print class: order list, toolbar, table, modals */
+  .no-print {
+    display: none !important;
+  }
+}

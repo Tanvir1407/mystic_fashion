@@ -145,7 +145,11 @@ export default function OrderListClient({
   const selectedOrdersToPrint = filteredOrders.filter((o) => selectedIds.has(o.id));
   return (
     <div className="flex flex-col gap-6">
+      {/* Invoice print view — only this is visible during printing */}
       <InvoicePrintView orders={selectedOrdersToPrint} />
+
+      {/* no-print: everything below is hidden by @media print in globals.css */}
+      <div className="no-print flex flex-col gap-6">
 
       {/* Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
@@ -386,6 +390,7 @@ export default function OrderListClient({
           });
         }}
       />
+      </div>{/* end no-print */}
     </div>
   );
 }

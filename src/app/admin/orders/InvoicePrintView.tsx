@@ -46,27 +46,51 @@ export default function InvoicePrintView({ orders }: { orders: Order[] }) {
   };
 
   return (
-    <div className="print-only hidden print:block text-black">
+    <div className="hidden print:block text-black">
       <style dangerouslySetInnerHTML={{
         __html: `
         @media print {
+          /* Page setup */
           @page { size: A4; margin: 0; }
-          body { margin: 0; padding: 0; background: white !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-          .print-only { position: absolute; left: 0; top: 0; width: 100%; display: block !important; background: white; z-index: 9999; }
-          nav, sidebar, header, footer, button, .no-print { display: none !important; }
-          
+
+          /* Ensure the print wrapper itself is clean */
+          body {
+            margin: 0;
+            padding: 0;
+            background: white !important;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+          }
+
+          /*
+           * .invoice-page: one physical A4 sheet (2 invoices per sheet).
+           * DO NOT set a fixed height here — let the content determine
+           * height so tall invoices reflow correctly.
+           * Use both legacy (page-break-after) and modern (break-after)
+           * for full cross-browser support.
+           */
           .invoice-page {
             width: 210mm;
-            height: 297mm;
             padding: 0;
-            margin: 0;
-            display: flex;
-            flex-direction: column;
+            margin: 0 auto;
+            display: block;
             page-break-after: always;
+            break-after: page;
             background: white;
           }
+          /* Last page should not force a blank trailing page */
+          .invoice-page:last-child {
+            page-break-after: avoid;
+            break-after: avoid;
+          }
+
+          /*
+           * .invoice-item: one invoice (half an A4 sheet = 148.5mm).
+           * break-inside: avoid prevents a single invoice from being
+           * split across two physical pages.
+           */
           .invoice-item {
-            height: 148.5mm; /* Exactly half of A4 page */
+            height: 148.5mm;
             width: 100%;
             border-bottom: 1px dashed #9ca3af;
             padding: 12mm 15mm;
@@ -74,6 +98,8 @@ export default function InvoicePrintView({ orders }: { orders: Order[] }) {
             display: flex;
             flex-direction: column;
             position: relative;
+            page-break-inside: avoid;
+            break-inside: avoid;
           }
           .invoice-item:nth-child(even) {
             border-bottom: none;
@@ -139,8 +165,8 @@ export default function InvoicePrintView({ orders }: { orders: Order[] }) {
                     <tbody>
                       {order.items.map((item, idx) => (
                         <tr key={idx} className="border-b border-transparent">
-                          <td className="py-2 px-2 text-center align-top">{idx + 1}</td>
-                          <td className="py-2 px-2 align-top">
+                          <td className="py-1 px-2 text-center align-top">{idx + 1}</td>
+                          <td className="py-1 px-2 align-top">
                             <p className="font-bold leading-tight">{item.product.name} - Size {item.size}</p>
                             {item.requiresPrint && (
                               <div className="mt-1 text-[9px] font-bold text-gray-700 bg-gray-50 border border-gray-100 p-1 rounded-sm">
@@ -148,19 +174,22 @@ export default function InvoicePrintView({ orders }: { orders: Order[] }) {
                               </div>
                             )}
                           </td>
-                          <td className="py-2 px-2 text-center align-top">{item.quantity}</td>
-                          <td className="py-2 px-2 text-center align-top">৳{item.price.toLocaleString("en-IN")}</td>
-                          <td className="py-2 px-2 text-right align-top">৳{(item.price * item.quantity).toLocaleString("en-IN")}</td>
+                          <td className="py-1 px-2 text-center align-top">{item.quantity}</td>
+                          <td className="py-1 px-2 text-center align-top">৳{item.price.toLocaleString("en-IN")}</td>
+                          <td className="py-1 px-2 text-right align-top">৳{(item.price * item.quantity).toLocaleString("en-IN")}</td>
                         </tr>
                       ))}
                     </tbody>
                   </table>
                 </div>
 
-                {/* Subtotal Bar */}
-                <div className="w-full bg-[#E5E7EB] flex text-xs text-black mt-2">
-                  <div className="flex-1 text-right py-1.5 pr-8 font-normal uppercase">Subtotal</div>
-                  <div className="w-[15%] text-right py-1.5 px-2">৳{baseSubtotal.toLocaleString("en-IN")}</div>
+                {/* Subtotal Bar — right-aligned to match the w-2/5 pricing summary */}
+                <div className="w-full flex text-xs text-black mt-2">
+                  <div className="w-3/5 bg-[#E5E7EB]" />{/* spacer matching wash care column */}
+                  <div className="w-2/5 bg-[#E5E7EB] flex justify-between">
+                    <div className=" py-1.5 pl-2 font-bold uppercase">Subtotal</div>
+                    <div className="py-1.5 px-2 text-right">৳{baseSubtotal.toLocaleString("en-IN")}</div>
+                  </div>
                 </div>
 
                 {/* Bottom Section: Wash Care & Summary */}

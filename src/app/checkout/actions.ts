@@ -102,19 +102,6 @@ export async function placeOrderAction(payload: {
         // Stock will only be validated and decremented when admin moves status to CONFIRMED
       }
 
-      // 3. Validate that all products are published
-      const productIds = payload.items.map(i => i.id);
-      const publishedCount = await tx.product.count({
-        where: {
-          id: { in: productIds },
-          isPublished: true
-        }
-      });
-
-      if (publishedCount !== productIds.length) {
-        throw new Error("One or more items in your cart are no longer available.");
-      }
-
       revalidatePath("/admin/products");
       revalidatePath("/admin/orders");
       revalidatePath("/");
@@ -167,9 +154,9 @@ export async function validateCoupon(code: string, baseSubtotal: number) {
 export async function syncCartPrices(productIds: string[]) {
   try {
     const products = await prisma.product.findMany({
-      where: { 
+      where: {
         id: { in: productIds },
-        isPublished: true 
+        isPublished: true
       },
       include: { discount: true }
     });
