@@ -10,7 +10,6 @@ import PathaoReviewModal from "./PathaoReviewModal";
 
 import { useRouter } from "next/navigation";
 import { AdminPagination } from "@/components/AdminPagination";
-import { CustomSelect } from "@/components/CustomSelect";
 import { StatusAlertModal } from "@/components/StatusAlertModal";
 
 export default function OrderListClient({
@@ -144,7 +143,6 @@ export default function OrderListClient({
   };
 
   const selectedOrdersToPrint = filteredOrders.filter((o) => selectedIds.has(o.id));
-
   return (
     <div className="flex flex-col gap-6">
       <InvoicePrintView orders={selectedOrdersToPrint} />
