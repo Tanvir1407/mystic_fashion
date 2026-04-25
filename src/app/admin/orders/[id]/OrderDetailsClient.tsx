@@ -154,8 +154,9 @@ export default function OrderDetailsClient({ order, deliverySettings, products =
       {/* Action Header */}
       <div className="flex justify-between items-end">
         {/* Pathao Consignment ID Section */}
-        <>{order.pathaoConsignmentId && (
-          <div>
+
+        <div>
+          {order.pathaoConsignmentId && (<>
             <span className="block text-[10px] uppercase font-bold text-slate-400 mb-2 tracking-wider">
               Pathao Consignment ID / Tracking Number
             </span>
@@ -174,9 +175,10 @@ export default function OrderDetailsClient({ order, deliverySettings, products =
                   <Copy className="w-3.5 h-3.5" />
                 )}
               </button>
-            </div>
-          </div>
-        )}</>
+            </div></>
+          )}
+        </div>
+
         <div>
           <div className="flex justify-end">
             {!isEditing ? (

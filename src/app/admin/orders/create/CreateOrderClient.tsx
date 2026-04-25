@@ -1,10 +1,12 @@
 "use client";
 
-import { useState, useMemo, useTransition } from "react";
+import { useState, useMemo, useTransition, useEffect } from "react";
 import { Search, Plus, Trash2, User, Phone, MapPin, ShoppingBag, CheckCircle, ArrowLeft, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { createAdminOrder } from "../../actions";
 import { useRouter } from "next/navigation";
+import { getPathaoCities, getPathaoZones, getPathaoAreas } from "@/app/actions/pathao";
+import { CustomSelect } from "@/components/CustomSelect";
 
 interface Product {
   id: string;
@@ -36,6 +38,72 @@ export default function CreateOrderClient({ products, deliverySettings }: { prod
   const [remarks, setRemarks] = useState("");
   const [manualDiscountValue, setManualDiscountValue] = useState(0);
   const [manualDiscountType, setManualDiscountType] = useState<"FLAT" | "PERCENTAGE">("FLAT");
+
+  // Pathao Location States
+  const [cities, setCities] = useState<{ value: string, label: string }[]>([]);
+  const [zones, setZones] = useState<{ value: string, label: string }[]>([]);
+  const [areas, setAreas] = useState<{ value: string, label: string }[]>([]);
+
+  const [selectedCityId, setSelectedCityId] = useState<number | null>(null);
+  const [selectedZoneId, setSelectedZoneId] = useState<number | null>(null);
+  const [selectedAreaId, setSelectedAreaId] = useState<number | null>(null);
+
+  const [loadingCities, setLoadingCities] = useState(false);
+  const [loadingZones, setLoadingZones] = useState(false);
+  const [loadingAreas, setLoadingAreas] = useState(false);
+
+  // Fetch Pathao Cities on mount
+  useEffect(() => {
+    async function fetchCities() {
+      setLoadingCities(true);
+      const res = await getPathaoCities();
+      if (res.success && res.data) {
+        const cityOptions = res.data.map((c: any) => ({ value: c.city_id.toString(), label: c.city_name }));
+        // Add Self Pickup as a special city option if needed, or just keep it separate.
+        // User asked to retain existing functionality, so I'll add "Self Pickup" as a special option.
+        setCities([
+          { value: "self-pickup", label: "Self Pickup" },
+          ...cityOptions
+        ]);
+      }
+      setLoadingCities(false);
+    }
+    fetchCities();
+  }, []);
+
+  // Fetch Zones when City changes
+  useEffect(() => {
+    async function fetchZones() {
+      if (!selectedCityId) {
+        setZones([]);
+        return;
+      }
+      setLoadingZones(true);
+      const res = await getPathaoZones(selectedCityId);
+      if (res.success && res.data) {
+        setZones(res.data.map((z: any) => ({ value: z.zone_id.toString(), label: z.zone_name })));
+      }
+      setLoadingZones(false);
+    }
+    fetchZones();
+  }, [selectedCityId]);
+
+  // Fetch Areas when Zone changes
+  useEffect(() => {
+    async function fetchAreas() {
+      if (!selectedZoneId) {
+        setAreas([]);
+        return;
+      }
+      setLoadingAreas(true);
+      const res = await getPathaoAreas(selectedZoneId);
+      if (res.success && res.data) {
+        setAreas(res.data.map((a: any) => ({ value: a.area_id.toString(), label: a.area_name })));
+      }
+      setLoadingAreas(false);
+    }
+    fetchAreas();
+  }, [selectedZoneId]);
 
   // Items in current order
   const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
@@ -160,17 +228,32 @@ export default function CreateOrderClient({ products, deliverySettings }: { prod
       return alert("Please fill in all customer details and add at least one item.");
     }
 
+    if (district !== "Self Pickup" && (!selectedCityId || !selectedZoneId || !selectedAreaId)) {
+      return alert("Please select a City, Zone, and Area for delivery.");
+    }
+
+    const cityName = cities.find(c => c.value === selectedCityId?.toString())?.label || "";
+    const zoneName = zones.find(z => z.value === selectedZoneId?.toString())?.label || "";
+    const areaName = areas.find(a => a.value === selectedAreaId?.toString())?.label || "";
+
+    const fullDeliveryAddress = district === "Self Pickup" 
+      ? address 
+      : `${address}, ${areaName}, ${zoneName}, ${cityName}`;
+
     startTransition(async () => {
       try {
         const res = await createAdminOrder({
           customerName,
           phone,
           district,
-          address,
+          address: fullDeliveryAddress,
           totalAmount,
           advancePaid,
           discountAmount: calculatedDiscount,
           remarks,
+          pathaoCityId: selectedCityId || undefined,
+          pathaoZoneId: selectedZoneId || undefined,
+          pathaoAreaId: selectedAreaId || undefined,
           items: orderItems.map(item => ({
             productId: item.productId,
             size: item.size,
@@ -229,28 +312,64 @@ export default function CreateOrderClient({ products, deliverySettings }: { prod
                 />
               </div>
             </div>
-            <div className="space-y-1.5">
-              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">District</label>
-              <div className="relative">
-                <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                <select
-                  value={district}
-                  onChange={e => setDistrict(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
-                >
-                  <option value="Dhaka">Dhaka (Inside)</option>
-                  <option value="Outside Dhaka">Outside Dhaka</option>
-                  <option value="Self Pickup">Self Pickup</option>
-                </select>
+            <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Select City *</label>
+                <CustomSelect
+                  options={cities}
+                  value={selectedCityId?.toString() || (district === "Self Pickup" ? "self-pickup" : "")}
+                  onChange={(val) => {
+                    if (val === "self-pickup") {
+                      setSelectedCityId(null);
+                      setSelectedZoneId(null);
+                      setSelectedAreaId(null);
+                      setDistrict("Self Pickup");
+                    } else {
+                      const id = parseInt(val);
+                      setSelectedCityId(id);
+                      setSelectedZoneId(null);
+                      setSelectedAreaId(null);
+                      const city = cities.find(c => c.value === val);
+                      if (city) setDistrict(city.label);
+                    }
+                  }}
+                  placeholder={loadingCities ? "Loading..." : "-- Select City --"}
+                  searchable={true}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Select Zone *</label>
+                <CustomSelect
+                  options={zones}
+                  value={selectedZoneId?.toString() || ""}
+                  onChange={(val) => {
+                    setSelectedZoneId(parseInt(val));
+                    setSelectedAreaId(null);
+                  }}
+                  placeholder={loadingZones ? "Loading..." : (selectedCityId ? "-- Select Zone --" : "First select city")}
+                  disabled={!selectedCityId || loadingZones}
+                  searchable={true}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Select Area *</label>
+                <CustomSelect
+                  options={areas}
+                  value={selectedAreaId?.toString() || ""}
+                  onChange={(val) => setSelectedAreaId(parseInt(val))}
+                  placeholder={loadingAreas ? "Loading..." : (selectedZoneId ? "-- Select Area --" : "First select zone")}
+                  disabled={!selectedZoneId || loadingAreas}
+                  searchable={true}
+                />
               </div>
             </div>
-            <div className="space-y-1.5 ">
-              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Full Address</label>
+            <div className="space-y-1.5 md:col-span-2">
+              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">House / Road / Flat No. / Landmark</label>
               <input
                 type="text"
                 value={address}
                 onChange={e => setAddress(e.target.value)}
-                placeholder="Village, Post, Thana, District"
+                placeholder="e.g., House 12, Road 4, Block C"
                 className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
               />
             </div>

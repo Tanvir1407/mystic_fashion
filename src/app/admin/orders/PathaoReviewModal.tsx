@@ -28,21 +28,23 @@ export default function PathaoReviewModal({ isOpen, onClose, selectedOrders, onS
 
   const handleConfirm = async () => {
     if (validOrders.length === 0) return;
-    
+
     setLoading(true);
     setError(null);
     try {
       const orderIds = validOrders.map((o) => o.id);
       const res = await bulkSendToPathaoAction(orderIds);
-      
+
       if (res.success) {
         onSuccess();
         router.refresh();
         onClose();
       } else {
+        console.log("Pathao Review Modal Error:", res.error);
         setError(res.error || "Failed to send some orders to Pathao.");
       }
     } catch (err: any) {
+      console.log("Pathao Review Modal Error:", err);
       setError(err.message || "An unexpected error occurred.");
     } finally {
       setLoading(false);
@@ -63,7 +65,7 @@ export default function PathaoReviewModal({ isOpen, onClose, selectedOrders, onS
               <p className="text-xs text-slate-500 font-medium">Only orders with PACKAGING status can be processed</p>
             </div>
           </div>
-          <button 
+          <button
             onClick={onClose}
             className="p-2 hover:bg-slate-200 rounded-full transition-colors text-slate-400 hover:text-slate-600"
           >

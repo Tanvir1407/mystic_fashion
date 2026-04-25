@@ -304,6 +304,9 @@ export async function updateOrderDetails(id: string, data: {
   address: string;
   advancePaid: number;
   discountAmount: number;
+  pathaoCityId?: number;
+  pathaoZoneId?: number;
+  pathaoAreaId?: number;
   items?: {
     id: string;
     productId: string;
@@ -334,9 +337,6 @@ export async function updateOrderDetails(id: string, data: {
             const oldItem = oldItemsMap.get(newItem.id);
             if (oldItem) {
                 // Determine if quantity changed on exact size
-                // (Note: For simplicity, we assume size doesn't change on existing item rows, 
-                // but just in case it did, wait, if they change product/size, it's safer to treat it as a new id).
-                // Our UI won't allow editing size, just quantity.
                 const diff = newItem.quantity - oldItem.quantity;
                 if (diff !== 0) {
                     await tx.productVariant.update({
@@ -417,6 +417,9 @@ export async function updateOrderDetails(id: string, data: {
           advancePaid: data.advancePaid,
           discountAmount: data.discountAmount,
           totalAmount: newTotalAmount, // Explicitly saved
+          pathaoCityId: data.pathaoCityId,
+          pathaoZoneId: data.pathaoZoneId,
+          pathaoAreaId: data.pathaoAreaId,
         },
       });
 
@@ -765,6 +768,9 @@ export async function createAdminOrder(data: {
   advancePaid: number;
   discountAmount: number;
   remarks?: string;
+  pathaoCityId?: number;
+  pathaoZoneId?: number;
+  pathaoAreaId?: number;
 }) {
   try {
     const order = await prisma.$transaction(async (tx) => {
@@ -782,6 +788,9 @@ export async function createAdminOrder(data: {
           advancePaid: data.advancePaid,
           discountAmount: data.discountAmount,
           remarks: data.remarks,
+          pathaoCityId: data.pathaoCityId,
+          pathaoZoneId: data.pathaoZoneId,
+          pathaoAreaId: data.pathaoAreaId,
           status: "CONFIRMED", // Admin orders are usually confirmed immediately
           items: {
             create: data.items.map((item) => ({
