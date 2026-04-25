@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { User, MapPin, Phone, Edit2, Check, X, Package, Wallet, StickyNote, Save, Minus, VerifiedIcon, Trash2, Plus } from "lucide-react";
+import { User, MapPin, Phone, Edit2, Check, X, Package, Wallet, StickyNote, Save, Minus, VerifiedIcon, Trash2, Plus, Copy } from "lucide-react";
 import { updateOrderDetails, updateOrderRemark } from "../../actions";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
@@ -23,7 +23,6 @@ export default function OrderDetailsClient({ order, deliverySettings, products =
     discountAmount: order.discountAmount || 0,
     items: order.items || [],
   });
-
   const [isAddingProduct, setIsAddingProduct] = useState(false);
   const [newProductData, setNewProductData] = useState({
     productId: "",
@@ -35,6 +34,14 @@ export default function OrderDetailsClient({ order, deliverySettings, products =
     printCost: 300,
   });
 
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = (text: string) => {
+    navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
   const handleSave = async () => {
     setLoading(true);
     const result = await updateOrderDetails(order.id, {
@@ -45,15 +52,15 @@ export default function OrderDetailsClient({ order, deliverySettings, products =
       advancePaid: formData.advancePaid,
       discountAmount: formData.discountAmount,
       items: formData.items.map((i: any) => ({
-         id: i.id,
-         productId: i.productId,
-         size: i.size,
-         quantity: i.quantity,
-         price: i.price,
-         requiresPrint: i.requiresPrint,
-         printName: i.printName,
-         printNumber: i.printNumber,
-         printCost: i.printCost
+        id: i.id,
+        productId: i.productId,
+        size: i.size,
+        quantity: i.quantity,
+        price: i.price,
+        requiresPrint: i.requiresPrint,
+        printName: i.printName,
+        printNumber: i.printNumber,
+        printCost: i.printCost
       }))
     });
     if (result.success) {
@@ -106,9 +113,9 @@ export default function OrderDetailsClient({ order, deliverySettings, products =
     let price = product.price;
     if (product.discount) {
       if (product.discount.discountType === "PERCENTAGE") {
-         price = price - (price * (product.discount.value / 100));
+        price = price - (price * (product.discount.value / 100));
       } else {
-         price = price - product.discount.value;
+        price = price - product.discount.value;
       }
     }
 
@@ -145,48 +152,79 @@ export default function OrderDetailsClient({ order, deliverySettings, products =
   return (
     <div className="space-y-2">
       {/* Action Header */}
-      <div className="flex justify-end">
-        {!isEditing ? (
-          <button
-            onClick={() => setIsEditing(true)}
-            className="flex items-center gap-2 px-4 py-2 text-xs font-bold bg-white border border-slate-200 rounded-lg text-slate-600 hover:text-indigo-600 hover:border-indigo-200 transition-all   group"
-          >
-            <Edit2 className="w-3.5 h-3.5 group-hover:scale-110 transition-transform" />
-            Edit Customer Details
-          </button>
-        ) : (
-          <div className="flex items-center gap-3">
-            <button
-              onClick={handleSave}
-              disabled={loading}
-              className="flex items-center gap-1.5 px-4 py-2 text-xs font-bold bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-all shadow-md disabled:opacity-50"
-            >
-              <Check className="w-3.5 h-3.5" />
-              {loading ? "Saving..." : "Save Changes"}
-            </button>
-            <button
-              onClick={() => {
-                setIsEditing(false);
-                setFormData({
-                  customerName: order.customerName,
-                  phone: order.phone,
-                  district: order.district,
-                  address: order.address,
-                  advancePaid: order.advancePaid || 0,
-                  discountAmount: order.discountAmount || 0,
-                  items: order.items || [],
-                });
-                setIsAddingProduct(false);
-              }}
-              disabled={loading}
-              className="flex items-center gap-1.5 px-4 py-2 text-xs font-bold bg-white border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50 transition-all   disabled:opacity-50"
-            >
-              <X className="w-3.5 h-3.5" />
-              Cancel
-            </button>
+      <div className="flex justify-between items-end">
+        {/* Pathao Consignment ID Section */}
+        <>{order.pathaoConsignmentId && (
+          <div>
+            <span className="block text-[10px] uppercase font-bold text-slate-400 mb-2 tracking-wider">
+              Pathao Consignment ID / Tracking Number
+            </span>
+            <div className="flex items-center justify-between bg-indigo-50 border border-indigo-100  p-1 px-2 rounded-lg group transition-all hover:bg-indigo-100/50">
+              <span className="text-sm font-black text-indigo-700 tracking-widest uppercase font-mono">
+                {order.pathaoConsignmentId}
+              </span>
+              <button
+                onClick={() => handleCopy(order.pathaoConsignmentId)}
+                className="p-1.5 bg-white border border-indigo-200 rounded-md text-indigo-500 hover:text-indigo-700 hover:border-indigo-300 transition-all shadow-sm active:scale-95"
+                title="Copy to Clipboard"
+              >
+                {copied ? (
+                  <Check className="w-3.5 h-3.5 text-emerald-500 animate-in zoom-in-50 duration-200" />
+                ) : (
+                  <Copy className="w-3.5 h-3.5" />
+                )}
+              </button>
+            </div>
           </div>
-        )}
+        )}</>
+        <div>
+          <div className="flex justify-end">
+            {!isEditing ? (
+              <button
+                onClick={() => setIsEditing(true)}
+                className="flex items-center gap-2 px-4 py-2 text-xs font-bold bg-white border border-slate-200 rounded-lg text-slate-600 hover:text-indigo-600 hover:border-indigo-200 transition-all   group"
+              >
+                <Edit2 className="w-3.5 h-3.5 group-hover:scale-110 transition-transform" />
+                Edit Customer Details
+              </button>
+            ) : (
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={handleSave}
+                  disabled={loading}
+                  className="flex items-center gap-1.5 px-4 py-2 text-xs font-bold bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-all shadow-md disabled:opacity-50"
+                >
+                  <Check className="w-3.5 h-3.5" />
+                  {loading ? "Saving..." : "Save Changes"}
+                </button>
+                <button
+                  onClick={() => {
+                    setIsEditing(false);
+                    setFormData({
+                      customerName: order.customerName,
+                      phone: order.phone,
+                      district: order.district,
+                      address: order.address,
+                      advancePaid: order.advancePaid || 0,
+                      discountAmount: order.discountAmount || 0,
+                      items: order.items || [],
+                    });
+                    setIsAddingProduct(false);
+                  }}
+                  disabled={loading}
+                  className="flex items-center gap-1.5 px-4 py-2 text-xs font-bold bg-white border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50 transition-all   disabled:opacity-50"
+                >
+                  <X className="w-3.5 h-3.5" />
+                  Cancel
+                </button>
+              </div>
+            )}
+
+
+          </div>
+        </div>
       </div>
+
 
       {/* Row 1: 50/50 Split */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-2 bg-white border border-slate-200 rounded-2xl p-6    transition-shadow duration-300">
@@ -272,6 +310,8 @@ export default function OrderDetailsClient({ order, deliverySettings, products =
                 </div>
               )}
             </div>
+
+
           </div>
         </div>
 
@@ -525,7 +565,7 @@ export default function OrderDetailsClient({ order, deliverySettings, products =
           {isEditing && (
             <div className="p-5 bg-slate-50 border-t border-slate-100">
               {!isAddingProduct ? (
-                 <button
+                <button
                   onClick={() => setIsAddingProduct(true)}
                   className="flex items-center justify-center gap-2 w-full py-3 border-2 border-dashed border-slate-300 rounded-xl text-slate-500 font-bold hover:bg-slate-100 hover:text-slate-800 hover:border-slate-400 transition-all"
                 >
@@ -539,76 +579,76 @@ export default function OrderDetailsClient({ order, deliverySettings, products =
                       <X className="w-4 h-4" />
                     </button>
                   </div>
-                  
+
                   <div className="space-y-3">
                     <div>
                       <label className="text-[10px] font-bold uppercase text-slate-500 block mb-1">Select Product</label>
                       <CustomSelect
                         options={products.map((p) => ({ value: p.id, label: p.name }))}
                         value={newProductData.productId}
-                        onChange={(val) => setNewProductData({...newProductData, productId: val})}
+                        onChange={(val) => setNewProductData({ ...newProductData, productId: val })}
                         searchable={true}
                       />
                     </div>
-                    
+
                     {newProductData.productId && (
                       <div>
                         <label className="text-[10px] font-bold uppercase text-slate-500 block mb-1">Select Size</label>
                         <CustomSelect
-                           options={(products.find(p => p.id === newProductData.productId)?.variants || []).map((v: any) => ({ value: v.size, label: `${v.size} (Stock: ${v.stock})` }))}
-                           value={newProductData.size}
-                           onChange={(val) => setNewProductData({...newProductData, size: val})}
+                          options={(products.find(p => p.id === newProductData.productId)?.variants || []).map((v: any) => ({ value: v.size, label: `${v.size} (Stock: ${v.stock})` }))}
+                          value={newProductData.size}
+                          onChange={(val) => setNewProductData({ ...newProductData, size: val })}
                         />
                       </div>
                     )}
-                    
+
                     <div className="flex items-center gap-4">
                       <div>
                         <label className="text-[10px] font-bold uppercase text-slate-500 block mb-1">Quantity</label>
                         <div className="flex items-center bg-slate-100 rounded border border-slate-200 overflow-hidden">
-                           <button onClick={() => setNewProductData({...newProductData, quantity: Math.max(1, newProductData.quantity - 1)})} className="px-3 py-1.5 hover:bg-slate-200 text-slate-600 font-bold">-</button>
-                           <span className="text-xs bg-white px-4 py-1.5 font-bold">{newProductData.quantity}</span>
-                           <button onClick={() => setNewProductData({...newProductData, quantity: newProductData.quantity + 1})} className="px-3 py-1.5 hover:bg-slate-200 text-slate-600 font-bold">+</button>
+                          <button onClick={() => setNewProductData({ ...newProductData, quantity: Math.max(1, newProductData.quantity - 1) })} className="px-3 py-1.5 hover:bg-slate-200 text-slate-600 font-bold">-</button>
+                          <span className="text-xs bg-white px-4 py-1.5 font-bold">{newProductData.quantity}</span>
+                          <button onClick={() => setNewProductData({ ...newProductData, quantity: newProductData.quantity + 1 })} className="px-3 py-1.5 hover:bg-slate-200 text-slate-600 font-bold">+</button>
                         </div>
                       </div>
                     </div>
-                    
+
                     <div className="p-3 bg-indigo-50/50 border border-indigo-100 rounded-lg">
                       <label className="flex items-center gap-2 cursor-pointer">
-                        <input 
-                          type="checkbox" 
-                          checked={newProductData.requiresPrint} 
-                          onChange={(e) => setNewProductData({...newProductData, requiresPrint: e.target.checked})}
+                        <input
+                          type="checkbox"
+                          checked={newProductData.requiresPrint}
+                          onChange={(e) => setNewProductData({ ...newProductData, requiresPrint: e.target.checked })}
                           className="rounded text-indigo-600 focus:ring-indigo-500 scale-110"
                         />
                         <span className="text-xs font-bold text-slate-800">Add Jersey Customization (Name & Number)</span>
                       </label>
-                      
+
                       {newProductData.requiresPrint && (
                         <div className="mt-3 grid grid-cols-2 gap-3">
                           <div>
-                            <input 
-                              type="text" 
-                              placeholder="Print Name" 
+                            <input
+                              type="text"
+                              placeholder="Print Name"
                               value={newProductData.printName}
-                              onChange={(e) => setNewProductData({...newProductData, printName: e.target.value})}
+                              onChange={(e) => setNewProductData({ ...newProductData, printName: e.target.value })}
                               className="w-full text-xs px-3 py-2 border border-slate-200 rounded focus:ring-2 focus:ring-indigo-500 focus:outline-none"
                             />
                           </div>
                           <div>
-                            <input 
-                              type="text" 
-                              placeholder="Number" 
+                            <input
+                              type="text"
+                              placeholder="Number"
                               value={newProductData.printNumber}
-                              onChange={(e) => setNewProductData({...newProductData, printNumber: e.target.value})}
+                              onChange={(e) => setNewProductData({ ...newProductData, printNumber: e.target.value })}
                               className="w-full text-xs px-3 py-2 border border-slate-200 rounded focus:ring-2 focus:ring-indigo-500 focus:outline-none"
                             />
                           </div>
                         </div>
                       )}
                     </div>
-                    
-                    <button 
+
+                    <button
                       onClick={handleAddNewProduct}
                       className="w-full py-2 bg-slate-900 text-white font-bold text-xs rounded-lg hover:bg-slate-800 transition-colors shadow-sm mt-4 inline-flex items-center justify-center gap-2"
                     >

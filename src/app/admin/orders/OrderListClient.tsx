@@ -145,7 +145,6 @@ export default function OrderListClient({
 
   const selectedOrdersToPrint = filteredOrders.filter((o) => selectedIds.has(o.id));
 
-  console.log(filteredOrders)
   return (
     <div className="flex flex-col gap-6">
       <InvoicePrintView orders={selectedOrdersToPrint} />
@@ -375,7 +374,7 @@ export default function OrderListClient({
         message={alert.message}
         type={alert.type}
       />
-      <PathaoReviewModal 
+      <PathaoReviewModal
         isOpen={showPathaoModal}
         onClose={() => setShowPathaoModal(false)}
         selectedOrders={filteredOrders.filter(o => selectedIds.has(o.id))}
@@ -385,7 +384,7 @@ export default function OrderListClient({
             isOpen: true,
             title: "Success",
             message: "Successfully processed Pathao consignments.",
-            type: "warning" 
+            type: "warning"
           });
         }}
       />
