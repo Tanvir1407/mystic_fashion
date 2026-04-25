@@ -23,6 +23,7 @@ export default function ProductFormClient({
   const [images, setImages] = useState<string[]>(initialData?.images || []);
   const [isUploading, setIsUploading] = useState(false);
   const [isFeatured, setIsFeatured] = useState(initialData?.isFeatured || false);
+  const [isPublished, setIsPublished] = useState(initialData?.isPublished ?? true);
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -106,6 +107,7 @@ export default function ProductFormClient({
       sizeChartId: sizeChartId || undefined,
       discountId: discountId || null,
       isFeatured,
+      isPublished,
       variants: variants.map(({ size, stock }) => ({ size: size.trim(), stock }))
     };
 
@@ -233,18 +235,34 @@ export default function ProductFormClient({
             />
           </div>
 
-          <div className="flex items-center gap-3 p-4 bg-amber-50 border border-amber-100 rounded-lg col-span-1 md:col-span-2">
-            <input
-              type="checkbox"
-              id="isFeatured"
-              checked={isFeatured}
-              onChange={(e) => setIsFeatured(e.target.checked)}
-              className="w-5 h-5 text-amber-600 border-amber-300 rounded focus:ring-amber-500 cursor-pointer"
-            />
-            <label htmlFor="isFeatured" className="flex flex-col cursor-pointer">
-              <span className="text-sm font-bold text-amber-900">Featured Product</span>
-              <span className="text-xs text-amber-700">Pin this product to the top of the homepage collection</span>
-            </label>
+          <div className="col-span-2 flex justify-between gap-4">
+            <div className="flex items-center gap-3 p-4 bg-amber-50 border border-amber-100 rounded-lg col-span-1 md:col-span-2">
+              <input
+                type="checkbox"
+                id="isFeatured"
+                checked={isFeatured}
+                onChange={(e) => setIsFeatured(e.target.checked)}
+                className="w-5 h-5 text-amber-600 border-amber-300 rounded focus:ring-amber-500 cursor-pointer"
+              />
+              <label htmlFor="isFeatured" className="flex flex-col cursor-pointer">
+                <span className="text-sm font-bold text-amber-900">Featured Product</span>
+                <span className="text-xs text-amber-700">Pin this product to the top of the homepage collection</span>
+              </label>
+            </div>
+
+            <div className="flex items-center gap-3 p-4 bg-emerald-50 border border-emerald-100 rounded-lg col-span-1 md:col-span-2">
+              <input
+                type="checkbox"
+                id="isPublished"
+                checked={isPublished}
+                onChange={(e) => setIsPublished(e.target.checked)}
+                className="w-5 h-5 text-emerald-600 border-emerald-300 rounded focus:ring-emerald-500 cursor-pointer"
+              />
+              <label htmlFor="isPublished" className="flex flex-col cursor-pointer">
+                <span className="text-sm font-bold text-emerald-900">Publish to Storefront</span>
+                <span className="text-xs text-emerald-700">Make this product visible to customers on the public website</span>
+              </label>
+            </div>
           </div>
 
           <div className="col-span-1 md:col-span-2">

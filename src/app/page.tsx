@@ -14,6 +14,7 @@ export default async function Home({ searchParams }: { searchParams?: { limit?: 
 
   const [productsRes, totalCountRes, heroSlidesRes, footerData] = await Promise.all([
     prisma.product.findMany({
+      where: { isPublished: true },
       take: limit,
       orderBy: [
         { isFeatured: "desc" },
@@ -21,7 +22,7 @@ export default async function Home({ searchParams }: { searchParams?: { limit?: 
       ],
       include: { discount: true, variants: true }
     }).catch(e => { console.error(e); return []; }),
-    prisma.product.count().catch(() => 0),
+    prisma.product.count({ where: { isPublished: true } }).catch(() => 0),
     prisma.heroSlide.findMany({
       where: { active: true },
       orderBy: { sortOrder: "asc" }

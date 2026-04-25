@@ -5,10 +5,13 @@ import Footer from "@/components/Footer";
 import SidebarCart from "@/components/SidebarCart";
 import prisma from "@/lib/prisma";
 import { getFooterData } from "@/lib/footer";
+import { cookies } from 'next/headers';
 
 export const dynamic = "force-dynamic";
 
 export default async function ProductPage({ params }: { params: { id: string } }) {
+  const isAdmin = cookies().get("admin-auth")?.value === "true";
+
   const [product, delivery, footerData] = await Promise.all([
     prisma.product.findUnique({
       where: { id: params.id },
@@ -24,7 +27,7 @@ export default async function ProductPage({ params }: { params: { id: string } }
     getFooterData()
   ]);
 
-  if (!product) {
+  if (!product || (!product.isPublished && !isAdmin)) {
     notFound();
   }
 

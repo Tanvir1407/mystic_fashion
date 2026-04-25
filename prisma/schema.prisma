@@ -85,6 +85,7 @@ model Product {
   team          String
   category      String
   isFeatured    Boolean  @default(false)
+  isPublished   Boolean  @default(true)
   
   sizeChartId   String?
   sizeChart     SizeChart? @relation(fields: [sizeChartId], references: [id])

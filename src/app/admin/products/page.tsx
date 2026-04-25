@@ -1,7 +1,7 @@
 import prisma from "@/lib/prisma";
 import Link from "next/link";
 import { deleteProduct } from "../actions";
-import { Plus, Edit2, Filter, Star } from "lucide-react";
+import { Plus, Edit2, Filter, Star, Eye, EyeOff } from "lucide-react";
 import { ProductDeleteButton } from "./ProductDeleteButton";
 
 import { AdminPagination } from "@/components/AdminPagination";
@@ -110,6 +110,17 @@ export default async function AdminProductsPage({ searchParams }: { searchParams
                             <div className="flex items-center gap-1 px-1.5 py-0.5 bg-amber-100 text-amber-700 rounded text-[10px] font-bold uppercase tracking-wider border border-amber-200">
                               <Star className="w-2.5 h-2.5 fill-amber-500 text-amber-500" />
                               Featured
+                            </div>
+                          )}
+                          {product.isPublished ? (
+                            <div className="flex items-center gap-1 px-1.5 py-0.5 bg-emerald-100 text-emerald-700 rounded text-[10px] font-bold uppercase tracking-wider border border-emerald-200">
+                              <Eye className="w-2.5 h-2.5 text-emerald-500" />
+                              Published
+                            </div>
+                          ) : (
+                            <div className="flex items-center gap-1 px-1.5 py-0.5 bg-slate-100 text-slate-600 rounded text-[10px] font-bold uppercase tracking-wider border border-slate-200">
+                              <EyeOff className="w-2.5 h-2.5 text-slate-500" />
+                              Hidden
                             </div>
                           )}
                         </div>

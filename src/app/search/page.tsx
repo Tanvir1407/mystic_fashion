@@ -17,6 +17,7 @@ export default async function SearchPage({
   const [productsRes, footerData] = await Promise.all([
     query ? prisma.product.findMany({
       where: {
+        isPublished: true,
         OR: [
           { name: { contains: query, mode: 'insensitive' } },
           { team: { contains: query, mode: 'insensitive' } },
