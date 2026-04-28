@@ -369,6 +369,33 @@ class PathaoClient {
       throw error;
     }
   }
+  /**
+   * Fetches the order info / tracking status by consignment ID.
+   */
+  async getOrderInfo(consignmentId: string): Promise<any> {
+    const token = await this.getValidAccessToken();
+    const endpoint = `${this.baseUrl}/aladdin/api/v1/orders/${consignmentId}/info`;
+
+    try {
+      const response = await fetch(endpoint, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Accept': 'application/json',
+        },
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        console.error('[PathaoClient] Get Order Info API Error:', data);
+        throw new Error(data.message || 'Failed to fetch Pathao order info');
+      }
+
+      return data.data;
+    } catch (error) {
+      console.error('[PathaoClient] getOrderInfo Error:', error);
+      throw error;
+    }
+  }
 }
 
 // Export a singleton instance

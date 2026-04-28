@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { Search, Menu, X } from "lucide-react";
+import { Search, Menu, X, Phone, Truck } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useCartStore } from "../store/cartStore";
 
@@ -100,6 +100,13 @@ export default function Header() {
 
           {/* Right: Utilities */}
           <div className="flex justify-end items-center gap-2 md:gap-4 lg:gap-6">
+            <Link
+              href="/track"
+              className="hidden md:flex relative p-2 text-primary rounded-full transition-colors items-center justify-center group"
+              title="Track Order"
+            >
+              <Truck className="w-[1.5rem] h-[1.5rem] group-hover:scale-110 transition-transform" />
+            </Link>
             <button
               onClick={toggleCart}
               className="hidden md:flex relative p-2 text-foreground rounded-full transition-colors items-center justify-center group"
@@ -142,16 +149,16 @@ export default function Header() {
                 { label: "FAQ", href: "/faq" },
                 { label: "Privacy Policy", href: "/privacy" },
                 { label: "Terms & Conditions", href: "/terms" },
+                { label: "Track Order", href: "/track" },
               ].map((link) => (
                 <Link
                   key={link.href}
                   href={link.href}
                   onClick={() => setIsMobileMenuOpen(false)}
-                  className={`block px-4 py-3 rounded-lg text-lg font-bold transition-colors ${
-                    pathname === link.href 
-                      ? "bg-maroon/5 text-maroon" 
-                      : "text-slate-600 hover:bg-slate-50"
-                  }`}
+                  className={`block px-4 py-3 rounded-lg text-lg font-bold transition-colors ${pathname === link.href
+                    ? "bg-maroon/5 text-maroon"
+                    : "text-slate-600 hover:bg-slate-50"
+                    }`}
                 >
                   {link.label}
                 </Link>
