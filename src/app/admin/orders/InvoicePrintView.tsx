@@ -4,6 +4,7 @@
 "use client";
 
 import React from "react";
+import { formatDate } from "@/utils/formatDate";
 
 interface OrderItem {
   id: string;
@@ -36,14 +37,7 @@ interface Order {
 export default function InvoicePrintView({ orders }: { orders: Order[] }) {
   if (!orders || orders.length === 0) return null;
 
-  // Function to format date as DD-MM-YY
-  const formatDate = (dateString: string | Date) => {
-    const d = new Date(dateString);
-    const day = String(d.getDate()).padStart(2, "0");
-    const month = String(d.getMonth() + 1).padStart(2, "0");
-    const year = String(d.getFullYear()).slice(-2);
-    return `${day}-${month}-${year}`;
-  };
+
 
   return (
     <div className="hidden print:block text-black">

@@ -8,6 +8,7 @@ import { Eye, Trash2 } from "lucide-react";
 import { deleteOrder } from "../actions";
 import { useRouter } from "next/navigation";
 import { StatusAlertModal } from "@/components/StatusAlertModal";
+import { formatDate } from "@/utils/formatDate";
 
 export default function OrderRowClient({
   order,
@@ -98,24 +99,30 @@ export default function OrderRowClient({
           className="rounded border-slate-300 text-indigo-600 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 cursor-pointer"
         />
       </td>
-      <td className="px-6 py-4">
-        <span className="font-mono text-[10px] font-bold text-slate-400 bg-slate-50 px-2 py-1 rounded border border-slate-100 uppercase tracking-tighter">
-          {order.id}
-        </span>
+      <td className="px-2 py-4">
+
+        <div className="flex flex-col">
+          <span className="font-mono text-[12px] font-bold text-slate-900 tracking-tighter">
+            {order.id}
+
+          </span>
+          <span className="text-xs text-slate-500 mt-0.5">{formatDate(order.createdAt)}</span>
+        </div>
+
       </td>
-      <td className="px-6 py-4">
+      <td className="px-2 py-4">
         <div className="flex flex-col">
           <span className="font-medium text-sm text-slate-900">{order.customerName}</span>
           <span className="text-xs text-slate-500 mt-0.5">{order.phone}</span>
         </div>
       </td>
-      <td className="px-6 py-4">
+      <td className="px-2 py-4">
         <div className="flex flex-col items-start gap-1">
           <span className="text-sm text-slate-600 max-w-[250px] truncate" title={order.address}>{order.address}</span>
           <span className="bg-slate-100 text-slate-600 px-2 py-0.5 rounded text-[10px] uppercase font-bold tracking-wider">{order.district}</span>
         </div>
       </td>
-      <td className="px-6 py-4">
+      <td className="px-2 py-4">
         <div className="flex flex-col gap-0.5">
           {items.map((item) => (
             <div key={item.id} className="text-xs font-medium text-slate-600">
@@ -124,16 +131,16 @@ export default function OrderRowClient({
           ))}
         </div>
       </td>
-      <td className="px-6 py-4 text-sm text-slate-900 font-mono font-medium">
+      <td className="px-2 py-4 text-sm text-slate-900 font-mono font-medium">
         ৳{order.advancePaid.toLocaleString("en-IN")}
       </td>
-      <td className="px-6 py-4 text-sm text-red-600 font-mono font-medium">
+      <td className="px-2 py-4 text-sm text-red-600 font-mono font-medium">
         ৳{(order.totalAmount - order.advancePaid).toLocaleString("en-IN")}
       </td>
-      <td className="px-6 py-4 text-sm text-slate-900 font-mono font-medium">
+      <td className="px-2 py-4 text-sm text-slate-900 font-mono font-medium">
         ৳{order.totalAmount.toLocaleString("en-IN")}
       </td>
-      <td className="px-6 py-4 text-right">
+      <td className="px-2 py-4 text-right">
         <select
           value={status}
           onChange={handleStatusChange}
@@ -154,7 +161,7 @@ export default function OrderRowClient({
           <option value="CANCELLED">Cancelled</option>
         </select>
       </td>
-      <td className="px-6 py-4 text-right">
+      <td className="px-2 py-4 text-right">
         <div className="flex items-center justify-end gap-2">
           <Link
             href={`/admin/orders/${order.id}`}
