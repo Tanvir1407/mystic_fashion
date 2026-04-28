@@ -102,7 +102,7 @@ export default function OrderRowClient({
       <td className="px-2 py-4">
 
         <div className="flex flex-col">
-          <span className="font-mono text-[12px] font-bold text-slate-900 tracking-tighter">
+          <span className="font-medium text-sm text-slate-900">
             {order.id}
 
           </span>
