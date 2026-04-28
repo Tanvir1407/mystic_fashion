@@ -1,9 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { adminLogout } from "./actions";
-import { useState } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Package, ShoppingCart, LogOut, Search, Bell, User, Users, Truck, Settings, ImagePlay, Tag, AlertTriangle, TicketIcon, Banknote, Menu, X } from "lucide-react";
 
 const NAV_LINKS = [
@@ -25,8 +25,24 @@ const NAV_LINKS = [
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const router = useRouter();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const filteredLinks = useMemo(() => {
+    if (!searchQuery.trim()) return [];
+    return NAV_LINKS.filter(link => 
+      link.label.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+  }, [searchQuery]);
+
+  useEffect(() => {
+    if (searchQuery && filteredLinks.length === 1) {
+      router.push(filteredLinks[0].href);
+      setSearchQuery("");
+    }
+  }, [searchQuery, filteredLinks, router]);
 
   // Do not show sidebar on the login page
   if (pathname === "/admin/login") {
@@ -124,8 +140,32 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               <input
                 type="text"
                 placeholder="Search resources..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-md text-sm focus:border-slate-300 focus:bg-white focus:ring-0 transition-colors"
               />
+              {searchQuery && filteredLinks.length > 1 && (
+                <div className="absolute top-full mt-2 left-0 w-full bg-white border border-slate-200 shadow-lg rounded-md overflow-hidden z-50">
+                  <div className="max-h-64 overflow-y-auto py-1">
+                    {filteredLinks.map(link => (
+                      <Link
+                        key={link.href}
+                        href={link.href}
+                        onClick={() => setSearchQuery("")}
+                        className="flex items-center gap-3 px-4 py-2 hover:bg-slate-50 text-sm font-medium text-slate-700 transition-colors"
+                      >
+                        {link.icon}
+                        {link.label}
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {searchQuery && filteredLinks.length === 0 && (
+                <div className="absolute top-full mt-2 left-0 w-full bg-white border border-slate-200 shadow-lg rounded-md overflow-hidden z-50 p-4 text-sm text-slate-500 text-center">
+                  No resources found matching "{searchQuery}"
+                </div>
+              )}
             </div>
           </div>
           <div className="flex items-center gap-4">
