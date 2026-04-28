@@ -6,9 +6,27 @@ import { adminLogout } from "./actions";
 import { useState } from "react";
 import { Package, ShoppingCart, LogOut, Search, Bell, User, Users, Truck, Settings, ImagePlay, Tag, AlertTriangle, TicketIcon, Banknote, Menu, X } from "lucide-react";
 
+const NAV_LINKS = [
+  { href: "/admin", icon: <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-layout-dashboard w-4 h-4 shrink-0"><rect width="7" height="9" x="3" y="3" rx="1" /><rect width="7" height="5" x="14" y="3" rx="1" /><rect width="7" height="9" x="14" y="12" rx="1" /><rect width="7" height="5" x="3" y="16" rx="1" /></svg>, label: "Dashboard", exact: true },
+  { href: "/admin/products", icon: <Package className="w-4 h-4 shrink-0" />, label: "Products" },
+  { href: "/admin/orders", icon: <ShoppingCart className="w-4 h-4 shrink-0" />, label: "Orders" },
+  { href: "/admin/purchases", icon: <Truck className="w-4 h-4 shrink-0" />, label: "Purchases" },
+  { href: "/admin/accounting", icon: <Banknote className="w-4 h-4 shrink-0" />, label: "Accounting" },
+  { href: "/admin/discounts", icon: <Tag className="w-4 h-4 shrink-0" />, label: "Discounts" },
+  { href: "/admin/coupons", icon: <TicketIcon className="w-4 h-4 shrink-0" />, label: "Coupons" },
+  { href: "/admin/size-charts", icon: <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-ruler w-4 h-4 shrink-0"><path d="M21.3 15.3a2.4 2.4 0 0 1 0 3.4l-2.6 2.6a2.4 2.4 0 0 1-3.4 0L2.7 8.7a2.41 2.41 0 0 1 0-3.4l2.6-2.6a2.41 2.41 0 0 1 3.4 0Z" /><path d="m14.5 12.5 2-2" /><path d="m11.5 9.5 2-2" /><path d="m8.5 6.5 2-2" /><path d="m17.5 15.5 2-2" /></svg>, label: "Size Charts" },
+  { href: "/admin/hero", icon: <ImagePlay className="w-4 h-4 shrink-0" />, label: "Hero Slides" },
+  { href: "/admin/staff", icon: <Users className="w-4 h-4 shrink-0" />, label: "Staff" },
+  { href: "/admin/inventory", icon: <AlertTriangle className="w-4 h-4 shrink-0 text-amber-500" />, label: "Inventory Alerts" },
+  { href: "/admin/settings", icon: <Settings className="w-4 h-4 shrink-0" />, label: "General Settings", exact: true },
+  { href: "/admin/pages", icon: <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-file-text w-4 h-4 shrink-0"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" /><path d="M14 2v4a2 2 0 0 0 2 2h4" /><path d="M10 9H8" /><path d="M16 13H8" /><path d="M16 17H8" /></svg>, label: "Content Pages" },
+  { href: "/admin/settings/footer", icon: <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-panel-bottom w-4 h-4 shrink-0"><rect width="18" height="18" x="3" y="3" rx="2" /><path d="M3 15h18" /></svg>, label: "Footer Settings" },
+];
+
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(false);
 
   // Do not show sidebar on the login page
   if (pathname === "/admin/login") {
@@ -26,13 +44,13 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       )}
 
       {/* Sidebar - Dark Enterprise Theme */}
-      <aside className={`fixed inset-y-0 left-0 z-50 w-64 bg-slate-900 border-r border-slate-800 text-slate-300 flex flex-col flex-shrink-0 shadow-lg transform transition-transform duration-300 ease-in-out md:relative md:translate-x-0 print:hidden ${
-        isSidebarOpen ? "translate-x-0" : "-translate-x-full"
-      }`}>
-        <div className="h-16 flex items-center justify-between px-6 border-b border-slate-800">
-          <Link href="/admin" className="font-bold text-lg tracking-tight text-white flex items-center gap-3">
-            <div className="w-8 h-8 bg-gold rounded-md flex items-center justify-center text-slate-900 font-black shadow-sm">M</div>
-            Mystic Admin
+      <aside className={`fixed inset-y-0 left-0 z-50 bg-slate-900 border-r border-slate-800 text-slate-300 flex flex-col flex-shrink-0 shadow-lg transform transition-all duration-300 ease-in-out print:hidden overflow-x-hidden ${
+        isSidebarOpen ? "translate-x-0 w-64" : "-translate-x-full w-64"
+      } md:relative md:translate-x-0 ${isCollapsed ? "md:w-[4.5rem]" : "md:w-64"}`}>
+        <div className="h-16 flex items-center justify-between px-5 border-b border-slate-800 shrink-0">
+          <Link href="/admin" className="font-bold text-lg tracking-tight text-white flex items-center gap-3 overflow-hidden whitespace-nowrap">
+            <div className="w-8 h-8 shrink-0 bg-gold rounded-md flex items-center justify-center text-slate-900 font-black shadow-sm">M</div>
+            <span className={`transition-opacity duration-300 ${isCollapsed ? "opacity-0" : "opacity-100"}`}>Mystic Admin</span>
           </Link>
           <button 
             className="md:hidden text-slate-400 hover:text-white transition-colors"
@@ -42,167 +60,44 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           </button>
         </div>
 
-        <div className="px-5 py-6 font-semibold text-xs tracking-wider text-slate-500 uppercase">
+        <div className={`px-5 py-6 font-semibold text-[10px] tracking-wider text-slate-500 uppercase transition-all duration-300 whitespace-nowrap ${isCollapsed ? "opacity-0 h-0 py-0 overflow-hidden" : "opacity-100"}`}>
           Overview
         </div>
-        <nav className="flex-1 px-3 space-y-1">
-          <Link
-            href="/admin"
-            className={`flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-colors ${pathname === "/admin"
-              ? "bg-maroon text-white shadow-md shadow-maroon/20"
-              : "hover:bg-slate-800 hover:text-white"
-              }`}
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-layout-dashboard"><rect width="7" height="9" x="3" y="3" rx="1" /><rect width="7" height="5" x="14" y="3" rx="1" /><rect width="7" height="9" x="14" y="12" rx="1" /><rect width="7" height="5" x="3" y="16" rx="1" /></svg>
-            Dashboard
-          </Link>
-          <Link
-            href="/admin/products"
-            className={`flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-colors ${pathname.includes("/admin/products")
-              ? "bg-maroon text-white shadow-md shadow-maroon/20"
-              : "hover:bg-slate-800 hover:text-white"
-              }`}
-          >
-            <Package className="w-4 h-4" />
-            Products
-          </Link>
-
-          <Link
-            href="/admin/orders"
-            className={`flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-colors ${pathname.includes("/admin/orders")
-              ? "bg-maroon text-white shadow-md shadow-maroon/20"
-              : "hover:bg-slate-800 hover:text-white"
-              }`}
-          >
-            <ShoppingCart className="w-4 h-4" />
-            Orders
-          </Link>
-          <Link
-            href="/admin/purchases"
-            className={`flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-colors ${pathname.includes("/admin/purchases")
-              ? "bg-maroon text-white shadow-md shadow-maroon/20"
-              : "hover:bg-slate-800 hover:text-white"
-              }`}
-          >
-            <Truck className="w-4 h-4" />
-            Purchases
-          </Link>
-          <Link
-            href="/admin/accounting"
-            className={`flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-colors ${pathname.includes("/admin/accounting")
-              ? "bg-maroon text-white shadow-md shadow-maroon/20"
-              : "hover:bg-slate-800 hover:text-white"
-              }`}
-          >
-            <Banknote className="w-4 h-4" />
-            Accounting
-          </Link>
-          <Link
-            href="/admin/discounts"
-            className={`flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-colors ${pathname.includes("/admin/discounts")
-              ? "bg-maroon text-white shadow-md shadow-maroon/20"
-              : "hover:bg-slate-800 hover:text-white"
-              }`}
-          >
-            <Tag className="w-4 h-4" />
-            Discounts
-          </Link>
-          <Link
-            href="/admin/coupons"
-            className={`flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-colors ${pathname.includes("/admin/discounts")
-              ? "bg-maroon text-white shadow-md shadow-maroon/20"
-              : "hover:bg-slate-800 hover:text-white"
-              }`}
-          >
-            <TicketIcon className="w-4 h-4" />
-            Coupons
-          </Link>
-          <Link
-            href="/admin/size-charts"
-            className={`flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-colors ${pathname.includes("/admin/size-charts")
-              ? "bg-maroon text-white shadow-md shadow-maroon/20"
-              : "hover:bg-slate-800 hover:text-white"
-              }`}
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-ruler"><path d="M21.3 15.3a2.4 2.4 0 0 1 0 3.4l-2.6 2.6a2.4 2.4 0 0 1-3.4 0L2.7 8.7a2.41 2.41 0 0 1 0-3.4l2.6-2.6a2.41 2.41 0 0 1 3.4 0Z" /><path d="m14.5 12.5 2-2" /><path d="m11.5 9.5 2-2" /><path d="m8.5 6.5 2-2" /><path d="m17.5 15.5 2-2" /></svg>
-            Size Charts
-          </Link>
-          <Link
-            href="/admin/hero"
-            className={`flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-colors ${pathname.includes("/admin/hero")
-              ? "bg-maroon text-white shadow-md shadow-maroon/20"
-              : "hover:bg-slate-800 hover:text-white"
-              }`}
-          >
-            <ImagePlay className="w-4 h-4" />
-            Hero Slides
-          </Link>
-
-          <Link
-            href="/admin/staff"
-            className={`flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-colors ${pathname.includes("/admin/staff")
-              ? "bg-maroon text-white shadow-md shadow-maroon/20"
-              : "hover:bg-slate-800 hover:text-white"
-              }`}
-          >
-            <Users className="w-4 h-4" />
-            Staff
-          </Link>
-
-          <Link
-            href="/admin/inventory"
-            className={`flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-colors ${pathname.includes("/admin/inventory")
-              ? "bg-maroon text-white shadow-md shadow-maroon/20"
-              : "hover:bg-slate-800 hover:text-white"
-              }`}
-          >
-            <AlertTriangle className="w-4 h-4 text-amber-500" />
-            Inventory Alerts
-          </Link>
-
-          <Link
-            href="/admin/settings"
-            className={`flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-colors ${pathname === "/admin/settings"
-              ? "bg-maroon text-white shadow-md shadow-maroon/20"
-              : "hover:bg-slate-800 hover:text-white"
-              }`}
-          >
-            <Settings className="w-4 h-4" />
-            General Settings
-          </Link>
-
-
-          <Link
-            href="/admin/pages"
-            className={`flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-colors ${pathname.includes("/admin/pages")
-              ? "bg-maroon text-white shadow-md shadow-maroon/20"
-              : "hover:bg-slate-800 hover:text-white"
-              }`}
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-file-text"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" /><path d="M14 2v4a2 2 0 0 0 2 2h4" /><path d="M10 9H8" /><path d="M16 13H8" /><path d="M16 17H8" /></svg>
-            Content Pages
-          </Link>
-
-          <Link
-            href="/admin/settings/footer"
-            className={`flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-colors ${pathname.includes("/admin/settings/footer")
-              ? "bg-maroon text-white shadow-md shadow-maroon/20"
-              : "hover:bg-slate-800 hover:text-white"
-              }`}
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-panel-bottom"><rect width="18" height="18" x="3" y="3" rx="2" /><path d="M3 15h18" /></svg>
-            Footer Settings
-          </Link>
-
+        <div className={`md:hidden px-5 py-6 font-semibold text-[10px] tracking-wider text-slate-500 uppercase transition-all duration-300 whitespace-nowrap ${!isCollapsed ? "hidden" : "block opacity-100"}`}>
+          Overview
+        </div>
+        <nav className="flex-1 px-3 space-y-1 overflow-y-auto overflow-x-hidden scrollbar-thin scrollbar-thumb-slate-700">
+          {NAV_LINKS.map((link) => {
+            const isActive = link.exact ? pathname === link.href : pathname.includes(link.href);
+            return (
+              <Link
+                key={link.href}
+                href={link.href}
+                title={isCollapsed ? link.label : undefined}
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-colors whitespace-nowrap ${isActive
+                  ? "bg-maroon text-white shadow-md shadow-maroon/20"
+                  : "hover:bg-slate-800 hover:text-white"
+                  }`}
+              >
+                {link.icon}
+                <span className={`transition-opacity duration-300 ${isCollapsed ? "opacity-0 md:w-0 overflow-hidden" : "opacity-100"}`}>
+                  {link.label}
+                </span>
+              </Link>
+            );
+          })}
         </nav>
 
-        <div className="p-4 border-t border-slate-800">
+        <div className="p-4 border-t border-slate-800 shrink-0">
           <button
             onClick={() => adminLogout()}
-            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-md text-sm font-medium text-slate-400 hover:bg-slate-800 hover:text-white transition-colors"
+            title={isCollapsed ? "Sign Out" : undefined}
+            className={`w-full flex items-center justify-center gap-3 px-4 py-2.5 rounded-md text-sm font-medium text-slate-400 hover:bg-slate-800 hover:text-white transition-colors overflow-hidden whitespace-nowrap`}
           >
-            <LogOut className="w-4 h-4" />
-            Sign Out
+            <LogOut className="w-4 h-4 shrink-0" />
+            <span className={`transition-opacity duration-300 ${isCollapsed ? "opacity-0 md:w-0 md:hidden" : "opacity-100"}`}>
+              Sign Out
+            </span>
           </button>
         </div>
       </aside>
@@ -215,6 +110,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             <button 
               className="p-2 -ml-2 text-slate-600 hover:bg-slate-100 rounded-md md:hidden transition-colors"
               onClick={() => setIsSidebarOpen(true)}
+            >
+              <Menu className="w-6 h-6" />
+            </button>
+            <button 
+              className="p-2 -ml-2 text-slate-600 hover:bg-slate-100 rounded-md hidden md:block transition-colors"
+              onClick={() => setIsCollapsed(!isCollapsed)}
             >
               <Menu className="w-6 h-6" />
             </button>
