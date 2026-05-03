@@ -708,6 +708,24 @@ export async function updateInventorySettings(lowStockThreshold: number) {
   revalidatePath("/admin/inventory");
 }
 
+export async function getDTFPrintSetting() {
+  return await prisma.dTFPrintSetting.upsert({
+    where: { id: "default" },
+    update: {},
+    create: { id: "default", printCost: 300 },
+  });
+}
+
+export async function updateDTFPrintSetting(printCost: number) {
+  await prisma.dTFPrintSetting.upsert({
+    where: { id: "default" },
+    update: { printCost },
+    create: { id: "default", printCost },
+  });
+  revalidatePath("/admin/settings");
+  revalidatePath("/checkout");
+}
+
 export async function getLowStockProducts() {
   const setting = await getInventorySettings();
   const threshold = setting.lowStockThreshold;

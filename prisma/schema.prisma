@@ -185,6 +185,12 @@ model InventorySetting {
   updatedAt         DateTime @updatedAt
 }
 
+model DTFPrintSetting {
+  id        String   @id @default("default")
+  printCost Int      @default(300)
+  updatedAt DateTime @updatedAt
+}
+
 model HeroSlide {
   id        String   @id @default(uuid())
   image     String

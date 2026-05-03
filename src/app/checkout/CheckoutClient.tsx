@@ -14,10 +14,12 @@ import { getPathaoCities, getPathaoZones, getPathaoAreas } from "@/app/actions/p
 
 export default function CheckoutClient({
   deliveryData,
-  footerData
+  footerData,
+  dtfCostPerItem = 300
 }: {
   deliveryData: { insideDhaka: number, outsideDhaka: number },
-  footerData: FooterData
+  footerData: FooterData,
+  dtfCostPerItem?: number
 }) {
   const { items, getTotalPrice, clearCart, updateItem } = useCartStore();
   const [isSubmitted, setIsSubmitted] = useState(false);
@@ -128,7 +130,7 @@ export default function CheckoutClient({
 
   // Pricing Logic (Excluding DTF from discounts)
   const baseSubtotal = getTotalPrice();
-  const totalDTFCost = items.reduce((sum, item) => sum + (item.requiresPrint ? 300 * item.quantity : 0), 0);
+  const totalDTFCost = items.reduce((sum, item) => sum + (item.requiresPrint ? dtfCostPerItem * item.quantity : 0), 0);
   const total = baseSubtotal - couponDiscount + totalDTFCost + (items.length > 0 ? deliveryFee : 0);
 
   const originalBaseSubtotal = items.reduce((total, item) => total + (item.originalPrice || item.price) * item.quantity, 0);
@@ -242,7 +244,7 @@ export default function CheckoutClient({
       requiresPrint: true,
       printName: finalName,
       printNumber: finalNumber,
-      printCost: 300
+      printCost: dtfCostPerItem
     });
     setShowDTFModal(false);
     setActiveItem(null);
@@ -467,7 +469,7 @@ export default function CheckoutClient({
                             onChange={(e) => handleDTFToggle(item.id, item.size, e.target.checked)}
                             className="w-4 h-4 rounded border-slate-300 text-primary focus:ring-primary"
                           />
-                          <span className="text-[10px] font-bold text-slate-600 uppercase">Add DTF Print (+৳300)</span>
+                          <span className="text-[10px] font-bold text-slate-600 uppercase">Add DTF Print (+৳{dtfCostPerItem})</span>
                         </label>
                         {item.requiresPrint && item.printName && (
                           <div className="flex items-center gap-3 bg-slate-50 p-2 rounded-lg border border-slate-100">
@@ -722,7 +724,7 @@ export default function CheckoutClient({
 
               <div className="p-4 bg-slate-50 rounded-lg flex justify-between items-center text-[10px] font-black uppercase tracking-widest border border-slate-100">
                 <span className="text-slate-400">Customization Fee</span>
-                <span className="text-primary italic animate-pulse">৳300</span>
+                <span className="text-primary italic animate-pulse">৳{dtfCostPerItem}</span>
               </div>
 
               <button
