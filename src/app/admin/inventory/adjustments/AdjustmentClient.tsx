@@ -1,13 +1,13 @@
 "use client";
 
 import { useState, useTransition, useMemo } from "react";
-import { 
-  Package, 
-  History, 
-  Plus, 
-  Minus, 
-  Settings2, 
-  AlertCircle, 
+import {
+  Package,
+  History,
+  Plus,
+  Minus,
+  Settings2,
+  AlertCircle,
   ChevronRight,
   ArrowRight,
   Database,
@@ -54,16 +54,16 @@ interface Adjustment {
   };
 }
 
-export default function AdjustmentClient({ 
-  products, 
-  initialAdjustments 
-}: { 
-  products: Product[], 
-  initialAdjustments: any[] 
+export default function AdjustmentClient({
+  products,
+  initialAdjustments
+}: {
+  products: Product[],
+  initialAdjustments: any[]
 }) {
   const [isPending, startTransition] = useTransition();
   const [adjustments, setAdjustments] = useState<Adjustment[]>(initialAdjustments);
-  
+
   // Form State
   const [selectedVariantId, setSelectedVariantId] = useState("");
   const [type, setType] = useState<AdjustmentType>("ADDITION");
@@ -105,7 +105,7 @@ export default function AdjustmentClient({
           } : { size: "?", product: { name: "Unknown" } }
         };
         setAdjustments([newAdj, ...adjustments.slice(0, 19)]);
-        
+
         // Reset Form
         setSelectedVariantId("");
         setQuantity("");
@@ -119,10 +119,10 @@ export default function AdjustmentClient({
   };
 
   return (
-    <div className="flex flex-col gap-6 max-w-6xl">
-      <StatusAlertModal 
-        isOpen={isErrorModalOpen} 
-        onClose={() => setIsErrorModalOpen(false)} 
+    <div className="flex flex-col max-w-8xl">
+      <StatusAlertModal
+        isOpen={isErrorModalOpen}
+        onClose={() => setIsErrorModalOpen(false)}
         title="Adjustment Failed"
         message={errorMessage}
       />
@@ -139,16 +139,16 @@ export default function AdjustmentClient({
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
-        
+
         {/* Adjustment Form */}
         <div className="md:col-span-1 bg-white border border-slate-200 rounded-lg p-6 shadow-sm">
           <h2 className="text-sm font-semibold text-slate-900 mb-6 flex items-center gap-2">
             <PlusCircle className="w-4 h-4 text-slate-400" />
             New Adjustment
           </h2>
-          
+
           <form onSubmit={handleSubmit} className="space-y-4">
-            <CustomSelect 
+            <CustomSelect
               label="Select Variant *"
               placeholder="Search products..."
               options={variantOptions}
@@ -167,11 +167,10 @@ export default function AdjustmentClient({
                       key={t}
                       type="button"
                       onClick={() => setType(t)}
-                      className={`py-2 px-1 border rounded-md text-[10px] font-bold uppercase transition-colors flex items-center justify-center gap-1 ${
-                        type === t 
-                        ? "bg-slate-900 border-slate-900 text-white" 
+                      className={`py-2 px-1 border rounded-md text-[10px] font-bold uppercase transition-colors flex items-center justify-center gap-1 ${type === t
+                        ? "bg-slate-900 border-slate-900 text-white"
                         : "bg-white border-slate-200 text-slate-600 hover:border-slate-300"
-                      }`}
+                        }`}
                     >
                       <span className="text-xs">{t === "ADDITION" ? "+" : t === "SUBTRACTION" ? "-" : "="}</span>
                       {t.replace("TION", "")}
@@ -179,10 +178,10 @@ export default function AdjustmentClient({
                   ))}
                 </div>
               </div>
-              
+
               <div className="space-y-1.5">
                 <label className="text-xs font-semibold text-slate-900">Quantity *</label>
-                <input 
+                <input
                   type="number"
                   value={quantity}
                   onChange={(e) => setQuantity(e.target.value === "" ? "" : Number(e.target.value))}
@@ -196,7 +195,7 @@ export default function AdjustmentClient({
 
             <div className="space-y-1.5">
               <label className="text-xs font-semibold text-slate-900">Reason</label>
-              <textarea 
+              <textarea
                 value={reason}
                 onChange={(e) => setReason(e.target.value)}
                 placeholder="Brief explanation..."
@@ -266,14 +265,13 @@ export default function AdjustmentClient({
                       </td>
                       <td className="px-4 py-4 text-center text-xs font-mono text-slate-400">{adj.previousQuantity}</td>
                       <td className="px-4 py-4 text-center">
-                        <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${
-                          adj.adjustmentType === "ADDITION" ? "bg-emerald-100 text-emerald-700" :
+                        <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${adj.adjustmentType === "ADDITION" ? "bg-emerald-100 text-emerald-700" :
                           adj.adjustmentType === "SUBTRACTION" ? "bg-red-100 text-red-700" :
-                          "bg-indigo-100 text-indigo-700"
-                        }`}>
-                          {adj.adjustmentType === "ADDITION" ? "+" : 
-                           adj.adjustmentType === "SUBTRACTION" ? "-" : 
-                           adj.adjustmentType === "SET" ? "=" : ""}{adj.quantity}
+                            "bg-indigo-100 text-indigo-700"
+                          }`}>
+                          {adj.adjustmentType === "ADDITION" ? "+" :
+                            adj.adjustmentType === "SUBTRACTION" ? "-" :
+                              adj.adjustmentType === "SET" ? "=" : ""}{adj.quantity}
                         </span>
                       </td>
                       <td className="px-4 py-4 text-center text-sm font-mono font-bold text-slate-900">{adj.newQuantity}</td>

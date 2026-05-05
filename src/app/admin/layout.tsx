@@ -4,24 +4,78 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { adminLogout } from "./actions";
 import { useState, useEffect, useMemo } from "react";
-import { Package, ShoppingCart, LogOut, Search, Bell, User, Users, Truck, Settings, ImagePlay, Tag, AlertTriangle, TicketIcon, Banknote, Menu, X, Database } from "lucide-react";
+import { 
+  Package, 
+  ShoppingCart, 
+  LogOut, 
+  Search, 
+  Bell, 
+  User, 
+  Users, 
+  Truck, 
+  Settings, 
+  ImagePlay, 
+  Tag, 
+  AlertTriangle, 
+  TicketIcon, 
+  Banknote, 
+  Menu, 
+  X, 
+  Database,
+  ChevronDown,
+  LayoutDashboard,
+  FileText,
+  Ruler,
+  PanelBottom,
+  Boxes
+} from "lucide-react";
 
 const NAV_LINKS = [
-  { href: "/admin", icon: <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-layout-dashboard w-4 h-4 shrink-0"><rect width="7" height="9" x="3" y="3" rx="1" /><rect width="7" height="5" x="14" y="3" rx="1" /><rect width="7" height="9" x="14" y="12" rx="1" /><rect width="7" height="5" x="3" y="16" rx="1" /></svg>, label: "Dashboard", exact: true },
-  { href: "/admin/products", icon: <Package className="w-4 h-4 shrink-0" />, label: "Products" },
-  { href: "/admin/orders", icon: <ShoppingCart className="w-4 h-4 shrink-0" />, label: "Orders" },
-  { href: "/admin/purchases", icon: <Truck className="w-4 h-4 shrink-0" />, label: "Purchases" },
-  { href: "/admin/accounting", icon: <Banknote className="w-4 h-4 shrink-0" />, label: "Accounting" },
-  { href: "/admin/discounts", icon: <Tag className="w-4 h-4 shrink-0" />, label: "Discounts" },
-  { href: "/admin/coupons", icon: <TicketIcon className="w-4 h-4 shrink-0" />, label: "Coupons" },
-  { href: "/admin/size-charts", icon: <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-ruler w-4 h-4 shrink-0"><path d="M21.3 15.3a2.4 2.4 0 0 1 0 3.4l-2.6 2.6a2.4 2.4 0 0 1-3.4 0L2.7 8.7a2.41 2.41 0 0 1 0-3.4l2.6-2.6a2.41 2.41 0 0 1 3.4 0Z" /><path d="m14.5 12.5 2-2" /><path d="m11.5 9.5 2-2" /><path d="m8.5 6.5 2-2" /><path d="m17.5 15.5 2-2" /></svg>, label: "Size Charts" },
-  { href: "/admin/hero", icon: <ImagePlay className="w-4 h-4 shrink-0" />, label: "Hero Slides" },
-  { href: "/admin/staff", icon: <Users className="w-4 h-4 shrink-0" />, label: "Staff" },
-  { href: "/admin/inventory", icon: <AlertTriangle className="w-4 h-4 shrink-0 text-amber-500" />, label: "Inventory Alerts" },
-  { href: "/admin/inventory/adjustments", icon: <Database className="w-4 h-4 shrink-0 text-indigo-500" />, label: "Stock Adjustments" },
-  { href: "/admin/settings", icon: <Settings className="w-4 h-4 shrink-0" />, label: "General Settings", exact: true },
-  { href: "/admin/pages", icon: <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-file-text w-4 h-4 shrink-0"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" /><path d="M14 2v4a2 2 0 0 0 2 2h4" /><path d="M10 9H8" /><path d="M16 13H8" /><path d="M16 17H8" /></svg>, label: "Content Pages" },
-  { href: "/admin/settings/footer", icon: <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-panel-bottom w-4 h-4 shrink-0"><rect width="18" height="18" x="3" y="3" rx="2" /><path d="M3 15h18" /></svg>, label: "Footer Settings" },
+  { href: "/admin", icon: <LayoutDashboard className="w-4 h-4 shrink-0" />, label: "Dashboard", exact: true },
+  {
+    label: "Inventory",
+    icon: <Boxes className="w-4 h-4 shrink-0" />,
+    children: [
+      { href: "/admin/products", label: "Products" },
+      { href: "/admin/inventory/adjustments", label: "Stock Adjustments" },
+      { href: "/admin/inventory/low-stock", label: "Low Stock Alerts" },
+    ]
+  },
+  {
+    label: "Sales & Finance",
+    icon: <ShoppingCart className="w-4 h-4 shrink-0" />,
+    children: [
+      { href: "/admin/orders", label: "Orders" },
+      { href: "/admin/purchases", label: "Purchases" },
+      { href: "/admin/accounting", label: "Accounting" },
+    ]
+  },
+  {
+    label: "Marketing",
+    icon: <Tag className="w-4 h-4 shrink-0" />,
+    children: [
+      { href: "/admin/discounts", label: "Discounts" },
+      { href: "/admin/coupons", label: "Coupons" },
+    ]
+  },
+  {
+    label: "Content",
+    icon: <FileText className="w-4 h-4 shrink-0" />,
+    children: [
+      { href: "/admin/pages", label: "Pages" },
+      { href: "/admin/hero", label: "Hero Slides" },
+      { href: "/admin/size-charts", label: "Size Charts" },
+    ]
+  },
+  {
+    label: "Setup",
+    icon: <Settings className="w-4 h-4 shrink-0" />,
+    children: [
+      { href: "/admin/settings", label: "General Settings", exact: true },
+      { href: "/admin/settings/footer", label: "Footer Settings" },
+      { href: "/admin/staff", label: "Staff Members" },
+    ]
+  },
 ];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -30,13 +84,39 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [openGroups, setOpenGroups] = useState<string[]>([]);
+
+  // Automatically open groups that contain the active link
+  useEffect(() => {
+    const activeGroup = NAV_LINKS.find(group => 
+      group.children?.some(child => pathname.includes(child.href))
+    );
+    if (activeGroup && !openGroups.includes(activeGroup.label)) {
+      setOpenGroups(prev => [...prev, activeGroup.label]);
+    }
+  }, [pathname]);
+
+  const toggleGroup = (label: string) => {
+    setOpenGroups(prev => 
+      prev.includes(label) ? prev.filter(l => l !== label) : [...prev, label]
+    );
+  };
+
+  const allFlatLinks = useMemo(() => {
+    const flat: any[] = [];
+    NAV_LINKS.forEach(link => {
+      if (link.href) flat.push(link);
+      if (link.children) flat.push(...link.children.map(c => ({ ...c, icon: link.icon })));
+    });
+    return flat;
+  }, []);
 
   const filteredLinks = useMemo(() => {
     if (!searchQuery.trim()) return [];
-    return NAV_LINKS.filter(link => 
+    return allFlatLinks.filter(link => 
       link.label.toLowerCase().includes(searchQuery.toLowerCase())
     );
-  }, [searchQuery]);
+  }, [searchQuery, allFlatLinks]);
 
   useEffect(() => {
     if (searchQuery && filteredLinks.length === 1) {
@@ -78,32 +158,81 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         </div>
 
         <div className={`px-5 py-6 font-semibold text-[10px] tracking-wider text-slate-500 uppercase transition-all duration-300 whitespace-nowrap ${isCollapsed ? "opacity-0 h-0 py-0 overflow-hidden" : "opacity-100"}`}>
-          Overview
+          Main Menu
         </div>
-        <div className={`md:hidden px-5 py-6 font-semibold text-[10px] tracking-wider text-slate-500 uppercase transition-all duration-300 whitespace-nowrap ${!isCollapsed ? "hidden" : "block opacity-100"}`}>
-          Overview
-        </div>
-        <nav className="flex-1 px-3 space-y-1 overflow-y-auto overflow-x-hidden scrollbar-thin scrollbar-thumb-slate-700">
-          {NAV_LINKS.map((link) => {
-            const isActive = link.exact ? pathname === link.href : pathname.includes(link.href);
+        
+        <nav className="flex-1 px-3 space-y-1 overflow-y-auto overflow-x-hidden scrollbar-thin scrollbar-thumb-slate-700 pb-20">
+          {NAV_LINKS.map((item) => {
+            if (item.href) {
+              const isActive = item.exact ? pathname === item.href : pathname.includes(item.href);
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  title={isCollapsed ? item.label : undefined}
+                  className={`flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-colors whitespace-nowrap ${isActive
+                    ? "bg-maroon text-white shadow-md shadow-maroon/20"
+                    : "hover:bg-slate-800 hover:text-white"
+                    }`}
+                >
+                  {item.icon}
+                  <span className={`transition-opacity duration-300 ${isCollapsed ? "opacity-0 md:w-0 overflow-hidden" : "opacity-100"}`}>
+                    {item.label}
+                  </span>
+                </Link>
+              );
+            }
+
+            // Render Group
+            const isGroupOpen = openGroups.includes(item.label);
+            const isAnyChildActive = item.children?.some(child => 
+              child.exact ? pathname === child.href : pathname.includes(child.href)
+            );
+
             return (
-              <Link
-                key={link.href}
-                href={link.href}
-                title={isCollapsed ? link.label : undefined}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-colors whitespace-nowrap ${isActive
-                  ? "bg-maroon text-white shadow-md shadow-maroon/20"
-                  : "hover:bg-slate-800 hover:text-white"
+              <div key={item.label} className="space-y-1">
+                <button
+                  onClick={() => toggleGroup(item.label)}
+                  className={`w-full flex items-center justify-between px-3 py-2.5 rounded-md text-sm font-medium transition-colors whitespace-nowrap group ${
+                    isAnyChildActive ? "text-white" : "text-slate-400 hover:bg-slate-800 hover:text-white"
                   }`}
-              >
-                {link.icon}
-                <span className={`transition-opacity duration-300 ${isCollapsed ? "opacity-0 md:w-0 overflow-hidden" : "opacity-100"}`}>
-                  {link.label}
-                </span>
-              </Link>
+                >
+                  <div className="flex items-center gap-3">
+                    {item.icon}
+                    <span className={`transition-opacity duration-300 ${isCollapsed ? "opacity-0 md:w-0 overflow-hidden" : "opacity-100"}`}>
+                      {item.label}
+                    </span>
+                  </div>
+                  {!isCollapsed && (
+                    <ChevronDown className={`w-3 h-3 transition-transform duration-200 ${isGroupOpen ? "rotate-180" : ""}`} />
+                  )}
+                </button>
+
+                {isGroupOpen && !isCollapsed && (
+                  <div className="ml-9 space-y-1 border-l border-slate-800">
+                    {item.children?.map((child) => {
+                      const isChildActive = child.exact ? pathname === child.href : pathname.includes(child.href);
+                      return (
+                        <Link
+                          key={child.href}
+                          href={child.href}
+                          className={`flex items-center gap-3 px-3 py-2 text-xs font-medium transition-colors whitespace-nowrap rounded-r-md border-l-2 ${
+                            isChildActive 
+                            ? "text-gold border-gold bg-gold/5" 
+                            : "text-slate-500 border-transparent hover:text-slate-300 hover:bg-slate-800/50"
+                          }`}
+                        >
+                          {child.label}
+                        </Link>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
             );
           })}
         </nav>
+
 
         <div className="p-4 border-t border-slate-800 shrink-0">
           <button
