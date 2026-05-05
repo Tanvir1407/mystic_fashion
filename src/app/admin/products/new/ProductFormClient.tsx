@@ -128,17 +128,17 @@ export default function ProductFormClient({
   };
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-6 max-w-4xl pb-12">
-      <div className="flex items-center gap-4 mb-2">
-        <Link href="/admin/products" className="p-2 bg-slate-100 hover:bg-slate-200 rounded-md transition-colors text-slate-500">
-          <ArrowLeft className="w-5 h-5" />
-        </Link>
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-slate-900">
+    <form onSubmit={handleSubmit} className="flex flex-col gap-6 max-w-4xl pb-12 w-full mx-auto">
+      <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-2">
+        <div className="flex items-center gap-4">
+          <Link href="/admin/products" className="p-2 bg-slate-100 hover:bg-slate-200 rounded-md transition-colors text-slate-500">
+            <ArrowLeft className="w-5 h-5" />
+          </Link>
+          <h1 className="text-xl sm:text-2xl font-semibold tracking-tight text-slate-900">
             {initialData ? 'Edit Product' : 'Add New Product'}
           </h1>
-          <p className="text-sm text-slate-500 mt-1">Configure product details, variants, and stock dependencies.</p>
         </div>
+        <p className="text-xs sm:text-sm text-slate-500 sm:mt-1 ml-1 sm:ml-0">Configure product details, variants, and stock dependencies.</p>
       </div>
 
       <div className="bg-white border border-slate-200 rounded-lg p-6 shadow-sm">
@@ -235,32 +235,32 @@ export default function ProductFormClient({
             />
           </div>
 
-          <div className="col-span-2 flex justify-between gap-4">
-            <div className="flex items-center gap-3 p-4 bg-amber-50 border border-amber-100 rounded-lg col-span-1 md:col-span-2">
+          <div className="col-span-1 md:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="flex items-center gap-3 p-4 bg-amber-50 border border-amber-100 rounded-lg">
               <input
                 type="checkbox"
                 id="isFeatured"
                 checked={isFeatured}
                 onChange={(e) => setIsFeatured(e.target.checked)}
-                className="w-5 h-5 text-amber-600 border-amber-300 rounded focus:ring-amber-500 cursor-pointer"
+                className="w-5 h-5 text-amber-600 border-amber-300 rounded focus:ring-amber-500 cursor-pointer shrink-0"
               />
               <label htmlFor="isFeatured" className="flex flex-col cursor-pointer">
                 <span className="text-sm font-bold text-amber-900">Featured Product</span>
-                <span className="text-xs text-amber-700">Pin this product to the top of the homepage collection</span>
+                <span className="text-[10px] text-amber-700">Pin this product to the top of the homepage collection</span>
               </label>
             </div>
 
-            <div className="flex items-center gap-3 p-4 bg-emerald-50 border border-emerald-100 rounded-lg col-span-1 md:col-span-2">
+            <div className="flex items-center gap-3 p-4 bg-emerald-50 border border-emerald-100 rounded-lg">
               <input
                 type="checkbox"
                 id="isPublished"
                 checked={isPublished}
                 onChange={(e) => setIsPublished(e.target.checked)}
-                className="w-5 h-5 text-emerald-600 border-emerald-300 rounded focus:ring-emerald-500 cursor-pointer"
+                className="w-5 h-5 text-emerald-600 border-emerald-300 rounded focus:ring-emerald-500 cursor-pointer shrink-0"
               />
               <label htmlFor="isPublished" className="flex flex-col cursor-pointer">
                 <span className="text-sm font-bold text-emerald-900">Publish to Storefront</span>
-                <span className="text-xs text-emerald-700">Make this product visible to customers on the public website</span>
+                <span className="text-[10px] text-emerald-700">Make visible to customers on the public website</span>
               </label>
             </div>
           </div>
@@ -319,7 +319,8 @@ export default function ProductFormClient({
               <p className="text-xs text-slate-500 font-medium">Set initial stock for new product</p>
             )}
           </div>
-          <table className="w-full text-left border-collapse">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse min-w-[500px]">
             <thead>
               <tr className="bg-slate-50/50 border-b border-slate-100">
                 <th className="px-4 py-2 text-xs font-semibold text-slate-500 uppercase tracking-wider">Size Label</th>
@@ -384,6 +385,7 @@ export default function ProductFormClient({
               ))}
             </tbody>
           </table>
+          </div>
           <div className="bg-white p-3 text-center border-t border-slate-100">
             <button
               type="button"
@@ -396,11 +398,11 @@ export default function ProductFormClient({
           </div>
         </div>
 
-        <div className="flex justify-end pt-4 border-t border-slate-100">
+        <div className="flex flex-col sm:flex-row sm:justify-end pt-4 border-t border-slate-100">
           <button
             type="submit"
             disabled={loading}
-            className="px-6 py-2.5 bg-slate-900 text-white font-medium rounded-md flex items-center justify-center gap-2 hover:bg-slate-800 transition-colors disabled:opacity-75 shadow-sm"
+            className="w-full sm:w-auto px-6 py-3 bg-slate-900 text-white font-bold uppercase tracking-widest text-xs rounded-md flex items-center justify-center gap-2 hover:bg-slate-800 transition-all disabled:opacity-75 shadow-lg shadow-black/10 active:scale-[0.98]"
           >
             {loading ? (
               <div className="w-4 h-4 border-2 border-white/50 border-t-white rounded-full animate-spin" />

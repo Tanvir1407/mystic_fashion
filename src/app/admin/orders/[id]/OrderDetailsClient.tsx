@@ -152,7 +152,7 @@ export default function OrderDetailsClient({ order, deliverySettings, products =
   return (
     <div className="space-y-2">
       {/* Action Header */}
-      <div className="flex justify-between items-end">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-4">
         {/* Pathao Consignment ID Section */}
 
         <div>
@@ -229,7 +229,7 @@ export default function OrderDetailsClient({ order, deliverySettings, products =
 
 
       {/* Row 1: 50/50 Split */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-2 bg-white border border-slate-200 rounded-2xl p-6    transition-shadow duration-300">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-white border border-slate-200 rounded-2xl p-4 sm:p-6 transition-shadow duration-300">
         {/* Customer Identity */}
         <div className="rounded-2xl p-6    transition-shadow duration-300">
           <h3 className="font-bold text-slate-900 mb-6 uppercase tracking-widest text-[11px] flex items-center gap-2.5 pb-4 border-b border-slate-50">
@@ -318,7 +318,7 @@ export default function OrderDetailsClient({ order, deliverySettings, products =
         </div>
 
         {/* Row 3: Administrative Remarks */}
-        <div className="col-span-2 px-5">
+        <div className="md:col-span-2 px-0 sm:px-5">
           <div className="flex items-center justify-between mb-1 pt-4 border-t border-slate-50">
             <h3 className="block text-[10px] uppercase font-bold text-slate-400 tracking-wider">
               Administrative Remarks
@@ -384,10 +384,10 @@ export default function OrderDetailsClient({ order, deliverySettings, products =
       </div>
 
       {/* Row 2: Financial Breakdown & Physical Artifacts */}
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-2">
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
 
         {/* Financial Breakdown */}
-        <div className="col-span-2 bg-white border border-slate-200 rounded-2xl p-6    transition-shadow duration-300">
+        <div className="lg:col-span-2 bg-white border border-slate-200 rounded-2xl p-4 sm:p-6 transition-shadow duration-300 h-fit">
           <h3 className="font-bold text-slate-900 mb-6 uppercase tracking-widest text-[11px] flex items-center gap-2.5 pb-4 border-b border-slate-50">
             <div className="p-1.5 bg-emerald-50 rounded-md">
               <Wallet className="w-4 h-4 text-emerald-500" />
@@ -498,7 +498,7 @@ export default function OrderDetailsClient({ order, deliverySettings, products =
         </div>
 
         {/* Physical Artifacts (Order Items) */}
-        <div className="col-span-3 bg-white border border-slate-200 rounded-2xl overflow-hidden    transition-shadow duration-300">
+        <div className="lg:col-span-3 bg-white border border-slate-200 rounded-2xl overflow-hidden transition-shadow duration-300">
           <div className="px-6 py-4 border-b border-slate-50 bg-slate-50/40">
             <h3 className="font-bold text-slate-900 uppercase tracking-widest text-[11px] flex items-center gap-2.5">
               <div className="p-1.5 bg-amber-50 rounded-md">
