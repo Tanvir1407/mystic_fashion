@@ -3,7 +3,7 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import prisma from "@/lib/prisma";
-import { OrderStatus } from "@/generated/prisma/client";
+import { OrderStatus, AdjustmentType } from "@/generated/prisma/client";
 import { revalidatePath } from "next/cache";
 import { writeFile, mkdir } from "fs/promises";
 import { join, dirname } from "path";
@@ -995,4 +995,85 @@ export async function bulkSendToPathaoAction(orderIds: string[]) {
     console.error("Bulk Pathao action error:", error);
     return { success: false, error: error.message || "Failed to process bulk Pathao request." };
   }
+}
+
+export async function adjustStock(data: {
+  variantId: string;
+  adjustmentType: AdjustmentType;
+  quantity: number;
+  reason?: string;
+}) {
+  try {
+    const { variantId, adjustmentType, quantity, reason } = data;
+
+    const result = await prisma.$transaction(async (tx) => {
+      // 1. Fetch current variant to get previousQuantity
+      const variant = await tx.productVariant.findUnique({
+        where: { id: variantId },
+        select: { stock: true, id: true },
+      });
+
+      if (!variant) throw new Error("Product variant not found");
+
+      const previousQuantity = variant.stock;
+      let newQuantity = previousQuantity;
+
+      // 2. Calculate newQuantity
+      if (adjustmentType === "ADDITION") {
+        newQuantity = previousQuantity + quantity;
+      } else if (adjustmentType === "SUBTRACTION") {
+        newQuantity = previousQuantity - quantity;
+      } else if (adjustmentType === "SET") {
+        newQuantity = quantity;
+      }
+
+      // 3. Validation: Subtraction cannot result in negative stock
+      if (adjustmentType === "SUBTRACTION" && newQuantity < 0) {
+        throw new Error("Stock cannot go below zero");
+      }
+
+      // 4. Update variant stock
+      await tx.productVariant.update({
+        where: { id: variantId },
+        data: { stock: newQuantity },
+      });
+
+      // 5. Create adjustment record
+      const adjustment = await tx.stockAdjustment.create({
+        data: {
+          variantId,
+          adjustmentType,
+          quantity,
+          previousQuantity,
+          newQuantity,
+          reason,
+        },
+      });
+
+      return adjustment;
+    });
+
+    revalidatePath("/admin/inventory");
+    revalidatePath("/admin/inventory/adjustments");
+    return { success: true, data: result };
+  } catch (error: any) {
+    console.error("Stock adjustment error:", error);
+    return { success: false, error: error.message || "Failed to adjust stock" };
+  }
+}
+
+export async function getRecentAdjustments() {
+  return await prisma.stockAdjustment.findMany({
+    include: {
+      variant: {
+        include: {
+          product: {
+            select: { name: true }
+          }
+        }
+      }
+    },
+    orderBy: { createdAt: "desc" },
+    take: 20,
+  });
 }

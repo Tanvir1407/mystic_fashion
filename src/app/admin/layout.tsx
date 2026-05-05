@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { adminLogout } from "./actions";
 import { useState, useEffect, useMemo } from "react";
-import { Package, ShoppingCart, LogOut, Search, Bell, User, Users, Truck, Settings, ImagePlay, Tag, AlertTriangle, TicketIcon, Banknote, Menu, X } from "lucide-react";
+import { Package, ShoppingCart, LogOut, Search, Bell, User, Users, Truck, Settings, ImagePlay, Tag, AlertTriangle, TicketIcon, Banknote, Menu, X, Database } from "lucide-react";
 
 const NAV_LINKS = [
   { href: "/admin", icon: <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-layout-dashboard w-4 h-4 shrink-0"><rect width="7" height="9" x="3" y="3" rx="1" /><rect width="7" height="5" x="14" y="3" rx="1" /><rect width="7" height="9" x="14" y="12" rx="1" /><rect width="7" height="5" x="3" y="16" rx="1" /></svg>, label: "Dashboard", exact: true },
@@ -18,6 +18,7 @@ const NAV_LINKS = [
   { href: "/admin/hero", icon: <ImagePlay className="w-4 h-4 shrink-0" />, label: "Hero Slides" },
   { href: "/admin/staff", icon: <Users className="w-4 h-4 shrink-0" />, label: "Staff" },
   { href: "/admin/inventory", icon: <AlertTriangle className="w-4 h-4 shrink-0 text-amber-500" />, label: "Inventory Alerts" },
+  { href: "/admin/inventory/adjustments", icon: <Database className="w-4 h-4 shrink-0 text-indigo-500" />, label: "Stock Adjustments" },
   { href: "/admin/settings", icon: <Settings className="w-4 h-4 shrink-0" />, label: "General Settings", exact: true },
   { href: "/admin/pages", icon: <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-file-text w-4 h-4 shrink-0"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" /><path d="M14 2v4a2 2 0 0 0 2 2h4" /><path d="M10 9H8" /><path d="M16 13H8" /><path d="M16 17H8" /></svg>, label: "Content Pages" },
   { href: "/admin/settings/footer", icon: <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-panel-bottom w-4 h-4 shrink-0"><rect width="18" height="18" x="3" y="3" rx="2" /><path d="M3 15h18" /></svg>, label: "Footer Settings" },
