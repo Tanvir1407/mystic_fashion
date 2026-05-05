@@ -223,6 +223,12 @@ export default function CreateOrderClient({ products, deliverySettings }: { prod
 
   const totalAmount = (subtotal + deliveryCharge) - calculatedDiscount;
 
+  // If any item was added from a 0 or negative stock variant, this is a backorder
+  const hasBackorderItems = useMemo(() =>
+    orderItems.some(item => item.stock <= 0),
+    [orderItems]
+  );
+
   const handleSubmit = () => {
     if (!customerName || !phone || !address || orderItems.length === 0) {
       return alert("Please fill in all customer details and add at least one item.");
@@ -236,8 +242,8 @@ export default function CreateOrderClient({ products, deliverySettings }: { prod
     const zoneName = zones.find(z => z.value === selectedZoneId?.toString())?.label || "";
     const areaName = areas.find(a => a.value === selectedAreaId?.toString())?.label || "";
 
-    const fullDeliveryAddress = district === "Self Pickup" 
-      ? address 
+    const fullDeliveryAddress = district === "Self Pickup"
+      ? address
       : `${address}, ${areaName}, ${zoneName}, ${cityName}`;
 
     startTransition(async () => {
@@ -259,7 +265,8 @@ export default function CreateOrderClient({ products, deliverySettings }: { prod
             size: item.size,
             quantity: item.quantity,
             price: item.price
-          }))
+          })),
+          hasBackorderItems,
         });
 
         if (res.success) {
@@ -495,29 +502,42 @@ export default function CreateOrderClient({ products, deliverySettings }: { prod
                 <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1.5">Size & Stock</label>
                 <div className="flex flex-wrap gap-2">
                   {selectedProductId ? (
-                    availableSizes.map(v => (
-                      <button
-                        key={v.id}
-                        type="button"
-                        disabled={v.stock <= 0}
-                        onClick={() => setSelectedSize(v.size)}
-                        className={`px-3 py-2 rounded-md border text-xs font-black transition-all ${selectedSize === v.size
-                          ? "bg-indigo-600 border-indigo-600 text-white shadow-lg shadow-indigo-200"
-                          : v.stock > 0
-                            ? "bg-white border-slate-200 text-slate-700 hover:border-indigo-400"
-                            : "bg-slate-50 border-slate-100 text-slate-300 cursor-not-allowed"
-                          }`}
-                      >
-                        {v.size}
-                        <span className={`ml-1 text-[9px] ${selectedSize === v.size ? "text-indigo-200" : "text-slate-400"}`}>
-                          ({v.stock})
-                        </span>
-                      </button>
-                    ))
+                    availableSizes.map(v => {
+                      const isOutOfStock = v.stock <= 0;
+                      return (
+                        <button
+                          key={v.id}
+                          type="button"
+                          onClick={() => setSelectedSize(v.size)}
+                          className={`relative px-3 py-2 rounded-md border text-xs font-black transition-all ${selectedSize === v.size
+                            ? "bg-indigo-600 border-indigo-600 text-white shadow-lg shadow-indigo-200"
+                            : isOutOfStock
+                              ? "bg-orange-50 border-orange-200 text-orange-700 hover:border-orange-400 hover:bg-orange-100"
+                              : "bg-white border-slate-200 text-slate-700 hover:border-indigo-400"
+                            }`}
+                        >
+                          {v.size}
+                          <span className={`ml-1 text-[9px] ${selectedSize === v.size ? "text-indigo-200" : isOutOfStock ? "text-orange-400" : "text-slate-400"
+                            }`}>
+                            ({v.stock})
+                          </span>
+                          {isOutOfStock && (
+                            <span className="absolute -top-1.5 -right-1.5 bg-orange-500 text-white text-[7px] font-black px-1 py-0 rounded-sm leading-tight">
+                              OUT
+                            </span>
+                          )}
+                        </button>
+                      );
+                    })
                   ) : (
                     <div className="h-9 flex items-center text-slate-400 text-xs italic">Select a product first</div>
                   )}
                 </div>
+                {selectedSize && availableSizes.find(v => v.size === selectedSize)?.stock <= 0 && (
+                  <p className="mt-1.5 text-[10px] text-orange-600 font-bold flex items-center gap-1">
+                    <span>⚠</span> Out of stock — admin override active. Stock will go negative.
+                  </p>
+                )}
               </div>
 
               {/* Quantity */}
@@ -566,8 +586,13 @@ export default function CreateOrderClient({ products, deliverySettings }: { prod
                     </tr>
                   ) : (
                     orderItems.map((item, idx) => (
-                      <tr key={`${item.productId}-${item.size}`} className="hover:bg-slate-50 transition-colors">
-                        <td className="px-4 py-3 font-bold">{item.productName}</td>
+                      <tr key={`${item.productId}-${item.size}`} className={`hover:bg-slate-50 transition-colors ${item.stock <= 0 ? "bg-orange-50/40" : ""}`}>
+                        <td className="px-4 py-3 font-bold">
+                          <span>{item.productName}</span>
+                          {item.stock <= 0 && (
+                            <span className="ml-2 text-[9px] font-black text-orange-500 bg-orange-100 px-1.5 py-0.5 rounded">⚠ BACKORDER</span>
+                          )}
+                        </td>
                         <td className="px-4 py-3 text-center"><span className="px-2 py-0.5 bg-slate-100 rounded text-[10px] font-black">{item.size}</span></td>
                         <td className="px-4 py-3 text-center font-semibold">{item.quantity}</td>
                         <td className="px-4 py-3 text-right font-mono">৳{item.price.toLocaleString()}</td>
@@ -638,19 +663,20 @@ export default function CreateOrderClient({ products, deliverySettings }: { prod
             </div>
 
             <div className="pt-6 space-y-3">
+
+              {
+                hasBackorderItems && (
+                  <div className="border-2 border-dashed border-orange-200 p-2 rounded-lg text-xs font-bold text-center ">
+                    ⚠ This order contains backordered items.
+                  </div>
+                )
+              }
               <button
                 onClick={handleSubmit}
                 disabled={isPending || orderItems.length === 0}
-                className="w-full bg-indigo-600 text-white font-black py-4 rounded-xl shadow-lg shadow-indigo-200 hover:bg-black hover:shadow-black/10 transition-all flex items-center justify-center gap-2 active:scale-[0.98] disabled:bg-slate-300 disabled:shadow-none disabled:cursor-not-allowed group"
-              >
-                {isPending ? (
-                  <Loader2 className="w-5 h-5 animate-spin" />
-                ) : (
-                  <>
-                    <CheckCircle className="w-5 h-5 group-hover:scale-110 transition-transform" />
-                    CREATE & CONFIRM ORDER
-                  </>
-                )}
+                className="w-full text-white font-black py-4 rounded-xl shadow-lg shadow-indigo-200 bg-black hover:shadow-black/10 transition-all flex items-center justify-center gap-2 active:scale-[0.98] disabled:bg-slate-300 disabled:shadow-none disabled:cursor-not-allowed group">
+                <CheckCircle className="w-5 h-5 group-hover:scale-110 transition-transform" />
+                CREATE ORDER
               </button>
 
               <Link

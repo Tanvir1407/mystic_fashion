@@ -176,23 +176,16 @@ export async function updateOrderStatus(orderId: string, status: OrderStatus) {
       // Execute Stock Action
       if (stockAction === "REDUCE") {
         for (const item of order.items) {
-          const variant = await tx.productVariant.findUnique({
+          // Admin can always decrement stock — negative stock is allowed (backorder workflow).
+          // When new stock arrives via a purchase, it will restore the correct count.
+          await tx.productVariant.update({
             where: {
               productId_size: {
                 productId: item.productId,
-                size: item.size
-              }
+                size: item.size,
+              },
             },
-            include: { product: true }
-          });
-
-          if (!variant || variant.stock < item.quantity) {
-            throw new Error(`Insufficient stock for product: ${variant?.product.name || 'Unknown'} | size: ${item.size}`);
-          }
-
-          await tx.productVariant.update({
-            where: { id: variant.id },
-            data: { stock: { decrement: item.quantity } }
+            data: { stock: { decrement: item.quantity } },
           });
         }
       } else if (stockAction === "RESTORE") {
@@ -793,12 +786,18 @@ export async function createAdminOrder(data: {
   pathaoCityId?: number;
   pathaoZoneId?: number;
   pathaoAreaId?: number;
+  hasBackorderItems?: boolean;
 }) {
   try {
     const order = await prisma.$transaction(async (tx) => {
       const customId = await generateOrderIdInternal(tx);
 
-      // 1. Create the order
+      // 1. Determine order status
+      // If any item is a backorder (out-of-stock), the order stays PENDING
+      // until stock is replenished via a Purchase and admin manually confirms.
+      const orderStatus = data.hasBackorderItems ? "PENDING" : "CONFIRMED";
+
+      // 2. Create the order
       const newOrder = await tx.order.create({
         data: {
           id: customId,
@@ -813,7 +812,7 @@ export async function createAdminOrder(data: {
           pathaoCityId: data.pathaoCityId,
           pathaoZoneId: data.pathaoZoneId,
           pathaoAreaId: data.pathaoAreaId,
-          status: "CONFIRMED", // Admin orders are usually confirmed immediately
+          status: orderStatus,
           items: {
             create: data.items.map((item) => ({
               productId: item.productId,
@@ -825,7 +824,7 @@ export async function createAdminOrder(data: {
         },
       });
 
-      // 2. Update stock for each item
+      // 3. Update stock for each item (allowed to go negative for backorders)
       for (const item of data.items) {
         await tx.productVariant.update({
           where: {
@@ -842,19 +841,22 @@ export async function createAdminOrder(data: {
         });
       }
 
-      // 3. Accounting Automation
-      const account = await getOrCreateSystemAccount(tx, "Sales Revenue", "INCOME");
-      await tx.transaction.create({
-        data: {
-          accountId: account.id,
-          amount: data.totalAmount,
-          date: new Date(),
-          type: "CREDIT",
-          description: `Order confirmation sale for ${newOrder.id}`,
-          referenceId: newOrder.id,
-          referenceType: "ORDER",
-        }
-      });
+      // 4. Accounting Automation — only for CONFIRMED orders
+      // PENDING (backorder) orders get the accounting entry when they are later confirmed.
+      if (orderStatus === "CONFIRMED") {
+        const account = await getOrCreateSystemAccount(tx, "Sales Revenue", "INCOME");
+        await tx.transaction.create({
+          data: {
+            accountId: account.id,
+            amount: data.totalAmount,
+            date: new Date(),
+            type: "CREDIT",
+            description: `Order confirmation sale for ${newOrder.id}`,
+            referenceId: newOrder.id,
+            referenceType: "ORDER",
+          }
+        });
+      }
 
       return newOrder;
     });
