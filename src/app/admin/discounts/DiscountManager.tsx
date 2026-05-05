@@ -1,9 +1,21 @@
 "use client";
 
-import { useState, useTransition } from "react";
-import { Plus, Tag, Percent, Edit2, Check, X } from "lucide-react";
-import { createDiscount, updateDiscount, deleteDiscount } from "./actions";
+import { useState, useTransition, useMemo } from "react";
+import { 
+  Plus, 
+  Tag, 
+  Percent, 
+  Edit2, 
+  X, 
+  Search, 
+  Filter, 
+  CheckCircle2, 
+  XCircle, 
+  Banknote
+} from "lucide-react";
+import { updateDiscount, deleteDiscount } from "./actions";
 import { DeleteWarningModal } from "@/components/DeleteWarningModal";
+import { DiscountForm } from "./DiscountForm";
 
 interface Discount {
   id: string;
@@ -16,33 +28,9 @@ interface Discount {
 export default function DiscountManager({ initialDiscounts }: { initialDiscounts: Discount[] }) {
   const [discounts, setDiscounts] = useState<Discount[]>(initialDiscounts);
   const [isPending, startTransition] = useTransition();
-  const [showAdd, setShowAdd] = useState(false);
-
-  // New Discount Form State
-  const [newName, setNewName] = useState("");
-  const [newType, setNewType] = useState<"FLAT" | "PERCENTAGE">("PERCENTAGE");
-  const [newValue, setNewValue] = useState("");
-
-  // Edit State
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [editName, setEditName] = useState("");
-  const [editType, setEditType] = useState<"FLAT" | "PERCENTAGE">("PERCENTAGE");
-  const [editValue, setEditValue] = useState("");
-
-  const handleAdd = () => {
-    if (!newName.trim() || !newValue) return;
-    const valueNum = parseFloat(newValue);
-    if (isNaN(valueNum) || valueNum <= 0) return alert("Please enter a valid discount amount.");
-
-    startTransition(async () => {
-      const created = await createDiscount({ name: newName, discountType: newType, value: valueNum });
-      setDiscounts(prev => [created, ...prev]);
-      setShowAdd(false);
-      setNewName("");
-      setNewValue("");
-      setNewType("PERCENTAGE");
-    });
-  };
+  const [showForm, setShowForm] = useState(false);
+  const [editingDiscount, setEditingDiscount] = useState<Discount | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
 
   const handleToggleActive = (id: string, currentActive: boolean) => {
     startTransition(async () => {
@@ -51,175 +39,156 @@ export default function DiscountManager({ initialDiscounts }: { initialDiscounts
     });
   };
 
-  const startEdit = (d: Discount) => {
-    setEditingId(d.id);
-    setEditName(d.name);
-    setEditType(d.discountType);
-    setEditValue(d.value.toString());
-  };
-
-  const handleSaveEdit = (id: string) => {
-    const valueNum = parseFloat(editValue);
-    if (isNaN(valueNum) || valueNum <= 0) return alert("Please enter a valid discount amount.");
-
-    startTransition(async () => {
-      const updated = await updateDiscount(id, { name: editName, discountType: editType, value: valueNum });
-      setDiscounts(prev => prev.map(d => d.id === id ? updated : d));
-      setEditingId(null);
-    });
-  };
+  const filteredDiscounts = useMemo(() => {
+    return discounts.filter(d => 
+      d.name.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+  }, [discounts, searchQuery]);
 
   return (
-    <div className="space-y-6">
-      {/* Top Banner & Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="bg-white border border-slate-200 rounded-lg px-5 py-4 shadow-sm">
-          <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Total Rules</p>
-          <p className="text-2xl font-black mt-1 text-slate-800">{discounts.length}</p>
-        </div>
-        <div className="bg-white border border-slate-200 rounded-lg px-5 py-4 shadow-sm">
-          <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Active</p>
-          <p className="text-2xl font-black mt-1 text-green-600">{discounts.filter(d => d.active).length}</p>
-        </div>
-      </div>
-
-      <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
-        {/* Header toolbar */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-slate-50">
-          <h2 className="text-sm font-bold text-slate-800 flex items-center gap-2">
-            <Tag className="w-4 h-4 text-indigo-500" /> Discount Rules List
-          </h2>
-          <button
-            onClick={() => setShowAdd(!showAdd)}
-            className="flex items-center gap-2 px-3.5 py-1.5 bg-slate-900 text-white text-xs font-bold rounded-md hover:bg-slate-700 transition-colors shadow-sm"
-          >
-            <Plus className="w-4 h-4" />
-            Add Discount
+    <div className="flex flex-col gap-6">
+      {/* Action Bar */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex items-center gap-3 flex-1 max-w-sm">
+          <div className="relative flex-1">
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+            <input
+              type="text"
+              placeholder="Search discount..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-4 focus:ring-slate-900/5 focus:border-slate-400 transition-all"
+            />
+          </div>
+          <button className="h-10 px-4 bg-white border border-slate-200 text-slate-600 rounded-xl text-xs font-bold flex items-center gap-2 hover:bg-slate-50 transition-all shadow-sm">
+            <Filter className="w-4 h-4" />
+            Filter
           </button>
         </div>
 
-        {/* Add Row */}
-        {showAdd && (
-          <div className="px-6 py-4 bg-indigo-50/50 border-b border-indigo-100 flex items-end gap-4">
-            <div className="flex-1 space-y-1.5">
-              <label className="text-xs font-bold text-slate-600 uppercase tracking-wider">Rule Name / Code</label>
-              <input type="text" value={newName} onChange={e => setNewName(e.target.value)} placeholder="e.g. SUMMER25" className="w-full text-sm px-3 py-2 border border-indigo-200 rounded-md focus:border-indigo-400 focus:ring-1 focus:ring-indigo-300" />
-            </div>
-            <div className="w-32 space-y-1.5">
-              <label className="text-xs font-bold text-slate-600 uppercase tracking-wider">Type</label>
-              <select value={newType} onChange={e => setNewType(e.target.value as any)} className="w-full text-sm px-3 py-2 border border-indigo-200 rounded-md focus:border-indigo-400 bg-white">
-                <option value="PERCENTAGE">Percentage</option>
-                <option value="FLAT">Flat</option>
-              </select>
-            </div>
-            <div className="w-32 space-y-1.5">
-              <label className="text-xs font-bold text-slate-600 uppercase tracking-wider">Amount</label>
-              <input type="number" value={newValue} onChange={e => setNewValue(e.target.value)} placeholder="0" className="w-full text-sm px-3 py-2 border border-indigo-200 rounded-md focus:border-indigo-400 font-mono" />
-            </div>
-            <div className="flex gap-2 pb-0.5">
-              <button disabled={isPending} onClick={handleAdd} className="flex items-center gap-1.5 px-4 py-2 bg-indigo-600 text-white text-sm font-semibold rounded-md hover:bg-indigo-700 transition shadow-sm">
-                <Check className="w-4 h-4" /> Save
-              </button>
-              <button onClick={() => setShowAdd(false)} className="px-3 py-2 border border-slate-300 bg-white text-slate-600 rounded-md hover:bg-slate-50 transition text-sm font-medium">Cancel</button>
-            </div>
-          </div>
-        )}
-
-        {/* The List Data */}
-        {discounts.length === 0 ? (
-          <div className="p-12 text-center text-slate-400 font-medium text-sm">
-            No discounts configured yet.
-          </div>
-        ) : (
-          <div className="divide-y divide-slate-100">
-            {discounts.map(d => (
-              <div key={d.id} className={`flex items-center px-6 py-4 hover:bg-slate-50 transition-colors ${!d.active ? "opacity-50" : ""}`}>
-
-                {editingId === d.id ? (
-                  /* Edit Row */
-                  <div className="w-full flex items-end gap-4 p-2 bg-slate-50 border border-slate-200 rounded-lg">
-                    <div className="flex-1 space-y-1">
-                      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Name</label>
-                      <input type="text" value={editName} onChange={e => setEditName(e.target.value)} className="w-full text-sm px-2.5 py-1.5 border border-slate-300 rounded focus:border-indigo-500" />
-                    </div>
-                    <div className="w-28 space-y-1">
-                      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Type</label>
-                      <select value={editType} onChange={e => setEditType(e.target.value as any)} className="w-full text-sm px-2.5 py-1.5 border border-slate-300 rounded focus:border-indigo-500 bg-white">
-                        <option value="PERCENTAGE">Percentage</option>
-                        <option value="FLAT">Flat</option>
-                      </select>
-                    </div>
-                    <div className="w-24 space-y-1">
-                      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Value</label>
-                      <input type="number" value={editValue} onChange={e => setEditValue(e.target.value)} className="w-full text-sm px-2.5 py-1.5 border border-slate-300 rounded focus:border-indigo-500 font-mono" />
-                    </div>
-                    <div className="flex gap-1.5 pb-px">
-                      <button disabled={isPending} onClick={() => handleSaveEdit(d.id)} className="p-1.5 bg-indigo-600 text-white rounded hover:bg-indigo-700 transition">
-                        <Check className="w-4 h-4" />
-                      </button>
-                      <button onClick={() => setEditingId(null)} className="p-1.5 bg-white border border-slate-300 text-slate-600 rounded hover:bg-slate-50 transition">
-                        <X className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  /* Display Row */
-                  <>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <h3 className="text-sm font-bold text-slate-800">{d.name}</h3>
-                        {d.discountType === "PERCENTAGE" ? (
-                          <span className="inline-flex items-center text-[10px] font-bold px-2 py-0.5 rounded-full bg-cyan-50 border border-cyan-100 text-cyan-700">
-                            Percentage
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 border border-emerald-100 text-emerald-700">
-                            Flat
-                          </span>
-                        )}
-                      </div>
-                      <p className="text-sm font-mono font-medium text-slate-500 mt-1">
-                        {d.discountType === "PERCENTAGE" ? `${d.value}% OFF` : `৳${d.value.toLocaleString("en-IN")} OFF`}
-                      </p>
-                    </div>
-
-                    <div className="flex items-center gap-3 flex-shrink-0">
-                      {/* Active Toggle Switch */}
-                      <div className="flex items-center gap-2 mr-2 border-r border-slate-200 pr-4">
-                        <span className="text-xs font-semibold text-slate-400">{d.active ? 'Active' : 'Hidden'}</span>
-                        <button
-                          disabled={isPending}
-                          onClick={() => handleToggleActive(d.id, d.active)}
-                          className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${d.active ? 'bg-green-500' : 'bg-slate-300'}`}
-                        >
-                          <span className={`${d.active ? 'translate-x-4' : 'translate-x-0'} pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out`} />
-                        </button>
-                      </div>
-
-                      <button onClick={() => startEdit(d)} className="p-1.5 text-slate-400 hover:bg-slate-100 hover:text-indigo-600 rounded transition-colors">
-                        <Edit2 className="w-4 h-4" />
-                      </button>
-
-                      <DeleteWarningModal
-                        title={`Delete rule "${d.name}"?`}
-                        description="This will permanently delete this discount. Future checkouts will no longer be able to use it."
-                        impacts={[]}
-                        onConfirm={async () => {
-                          startTransition(async () => {
-                            await deleteDiscount(d.id);
-                            setDiscounts(prev => prev.filter(item => item.id !== d.id));
-                          });
-                        }}
-                      />
-                    </div>
-                  </>
-                )}
-              </div>
-            ))}
-          </div>
-        )}
+        <button
+          onClick={() => {
+            setEditingDiscount(null);
+            setShowForm(true);
+          }}
+          className="h-12 px-6 bg-slate-900 text-white text-xs font-black uppercase tracking-widest rounded-xl flex items-center justify-center gap-3 hover:bg-black transition-all shadow-lg shadow-black/10 active:scale-[0.98] group"
+        >
+          <Plus className="w-4 h-4 group-hover:rotate-90 transition-transform duration-300" />
+          New Discount
+        </button>
       </div>
 
+      {/* Data Table */}
+      <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm min-h-[400px]">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="border-b border-slate-100 bg-slate-50/50 text-slate-500">
+                <th className="px-6 py-4 font-black text-[10px] uppercase tracking-widest">Discount Details</th>
+                <th className="px-6 py-4 font-black text-[10px] uppercase tracking-widest text-center">Type</th>
+                <th className="px-6 py-4 font-black text-[10px] uppercase tracking-widest text-center">Value</th>
+                <th className="px-6 py-4 font-black text-[10px] uppercase tracking-widest text-center">Status</th>
+                <th className="px-6 py-4 font-black text-[10px] uppercase tracking-widest text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-50">
+              {filteredDiscounts.length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="px-6 py-20 text-center">
+                    <div className="flex flex-col items-center gap-3">
+                      <div className="w-16 h-16 rounded-full bg-slate-50 flex items-center justify-center">
+                        <Tag className="w-8 h-8 text-slate-200" />
+                      </div>
+                      <p className="text-sm text-slate-400 font-bold uppercase tracking-widest">No discount found</p>
+                    </div>
+                  </td>
+                </tr>
+              ) : (
+                filteredDiscounts.map((d) => (
+                  <tr key={d.id} className={`hover:bg-slate-50/80 transition-colors group ${!d.active ? "opacity-60" : ""}`}>
+                    <td className="px-6 py-5">
+                      <div className="flex items-center gap-3">
+                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center border ${d.discountType === "PERCENTAGE"
+                          ? "bg-purple-50 border-purple-100 text-purple-500"
+                          : "bg-emerald-50 border-emerald-100 text-emerald-500"
+                          }`}>
+                          {d.discountType === "PERCENTAGE" ? <Percent className="w-5 h-5" /> : <Banknote className="w-5 h-5" />}
+                        </div>
+                        <span className="font-black text-sm text-slate-900 uppercase tracking-tight">{d.name}</span>
+                      </div>
+                    </td>
+                    <td className="px-6 py-5 text-center">
+                      <span className={`inline-flex px-2 py-1 rounded-md text-[10px] font-black uppercase tracking-widest ${d.discountType === "PERCENTAGE" ? "bg-purple-50 text-purple-700" : "bg-emerald-50 text-emerald-700"
+                        }`}>
+                        {d.discountType}
+                      </span>
+                    </td>
+                    <td className="px-6 py-5 text-center">
+                      <span className="text-sm font-mono font-black text-slate-700">
+                        {d.discountType === "PERCENTAGE" ? `${d.value}%` : `৳${d.value.toLocaleString()}`}
+                      </span>
+                    </td>
+                    <td className="px-6 py-5 text-center">
+                      <button
+                        onClick={() => handleToggleActive(d.id, d.active)}
+                        className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-wider transition-all border ${d.active
+                          ? 'bg-emerald-50 text-emerald-700 border-emerald-100 hover:bg-emerald-100'
+                          : 'bg-slate-50 text-slate-400 border-slate-100 hover:bg-slate-100'
+                          }`}
+                      >
+                        {d.active ? (
+                          <><CheckCircle2 className="w-3 h-3" /> Active</>
+                        ) : (
+                          <><XCircle className="w-3 h-3" /> Hidden</>
+                        )}
+                      </button>
+                    </td>
+                    <td className="px-6 py-5 text-right">
+                      <div className="flex items-center justify-end gap-2">
+                        <button 
+                          onClick={() => {
+                            setEditingDiscount(d);
+                            setShowForm(true);
+                          }} 
+                          className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all"
+                        >
+                          <Edit2 className="w-4 h-4" />
+                        </button>
+                        <DeleteWarningModal
+                          title={`Delete discount "${d.name}"?`}
+                          description="This will remove the discount from all associated products immediately."
+                          impacts={["Pricing will revert to base price"]}
+                          onConfirm={async () => {
+                            startTransition(async () => {
+                              await deleteDiscount(d.id);
+                              setDiscounts(prev => prev.filter(item => item.id !== d.id));
+                            });
+                          }}
+                        />
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {showForm && (
+        <DiscountForm 
+          discount={editingDiscount}
+          onClose={() => {
+            setShowForm(false);
+            setEditingDiscount(null);
+          }}
+          onSuccess={() => {
+            setShowForm(false);
+            setEditingDiscount(null);
+            window.location.reload();
+          }}
+        />
+      )}
     </div>
   );
 }
