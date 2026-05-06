@@ -3,7 +3,7 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import prisma from "@/lib/prisma";
-import { OrderStatus, AdjustmentType } from "@/generated/prisma/client";
+import { OrderStatus, AdjustmentType, ReturnStatus } from "@/generated/prisma/client";
 import { revalidatePath } from "next/cache";
 import { writeFile, mkdir } from "fs/promises";
 import { join, dirname } from "path";
@@ -1077,3 +1077,166 @@ export async function getRecentAdjustments() {
     take: 20,
   });
 }
+
+export async function processSalesReturn(data: {
+  orderId: string;
+  orderItemId: string;
+  returnReason: string;
+  deliveryLossAmount?: number;
+  returnActionType: ReturnStatus;
+}) {
+  try {
+    const { orderId, orderItemId, returnReason, deliveryLossAmount, returnActionType } = data;
+
+    const result = await prisma.$transaction(async (tx) => {
+      // 1. Fetch OrderItem and include Product
+      const orderItem = await tx.orderItem.findUnique({
+        where: { id: orderItemId },
+        include: { product: true },
+      });
+
+      if (!orderItem) throw new Error("Order item not found");
+
+      // Verify the orderId matches the item's orderId
+      if (orderItem.orderId !== orderId) {
+        throw new Error("Order ID mismatch for the specified order item");
+      }
+
+      // 2. Fetch ProductVariant using productId and size
+      const variant = await tx.productVariant.findUnique({
+        where: {
+          productId_size: {
+            productId: orderItem.productId,
+            size: orderItem.size,
+          },
+        },
+      });
+
+      if (!variant) throw new Error("Product variant not found");
+
+      // 3. Determine Return Status strictly from manual input override
+      const status: ReturnStatus = returnActionType;
+
+      // 4. Financial Calculations (default deliveryLossAmount to 0 if null/undefined)
+      const deliveryLoss = deliveryLossAmount ?? 0;
+      let productLoss = 0;
+      let printingLoss = 0;
+
+      if (status === "WASTAGE") {
+        const purchasePrice = orderItem.product.purchasePrice ?? orderItem.product.price;
+        productLoss = purchasePrice * orderItem.quantity;
+        printingLoss = orderItem.printCost * orderItem.quantity;
+      }
+
+      const totalLoss = deliveryLoss + productLoss + printingLoss;
+
+      // 5. Inventory Update
+      if (status === "RESTOCKED") {
+        const previousQuantity = variant.stock;
+        const newQuantity = previousQuantity + orderItem.quantity;
+
+        // Update Product Variant Stock
+        await tx.productVariant.update({
+          where: { id: variant.id },
+          data: { stock: newQuantity },
+        });
+
+        // Create StockAdjustment entry
+        await tx.stockAdjustment.create({
+          data: {
+            variantId: variant.id,
+            adjustmentType: "ADDITION",
+            quantity: orderItem.quantity,
+            previousQuantity,
+            newQuantity,
+            reason: `Sales Return Restock (Order: ${orderId})`,
+          },
+        });
+      }
+
+      // 6. Accounting Entry
+      if (totalLoss > 0) {
+        const account = await getOrCreateSystemAccount(tx, "Returns & Wastage Loss", "EXPENSE");
+        await tx.transaction.create({
+          data: {
+            accountId: account.id,
+            amount: totalLoss,
+            date: new Date(),
+            type: "DEBIT",
+            description: `Loss on return for Order Item ${orderItemId} (Order: ${orderId}). Status: ${status}.`,
+            referenceId: orderId,
+            referenceType: "ORDER",
+          },
+        });
+      }
+
+      // 7. Update Order Status to CANCELLED
+      await tx.order.update({
+        where: { id: orderId },
+        data: { status: "CANCELLED" },
+      });
+
+      // 8. Create SalesReturn Record
+      const salesReturn = await tx.salesReturn.create({
+        data: {
+          orderId,
+          orderItemId,
+          variantId: variant.id,
+          quantity: orderItem.quantity,
+          returnReason,
+          status,
+          deliveryLoss,
+          productLoss,
+          printingLoss,
+        },
+        include: {
+          order: true,
+          orderItem: {
+            include: { product: true }
+          },
+          variant: true
+        }
+      });
+
+      return salesReturn;
+    });
+
+    revalidatePath("/admin/orders");
+    revalidatePath("/admin/orders/returns");
+    revalidatePath("/admin/inventory");
+    revalidatePath("/admin/inventory/adjustments");
+    revalidatePath("/admin/accounting");
+
+    return { success: true, data: result };
+  } catch (error: any) {
+    console.error("Process sales return error:", error);
+    return { success: false, error: error.message || "Failed to process sales return" };
+  }
+}
+
+export async function getRecentSalesReturns() {
+  try {
+    return await prisma.salesReturn.findMany({
+      include: {
+        order: {
+          select: { id: true, customerName: true }
+        },
+        orderItem: {
+          include: {
+            product: {
+              select: { name: true }
+            }
+          }
+        },
+        variant: {
+          select: { size: true }
+        }
+      },
+      orderBy: { createdAt: "desc" },
+    });
+  } catch (error: any) {
+    console.error("Get recent sales returns error:", error);
+    return [];
+  }
+}
+

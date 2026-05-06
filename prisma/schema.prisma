@@ -110,6 +110,7 @@ model ProductVariant {
   product          Product           @relation(fields: [productId], references: [id], onDelete: Cascade)
   purchaseItems    PurchaseItem[]
   stockAdjustments StockAdjustment[]
+  salesReturns     SalesReturn[]
 
   @@unique([productId, size])
 }
@@ -139,6 +140,7 @@ model Order {
 
   items OrderItem[]
   coupon   Coupon? @relation(fields: [couponCode], references: [code])
+  salesReturns SalesReturn[]
 }
 
 model Coupon {
@@ -171,6 +173,7 @@ model OrderItem {
 
   order   Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
   product Product @relation(fields: [productId], references: [id])
+  salesReturns SalesReturn[]
 }
 
 model DeliverySetting {
@@ -323,5 +326,32 @@ model StockAdjustment {
   createdAt        DateTime       @default(now())
 
   variant          ProductVariant @relation(fields: [variantId], references: [id], onDelete: Cascade)
+}
+
+enum ReturnStatus {
+  RESTOCKED
+  WASTAGE
+}
+
+model SalesReturn {
+  id               String       @id @default(uuid())
+  orderId          String
+  orderItemId      String
+  variantId        String
+  quantity         Int
+  returnReason     String       // e.g., "Customer rejected at door"
+  status           ReturnStatus // If DTF printed -> WASTAGE, else -> RESTOCKED
+  
+  // Financial Tracking
+  deliveryLoss     Float        @default(0) // Courier charge lost
+  productLoss      Float        @default(0) // Purchase price lost (if wasted)
+  printingLoss     Float        @default(0) // DTF print cost lost (if wasted)
+  
+  processedBy      String?      // Admin/Staff ID
+  createdAt        DateTime     @default(now())
+
+  order            Order          @relation(fields: [orderId], references: [id])
+  orderItem        OrderItem      @relation(fields: [orderItemId], references: [id])
+  variant          ProductVariant @relation(fields: [variantId], references: [id])
 }
 

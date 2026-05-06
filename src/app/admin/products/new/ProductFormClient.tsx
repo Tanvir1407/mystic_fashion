@@ -321,98 +321,96 @@ export default function ProductFormClient({
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse min-w-[500px]">
-            <thead>
-              <tr className="bg-slate-50/50 border-b border-slate-100">
-                <th className="px-4 py-2 text-xs font-semibold text-slate-500 uppercase tracking-wider">Size Label</th>
-                <th className="px-4 py-2 text-xs font-semibold text-slate-500 uppercase tracking-wider w-32">Current Stock</th>
-                <th className="px-4 py-2 text-xs font-semibold text-slate-500 uppercase tracking-wider w-16"></th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {variants.map((v) => (
-                <tr key={v.id}>
-                  <td className="px-4 py-2">
-                    <input
-                      type="text"
-                      value={v.size}
-                      onChange={(e) => updateVariant(v.id, "size", e.target.value.toUpperCase())}
-                      placeholder="e.g. XL"
-                      className="w-full px-3 py-1.5 border border-slate-200 rounded text-sm focus:outline-none focus:border-indigo-500 uppercase"
-                      required
-                    />
-                  </td>
-                  <td className="px-4 py-2">
-                    {initialData?.id ? (
-                      <div className="relative">
+              <thead>
+                <tr className="bg-slate-50/50 border-b border-slate-100">
+                  <th className="px-4 py-2 text-xs font-semibold text-slate-500 uppercase tracking-wider">Size Label</th>
+                  <th className="px-4 py-2 text-xs font-semibold text-slate-500 uppercase tracking-wider w-32">Current Stock</th>
+                  <th className="px-4 py-2 text-xs font-semibold text-slate-500 uppercase tracking-wider w-16"></th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {variants.map((v) => (
+                  <tr key={v.id}>
+                    <td className="px-4 py-2">
+                      <input
+                        type="text"
+                        value={v.size}
+                        onChange={(e) => updateVariant(v.id, "size", e.target.value.toUpperCase())}
+                        placeholder="e.g. XL"
+                        className="w-full px-3 py-1.5 border border-slate-200 rounded text-sm focus:outline-none focus:border-indigo-500 uppercase"
+                        required
+                      />
+                    </td>
+                    <td className="px-4 py-2">
+                      {initialData?.id ? (
+                        <div className="relative">
+                          <input
+                            type="number"
+                            value={v.stock}
+                            readOnly
+                            className={`w-full px-3 py-1.5 border rounded text-sm font-mono select-none cursor-not-allowed ${v.stock < 0
+                                ? "border-orange-200 bg-orange-50 text-orange-600"
+                                : v.stock === 0
+                                  ? "border-slate-200 bg-slate-50 text-slate-400"
+                                  : "border-emerald-100 bg-emerald-50 text-emerald-700"
+                              }`}
+                            title="Current stock is read-only. It is automatically adjusted by Orders and Purchases."
+                          />
+                          <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[9px] font-black uppercase tracking-wider text-slate-300">
+                            {v.stock < 0 ? "⚠ LOW" : "LIVE"}
+                          </span>
+                        </div>
+                      ) : (
                         <input
                           type="number"
+                          min="0"
                           value={v.stock}
-                          readOnly
-                          className={`w-full px-3 py-1.5 border rounded text-sm font-mono select-none cursor-not-allowed ${
-                            v.stock < 0
-                              ? "border-orange-200 bg-orange-50 text-orange-600"
-                              : v.stock === 0
-                                ? "border-slate-200 bg-slate-50 text-slate-400"
-                                : "border-emerald-100 bg-emerald-50 text-emerald-700"
-                          }`}
-                          title="Current stock is read-only. It is automatically adjusted by Orders and Purchases."
+                          onChange={(e) => updateVariant(v.id, "stock", parseInt(e.target.value) || 0)}
+                          className="w-full px-3 py-1.5 border border-slate-200 bg-white rounded text-sm focus:outline-none focus:border-indigo-500 font-mono"
+                          placeholder="0"
                         />
-                        <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[9px] font-black uppercase tracking-wider text-slate-300">
-                          {v.stock < 0 ? "⚠ LOW" : "LIVE"}
-                        </span>
-                      </div>
-                    ) : (
-                      <input
-                        type="number"
-                        min="0"
-                        value={v.stock}
-                        onChange={(e) => updateVariant(v.id, "stock", parseInt(e.target.value) || 0)}
-                        className="w-full px-3 py-1.5 border border-slate-200 bg-white rounded text-sm focus:outline-none focus:border-indigo-500 font-mono"
-                        placeholder="0"
-                      />
-                    )}
-                  </td>
-                  <td className="px-4 py-2 text-center">
-                    <button
-                      type="button"
-                      onClick={() => removeVariant(v.id)}
-                      className="text-slate-400 hover:text-red-600 transition-colors p-1 rounded-md hover:bg-red-50"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                      )}
+                    </td>
+                    <td className="px-4 py-2 text-center">
+                      <button
+                        type="button"
+                        onClick={() => removeVariant(v.id)}
+                        className="text-slate-400 hover:text-red-600 transition-colors p-1 rounded-md hover:bg-red-50"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            <div className="bg-white p-3 text-center border-t border-slate-100">
+              <button
+                type="button"
+                onClick={addVariant}
+                className="text-xs font-medium text-indigo-600 hover:text-indigo-800 flex items-center justify-center gap-1 mx-auto bg-indigo-50 px-3 py-1.5 rounded-full transition-colors"
+              >
+                <Plus className="w-3 h-3" />
+                Add Size Variant
+              </button>
+            </div>
           </div>
-          <div className="bg-white p-3 text-center border-t border-slate-100">
+
+          <div className="flex flex-col sm:flex-row sm:justify-end pt-4 border-t border-slate-100">
             <button
-              type="button"
-              onClick={addVariant}
-              className="text-xs font-medium text-indigo-600 hover:text-indigo-800 flex items-center justify-center gap-1 mx-auto bg-indigo-50 px-3 py-1.5 rounded-full transition-colors"
+              type="submit"
+              disabled={loading}
+              className="w-full sm:w-auto px-6 py-3 bg-slate-900 text-white font-bold uppercase tracking-widest text-xs rounded-md flex items-center justify-center gap-2 hover:bg-slate-800 transition-all disabled:opacity-75 shadow-lg shadow-black/10 active:scale-[0.98]"
             >
-              <Plus className="w-3 h-3" />
-              Add Size Variant
+              {loading ? (
+                <div className="w-4 h-4 border-2 border-white/50 border-t-white rounded-full animate-spin" />
+              ) : (
+                <Save className="w-4 h-4" />
+              )}
+              Save Product Listing
             </button>
           </div>
         </div>
-
-        <div className="flex flex-col sm:flex-row sm:justify-end pt-4 border-t border-slate-100">
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full sm:w-auto px-6 py-3 bg-slate-900 text-white font-bold uppercase tracking-widest text-xs rounded-md flex items-center justify-center gap-2 hover:bg-slate-800 transition-all disabled:opacity-75 shadow-lg shadow-black/10 active:scale-[0.98]"
-          >
-            {loading ? (
-              <div className="w-4 h-4 border-2 border-white/50 border-t-white rounded-full animate-spin" />
-            ) : (
-              <Save className="w-4 h-4" />
-            )}
-            Save Product Listing
-          </button>
-        </div>
-      </div>
     </form>
   );
 }

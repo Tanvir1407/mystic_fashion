@@ -46,6 +46,7 @@ const NAV_LINKS = [
     icon: <ShoppingCart className="w-4 h-4 shrink-0" />,
     children: [
       { href: "/admin/orders", label: "Orders" },
+      { href: "/admin/orders/returns", label: "Sales Returns" },
       { href: "/admin/purchases", label: "Purchases" },
       { href: "/admin/accounting", label: "Accounting" },
     ]
