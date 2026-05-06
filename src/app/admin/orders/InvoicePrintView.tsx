@@ -5,6 +5,7 @@
 
 import React from "react";
 import { formatDate } from "@/utils/formatDate";
+import Barcode from "react-barcode";
 
 interface OrderItem {
   id: string;
@@ -117,12 +118,20 @@ export default function InvoicePrintView({ orders }: { orders: Order[] }) {
                 <div className="flex justify-between items-start mb-6">
                   {/* Left: Customer Info */}
                   <div className="text-sm">
-                    <h1 className="text-2xl font-black uppercase tracking-tight text-black mb-3">INVOICE</h1>
-                    {/* here add bar code image */}
-                    <img src={`data:image/png;base64,${btoa(Buffer.from(Buffer.from(order.id)).toString("base64"))}`} alt="Barcode" />
+                    <h1 className="text-2xl font-semibold uppercase tracking-tight text-black mb-1">INVOICE</h1>
+                    <div className="mb-4">
+                      <Barcode
+                        value={order.id.toUpperCase()}
+                        width={1.2}
+                        height={40}
+                        displayValue={false}
+                        margin={0}
+                        background="transparent"
+                      />
+                    </div>
                     <p className="font-bold text-xs mb-1">BILL TO</p>
                     <p className="text-xs mb-0.5">Name: {order.customerName}</p>
-                    <p className="text-xs mb-1">Address: {order.address}, {order.district}</p>
+                    <p className="text-xs mb-1 max-w-[450px] break-words">Address: {order.address}, {order.district}</p>
                     <p className="text-xs font-bold mt-1">Phone: {order.phone}</p>
                   </div>
 
