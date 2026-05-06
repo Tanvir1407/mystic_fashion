@@ -162,22 +162,9 @@ export async function updateOrderStatus(orderId: string, status: OrderStatus) {
         throw new Error("Cannot revert order status back to Pending once it has been processed.");
       }
 
-      // Determine Stock Action
-      let stockAction: "REDUCE" | "RESTORE" | "NONE" = "NONE";
-
-      if ((oldStatus === "PENDING" || oldStatus === "CANCELLED") && isActive(newStatus)) {
-        // Pending/Canceled -> Active: Reduction
-        stockAction = "REDUCE";
-      } else if (isActive(oldStatus) && newStatus === "CANCELLED") {
-        // Active -> Canceled: Restoration
-        stockAction = "RESTORE";
-      }
-
-      // Execute Stock Action
-      if (stockAction === "REDUCE") {
+      // Execute Stock Action: Stock is deducted ONLY when the order transitions to SHIPPED for the first time
+      if (newStatus === "SHIPPED" && oldStatus !== "SHIPPED") {
         for (const item of order.items) {
-          // Admin can always decrement stock — negative stock is allowed (backorder workflow).
-          // When new stock arrives via a purchase, it will restore the correct count.
           await tx.productVariant.update({
             where: {
               productId_size: {
@@ -186,18 +173,6 @@ export async function updateOrderStatus(orderId: string, status: OrderStatus) {
               },
             },
             data: { stock: { decrement: item.quantity } },
-          });
-        }
-      } else if (stockAction === "RESTORE") {
-        for (const item of order.items) {
-          await tx.productVariant.update({
-            where: {
-              productId_size: {
-                productId: item.productId,
-                size: item.size
-              }
-            },
-            data: { stock: { increment: item.quantity } }
           });
         }
       }
