@@ -12,6 +12,9 @@ export default async function EditProductPage({ params }: { params: { id: string
 
   if (!product) notFound();
 
+  // Sort variants in-memory to prevent Prisma Client caching issues
+  product.variants.sort((a, b) => (a.order || 0) - (b.order || 0));
+
   const sizeCharts = await prisma.sizeChart.findMany();
   const discounts = await prisma.discount.findMany({ where: { active: true } });
 

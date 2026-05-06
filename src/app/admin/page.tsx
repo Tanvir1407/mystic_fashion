@@ -50,7 +50,7 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
   allProducts.forEach(p => p.variants.forEach(v => { currentStockCount += v.stock; }));
 
   // Pending order product qty (PENDING, CONFIRMED, PACKAGING — everything before SHIPPED)
-  const pendingStatuses = ["PENDING", "CONFIRMED", "PACKAGING"];
+  const pendingStatuses = ["PENDING"];
   const pendingOrders = ordersInRange.filter(o => pendingStatuses.includes(o.status));
   const pendingOrderQty = pendingOrders.reduce((acc, o) => acc + o.items.reduce((s, i) => s + i.quantity, 0), 0);
 

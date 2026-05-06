@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useTransition, useMemo } from "react";
+import { useState, useTransition, useMemo, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import {
   History,
   Save,
@@ -82,6 +83,26 @@ export default function ReturnsClient({
   const [returnAction, setReturnAction] = useState<ReturnStatus>("RESTOCKED");
   const [deliveryLossAmount, setDeliveryLossAmount] = useState<number | "">(0);
   const [returnReason, setReturnReason] = useState("");
+
+  const searchParams = useSearchParams();
+  const queryOrderId = searchParams.get("orderId");
+
+  useEffect(() => {
+    setSelectedOrderId(queryOrderId || "");
+  }, [queryOrderId]);
+
+  useEffect(() => {
+    if (selectedOrderId && orders) {
+      const order = orders.find((o) => o.id === selectedOrderId);
+      if (order && order.items.length === 1) {
+        handleItemChange(order.items[0].id);
+      } else {
+        setSelectedOrderItemId("");
+      }
+    } else {
+      setSelectedOrderItemId("");
+    }
+  }, [selectedOrderId, orders]);
 
   // Modal State
   const [isErrorModalOpen, setIsErrorModalOpen] = useState(false);

@@ -1,6 +1,7 @@
 import prisma from "@/lib/prisma";
 import { getRecentSalesReturns } from "../../actions";
 import ReturnsClient from "./ReturnsClient";
+import { Suspense } from "react";
 
 export default async function ReturnsPage() {
   // Fetch recent orders with their items and products
@@ -21,9 +22,11 @@ export default async function ReturnsPage() {
   const recentReturns = await getRecentSalesReturns();
 
   return (
-    <ReturnsClient
-      orders={orders as any}
-      initialReturns={recentReturns as any}
-    />
+    <Suspense fallback={<div className="p-8 text-sm text-slate-500">Loading returns module...</div>}>
+      <ReturnsClient
+        orders={orders as any}
+        initialReturns={recentReturns as any}
+      />
+    </Suspense>
   );
 }

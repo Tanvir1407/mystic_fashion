@@ -70,7 +70,11 @@ export async function createProduct(data: {
       sizeChartId: data.sizeChartId,
       discountId: data.discountId,
       variants: {
-        create: data.variants,
+        create: data.variants.map((v, idx) => ({
+          size: v.size,
+          stock: v.stock,
+          order: idx,
+        })),
       },
     },
   });
@@ -109,11 +113,11 @@ export async function updateProduct(id: string, data: {
   });
 
   await prisma.$transaction(
-    data.variants.map((v) =>
+    data.variants.map((v, idx) =>
       prisma.productVariant.upsert({
         where: { productId_size: { productId: id, size: v.size } },
-        update: { stock: v.stock },
-        create: { productId: id, size: v.size, stock: v.stock },
+        update: { stock: v.stock, order: idx },
+        create: { productId: id, size: v.size, stock: v.stock, order: idx },
       })
     )
   );
@@ -1145,10 +1149,10 @@ export async function processSalesReturn(data: {
         });
       }
 
-      // 7. Update Order Status to CANCELLED
+      // 7. Update Order Status to RETURNED
       await tx.order.update({
         where: { id: orderId },
-        data: { status: "CANCELLED" },
+        data: { status: "RETURNED" },
       });
 
       // 8. Create SalesReturn Record

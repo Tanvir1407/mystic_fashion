@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { createProduct, updateProduct, uploadImage } from "../../actions";
-import { Plus, Trash2, Save, ArrowLeft } from "lucide-react";
+import { Plus, Trash2, Save, ArrowLeft, GripVertical } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
@@ -66,6 +66,28 @@ export default function ProductFormClient({
       { id: "1", size: "M", stock: 0 }
     ]
   );
+
+  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+
+  const handleDragStart = (index: number) => {
+    setDraggedIndex(index);
+  };
+
+  const handleDragOver = (e: React.DragEvent, index: number) => {
+    e.preventDefault();
+    if (draggedIndex === null || draggedIndex === index) return;
+
+    const updatedVariants = [...variants];
+    const draggedItem = updatedVariants[draggedIndex];
+    updatedVariants.splice(draggedIndex, 1);
+    updatedVariants.splice(index, 0, draggedItem);
+    setDraggedIndex(index);
+    setVariants(updatedVariants);
+  };
+
+  const handleDragEnd = () => {
+    setDraggedIndex(null);
+  };
 
   const addVariant = () => {
     setVariants([...variants, { id: Date.now().toString(), size: "", stock: 0 }]);
@@ -323,14 +345,25 @@ export default function ProductFormClient({
             <table className="w-full text-left border-collapse min-w-[500px]">
               <thead>
                 <tr className="bg-slate-50/50 border-b border-slate-100">
+                  <th className="w-10 px-4 py-2"></th>
                   <th className="px-4 py-2 text-xs font-semibold text-slate-500 uppercase tracking-wider">Size Label</th>
                   <th className="px-4 py-2 text-xs font-semibold text-slate-500 uppercase tracking-wider w-32">Current Stock</th>
                   <th className="px-4 py-2 text-xs font-semibold text-slate-500 uppercase tracking-wider w-16"></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {variants.map((v) => (
-                  <tr key={v.id}>
+                {variants.map((v, index) => (
+                  <tr
+                    key={v.id}
+                    draggable
+                    onDragStart={() => handleDragStart(index)}
+                    onDragOver={(e) => handleDragOver(e, index)}
+                    onDragEnd={handleDragEnd}
+                    className={`transition-all duration-150 ${draggedIndex === index ? "bg-slate-100 opacity-55" : "hover:bg-slate-50/50"}`}
+                  >
+                    <td className="px-4 py-2 text-slate-400 cursor-grab active:cursor-grabbing text-center select-none">
+                      <GripVertical className="w-4 h-4 mx-auto" />
+                    </td>
                     <td className="px-4 py-2">
                       <input
                         type="text"
@@ -411,6 +444,7 @@ export default function ProductFormClient({
             </button>
           </div>
         </div>
+      </div>
     </form>
   );
 }

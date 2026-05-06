@@ -39,6 +39,11 @@ export default function OrderRowClient({
     const newStatus = e.target.value as OrderStatus;
     const oldStatus = status;
 
+    if (newStatus === "RETURNED") {
+      router.push(`/admin/orders/returns?orderId=${order.id}`);
+      return;
+    }
+
     setStatus(newStatus);
     setLoading(true);
     const result = await updateOrderStatus(order.id, newStatus);

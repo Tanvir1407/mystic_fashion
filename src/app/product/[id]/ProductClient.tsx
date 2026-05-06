@@ -185,14 +185,14 @@ export default function ProductClient({ product, sizeChartData, deliveryData }: 
 
             {/* Size Selector */}
             <div className="mb-8">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="font-bold text-zinc-900 text-sm uppercase tracking-widest">Select Size</h3>
+              <div className="flex justify-between items-center mb-3">
+                <h3 className="font-semibold text-zinc-900 text-sm uppercase tracking-widest">Select Size</h3>
               </div>
 
               {product.variants.length === 0 ? (
-                <p className="text-red-500 font-bold">Size map not configured yet.</p>
+                <p className="text-red-500 font-medium text-sm">Size map not configured yet.</p>
               ) : (
-                <div className="flex flex-wrap gap-3">
+                <div className="flex flex-wrap gap-2">
                   {product.variants.map((v) => (
                     <button
                       key={v.size}
@@ -200,9 +200,9 @@ export default function ProductClient({ product, sizeChartData, deliveryData }: 
                         setSelectedSize(v.size);
                         setQuantity(1);
                       }}
-                      className={`w-14 h-14 rounded-xl flex flex-col items-center justify-center font-bold text-base transition-all duration-200 border-2 ${selectedSize === v.size
-                        ? 'bg-primary text-[#FFD700] border-primary shadow-lg shadow-primary/20 scale-105'
-                        : 'bg-white text-zinc-900 border-slate-200 hover:border-primary'
+                      className={`h-12 px-6 flex items-center justify-center font-semibold text-sm transition-colors border ${selectedSize === v.size
+                        ? 'bg-zinc-900 text-white border-zinc-900'
+                        : 'bg-white text-zinc-900 border-zinc-200 hover:border-zinc-900'
                         }`}
                     >
                       <span>{v.size}</span>
@@ -214,24 +214,24 @@ export default function ProductClient({ product, sizeChartData, deliveryData }: 
 
             {/* Quantity Selector */}
             <div className="mb-10">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="font-bold text-zinc-900 text-sm uppercase tracking-widest">Quantity</h3>
+              <div className="flex justify-between items-center mb-3">
+                <h3 className="font-semibold text-zinc-900 text-sm uppercase tracking-widest">Quantity</h3>
               </div>
-              <div className="flex items-center inline-flex bg-slate-100 dark:bg-zinc-900 rounded-xl p-1 gap-1">
+              <div className="inline-flex border border-zinc-200 h-12">
                 <button
                   onClick={decrementQuantity}
-                  className="w-10 h-10 flex items-center justify-center text-zinc-500 hover:text-zinc-900 bg-white dark:bg-zinc-800 rounded-lg shadow-sm transition-all active:scale-90"
+                  className="w-12 h-full flex items-center justify-center text-zinc-500 hover:text-zinc-900 hover:bg-zinc-50 transition-colors"
                 >
-                  <Minus className="w-3.5 h-3.5" strokeWidth={3} />
+                  <Minus className="w-4 h-4" strokeWidth={1.5} />
                 </button>
-                <div className="w-12 flex items-center justify-center font-black text-lg text-zinc-900 dark:text-zinc-100">
+                <div className="w-12 h-full flex items-center justify-center font-medium text-sm text-zinc-900 border-l border-r border-zinc-200">
                   {quantity}
                 </div>
                 <button
                   onClick={incrementQuantity}
-                  className="w-10 h-10 flex items-center justify-center text-zinc-500 hover:text-zinc-900 bg-white dark:bg-zinc-800 rounded-lg shadow-sm transition-all active:scale-90"
+                  className="w-12 h-full flex items-center justify-center text-zinc-500 hover:text-zinc-900 hover:bg-zinc-50 transition-colors"
                 >
-                  <Plus className="w-3.5 h-3.5" strokeWidth={3} />
+                  <Plus className="w-4 h-4" strokeWidth={1.5} />
                 </button>
               </div>
             </div>
@@ -241,21 +241,21 @@ export default function ProductClient({ product, sizeChartData, deliveryData }: 
               <button
                 onClick={handleAddToCart}
                 disabled={!selectedSize}
-                className={`md:flex-1 h-14 md:h-16 font-black text-xs md:text-sm uppercase tracking-[0.15em] flex items-center justify-center gap-3 transition-all duration-300 border-2 rounded-xl ${(!selectedSize)
-                  ? 'border-slate-200 bg-slate-50 text-slate-400 cursor-not-allowed'
+                className={`md:flex-1 h-14 font-semibold text-xs md:text-sm uppercase tracking-[0.1em] flex items-center justify-center gap-2 transition-colors border ${(!selectedSize)
+                  ? 'border-zinc-200 bg-zinc-50 text-zinc-400 cursor-not-allowed'
                   : addedEffect
-                    ? 'border-green-600 bg-green-50 text-green-700'
-                    : 'border-primary bg-white text-primary hover:bg-primary hover:text-white active:scale-[0.98]'
+                    ? 'border-green-600 bg-white text-green-600'
+                    : 'border-zinc-900 bg-white text-zinc-900 hover:bg-zinc-900 hover:text-white'
                   }`}
               >
                 {addedEffect ? (
                   <>
-                    <Check className="w-5 h-5" strokeWidth={3} />
+                    <Check className="w-4 h-4" />
                     Added to Bag
                   </>
                 ) : (
                   <>
-                    <ShoppingBag className="w-5 h-5" />
+                    <ShoppingBag className="w-4 h-4" />
                     {selectedSize ? 'Add to Bag' : 'Select Size'}
                   </>
                 )}
@@ -264,16 +264,16 @@ export default function ProductClient({ product, sizeChartData, deliveryData }: 
               <button
                 onClick={handleBuyNow}
                 disabled={!selectedSize}
-                className={`md:flex-1 h-14 md:h-16 font-black text-xs md:text-sm uppercase tracking-[0.15em] flex items-center justify-center gap-3 transition-all duration-300 rounded-xl shadow-lg shadow-primary/10 ${(!selectedSize)
-                  ? 'bg-slate-200 text-slate-400 cursor-not-allowed shadow-none'
-                  : 'bg-primary text-[#FFD700] hover:bg-[#600018] active:scale-[0.98]'
+                className={`md:flex-1 h-14 font-semibold text-xs md:text-sm uppercase tracking-[0.1em] flex items-center justify-center gap-2 transition-colors border ${(!selectedSize)
+                  ? 'border-zinc-200 bg-zinc-200 text-zinc-400 cursor-not-allowed'
+                  : 'border-zinc-900 bg-zinc-900 text-white hover:bg-zinc-800 hover:border-zinc-800'
                   }`}
               >
-                <ShoppingCart className=" w-5 h-5" />
+                <ShoppingCart className="w-4 h-4" />
                 Buy it Now
               </button>
             </div>
-            {!selectedSize && <p className="text-xs text-red-500 font-bold uppercase tracking-widest px-1 mt-2">Please select a size to continue</p>}
+            {!selectedSize && <p className="text-xs text-red-500 font-medium mt-3">Please select a size to continue</p>}
 
             {/* Size Chart Data Table */}
             {sizeChartData && Array.isArray(sizeChartData.data) && sizeChartData.data.length > 0 && (

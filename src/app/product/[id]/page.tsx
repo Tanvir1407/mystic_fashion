@@ -31,6 +31,9 @@ export default async function ProductPage({ params }: { params: { id: string } }
     notFound();
   }
 
+  // Sort variants in-memory to prevent Prisma Client caching issues
+  product.variants.sort((a, b) => (a.order || 0) - (b.order || 0));
+
   const deliveryData = delivery || { insideDhaka: 80, outsideDhaka: 150 };
 
   return (
