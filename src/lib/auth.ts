@@ -12,19 +12,28 @@ export interface SessionPayload {
 }
 
 export async function createSession(payload: SessionPayload) {
-  const session = await new SignJWT(payload)
-    .setProtectedHeader({ alg: 'HS256' })
-    .setIssuedAt()
-    .setExpirationTime('7d')
-    .sign(encodedSecret);
+  console.log(`[Auth] createSession called with payload:`, JSON.stringify(payload));
+  try {
+    const session = await new SignJWT(payload)
+      .setProtectedHeader({ alg: 'HS256' })
+      .setIssuedAt()
+      .setExpirationTime('7d')
+      .sign(encodedSecret);
+    console.log(`[Auth] JWT Session generated successfully (length: ${session.length})`);
 
-  const cookieStore = cookies();
-  cookieStore.set('admin-session', session, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    maxAge: 60 * 60 * 24 * 7, // 1 week
-    path: '/',
-  });
+    const cookieStore = cookies();
+    cookieStore.set('admin-session', session, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      maxAge: 60 * 60 * 24 * 7, // 1 week
+      path: '/',
+    });
+    console.log(`[Auth] Cookie 'admin-session' set successfully in cookieStore`);
+    return session;
+  } catch (error) {
+    console.error(`[Auth] Error in createSession:`, error);
+    throw error;
+  }
 }
 
 export async function getSession(): Promise<SessionPayload | null> {

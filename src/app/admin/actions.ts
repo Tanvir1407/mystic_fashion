@@ -37,16 +37,16 @@ export async function adminLogin(email: string, password: string) {
         return { success: false, error: "Access denied: No role assigned." };
       }
 
-      await createSession({
+      const token = await createSession({
         userId: staff.id,
         roleName: staff.role.name,
-        permissions: staff.role.permissions.map(p => ({
+        permissions: staff.role.name === "SUPERADMIN" ? [] : staff.role.permissions.map(p => ({
           action: p.action,
           subject: p.subject
         }))
       });
 
-      return { success: true };
+      return { success: true, token };
     } else {
       return { success: false, error: "Invalid email or password" };
     }
