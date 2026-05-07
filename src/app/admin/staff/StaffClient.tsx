@@ -11,10 +11,12 @@ interface Staff {
   username: string;
   email: string;
   password?: string;
+  roleId?: string | null;
+  role?: any;
   createdAt: Date;
 }
 
-export default function StaffClient({ initialStaff }: { initialStaff: Staff[] }) {
+export default function StaffClient({ initialStaff, availableRoles }: { initialStaff: Staff[], availableRoles: any[] }) {
   const [staffList, setStaffList] = useState<Staff[]>(initialStaff);
   const [isPending, startTransition] = useTransition();
   const [showForm, setShowForm] = useState(false);
@@ -67,6 +69,7 @@ export default function StaffClient({ initialStaff }: { initialStaff: Staff[] })
                 <tr className="bg-slate-50 border-b border-slate-200">
                   <th className="px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Username</th>
                   <th className="px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Email</th>
+                  <th className="px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Role</th>
                   <th className="px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Created At</th>
                   <th className="px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider text-right">Actions</th>
                 </tr>
@@ -87,6 +90,17 @@ export default function StaffClient({ initialStaff }: { initialStaff: Staff[] })
                         <Mail className="w-4 h-4 text-slate-400" />
                         <span className="text-sm">{s.email}</span>
                       </div>
+                    </td>
+                    <td className="px-4 py-4 text-sm text-slate-600 font-medium">
+                      {s.role ? (
+                        <span className="inline-flex items-center rounded-md bg-indigo-50 px-2 py-1 text-xs font-medium text-indigo-700 ring-1 ring-inset ring-indigo-700/10">
+                          {s.role.name}
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center rounded-md bg-slate-50 px-2 py-1 text-xs font-medium text-slate-600 ring-1 ring-inset ring-slate-500/10">
+                          Unassigned
+                        </span>
+                      )}
                     </td>
                     <td className="px-4 py-4 text-sm text-slate-600 font-medium">
                       {new Date(s.createdAt).toLocaleDateString('en-GB')}
@@ -132,6 +146,7 @@ export default function StaffClient({ initialStaff }: { initialStaff: Staff[] })
       {showForm && (
         <StaffForm
           staff={editingStaff}
+          availableRoles={availableRoles}
           onClose={() => {
             setShowForm(false);
             setEditingStaff(null);

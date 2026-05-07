@@ -6,11 +6,12 @@ import { Loader2, X, Save } from "lucide-react";
 
 interface StaffFormProps {
   staff?: any;
+  availableRoles: any[];
   onClose: () => void;
   onSuccess: (savedStaff: any) => void;
 }
 
-export function StaffForm({ staff, onClose, onSuccess }: StaffFormProps) {
+export function StaffForm({ staff, availableRoles, onClose, onSuccess }: StaffFormProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -18,6 +19,7 @@ export function StaffForm({ staff, onClose, onSuccess }: StaffFormProps) {
     username: staff?.username || "",
     email: staff?.email || "",
     password: "", // empty for edit unless changed
+    roleId: staff?.roleId || "",
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -28,7 +30,7 @@ export function StaffForm({ staff, onClose, onSuccess }: StaffFormProps) {
     try {
       let saved: any;
       if (staff) {
-        const updateData: any = { username: formData.username, email: formData.email };
+        const updateData: any = { username: formData.username, email: formData.email, roleId: formData.roleId || null };
         if (formData.password.trim()) {
           updateData.password = formData.password;
         }
@@ -91,6 +93,20 @@ export function StaffForm({ staff, onClose, onSuccess }: StaffFormProps) {
                 placeholder="staff@example.com"
                 className="w-full text-sm px-3 py-2 border border-slate-200 rounded-md focus:border-slate-400 focus:outline-none transition-colors"
               />
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-slate-700">Role</label>
+              <select
+                value={formData.roleId}
+                onChange={(e) => setFormData({ ...formData, roleId: e.target.value })}
+                className="w-full text-sm px-3 py-2 border border-slate-200 rounded-md focus:border-slate-400 focus:outline-none transition-colors bg-white"
+              >
+                <option value="">-- No Role Assigned --</option>
+                {availableRoles.map(role => (
+                  <option key={role.id} value={role.id}>{role.name}</option>
+                ))}
+              </select>
             </div>
 
             <div className="space-y-1.5">

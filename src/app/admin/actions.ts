@@ -19,20 +19,32 @@ async function getOrCreateSystemAccount(tx: any, name: string, type: "INCOME" | 
   return account;
 }
 
+import { createSession, destroySession } from "@/lib/auth";
+
 export async function adminLogin(email: string, password: string) {
   const staff = await prisma.staff.findUnique({
     where: { email },
+    include: {
+      role: {
+        include: { permissions: true }
+      }
+    }
   });
 
   if (staff && staff.password === password) {
-    cookies().set("admin-auth", "true", {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      maxAge: 60 * 60 * 24 * 7, // 1 week
-      path: "/",
+    if (!staff.role) {
+      return { success: false, error: "Access denied: No role assigned." };
+    }
+
+    await createSession({
+      userId: staff.id,
+      roleName: staff.role.name,
+      permissions: staff.role.permissions.map(p => ({
+        action: p.action,
+        subject: p.subject
+      }))
     });
 
-    // Store staff info if needed, but for now simple true/false auth is used across app
     return { success: true };
   } else {
     return { success: false, error: "Invalid email or password" };
@@ -40,7 +52,7 @@ export async function adminLogin(email: string, password: string) {
 }
 
 export async function adminLogout() {
-  cookies().delete("admin-auth");
+  await destroySession();
   redirect("/admin/login");
 }
 
