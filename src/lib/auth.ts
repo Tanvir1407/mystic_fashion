@@ -17,8 +17,8 @@ export async function createSession(payload: SessionPayload) {
     .setIssuedAt()
     .setExpirationTime('7d')
     .sign(encodedSecret);
-  
-  const cookieStore = await cookies();
+
+  const cookieStore = cookies();
   cookieStore.set('admin-session', session, {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
@@ -28,10 +28,10 @@ export async function createSession(payload: SessionPayload) {
 }
 
 export async function getSession(): Promise<SessionPayload | null> {
-  const cookieStore = await cookies();
+  const cookieStore = cookies();
   const session = cookieStore.get('admin-session')?.value;
   if (!session) return null;
-  
+
   try {
     const { payload } = await jwtVerify(session, encodedSecret, {
       algorithms: ['HS256'],
@@ -43,7 +43,7 @@ export async function getSession(): Promise<SessionPayload | null> {
 }
 
 export async function destroySession() {
-  const cookieStore = await cookies();
+  const cookieStore = cookies();
   cookieStore.delete('admin-session');
   // Also delete the old cookie if it exists to clean up
   cookieStore.delete('admin-auth');
@@ -52,9 +52,9 @@ export async function destroySession() {
 export async function hasPermission(action: string, subject: string): Promise<boolean> {
   const session = await getSession();
   if (!session) return false;
-  
+
   if (session.roleName === 'SUPERADMIN') return true;
-  
+
   return session.permissions.some(
     p => p.action === action && p.subject === subject
   );
