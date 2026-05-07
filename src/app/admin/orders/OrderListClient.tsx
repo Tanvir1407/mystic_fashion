@@ -45,23 +45,14 @@ export default function OrderListClient({
     setSearchValue(currentSearch);
   }, [initialOrders, currentSearch]);
 
-  // Debounced Search Sync
-  useEffect(() => {
-    // Skip if the value matches the current URL state
-    if (searchValue === currentSearch) return;
+  const handleSearch = () => {
+    const params = new URLSearchParams(window.location.search);
+    if (searchValue) params.set("search", searchValue);
+    else params.delete("search");
 
-    const delayDebounceFn = setTimeout(() => {
-      const params = new URLSearchParams(window.location.search);
-      if (searchValue) params.set("search", searchValue);
-      else params.delete("search");
-
-      params.set("page", "1");
-      router.push(`/admin/orders?${params.toString()}`);
-    }, 400); // 400ms delay for a snappy feel
-
-    return () => clearTimeout(delayDebounceFn);
-  }, [searchValue, currentSearch, router]);
-
+    params.set("page", "1");
+    router.push(`/admin/orders?${params.toString()}`);
+  };
   const filteredOrders = optimisticOrders;
 
   const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -182,33 +173,100 @@ export default function OrderListClient({
                   placeholder="Track by ID, Customer Name, or Phone..."
                   value={searchValue}
                   onChange={(e) => setSearchValue(e.target.value)}
-                  className="block w-full pl-10 pr-12 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 focus:bg-white transition-all outline-none font-medium text-slate-900 placeholder:text-slate-400"
+                  onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+                  className="block w-full pl-10 pr-24 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 focus:bg-white transition-all outline-none font-medium text-slate-900 placeholder:text-slate-400"
                 />
-                <div className="absolute inset-y-0 right-0 pr-2 flex items-center">
+                <div className="absolute inset-y-0 right-0 pr-1 flex items-center gap-1">
                   {searchValue && (
                     <button
                       onClick={() => {
                         setSearchValue("");
+                        const params = new URLSearchParams(window.location.search);
+                        params.delete("search");
+                        params.set("page", "1");
+                        router.push(`/admin/orders?${params.toString()}`);
                       }}
-                      className="p-1 hover:bg-slate-200 rounded-full transition-colors text-slate-400 hover:text-slate-600"
+                      className="p-1.5 hover:bg-slate-200 rounded-md transition-colors text-slate-400 hover:text-slate-600"
                     >
                       <X className="w-3.5 h-3.5" />
                     </button>
                   )}
+                  <button
+                    onClick={handleSearch}
+                    className="px-3 py-1.5 bg-slate-900 text-white text-xs font-semibold rounded-md hover:bg-slate-800 transition-colors"
+                  >
+                    Search
+                  </button>
                 </div>
               </div>
+              {/* Right Side: Bulk Actions */}
+              {selectedIds.size > 0 && (
+                <div className="flex flex-wrap items-center gap-2 lg:gap-3  w-full xl:w-auto mt-4 xl:mt-0">
 
+
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="font-semibold text-sm bg-blue-600 text-white px-3 py-1.5 rounded-md"> {selectedIds.size}</span>
+                    <select
+                      value={bulkStatus}
+                      onChange={(e) => setBulkStatus(e.target.value as OrderStatus)}
+                      className="w-36 bg-white border border-indigo-200 rounded-md px-3 py-1.5 text-xs font-semibold text-indigo-700 focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all cursor-pointer"
+                    >
+                      {[
+                        { value: "PENDING", label: "Set Pending" },
+                        { value: "CONFIRMED", label: "Set Confirmed" },
+                        { value: "PRINTING", label: "Set Printing" },
+                        { value: "PACKAGING", label: "Set Packaging" },
+                        { value: "SHIPPED", label: "Set Shipped" },
+                        { value: "DELIVERED", label: "Set Delivered" },
+                        { value: "CANCELLED", label: "Set Cancelled" },
+                        { value: "RETURNED", label: "Set Returned" },
+                      ].map((opt) => (
+                        <option key={opt.value} value={opt.value}>
+                          {opt.label}
+                        </option>
+                      ))}
+                    </select>
+
+                    <button
+                      onClick={handleBulkUpdate}
+                      disabled={loading}
+                      className="text-xs font-semibold text-white bg-indigo-600 px-3 py-1.5 rounded-md hover:bg-indigo-700 transition disabled:opacity-50"
+                    >
+                      {loading ? "Updating..." : "Update"}
+                    </button>
+                    <button
+                      onClick={handlePrintSelected}
+                      className="flex items-center gap-1.5 text-xs font-semibold text-indigo-600 bg-white border border-indigo-200 px-3 py-1.5 rounded-md hover:bg-slate-50 transition"
+                    >
+                      <Printer className="w-3.5 h-3.5" />
+                      Print
+                    </button>
+                    <button
+                      onClick={handleBulkDelete}
+                      disabled={loading}
+                      className="flex items-center gap-1.5 text-xs font-semibold text-red-600 bg-white border border-red-200 px-3 py-1.5 rounded-md hover:bg-red-50 transition disabled:opacity-50"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      Delete
+                    </button>
+                    <button
+                      onClick={() => setShowPathaoModal(true)}
+                      disabled={loading}
+                      className="flex items-center gap-1.5 text-xs font-semibold text-white bg-[#ee2e24] px-3 py-1.5 rounded-md hover:bg-[#d1281f] transition disabled:opacity-50 shadow-sm"
+                    >
+                      <Truck className="w-3.5 h-3.5" />
+                      Send to Pathao
+                    </button>
+                  </div>
+                </div>
+              )}
               <div className="h-8 w-px bg-slate-200 hidden md:block" />
 
               {/* Filter Block */}
               <div className="flex items-center gap-3">
-                <div className="p-2 bg-slate-50 rounded-lg border border-slate-200">
-                  <Filter className="w-4 h-4 text-slate-500" />
-                </div>
+
                 <div className="flex flex-col">
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none mb-1">
-                    Status Filter
-                  </span>
+
                   <select
                     value={currentFilter}
                     onChange={(e) => {
@@ -225,10 +283,12 @@ export default function OrderListClient({
                       { value: "ALL", label: "All Statuses" },
                       { value: "PENDING", label: "Pending" },
                       { value: "CONFIRMED", label: "Confirmed" },
+                      { value: "PRINTING", label: "Printing" },
                       { value: "PACKAGING", label: "Packaging" },
                       { value: "SHIPPED", label: "Shipped" },
                       { value: "DELIVERED", label: "Delivered" },
                       { value: "CANCELLED", label: "Cancelled" },
+                      { value: "RETURNED", label: "Returned" },
                     ].map((opt) => (
                       <option key={opt.value} value={opt.value}>
                         {opt.label}
@@ -239,66 +299,7 @@ export default function OrderListClient({
               </div>
             </div>
 
-            {/* Right Side: Bulk Actions */}
-            {selectedIds.size > 0 && (
-              <div className="flex flex-wrap items-center gap-2 lg:gap-3 bg-indigo-50/50 p-2 lg:px-3 lg:py-2 rounded-lg border border-indigo-100 w-full xl:w-auto mt-4 xl:mt-0">
-                <span className="text-xs font-semibold text-indigo-700 px-2 whitespace-nowrap">
-                  {selectedIds.size} selected
-                </span>
 
-                <div className="flex items-center gap-2 flex-wrap">
-                  <select
-                    value={bulkStatus}
-                    onChange={(e) => setBulkStatus(e.target.value as OrderStatus)}
-                    className="w-36 bg-white border border-indigo-200 rounded-md px-3 py-1.5 text-xs font-semibold text-indigo-700 focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all cursor-pointer"
-                  >
-                    {[
-                      { value: "PENDING", label: "Set Pending" },
-                      { value: "CONFIRMED", label: "Set Confirmed" },
-                      { value: "PACKAGING", label: "Set Packaging" },
-                      { value: "SHIPPED", label: "Set Shipped" },
-                      { value: "DELIVERED", label: "Set Delivered" },
-                      { value: "CANCELLED", label: "Set Cancelled" },
-                    ].map((opt) => (
-                      <option key={opt.value} value={opt.value}>
-                        {opt.label}
-                      </option>
-                    ))}
-                  </select>
-
-                  <button
-                    onClick={handleBulkUpdate}
-                    disabled={loading}
-                    className="text-xs font-semibold text-white bg-indigo-600 px-3 py-1.5 rounded-md hover:bg-indigo-700 transition disabled:opacity-50"
-                  >
-                    {loading ? "Updating..." : "Update"}
-                  </button>
-                  <button
-                    onClick={handlePrintSelected}
-                    className="flex items-center gap-1.5 text-xs font-semibold text-indigo-600 bg-white border border-indigo-200 px-3 py-1.5 rounded-md hover:bg-slate-50 transition"
-                  >
-                    <Printer className="w-3.5 h-3.5" />
-                    Print
-                  </button>
-                  <button
-                    onClick={handleBulkDelete}
-                    disabled={loading}
-                    className="flex items-center gap-1.5 text-xs font-semibold text-red-600 bg-white border border-red-200 px-3 py-1.5 rounded-md hover:bg-red-50 transition disabled:opacity-50"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                    Delete
-                  </button>
-                  <button
-                    onClick={() => setShowPathaoModal(true)}
-                    disabled={loading}
-                    className="flex items-center gap-1.5 text-xs font-semibold text-white bg-[#ee2e24] px-3 py-1.5 rounded-md hover:bg-[#d1281f] transition disabled:opacity-50 shadow-sm"
-                  >
-                    <Truck className="w-3.5 h-3.5" />
-                    Send to Pathao
-                  </button>
-                </div>
-              </div>
-            )}
           </div>
         </div>
 

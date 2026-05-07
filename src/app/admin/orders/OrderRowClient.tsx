@@ -135,15 +135,17 @@ export default function OrderRowClient({
           disabled={loading || status === "CANCELLED" || status === "RETURNED"}
           className={`w-32 text-[11px] font-black uppercase tracking-wider px-2 py-1.5 rounded-md border transition-all cursor-pointer outline-none focus:ring-2 focus:ring-opacity-50 ${status === "PENDING" ? "bg-amber-50 text-amber-700 border-amber-200 focus:ring-amber-500" :
             status === "CONFIRMED" ? "bg-blue-50 text-blue-700 border-blue-200 focus:ring-blue-500" :
-              status === "PACKAGING" ? "bg-purple-50 text-purple-700 border-purple-200 focus:ring-purple-500" :
-                status === "SHIPPED" ? "bg-indigo-50 text-indigo-700 border-indigo-200 focus:ring-indigo-500" :
-                  status === "DELIVERED" ? "bg-green-50 text-green-700 border-green-200 focus:ring-green-500" :
-                    status === "RETURNED" ? "bg-rose-50 text-rose-700 border-rose-200 focus:ring-rose-500" :
-                      "bg-red-50 text-red-700 border-red-200 focus:ring-red-500"
+              status === "PRINTING" ? "bg-cyan-50 text-cyan-700 border-cyan-200 focus:ring-cyan-500" :
+                status === "PACKAGING" ? "bg-purple-50 text-purple-700 border-purple-200 focus:ring-purple-500" :
+                  status === "SHIPPED" ? "bg-indigo-50 text-indigo-700 border-indigo-200 focus:ring-indigo-500" :
+                    status === "DELIVERED" ? "bg-green-50 text-green-700 border-green-200 focus:ring-green-500" :
+                      status === "RETURNED" ? "bg-rose-50 text-rose-700 border-rose-200 focus:ring-rose-500" :
+                        "bg-red-50 text-red-700 border-red-200 focus:ring-red-500"
             }`}
         >
           <option value="PENDING" disabled={status !== "PENDING"}>Pending</option>
           <option value="CONFIRMED" disabled={status === "SHIPPED" || status === "DELIVERED" || status === "CANCELLED" || status === "RETURNED"}>Confirmed</option>
+          <option value="PRINTING" disabled={status === "SHIPPED" || status === "DELIVERED" || status === "CANCELLED" || status === "RETURNED"}>Printing</option>
           <option value="PACKAGING" disabled={status === "SHIPPED" || status === "DELIVERED" || status === "CANCELLED" || status === "RETURNED"}>Packaging</option>
           <option value="SHIPPED" disabled={status === "DELIVERED" || status === "CANCELLED" || status === "RETURNED"}>Shipped</option>
           <option value="DELIVERED" disabled={status === "PENDING" || status === "CONFIRMED" || status === "PACKAGING" || status === "CANCELLED" || status === "RETURNED"}>Delivered</option>
