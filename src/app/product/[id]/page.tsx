@@ -10,7 +10,7 @@ import { cookies } from 'next/headers';
 export const dynamic = "force-dynamic";
 
 export default async function ProductPage({ params }: { params: { id: string } }) {
-  const cookieStore = await cookies();
+  const cookieStore = cookies();
   const isAdmin = cookieStore.get("admin-auth")?.value === "true";
 
   const [product, delivery, footerData] = await Promise.all([
