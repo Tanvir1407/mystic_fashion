@@ -155,7 +155,14 @@ export default async function AdminProductsPage({ searchParams }: { searchParams
                     <td className="px-2 py-4 text-right">
                       <div className="flex items-center justify-end gap-2">
                         <Link
-                          href={`/admin/products/${product.id}/edit`}
+                          href={`/admin/products/${product.id}`}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-600 bg-slate-50 border border-slate-200 rounded-md hover:bg-slate-100 hover:border-slate-300 transition-colors"
+                        >
+                          <Eye className="w-3.5 h-3.5" />
+                          View
+                        </Link>
+                        <Link
+                          href={`/admin/products/edit/${product.id}`}
                           className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-indigo-600 bg-indigo-50 border border-indigo-200 rounded-md hover:bg-indigo-100 hover:border-indigo-300 transition-colors"
                         >
                           <Edit2 className="w-3.5 h-3.5" />

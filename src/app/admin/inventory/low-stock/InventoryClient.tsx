@@ -221,7 +221,7 @@ export default function InventoryClient({ initialSettings, products }: { initial
                           </td>
                           <td className="px-4 py-4 text-right">
                             <Link 
-                              href={`/admin/products/${product.id}/edit`}
+                              href={`/admin/products/edit/${product.id}`}
                               className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-bold text-indigo-600 bg-indigo-50 border border-indigo-100 rounded hover:bg-indigo-100 transition-colors uppercase tracking-wider"
                             >
                               Manage
