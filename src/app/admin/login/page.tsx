@@ -2,8 +2,8 @@
 
 import { useState } from "react";
 import { adminLogin } from "../actions";
-import { useRouter } from "next/navigation";
 import { Loader2, ArrowRight } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -19,7 +19,11 @@ export default function LoginPage() {
     try {
       const res = await adminLogin(email, password);
       if (res.success) {
-        router.push("/admin/products");
+        if (res.token) {
+          localStorage.setItem('admin_token', res.token);
+        }
+        router.push('/admin/products');
+        router.refresh();
       } else {
         setError(res.error || "Login failed");
         setIsLoading(false);
