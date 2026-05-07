@@ -72,7 +72,11 @@ export default async function AdminSizeChartsPage() {
                       </Link>
                       <form action={async () => {
                         "use server";
-                        await deleteSizeChart(chart.id);
+                        try {
+                          await deleteSizeChart(chart.id);
+                        } catch (err: any) {
+                          console.error("Inline action deleteSizeChart failed:", err);
+                        }
                       }}>
                         <button
                           type="submit"

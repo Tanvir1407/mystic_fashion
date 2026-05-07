@@ -22,32 +22,37 @@ async function getOrCreateSystemAccount(tx: any, name: string, type: "INCOME" | 
 import { createSession, destroySession } from "@/lib/auth";
 
 export async function adminLogin(email: string, password: string) {
-  const staff = await prisma.staff.findUnique({
-    where: { email },
-    include: {
-      role: {
-        include: { permissions: true }
+  try {
+    const staff = await prisma.staff.findUnique({
+      where: { email },
+      include: {
+        role: {
+          include: { permissions: true }
+        }
       }
-    }
-  });
-
-  if (staff && staff.password === password) {
-    if (!staff.role) {
-      return { success: false, error: "Access denied: No role assigned." };
-    }
-
-    await createSession({
-      userId: staff.id,
-      roleName: staff.role.name,
-      permissions: staff.role.permissions.map(p => ({
-        action: p.action,
-        subject: p.subject
-      }))
     });
 
-    return { success: true };
-  } else {
-    return { success: false, error: "Invalid email or password" };
+    if (staff && staff.password === password) {
+      if (!staff.role) {
+        return { success: false, error: "Access denied: No role assigned." };
+      }
+
+      await createSession({
+        userId: staff.id,
+        roleName: staff.role.name,
+        permissions: staff.role.permissions.map(p => ({
+          action: p.action,
+          subject: p.subject
+        }))
+      });
+
+      return { success: true };
+    } else {
+      return { success: false, error: "Invalid email or password" };
+    }
+  } catch (error: any) {
+    console.error("Error in adminLogin:", error);
+    return { success: false, error: error instanceof Error ? error.message : "An unexpected error occurred." };
   }
 }
 
@@ -69,30 +74,39 @@ export async function createProduct(data: {
   isPublished: boolean;
   variants: { size: string; stock: number }[];
 }) {
-  await prisma.product.create({
-    data: {
-      name: data.name,
-      description: data.description,
-      price: data.price,
-      images: data.images,
-      team: data.team,
-      category: data.category,
-      isFeatured: data.isFeatured,
-      isPublished: data.isPublished,
-      sizeChartId: data.sizeChartId,
-      discountId: data.discountId,
-      variants: {
-        create: data.variants.map((v, idx) => ({
-          size: v.size,
-          stock: v.stock,
-          order: idx,
-        })),
+  try {
+    const product = await prisma.product.create({
+      data: {
+        name: data.name,
+        description: data.description,
+        price: data.price,
+        images: data.images,
+        team: data.team,
+        category: data.category,
+        isFeatured: data.isFeatured,
+        isPublished: data.isPublished,
+        sizeChartId: data.sizeChartId,
+        discountId: data.discountId,
+        variants: {
+          create: data.variants.map((v, idx) => ({
+            size: v.size,
+            stock: v.stock,
+            order: idx,
+          })),
+        },
       },
-    },
-  });
+    });
 
-  revalidatePath("/admin/products");
-  redirect("/admin/products");
+    revalidatePath("/admin/products");
+    redirect("/admin/products");
+    return { success: true, data: product };
+  } catch (error: any) {
+    if (error.message === 'NEXT_REDIRECT' || error.digest?.startsWith('NEXT_REDIRECT')) {
+      throw error;
+    }
+    console.error("Error in createProduct:", error);
+    return { success: false, error: error instanceof Error ? error.message : "An unexpected error occurred." };
+  }
 }
 
 export async function updateProduct(id: string, data: {
@@ -108,49 +122,64 @@ export async function updateProduct(id: string, data: {
   isPublished: boolean;
   variants: { size: string; stock: number }[];
 }) {
-  await prisma.product.update({
-    where: { id },
-    data: {
-      name: data.name,
-      description: data.description,
-      price: data.price,
-      images: data.images,
-      team: data.team,
-      category: data.category,
-      isFeatured: data.isFeatured,
-      isPublished: data.isPublished,
-      sizeChartId: data.sizeChartId,
-      discountId: data.discountId,
-    },
-  });
+  try {
+    const product = await prisma.product.update({
+      where: { id },
+      data: {
+        name: data.name,
+        description: data.description,
+        price: data.price,
+        images: data.images,
+        team: data.team,
+        category: data.category,
+        isFeatured: data.isFeatured,
+        isPublished: data.isPublished,
+        sizeChartId: data.sizeChartId,
+        discountId: data.discountId,
+      },
+    });
 
-  await prisma.$transaction(
-    data.variants.map((v, idx) =>
-      prisma.productVariant.upsert({
-        where: { productId_size: { productId: id, size: v.size } },
-        update: { stock: v.stock, order: idx },
-        create: { productId: id, size: v.size, stock: v.stock, order: idx },
-      })
-    )
-  );
+    await prisma.$transaction(
+      data.variants.map((v, idx) =>
+        prisma.productVariant.upsert({
+          where: { productId_size: { productId: id, size: v.size } },
+          update: { stock: v.stock, order: idx },
+          create: { productId: id, size: v.size, stock: v.stock, order: idx },
+        })
+      )
+    );
 
-  await prisma.productVariant.deleteMany({
-    where: {
-      productId: id,
-      size: { notIn: data.variants.map((v) => v.size) },
-    },
-  });
+    await prisma.productVariant.deleteMany({
+      where: {
+        productId: id,
+        size: { notIn: data.variants.map((v) => v.size) },
+      },
+    });
 
-  revalidatePath("/admin/products");
-  revalidatePath(`/product/${id}`);
-  redirect("/admin/products");
+    revalidatePath("/admin/products");
+    revalidatePath(`/product/${id}`);
+    redirect("/admin/products");
+    return { success: true, data: product };
+  } catch (error: any) {
+    if (error.message === 'NEXT_REDIRECT' || error.digest?.startsWith('NEXT_REDIRECT')) {
+      throw error;
+    }
+    console.error("Error in updateProduct:", error);
+    return { success: false, error: error instanceof Error ? error.message : "An unexpected error occurred." };
+  }
 }
 
 export async function deleteProduct(id: string) {
-  await prisma.product.delete({
-    where: { id },
-  });
-  revalidatePath("/admin/products");
+  try {
+    const product = await prisma.product.delete({
+      where: { id },
+    });
+    revalidatePath("/admin/products");
+    return { success: true, data: product };
+  } catch (error: any) {
+    console.error("Error in deleteProduct:", error);
+    return { success: false, error: error instanceof Error ? error.message : "An unexpected error occurred." };
+  }
 }
 
 export async function updateOrderStatus(orderId: string, status: OrderStatus) {
@@ -449,20 +478,35 @@ export async function updateOrderRemark(orderId: string, remarks: string) {
 }
 
 export async function saveSizeChart(category: string, data: any) {
-  await prisma.sizeChart.upsert({
-    where: { category },
-    update: { data },
-    create: { category, data },
-  });
-  revalidatePath("/admin/size-charts");
-  redirect("/admin/size-charts");
+  try {
+    const chart = await prisma.sizeChart.upsert({
+      where: { category },
+      update: { data },
+      create: { category, data },
+    });
+    revalidatePath("/admin/size-charts");
+    redirect("/admin/size-charts");
+    return { success: true, data: chart };
+  } catch (error: any) {
+    if (error.message === 'NEXT_REDIRECT' || error.digest?.startsWith('NEXT_REDIRECT')) {
+      throw error;
+    }
+    console.error("Error in saveSizeChart:", error);
+    return { success: false, error: error instanceof Error ? error.message : "An unexpected error occurred." };
+  }
 }
 
 export async function deleteSizeChart(id: string) {
-  await prisma.sizeChart.delete({
-    where: { id },
-  });
-  revalidatePath("/admin/size-charts");
+  try {
+    const chart = await prisma.sizeChart.delete({
+      where: { id },
+    });
+    revalidatePath("/admin/size-charts");
+    return { success: true, data: chart };
+  } catch (error: any) {
+    console.error("Error in deleteSizeChart:", error);
+    return { success: false, error: error instanceof Error ? error.message : "An unexpected error occurred." };
+  }
 }
 
 export async function createPurchase(
@@ -472,54 +516,64 @@ export async function createPurchase(
   discountAmount: number,
   items: { productId: string; variantId: string; quantity: number; unitPrice: number }[]
 ) {
-  await prisma.$transaction(async (tx) => {
-    const purchase = await tx.purchase.create({
-      data: {
-        supplierName,
-        invoiceNumber,
-        totalAmount,
-        discountAmount,
-        status: "COMPLETED", // Assuming immediate stock update on creation
-        items: {
-          create: items.map((i) => ({
-            productId: i.productId,
-            variantId: i.variantId,
-            quantity: i.quantity,
-            unitPrice: i.unitPrice,
-          })),
+  try {
+    const result = await prisma.$transaction(async (tx) => {
+      const purchase = await tx.purchase.create({
+        data: {
+          supplierName,
+          invoiceNumber,
+          totalAmount,
+          discountAmount,
+          status: "COMPLETED", // Assuming immediate stock update on creation
+          items: {
+            create: items.map((i) => ({
+              productId: i.productId,
+              variantId: i.variantId,
+              quantity: i.quantity,
+              unitPrice: i.unitPrice,
+            })),
+          },
         },
-      },
-    });
-
-    for (const item of items) {
-      await tx.productVariant.update({
-        where: { id: item.variantId },
-        data: { stock: { increment: item.quantity } },
       });
-      await tx.product.update({
-        where: { id: item.productId },
-        data: { purchasePrice: item.unitPrice },
-      });
-    }
 
-    const account = await getOrCreateSystemAccount(tx, "Inventory Purchases", "EXPENSE");
-    await tx.transaction.create({
-      data: {
-        accountId: account.id,
-        amount: totalAmount,
-        date: new Date(),
-        type: "DEBIT",
-        description: `Inventory purchase from ${supplierName}`,
-        referenceId: purchase.id,
-        referenceType: "PURCHASE",
+      for (const item of items) {
+        await tx.productVariant.update({
+          where: { id: item.variantId },
+          data: { stock: { increment: item.quantity } },
+        });
+        await tx.product.update({
+          where: { id: item.productId },
+          data: { purchasePrice: item.unitPrice },
+        });
       }
-    });
-    revalidatePath("/admin/accounting");
-  });
 
-  revalidatePath("/admin/purchases");
-  revalidatePath("/admin/products");
-  redirect("/admin/purchases");
+      const account = await getOrCreateSystemAccount(tx, "Inventory Purchases", "EXPENSE");
+      await tx.transaction.create({
+        data: {
+          accountId: account.id,
+          amount: totalAmount,
+          date: new Date(),
+          type: "DEBIT",
+          description: `Inventory purchase from ${supplierName}`,
+          referenceId: purchase.id,
+          referenceType: "PURCHASE",
+        }
+      });
+      revalidatePath("/admin/accounting");
+      return purchase;
+    });
+
+    revalidatePath("/admin/purchases");
+    revalidatePath("/admin/products");
+    redirect("/admin/purchases");
+    return { success: true, data: result };
+  } catch (error: any) {
+    if (error.message === 'NEXT_REDIRECT' || error.digest?.startsWith('NEXT_REDIRECT')) {
+      throw error;
+    }
+    console.error("Error in createPurchase:", error);
+    return { success: false, error: error instanceof Error ? error.message : "An unexpected error occurred." };
+  }
 }
 
 export async function updatePurchase(
@@ -624,16 +678,28 @@ export async function updatePurchase(
 }
 
 export async function deletePurchase(id: string) {
-  await prisma.purchase.delete({ where: { id } });
-  revalidatePath("/admin/purchases");
+  try {
+    const purchase = await prisma.purchase.delete({ where: { id } });
+    revalidatePath("/admin/purchases");
+    return { success: true, data: purchase };
+  } catch (error: any) {
+    console.error("Error in deletePurchase:", error);
+    return { success: false, error: error instanceof Error ? error.message : "An unexpected error occurred." };
+  }
 }
 
 export async function updatePurchaseStatus(id: string, status: string) {
-  await prisma.purchase.update({
-    where: { id },
-    data: { status },
-  });
-  revalidatePath("/admin/purchases");
+  try {
+    const purchase = await prisma.purchase.update({
+      where: { id },
+      data: { status },
+    });
+    revalidatePath("/admin/purchases");
+    return { success: true, data: purchase };
+  } catch (error: any) {
+    console.error("Error in updatePurchaseStatus:", error);
+    return { success: false, error: error instanceof Error ? error.message : "An unexpected error occurred." };
+  }
 }
 
 export async function uploadImage(formData: FormData) {
@@ -664,15 +730,21 @@ export async function getDeliverySettings() {
 }
 
 export async function updateDeliverySettings(insideDhaka: number, outsideDhaka: number) {
-  await prisma.deliverySetting.upsert({
-    where: { id: "default" },
-    update: { insideDhaka, outsideDhaka },
-    create: { id: "default", insideDhaka, outsideDhaka },
-  });
-  revalidatePath("/admin/settings");
-  revalidatePath("/");
-  revalidatePath("/checkout");
-  revalidatePath("/product/[id]", "page");
+  try {
+    const settings = await prisma.deliverySetting.upsert({
+      where: { id: "default" },
+      update: { insideDhaka, outsideDhaka },
+      create: { id: "default", insideDhaka, outsideDhaka },
+    });
+    revalidatePath("/admin/settings");
+    revalidatePath("/");
+    revalidatePath("/checkout");
+    revalidatePath("/product/[id]", "page");
+    return { success: true, data: settings };
+  } catch (error: any) {
+    console.error("Error in updateDeliverySettings:", error);
+    return { success: false, error: error instanceof Error ? error.message : "An unexpected error occurred." };
+  }
 }
 
 export async function getInventorySettings() {
@@ -684,12 +756,18 @@ export async function getInventorySettings() {
 }
 
 export async function updateInventorySettings(lowStockThreshold: number) {
-  await prisma.inventorySetting.upsert({
-    where: { id: "default" },
-    update: { lowStockThreshold },
-    create: { id: "default", lowStockThreshold },
-  });
-  revalidatePath("/admin/inventory");
+  try {
+    const settings = await prisma.inventorySetting.upsert({
+      where: { id: "default" },
+      update: { lowStockThreshold },
+      create: { id: "default", lowStockThreshold },
+    });
+    revalidatePath("/admin/inventory");
+    return { success: true, data: settings };
+  } catch (error: any) {
+    console.error("Error in updateInventorySettings:", error);
+    return { success: false, error: error instanceof Error ? error.message : "An unexpected error occurred." };
+  }
 }
 
 export async function getDTFPrintSetting() {
@@ -701,13 +779,19 @@ export async function getDTFPrintSetting() {
 }
 
 export async function updateDTFPrintSetting(printCost: number) {
-  await prisma.dTFPrintSetting.upsert({
-    where: { id: "default" },
-    update: { printCost },
-    create: { id: "default", printCost },
-  });
-  revalidatePath("/admin/settings");
-  revalidatePath("/checkout");
+  try {
+    const setting = await prisma.dTFPrintSetting.upsert({
+      where: { id: "default" },
+      update: { printCost },
+      create: { id: "default", printCost },
+    });
+    revalidatePath("/admin/settings");
+    revalidatePath("/checkout");
+    return { success: true, data: setting };
+  } catch (error: any) {
+    console.error("Error in updateDTFPrintSetting:", error);
+    return { success: false, error: error instanceof Error ? error.message : "An unexpected error occurred." };
+  }
 }
 
 export async function getLowStockProducts() {
@@ -862,30 +946,41 @@ export async function createAdminOrder(data: {
 }
 
 export async function getPageBySlug(slug: string) {
-  return await prisma.page.findUnique({
-    where: { slug },
-  });
+  try {
+    const page = await prisma.page.findUnique({
+      where: { slug },
+    });
+    return { success: true, data: page };
+  } catch (error: any) {
+    console.error("Error in getPageBySlug:", error);
+    return { success: false, error: error instanceof Error ? error.message : "An unexpected error occurred." };
+  }
 }
 
 export async function updatePage(slug: string, data: { title: string; content: string }) {
-  const page = await prisma.page.upsert({
-    where: { slug },
-    update: {
-      title: data.title,
-      content: data.content,
-    },
-    create: {
-      slug,
-      title: data.title,
-      content: data.content,
-    },
-  });
+  try {
+    const page = await prisma.page.upsert({
+      where: { slug },
+      update: {
+        title: data.title,
+        content: data.content,
+      },
+      create: {
+        slug,
+        title: data.title,
+        content: data.content,
+      },
+    });
 
-  revalidatePath(`/${slug}`);
-  revalidatePath(`/admin/pages/${slug}`);
-  revalidatePath("/admin/pages");
+    revalidatePath(`/${slug}`);
+    revalidatePath(`/admin/pages/${slug}`);
+    revalidatePath("/admin/pages");
 
-  return { success: true, page };
+    return { success: true, data: page };
+  } catch (error: any) {
+    console.error("Error in updatePage:", error);
+    return { success: false, error: error instanceof Error ? error.message : "An unexpected error occurred." };
+  }
 }
 
 export async function bulkSendToPathaoAction(orderIds: string[]) {
