@@ -26,7 +26,8 @@ export default function PurchaseFormClient({ products, initialData }: { products
     : [{ id: "1", productId: "", variantId: "", quantity: 1, unitPrice: 0 }];
 
   const [items, setItems] = useState<{ id: string, productId: string, variantId: string, quantity: number, unitPrice: number }[]>(defaultItems);
-  const subtotal = items.reduce((acc, item) => acc + (item.quantity * item.unitPrice), 0);
+  const totalUnits = items.reduce((acc, item) => acc + (Number(item.quantity) || 0), 0);
+  const subtotal = items.reduce((acc, item) => acc + ((Number(item.quantity) || 0) * (Number(item.unitPrice) || 0)), 0);
   const grandTotal = subtotal - (parseFloat(totalDiscount) || 0);
 
   const addItem = () => {
@@ -220,25 +221,35 @@ export default function PurchaseFormClient({ products, initialData }: { products
           </div>
         </div>
 
-        <div className="bg-slate-50 p-6 rounded-lg border border-slate-200 mb-8 flex flex-col gap-4 items-end">
-          <div className="flex items-center gap-8 text-sm">
-            <span className="text-slate-500 font-medium">Subtotal (Item sum):</span>
-            <span className="text-slate-900 font-mono font-bold text-lg">৳ {subtotal.toFixed(2)}</span>
+        <div className="w-full md:w-[480px] ml-auto bg-slate-50 p-6 rounded-lg border border-slate-200 mb-8 shadow-sm">
+          <div className="space-y-4">
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-slate-500 font-medium">Total Units Received</span>
+              <span className="text-slate-900 font-mono font-bold text-lg">{totalUnits}</span>
+            </div>
+
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-slate-500 font-medium">Subtotal (Item Sum)</span>
+              <span className="text-slate-900 font-mono font-bold text-lg">৳ {subtotal.toFixed(2)}</span>
+            </div>
+
+            <div className="flex items-center justify-between">
+              <label className="text-sm text-slate-500 font-medium">Supplier Discount</label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-mono text-sm">৳</span>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={totalDiscount}
+                  onChange={(e) => setTotalDiscount(e.target.value)}
+                  className="w-32 pl-7 pr-3 py-1.5 bg-white border border-slate-300 rounded-md focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 text-sm font-mono text-right transition-colors"
+                />
+              </div>
+            </div>
           </div>
 
-          <div className="flex items-center gap-8">
-            <label className="text-sm text-slate-500 font-medium">Supplier Discount (৳):</label>
-            <input
-              type="number"
-              step="0.01"
-              value={totalDiscount}
-              onChange={(e) => setTotalDiscount(e.target.value)}
-              className="w-32 px-3 py-1.5 border border-slate-300 rounded-md focus:outline-none focus:border-indigo-500 text-sm font-mono text-right"
-            />
-          </div>
-
-          <div className="flex items-center gap-8 py-3 border-t border-slate-200 w-full justify-end pt-5">
-            <span className="text-base font-semibold text-slate-900">Grand Total Paid:</span>
+          <div className="mt-5 pt-5 border-t border-slate-200 flex items-center justify-between">
+            <span className="text-base font-semibold text-slate-900">Grand Total Paid</span>
             <span className="text-2xl font-bold text-indigo-600 font-mono">৳ {grandTotal.toFixed(2)}</span>
           </div>
         </div>
