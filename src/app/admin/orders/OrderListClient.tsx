@@ -172,7 +172,16 @@ export default function OrderListClient({
                   type="text"
                   placeholder="Track by ID, Customer Name, or Phone..."
                   value={searchValue}
-                  onChange={(e) => setSearchValue(e.target.value)}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setSearchValue(val);
+                    if (val === "") {
+                      const params = new URLSearchParams(window.location.search);
+                      params.delete("search");
+                      params.set("page", "1");
+                      router.push(`/admin/orders?${params.toString()}`);
+                    }
+                  }}
                   onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
                   className="block w-full pl-10 pr-24 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:ring-4 focus:ring-slate-500/10 focus:border-slate-300 focus:bg-white transition-all outline-none font-medium text-slate-900 placeholder:text-slate-400"
                 />
