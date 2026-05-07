@@ -7,6 +7,7 @@ const inter = Inter({ subsets: ["latin"] });
 export const metadata: Metadata = {
   title: "Mystic Fashion | Premium Jersey & Apparel",
   description: "Experience the luxury of premium jerseys and fashion apparel.",
+  manifest: "/site.webmanifest",
 };
 
 export default function RootLayout({

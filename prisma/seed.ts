@@ -91,51 +91,6 @@ async function main() {
     });
     console.log(`- Created Completed Purchase and PurchaseItem from supplier "${purchase.supplierName}"`);
 
-    // 4. Create Two Test Orders
-    // Order 1: Standard Order (No customization, requiresPrint: false)
-    const order1 = await tx.order.create({
-      data: {
-        customerName: "Tanvir",
-        phone: "01712345678",
-        address: "Dhaka, Bangladesh",
-        totalAmount: 1200,
-        status: "SHIPPED",
-        items: {
-          create: {
-            productId: product.id,
-            size: "XL",
-            quantity: 1,
-            price: 1200,
-            requiresPrint: false,
-          },
-        },
-      },
-    });
-    console.log(`- Created Order 1 (Standard) for customer "${order1.customerName}"`);
-
-    // Order 2: Customized Order (requiresPrint: true, printCost: 300)
-    const order2 = await tx.order.create({
-      data: {
-        customerName: "Sabbir",
-        phone: "01812345678",
-        address: "Chittagong, Bangladesh",
-        totalAmount: 1500,
-        status: "SHIPPED",
-        items: {
-          create: {
-            productId: product.id,
-            size: "XL",
-            quantity: 1,
-            price: 1200,
-            requiresPrint: true,
-            printName: "MESSI",
-            printNumber: "10",
-            printCost: 300,
-          },
-        },
-      },
-    });
-    console.log(`- Created Order 2 (Customized) for customer "${order2.customerName}"`);
   });
 
   console.log("Seeding process completed successfully!");
