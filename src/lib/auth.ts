@@ -18,7 +18,8 @@ export async function createSession(payload: SessionPayload) {
     .setExpirationTime('7d')
     .sign(encodedSecret);
   
-  cookies().set('admin-session', session, {
+  const cookieStore = await cookies();
+  cookieStore.set('admin-session', session, {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
     maxAge: 60 * 60 * 24 * 7, // 1 week
@@ -27,7 +28,8 @@ export async function createSession(payload: SessionPayload) {
 }
 
 export async function getSession(): Promise<SessionPayload | null> {
-  const session = cookies().get('admin-session')?.value;
+  const cookieStore = await cookies();
+  const session = cookieStore.get('admin-session')?.value;
   if (!session) return null;
   
   try {
@@ -41,9 +43,10 @@ export async function getSession(): Promise<SessionPayload | null> {
 }
 
 export async function destroySession() {
-  cookies().delete('admin-session');
+  const cookieStore = await cookies();
+  cookieStore.delete('admin-session');
   // Also delete the old cookie if it exists to clean up
-  cookies().delete('admin-auth');
+  cookieStore.delete('admin-auth');
 }
 
 export async function hasPermission(action: string, subject: string): Promise<boolean> {

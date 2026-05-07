@@ -10,7 +10,8 @@ import { cookies } from 'next/headers';
 export const dynamic = "force-dynamic";
 
 export default async function ProductPage({ params }: { params: { id: string } }) {
-  const isAdmin = cookies().get("admin-auth")?.value === "true";
+  const cookieStore = await cookies();
+  const isAdmin = cookieStore.get("admin-auth")?.value === "true";
 
   const [product, delivery, footerData] = await Promise.all([
     prisma.product.findUnique({
