@@ -21,8 +21,7 @@ export async function placeOrderAction(payload: {
 }) {
   try {
     return await prisma.$transaction(async (tx) => {
-      const printQuantity = payload.items.reduce((sum, item) => sum + (item.requiresPrint ? item.quantity : 0), 0);
-      const calculatedAdvance = printQuantity * 300;
+      const calculatedAdvance = payload.items.reduce((sum, item) => sum + (item.requiresPrint ? (item.printCost || 0) * item.quantity : 0), 0);
 
       // Generate Custom Order ID
       const now = new Date();
