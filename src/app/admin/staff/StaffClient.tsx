@@ -125,8 +125,12 @@ export default function StaffClient({ initialStaff, availableRoles }: { initialS
                             onConfirm={async () => {
                               startTransition(async () => {
                                 try {
-                                  await deleteStaff(s.id);
-                                  setStaffList(prev => prev.filter(item => item.id !== s.id));
+                                  const res = await deleteStaff(s.id);
+                                  if (res.success) {
+                                    setStaffList(prev => prev.filter(item => item.id !== s.id));
+                                  } else {
+                                    alert(res.error || "Failed to delete staff.");
+                                  }
                                 } catch (error: any) {
                                   alert(error.message || "Failed to delete staff.");
                                 }

@@ -28,20 +28,25 @@ export function StaffForm({ staff, availableRoles, onClose, onSuccess }: StaffFo
     setError("");
 
     try {
-      let saved: any;
+      let res: any;
       if (staff) {
         const updateData: any = { username: formData.username, email: formData.email, roleId: formData.roleId || null };
         if (formData.password.trim()) {
           updateData.password = formData.password;
         }
-        saved = await updateStaff(staff.id, updateData);
+        res = await updateStaff(staff.id, updateData);
       } else {
         if (!formData.password.trim()) {
           throw new Error("Password is required for new staff.");
         }
-        saved = await createStaff(formData);
+        res = await createStaff(formData);
       }
-      onSuccess(saved);
+
+      if (res.success) {
+        onSuccess(res.data);
+      } else {
+        setError(res.error || "Failed to save staff member.");
+      }
     } catch (err: any) {
       setError(err.message || "An error occurred.");
     } finally {

@@ -37,7 +37,6 @@ export default async function ProductDetailView({ params }: { params: { id: stri
       },
       orderItems: {
         include: { order: true },
-        orderBy: { order: { createdAt: 'desc' } },
       },
       purchaseItems: true,
     },
@@ -46,6 +45,9 @@ export default async function ProductDetailView({ params }: { params: { id: stri
   if (!product) {
     notFound();
   }
+
+  // Sort orderItems in-memory based on order.createdAt descending
+  product.orderItems.sort((a, b) => new Date(b.order.createdAt).getTime() - new Date(a.order.createdAt).getTime());
 
   const inventorySetting = await prisma.inventorySetting.findUnique({
     where: { id: 'default' },
