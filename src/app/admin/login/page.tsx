@@ -3,59 +3,136 @@
 import { useState } from "react";
 import { adminLogin } from "../actions";
 import { useRouter } from "next/navigation";
+import { Loader2, ArrowRight } from "lucide-react";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
-    const res = await adminLogin(email, password);
-    if (res.success) {
-      router.push("/admin/products");
-    } else {
-      setError(res.error || "Login failed");
+    setIsLoading(true);
+    try {
+      const res = await adminLogin(email, password);
+      if (res.success) {
+        router.push("/admin/products");
+      } else {
+        setError(res.error || "Login failed");
+        setIsLoading(false);
+      }
+    } catch (err) {
+      setError("An unexpected error occurred.");
+      setIsLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-4">
-      <div className="max-w-md w-full bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-3xl p-8 shadow-2xl">
-        <h1 className="text-3xl font-black text-center text-foreground mb-8">Admin Access</h1>
-        <form onSubmit={handleSubmit} className="space-y-6">
+    <div className="min-h-screen flex bg-white">
+      {/* Left Panel - Branding & Visuals */}
+      <div className="hidden lg:flex lg:w-1/2 relative bg-[#800020] overflow-hidden">
+        {/* Background Image */}
+        <div
+          className="absolute inset-0 bg-cover bg-center opacity-30 mix-blend-luminosity"
+          style={{ backgroundImage: "url('https://images.unsplash.com/photo-1441984904996-e0b6ba687e04?q=80&w=2070&auto=format&fit=crop')" }}
+        />
+        {/* Gradient Overlay */}
+        <div className="absolute inset-0 bg-gradient-to-t from-[#800020] via-[#800020]/80 to-transparent" />
+
+        {/* Content */}
+        <div className="relative z-10 flex flex-col justify-between p-16 h-full w-full">
           <div>
-            <label className="block text-sm font-bold text-foreground mb-2">Email Address</label>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-4 py-4 rounded-2xl bg-slate-50 dark:bg-zinc-800/50 border border-slate-200 dark:border-zinc-700 text-foreground focus:outline-none focus:border-gold transition-colors"
-              placeholder="admin@example.com"
-              required
-            />
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center shadow-lg">
+                <span className="text-xl font-black text-[#800020] font-serif">M</span>
+              </div>
+              <span className="text-3xl font-medium text-white uppercase ">Mystic Fashion</span>
+            </div>
           </div>
+
+          <div className="max-w-xl">
+            <h2 className="text-4xl font-semibold text-white mb-6 leading-tight tracking-tight">
+              <span className="text-white/70">Admin Portal.</span>
+            </h2>
+            <p className="text-white/80 text-lg leading-relaxed">
+              Manage inventory, analyze performance, and oversee your entire retail operation from a single, unified administrative portal.
+            </p>
+          </div>
+
+          <div className="text-sm text-white/50 font-medium">
+            &copy; {new Date().getFullYear()} Mystic Fashion. All rights reserved.
+          </div>
+        </div>
+      </div>
+
+      {/* Right Panel - Login Form */}
+      <div className="w-full lg:w-1/2 flex items-center justify-center p-8 sm:p-12 lg:p-24 bg-white">
+        <div className="w-full max-w-sm">
+          {/* Mobile Logo */}
+          <div className="mb-12 lg:hidden flex items-center gap-3">
+            <div className="w-10 h-10 bg-[#800020] rounded-lg flex items-center justify-center shadow-sm">
+              <span className="text-xl font-black text-white font-serif">M</span>
+            </div>
+            <span className="text-xl font-bold text-[#800020] tracking-widest uppercase font-serif">Mystic Fashion</span>
+          </div>
+
           <div>
-            <label className="block text-sm font-bold text-foreground mb-2">Password</label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-4 py-4 rounded-2xl bg-slate-50 dark:bg-zinc-800/50 border border-slate-200 dark:border-zinc-700 text-foreground focus:outline-none focus:border-gold transition-colors font-mono"
-              placeholder="••••••••"
-              required
-            />
+            <h1 className="text-2xl font-bold text-slate-900 tracking-tight mb-2">Welcome back</h1>
+            <p className="text-sm text-slate-500 mb-8">Please enter your admin credentials to securely access the system.</p>
           </div>
-          {error && <p className="text-red-500 text-sm font-medium text-center">{error}</p>}
-          <button
-            type="submit"
-            className="w-full h-14 bg-foreground text-background font-black uppercase tracking-wider rounded-2xl hover:bg-gold hover:text-black hover:shadow-xl hover:shadow-gold/20 transition-all active:scale-95"
-          >
-            Enter Dashboard
-          </button>
-        </form>
+
+          <form onSubmit={handleSubmit} className="space-y-5">
+            {error && (
+              <div className="p-3 bg-red-50 border border-red-100 rounded-md text-red-600 text-sm font-medium">
+                {error}
+              </div>
+            )}
+
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium text-slate-700">Email Address</label>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="w-full px-4 h-11 bg-white border border-slate-200 rounded-md text-sm text-slate-900 focus:outline-none focus:border-slate-400 focus:ring-1 focus:ring-slate-400 transition-colors"
+                placeholder="admin@example.com"
+                required
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium text-slate-700">Password</label>
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full px-4 h-11 bg-white border border-slate-200 rounded-md text-sm text-slate-900 focus:outline-none focus:border-slate-400 focus:ring-1 focus:ring-slate-400 transition-colors"
+                placeholder="••••••••"
+                required
+              />
+            </div>
+
+            <div className="pt-2">
+              <button
+                type="submit"
+                disabled={isLoading}
+                className="w-full h-11 bg-[#800020] text-white text-sm font-semibold rounded-md hover:bg-[#5a0016] transition-colors shadow-sm disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2 group"
+              >
+                {isLoading ? (
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                ) : (
+                  <>
+                    Sign In
+                    <ArrowRight className="w-4 h-4 opacity-70 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all" />
+                  </>
+                )}
+              </button>
+            </div>
+          </form>
+        </div>
       </div>
     </div>
   );
