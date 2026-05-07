@@ -53,8 +53,8 @@ export default async function ProductDetailView({ params }: { params: { id: stri
   const lowStockThreshold = inventorySetting?.lowStockThreshold ?? 5;
 
   // Analytics Calculations
-  const totalUnitsSold = product.orderItems.reduce((acc, item) => acc + item.quantity, 0);
-  const totalRevenue = product.orderItems.reduce((acc, item) => acc + (item.quantity * item.price), 0);
+  const totalUnitsSold = product.orderItems.reduce((acc, item) => item.order.status === 'DELIVERED' ? acc + item.quantity : acc, 0);
+  const totalRevenue = product.orderItems.reduce((acc, item) => item.order.status === 'DELIVERED' ? acc + (item.quantity * item.price) : acc, 0);
   const currentStock = product.variants.reduce((acc, v) => acc + v.stock, 0);
   const totalPurchases = product.purchaseItems.reduce((acc, item) => acc + item.quantity, 0);
   const estimatedProfitMargin = product.price - (product.purchasePrice || 0);
@@ -290,13 +290,12 @@ export default async function ProductDetailView({ params }: { params: { id: stri
                         </td>
                         <td className="px-4 py-3">
                           <span
-                            className={`inline-flex items-center gap-1.5 px-2 py-0.5 text-xs font-medium border ${
-                              item.type === 'Order'
+                            className={`inline-flex items-center gap-1.5 px-2 py-0.5 text-xs font-medium border ${item.type === 'Order'
                                 ? 'bg-blue-50 text-blue-700 border-blue-200'
                                 : item.type === 'Return'
-                                ? 'bg-red-50 text-red-700 border-red-200'
-                                : 'bg-orange-50 text-orange-700 border-orange-200'
-                            }`}
+                                  ? 'bg-red-50 text-red-700 border-red-200'
+                                  : 'bg-orange-50 text-orange-700 border-orange-200'
+                              }`}
                           >
                             {item.type === 'Order' && <Activity className="w-3 h-3" />}
                             {item.type === 'Return' && <RefreshCcw className="w-3 h-3" />}
@@ -353,11 +352,9 @@ export default async function ProductDetailView({ params }: { params: { id: stri
                         </td>
                         <td className="px-4 py-3 text-right">
                           <span
-                            className={`inline-flex items-center gap-1.5 px-2 py-0.5 font-bold ${
-                              isLowStock ? 'text-red-600' : 'text-slate-900'
-                            }`}
+                            className={`inline-flex items-center gap-1.5 px-2 py-0.5 font-bold ${isLowStock ? 'text-red-600' : 'text-slate-900'
+                              }`}
                           >
-                            {isLowStock && <AlertCircle className="w-3 h-3" />}
                             {variant.stock}
                           </span>
                         </td>
@@ -374,7 +371,7 @@ export default async function ProductDetailView({ params }: { params: { id: stri
                 </tbody>
               </table>
             </div>
-            
+
             <div className="mt-4 pt-4 border-t border-slate-100">
               <div className="flex justify-between items-center text-sm">
                 <span className="font-semibold text-slate-700">Total Pipeline Stock</span>
