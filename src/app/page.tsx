@@ -33,6 +33,12 @@ export default async function Home({ searchParams }: { searchParams?: { limit?: 
   const products = productsRes;
   const heroSlides = heroSlidesRes;
 
+  products.forEach(product => {
+    if (product.variants) {
+      product.variants.sort((a, b) => (a.order || 0) - (b.order || 0));
+    }
+  });
+
   return (
     <main className="min-h-screen bg-white dark:bg-zinc-950">
       <Header />
