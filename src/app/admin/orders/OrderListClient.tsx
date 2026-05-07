@@ -162,11 +162,11 @@ export default function OrderListClient({
           <div className="p-4 flex flex-col xl:flex-row xl:items-center gap-4 justify-between">
 
             {/* Left Side: Search & Filter */}
-            <div className="flex flex-col md:flex-row md:items-center gap-4 flex-1">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 flex-1">
               {/* Search Block */}
-              <div className="flex-1 relative group min-w-[250px]">
+              <div className="flex-1 relative group max-w-[300px]">
                 <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
-                  <SearchIcon className="h-4 w-4 text-slate-400 group-focus-within:text-indigo-500 transition-colors" />
+                  <SearchIcon className="h-4 w-4 text-slate-400 group-focus-within:text-slate-900 transition-colors" />
                 </div>
                 <input
                   type="text"
@@ -174,7 +174,7 @@ export default function OrderListClient({
                   value={searchValue}
                   onChange={(e) => setSearchValue(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-                  className="block w-full pl-10 pr-24 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 focus:bg-white transition-all outline-none font-medium text-slate-900 placeholder:text-slate-400"
+                  className="block w-full pl-10 pr-24 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:ring-4 focus:ring-slate-500/10 focus:border-slate-300 focus:bg-white transition-all outline-none font-medium text-slate-900 placeholder:text-slate-400"
                 />
                 <div className="absolute inset-y-0 right-0 pr-1 flex items-center gap-1">
                   {searchValue && (
@@ -205,11 +205,14 @@ export default function OrderListClient({
 
 
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className="font-semibold text-sm bg-blue-600 text-white px-3 py-1.5 rounded-md"> {selectedIds.size}</span>
+
+                    <span className="font-semibold text-sm bg-slate-100 border border-slate-200 text-slate-700 px-3 py-1 rounded-md">
+                      {selectedIds.size} Selected
+                    </span>
                     <select
                       value={bulkStatus}
                       onChange={(e) => setBulkStatus(e.target.value as OrderStatus)}
-                      className="w-36 bg-white border border-indigo-200 rounded-md px-3 py-1.5 text-xs font-semibold text-indigo-700 focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all cursor-pointer"
+                      className="w-36 bg-white border border-slate-200 rounded-md px-3 py-1.5 text-xs font-semibold text-slate-700 focus:ring-4 focus:ring-slate-500/10 focus:border-slate-300 outline-none transition-all cursor-pointer"
                     >
                       {[
                         { value: "PENDING", label: "Set Pending" },
@@ -230,36 +233,40 @@ export default function OrderListClient({
                     <button
                       onClick={handleBulkUpdate}
                       disabled={loading}
-                      className="text-xs font-semibold text-white bg-indigo-600 px-3 py-1.5 rounded-md hover:bg-indigo-700 transition disabled:opacity-50"
+                      className="text-xs font-semibold text-white bg-slate-900 px-3 py-1.5 rounded-md hover:bg-slate-800 transition disabled:opacity-50 shadow-sm"
                     >
                       {loading ? "Updating..." : "Update"}
                     </button>
+
+                    <div className="w-px h-5 bg-slate-200 mx-1 hidden sm:block" />
+
                     <button
                       onClick={handlePrintSelected}
-                      className="flex items-center gap-1.5 text-xs font-semibold text-indigo-600 bg-white border border-indigo-200 px-3 py-1.5 rounded-md hover:bg-slate-50 transition"
+                      className="flex items-center gap-1.5 text-xs font-semibold text-slate-700 bg-white border border-slate-200 px-3 py-1.5 rounded-md hover:bg-slate-50 transition shadow-sm"
                     >
                       <Printer className="w-3.5 h-3.5" />
                       Print
                     </button>
                     <button
-                      onClick={handleBulkDelete}
-                      disabled={loading}
-                      className="flex items-center gap-1.5 text-xs font-semibold text-red-600 bg-white border border-red-200 px-3 py-1.5 rounded-md hover:bg-red-50 transition disabled:opacity-50"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                      Delete
-                    </button>
-                    <button
                       onClick={() => setShowPathaoModal(true)}
                       disabled={loading}
-                      className="flex items-center gap-1.5 text-xs font-semibold text-white bg-[#ee2e24] px-3 py-1.5 rounded-md hover:bg-[#d1281f] transition disabled:opacity-50 shadow-sm"
+                      className="flex items-center gap-1.5 text-xs font-semibold text-[#ee2e24] bg-white border border-slate-200 px-3 py-1.5 rounded-md hover:bg-slate-50 transition disabled:opacity-50 shadow-sm"
                     >
                       <Truck className="w-3.5 h-3.5" />
                       Send to Pathao
                     </button>
+                    <button
+                      onClick={handleBulkDelete}
+                      disabled={loading}
+                      className="flex items-center gap-1.5 text-xs font-semibold text-red-600 bg-white border border-slate-200 px-3 py-1.5 rounded-md hover:bg-red-50 hover:border-red-200 transition disabled:opacity-50 shadow-sm"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      Delete
+                    </button>
                   </div>
                 </div>
               )}
+
               <div className="h-8 w-px bg-slate-200 hidden md:block" />
 
               {/* Filter Block */}
@@ -277,7 +284,7 @@ export default function OrderListClient({
                       setSelectedIds(new Set());
                       router.push(`/admin/orders?${params.toString()}`);
                     }}
-                    className="w-40 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm font-semibold focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all cursor-pointer"
+                    className="w-40 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm font-semibold focus:ring-4 focus:ring-slate-500/10 focus:border-slate-300 outline-none transition-all cursor-pointer text-slate-700"
                   >
                     {[
                       { value: "ALL", label: "All Statuses" },
