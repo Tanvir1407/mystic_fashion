@@ -22,8 +22,10 @@ export default function LoginPage() {
         if (res.token) {
           localStorage.setItem('admin_token', res.token);
         }
-        router.push('/admin/products');
         router.refresh();
+        setTimeout(() => {
+          router.push('/admin/products');
+        }, 150);
       } else {
         setError(res.error || "Login failed");
         setIsLoading(false);

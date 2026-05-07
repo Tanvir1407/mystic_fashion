@@ -6,8 +6,11 @@ export const metadata = {
 };
 
 export default async function RolesPage() {
-  const roles = await getRoles();
-  const permissions = await getPermissions();
+  const rolesResult = await getRoles();
+  const permissionsResult = await getPermissions();
+
+  const roles = rolesResult.success ? rolesResult.data : [];
+  const permissions = permissionsResult.success ? permissionsResult.data : [];
 
   return (
     <div className="space-y-6">
