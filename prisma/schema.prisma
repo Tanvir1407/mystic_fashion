@@ -24,14 +24,14 @@ enum CouponType {
 
 model Discount {
   id           String       @id @default(uuid())
-  name         String       // Name or promo code identifier
+  name         String // Name or promo code identifier
   discountType DiscountType @default(FLAT)
-  value        Float        // e.g. 20 (for 20% or 20 BDT)
+  value        Float // e.g. 20 (for 20% or 20 BDT)
   active       Boolean      @default(true)
   createdAt    DateTime     @default(now())
   updatedAt    DateTime     @updatedAt
 
-  products     Product[]
+  products Product[]
 }
 
 enum OrderStatus {
@@ -55,6 +55,8 @@ model Admin {
   email     String    @unique
   password  String
   role      AdminRole @default(MANAGER)
+  roleId    String?
+  rbacRole  Role?     @relation(fields: [roleId], references: [id])
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
 }
@@ -64,8 +66,28 @@ model Staff {
   username  String   @unique
   email     String   @unique
   password  String
+  roleId    String?
+  role      Role?    @relation(fields: [roleId], references: [id])
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+model Role {
+  id          String       @id @default(uuid())
+  name        String       @unique
+  description String?
+  permissions Permission[]
+  staff       Staff[]
+  admins      Admin[]
+}
+
+model Permission {
+  id      String @id @default(uuid())
+  action  String // e.g., "CREATE", "VIEW", "EDIT", "DELETE"
+  subject String // e.g., "PRODUCT", "ORDER", "ALL"
+  roles   Role[]
+
+  @@unique([action, subject])
 }
 
 model SizeChart {
@@ -82,33 +104,33 @@ model Product {
   name          String
   description   String
   price         Float
-  purchasePrice Float?   // Updated dynamically from purchases
+  purchasePrice Float? // Updated dynamically from purchases
   images        String[]
   team          String
   category      String
   isFeatured    Boolean  @default(false)
   isPublished   Boolean  @default(true)
-  
-  sizeChartId   String?
-  sizeChart     SizeChart? @relation(fields: [sizeChartId], references: [id])
 
-  discountId    String?
-  discount      Discount? @relation(fields: [discountId], references: [id])
+  sizeChartId String?
+  sizeChart   SizeChart? @relation(fields: [sizeChartId], references: [id])
+
+  discountId String?
+  discount   Discount? @relation(fields: [discountId], references: [id])
 
   variants      ProductVariant[]
   orderItems    OrderItem[]
   purchaseItems PurchaseItem[]
 
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model ProductVariant {
-  id        String   @id @default(uuid())
+  id        String @id @default(uuid())
   productId String
-  size      String   
-  stock     Int      @default(0)
-  order     Int      @default(0)
+  size      String
+  stock     Int    @default(0)
+  order     Int    @default(0)
 
   product          Product           @relation(fields: [productId], references: [id], onDelete: Cascade)
   purchaseItems    PurchaseItem[]
@@ -119,54 +141,54 @@ model ProductVariant {
 }
 
 model Order {
-  id           String      @id @default(uuid())
-  customerName String
-  phone        String
-  district     String      @default("Dhaka")
-  address      String
-  totalAmount  Float
+  id             String      @id @default(uuid())
+  customerName   String
+  phone          String
+  district       String      @default("Dhaka")
+  address        String
+  totalAmount    Float
   advancePaid    Float       @default(0)
   status         OrderStatus @default(PENDING)
   bkashNumber    String?
   bkashTrxId     String?
   remarks        String?
-  couponCode   String?
+  couponCode     String?
   discountAmount Float       @default(0)
-  createdAt    DateTime    @default(now())
-  updatedAt    DateTime    @updatedAt
-  
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
   // Pathao Location IDs
-  pathaoCityId   Int?
-  pathaoZoneId   Int?
-  pathaoAreaId   Int?
+  pathaoCityId        Int?
+  pathaoZoneId        Int?
+  pathaoAreaId        Int?
   pathaoConsignmentId String?
 
-  items OrderItem[]
-  coupon   Coupon? @relation(fields: [couponCode], references: [code])
+  items        OrderItem[]
+  coupon       Coupon?       @relation(fields: [couponCode], references: [code])
   salesReturns SalesReturn[]
 }
 
 model Coupon {
-  id          String     @id @default(cuid())
-  code        String     @unique
-  type        CouponType @default(FLAT)
-  value       Float
-  startDate   DateTime?
-  endDate     DateTime?
-  isActive    Boolean    @default(true)
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
+  id        String     @id @default(cuid())
+  code      String     @unique
+  type      CouponType @default(FLAT)
+  value     Float
+  startDate DateTime?
+  endDate   DateTime?
+  isActive  Boolean    @default(true)
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
 
-  orders      Order[]
+  orders Order[]
 }
 
 model OrderItem {
-  id        String   @id @default(uuid())
+  id        String @id @default(uuid())
   orderId   String
   productId String
-  size      String   @default("M") // Required to know which variant to fulfill
+  size      String @default("M") // Required to know which variant to fulfill
   quantity  Int
-  price     Float    // Storing price at time of purchase
+  price     Float // Storing price at time of purchase
 
   // DTF Printing Fields
   requiresPrint Boolean @default(false)
@@ -174,8 +196,8 @@ model OrderItem {
   printNumber   String?
   printCost     Float   @default(0)
 
-  order   Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  product Product @relation(fields: [productId], references: [id])
+  order        Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product      Product       @relation(fields: [productId], references: [id])
   salesReturns SalesReturn[]
 }
 
@@ -202,7 +224,7 @@ model HeroSlide {
   id        String   @id @default(uuid())
   image     String
   link      String   @default("/shop")
-  label     String?  // Optional text label for the slide
+  label     String? // Optional text label for the slide
   sortOrder Int      @default(0)
   active    Boolean  @default(true)
   createdAt DateTime @default(now())
@@ -210,45 +232,45 @@ model HeroSlide {
 }
 
 model Purchase {
-  id            String   @id @default(uuid())
-  supplierName  String
-  invoiceNumber String?
+  id             String         @id @default(uuid())
+  supplierName   String
+  invoiceNumber  String?
   totalAmount    Float
-  discountAmount Float    @default(0)
-  status         String   @default("PENDING") // PENDING, COMPLETED, CANCELLED
+  discountAmount Float          @default(0)
+  status         String         @default("PENDING") // PENDING, COMPLETED, CANCELLED
   items          PurchaseItem[]
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
 }
 
 model PurchaseItem {
-  id            String   @id @default(uuid())
-  purchaseId    String
-  productId     String
-  variantId     String  
-  quantity      Int
-  unitPrice     Float   
-  
-  purchase      Purchase       @relation(fields: [purchaseId], references: [id], onDelete: Cascade)
-  product       Product        @relation(fields: [productId], references: [id])
-  variant       ProductVariant @relation(fields: [variantId], references: [id])
+  id         String @id @default(uuid())
+  purchaseId String
+  productId  String
+  variantId  String
+  quantity   Int
+  unitPrice  Float
+
+  purchase Purchase       @relation(fields: [purchaseId], references: [id], onDelete: Cascade)
+  product  Product        @relation(fields: [productId], references: [id])
+  variant  ProductVariant @relation(fields: [variantId], references: [id])
 }
 
 model FooterConfig {
-  id            String   @id @default("default")
-  aboutText     String   @default("Premium authentic jerseys and sportswear. Crafted for those who live and breathe the game.")
-  facebookUrl   String   @default("#")
-  instagramUrl  String   @default("#")
-  whatsappPhone String?  @default("")
-  
-  // Quick Links (JSON)
-  companyLinks  Json     @default("[{\"label\": \"About\", \"url\": \"/about\"}, {\"label\": \"Contact\", \"url\": \"/contact\"}, {\"label\": \"FAQ\", \"url\": \"/faq\"}]")
-  
-  contactEmail   String   @default("hello@mysticfashion.com")
-  contactPhone   String   @default("01700-MYSTIC")
-  contactAddress String   @default("Dhaka, Bangladesh")
+  id            String  @id @default("default")
+  aboutText     String  @default("Premium authentic jerseys and sportswear. Crafted for those who live and breathe the game.")
+  facebookUrl   String  @default("#")
+  instagramUrl  String  @default("#")
+  whatsappPhone String? @default("")
 
-  updatedAt     DateTime @updatedAt
+  // Quick Links (JSON)
+  companyLinks Json @default("[{\"label\": \"About\", \"url\": \"/about\"}, {\"label\": \"Contact\", \"url\": \"/contact\"}, {\"label\": \"FAQ\", \"url\": \"/faq\"}]")
+
+  contactEmail   String @default("hello@mysticfashion.com")
+  contactPhone   String @default("01700-MYSTIC")
+  contactAddress String @default("Dhaka, Bangladesh")
+
+  updatedAt DateTime @updatedAt
 }
 
 model Page {
@@ -273,13 +295,13 @@ enum AccountStatus {
 }
 
 model ChartOfAccount {
-  id           String          @id @default(uuid())
-  name         String          @unique
+  id           String        @id @default(uuid())
+  name         String        @unique
   type         AccountType
-  status       AccountStatus   @default(ACTIVE)
+  status       AccountStatus @default(ACTIVE)
   transactions Transaction[]
-  createdAt    DateTime        @default(now())
-  updatedAt    DateTime        @updatedAt
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
 }
 
 enum TransactionType {
@@ -288,19 +310,19 @@ enum TransactionType {
 }
 
 model Transaction {
-  id            String         @id @default(uuid())
+  id            String          @id @default(uuid())
   accountId     String
   amount        Float
   date          DateTime
   type          TransactionType
   description   String
   referenceId   String?
-  referenceType String?        // "ORDER", "PURCHASE"
+  referenceType String? // "ORDER", "PURCHASE"
 
-  account       ChartOfAccount  @relation(fields: [accountId], references: [id]) // No cascade delete
+  account ChartOfAccount @relation(fields: [accountId], references: [id]) // No cascade delete
 
-  createdAt     DateTime        @default(now())
-  updatedAt     DateTime        @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model ApiToken {
@@ -321,14 +343,14 @@ model StockAdjustment {
   id               String         @id @default(uuid())
   variantId        String
   adjustmentType   AdjustmentType
-  quantity         Int            // The amount being adjusted
-  previousQuantity Int            // Snapshot of stock before adjustment
-  newQuantity      Int            // Snapshot of stock after adjustment
-  reason           String?        // e.g., "Damage", "Count correction"
-  adjustedBy       String?        // Admin/Staff ID (optional for now)
+  quantity         Int // The amount being adjusted
+  previousQuantity Int // Snapshot of stock before adjustment
+  newQuantity      Int // Snapshot of stock after adjustment
+  reason           String? // e.g., "Damage", "Count correction"
+  adjustedBy       String? // Admin/Staff ID (optional for now)
   createdAt        DateTime       @default(now())
 
-  variant          ProductVariant @relation(fields: [variantId], references: [id], onDelete: Cascade)
+  variant ProductVariant @relation(fields: [variantId], references: [id], onDelete: Cascade)
 }
 
 enum ReturnStatus {
@@ -337,24 +359,23 @@ enum ReturnStatus {
 }
 
 model SalesReturn {
-  id               String       @id @default(uuid())
-  orderId          String
-  orderItemId      String
-  variantId        String
-  quantity         Int
-  returnReason     String       // e.g., "Customer rejected at door"
-  status           ReturnStatus // If DTF printed -> WASTAGE, else -> RESTOCKED
-  
+  id           String       @id @default(uuid())
+  orderId      String
+  orderItemId  String
+  variantId    String
+  quantity     Int
+  returnReason String // e.g., "Customer rejected at door"
+  status       ReturnStatus // If DTF printed -> WASTAGE, else -> RESTOCKED
+
   // Financial Tracking
-  deliveryLoss     Float        @default(0) // Courier charge lost
-  productLoss      Float        @default(0) // Purchase price lost (if wasted)
-  printingLoss     Float        @default(0) // DTF print cost lost (if wasted)
-  
-  processedBy      String?      // Admin/Staff ID
-  createdAt        DateTime     @default(now())
+  deliveryLoss Float @default(0) // Courier charge lost
+  productLoss  Float @default(0) // Purchase price lost (if wasted)
+  printingLoss Float @default(0) // DTF print cost lost (if wasted)
 
-  order            Order          @relation(fields: [orderId], references: [id])
-  orderItem        OrderItem      @relation(fields: [orderItemId], references: [id])
-  variant          ProductVariant @relation(fields: [variantId], references: [id])
+  processedBy String? // Admin/Staff ID
+  createdAt   DateTime @default(now())
+
+  order     Order          @relation(fields: [orderId], references: [id])
+  orderItem OrderItem      @relation(fields: [orderItemId], references: [id])
+  variant   ProductVariant @relation(fields: [variantId], references: [id])
 }
-
