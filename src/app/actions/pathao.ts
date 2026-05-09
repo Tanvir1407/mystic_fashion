@@ -39,10 +39,12 @@ export async function getPathaoAreas(zoneId: number) {
     }
 }
 
-export async function trackCustomerOrder(orderId: string) {
+export async function trackCustomerOrder(query: string) {
     try {
-        const order = await prisma.order.findUnique({
-            where: { id: orderId },
+        const trimmedQuery = query.trim();
+        
+        let order = await prisma.order.findUnique({
+            where: { id: trimmedQuery },
             select: {
                 id: true,
                 status: true,
@@ -50,6 +52,8 @@ export async function trackCustomerOrder(orderId: string) {
                 advancePaid: true,
                 createdAt: true,
                 pathaoConsignmentId: true,
+                customerName: true,
+                phone: true,
                 items: {
                     select: {
                         product: { select: { name: true } },
@@ -60,7 +64,41 @@ export async function trackCustomerOrder(orderId: string) {
         });
 
         if (!order) {
-            return { success: false, error: "Order not found. Please check your Order ID and try again." };
+            // Clean phone query for DB matching
+            const cleanQuery = trimmedQuery.replace(/[^0-9]/g, '');
+            if (cleanQuery.length >= 10) {
+                order = await prisma.order.findFirst({
+                    where: {
+                        OR: [
+                            { phone: { contains: trimmedQuery } },
+                            { phone: { contains: cleanQuery } },
+                            { phone: { contains: cleanQuery.startsWith('880') ? cleanQuery.slice(2) : cleanQuery } },
+                            { phone: { contains: '0' + (cleanQuery.startsWith('880') ? cleanQuery.slice(5) : cleanQuery.slice(3)) } }
+                        ]
+                    },
+                    orderBy: { createdAt: 'desc' },
+                    select: {
+                        id: true,
+                        status: true,
+                        totalAmount: true,
+                        advancePaid: true,
+                        createdAt: true,
+                        pathaoConsignmentId: true,
+                        customerName: true,
+                        phone: true,
+                        items: {
+                            select: {
+                                product: { select: { name: true } },
+                                quantity: true
+                            }
+                        }
+                    }
+                });
+            }
+        }
+
+        if (!order) {
+            return { success: false, error: "Order not found. Please check your Order ID or Phone Number." };
         }
 
         let pathaoInfo = null;
