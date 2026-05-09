@@ -181,9 +181,12 @@ export default function TrackOrderClient() {
 
                     {(() => {
                       const hasCustomPrinting = result?.order?.items?.some((item: any) => item.requiresPrint);
+                      const isCurrentlyPrinting = result?.order?.status === "PRINTING";
+                      const showPrintingStep = hasCustomPrinting || isCurrentlyPrinting;
+
                       const filteredSteps = STEPS.filter(step => {
                         if (step.statusKey === "PRINTING") {
-                          return hasCustomPrinting;
+                          return showPrintingStep;
                         }
                         return true;
                       });
