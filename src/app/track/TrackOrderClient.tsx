@@ -90,7 +90,7 @@ export default function TrackOrderClient() {
       <div className="max-w-2xl mx-auto w-full">
         {/* Header Section */}
         <div className="text-center mb-12">
-          <h1 className="text-3xl sm:text-4xl font-extrabold text-zinc-900 mb-4 tracking-tight uppercase">
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-zinc-900 mb-4 tracking-tight uppercase">
             Order Tracking
           </h1>
           <p className="text-zinc-500 max-w-md mx-auto text-sm sm:text-base leading-relaxed">
