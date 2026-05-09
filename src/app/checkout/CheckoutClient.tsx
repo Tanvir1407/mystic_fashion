@@ -160,7 +160,7 @@ export default function CheckoutClient({
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
-    
+
     const fullName = (formData.get("fullName") as string || "").trim();
     const phone = (formData.get("phone") as string || "").trim();
     const specificAddress = (formData.get("address") as string || "").trim();
@@ -318,7 +318,7 @@ export default function CheckoutClient({
           </div>
         )}
         {items.length === 0 ? (
-          <div className="bg-white p-12 rounded-2xl border border-slate-200 text-center flex flex-col items-center">
+          <div className="bg-white p-12 rounded-2xl border border-slate-200 text-center flex flex-col items-center mb-8 sm:mb-10 lg:mb-16">
             <div className="w-24 h-24 bg-slate-100 rounded-full flex items-center justify-center mb-6">
               <span className="text-4xl">🛒</span>
             </div>
@@ -329,7 +329,7 @@ export default function CheckoutClient({
             </Link>
           </div>
         ) : (
-          <div className="flex flex-col lg:flex-row gap-10">
+          <div className="flex flex-col lg:flex-row gap-10 mb-8 sm:mb-10 lg:mb-16">
 
             {/* Left Side: Customer Info Form */}
             <div className="w-full lg:w-3/5">
