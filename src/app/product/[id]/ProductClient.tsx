@@ -317,7 +317,10 @@ export default function ProductClient({ product, sizeChartData, deliveryData }: 
           <div className="space-y-8 text-zinc-600 leading-relaxed">
             <div>
               <h3 className="text-xl font-black text-zinc-900 uppercase tracking-tight mb-4">Masterclass Design</h3>
-              <p>{product.description}</p>
+              <div 
+                className="prose max-w-none text-zinc-600 leading-relaxed whitespace-pre-wrap"
+                dangerouslySetInnerHTML={{ __html: product.description || "" }} 
+              />
             </div>
 
           </div>
