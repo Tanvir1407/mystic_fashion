@@ -57,17 +57,17 @@ export default async function Home({ searchParams }: { searchParams?: { limit?: 
           )}
         </div>
 
-        {/* {products.length  < totalCountRes && ( */}
-        <div className="flex justify-center mt-12">
-          <Link
-            href={`/?limit=${limit + 12}`}
-            scroll={false}
-            className="border-2 border-primary hover:border-primary/80 text-primary hover:text-primary/80 transition-colors px-10 py-3.5 rounded-full font-bold uppercase tracking-widest text-xs shadow-md"
-          >
-            View More Products
-          </Link>
-        </div>
-        {/* )} */}
+        {products.length < totalCountRes && (
+          <div className="flex justify-center mt-12">
+            <Link
+              href={`/?limit=${limit + 12}`}
+              scroll={false}
+              className="border-2 border-primary hover:border-primary/80 text-primary hover:text-primary/80 transition-colors px-10 py-3.5  font-bold uppercase text-sm"
+            >
+              View More Products
+            </Link>
+          </div>
+        )}
       </section>
       <Footer config={footerData} />
       <SidebarCart />

@@ -201,8 +201,8 @@ export default function ProductClient({ product, sizeChartData, deliveryData }: 
                         setQuantity(1);
                       }}
                       className={`h-12 px-6 flex items-center justify-center font-semibold text-sm transition-colors border ${selectedSize === v.size
-                        ? 'bg-zinc-900 text-white border-zinc-900'
-                        : 'bg-white text-zinc-900 border-zinc-200 hover:border-zinc-900'
+                        ? 'bg-primary text-white border-primary'
+                        : 'bg-white text-zinc-900 border-zinc-200 hover:border-primary hover:text-primary'
                         }`}
                     >
                       <span>{v.size}</span>
@@ -245,7 +245,7 @@ export default function ProductClient({ product, sizeChartData, deliveryData }: 
                   ? 'border-zinc-200 bg-zinc-50 text-zinc-400 cursor-not-allowed'
                   : addedEffect
                     ? 'border-green-600 bg-white text-green-600'
-                    : 'border-zinc-900 bg-white text-zinc-900 hover:bg-zinc-900 hover:text-white'
+                    : 'border-primary bg-white text-primary hover:bg-primary hover:text-white'
                   }`}
               >
                 {addedEffect ? (
@@ -266,7 +266,7 @@ export default function ProductClient({ product, sizeChartData, deliveryData }: 
                 disabled={!selectedSize}
                 className={`md:flex-1 h-14 font-semibold text-xs md:text-sm uppercase tracking-[0.1em] flex items-center justify-center gap-2 transition-colors border ${(!selectedSize)
                   ? 'border-zinc-200 bg-zinc-200 text-zinc-400 cursor-not-allowed'
-                  : 'border-zinc-900 bg-zinc-900 text-white hover:bg-zinc-800 hover:border-zinc-800'
+                  : 'border-primary bg-primary text-white hover:bg-primary/90 hover:border-primary/90'
                   }`}
               >
                 <ShoppingCart className="w-4 h-4" />
@@ -319,31 +319,11 @@ export default function ProductClient({ product, sizeChartData, deliveryData }: 
               <h3 className="text-xl font-black text-zinc-900 uppercase tracking-tight mb-4">Masterclass Design</h3>
               <p>{product.description}</p>
             </div>
-            <div>
-              <h3 className="text-lg font-black text-zinc-900 uppercase tracking-tight mb-4">Why You'll Love It</h3>
-              <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-4">
-                <li className="flex gap-3">
-                  <Check className="w-5 h-5 text-[#800020] flex-shrink-0" />
-                  <span><strong>Fabric:</strong> High-performance Dry-fit</span>
-                </li>
-                <li className="flex gap-3">
-                  <Check className="w-5 h-5 text-[#800020] flex-shrink-0" />
-                  <span><strong>Pattern:</strong> Sublimation printing</span>
-                </li>
-                <li className="flex gap-3">
-                  <Check className="w-5 h-5 text-[#800020] flex-shrink-0" />
-                  <span><strong>Fit:</strong> Athletic slim fit</span>
-                </li>
-                <li className="flex gap-3">
-                  <Check className="w-5 h-5 text-[#800020] flex-shrink-0" />
-                  <span><strong>Care:</strong> Machine wash cold</span>
-                </li>
-              </ul>
-            </div>
+
           </div>
           <div className="space-y-6 text-zinc-600 leading-relaxed">
             <h3 className="text-xl font-black text-zinc-900 uppercase tracking-tight mb-2">Delivery Details</h3>
-            <div className="bg-slate-50 p-6 rounded-md border border-slate-200">
+            <div className=" p-6 ">
               <ul className="space-y-4">
                 <li className="flex items-start gap-3">
                   <Check className="w-5 h-5 text-[#800020] flex-shrink-0 mt-0.5" />
