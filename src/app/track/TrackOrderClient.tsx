@@ -133,13 +133,6 @@ export default function TrackOrderClient() {
         {/* Tracking Results */}
         {result && (
           <div className="space-y-4 animate-in fade-in slide-in-from-bottom-3 duration-500">
-            {/* Phone search contextual notice */}
-            {searchedWithPhone && (
-              <div className="bg-amber-50/75 text-amber-900 border border-amber-100  px-4 py-2.5 text-xs font-semibold flex items-center gap-2 shadow-sm">
-                <Info className="w-4 h-4 text-amber-600 shrink-0" />
-                <span>Showing details for your most recent order placed under <span className="font-bold underline">{result.order.phone}</span>.</span>
-              </div>
-            )}
 
             {/* Main Unified Tracking Card */}
             <div className="bg-white border border-zinc-200 overflow-hidden shadow-sm divide-y divide-zinc-100">
