@@ -18,6 +18,7 @@ import {
   AlertCircle,
 } from 'lucide-react';
 import Image from 'next/image';
+import UploadedImage from '@/components/UploadedImage';
 import { formatBDT } from '@/utils/formatPrice';
 
 export default async function ProductDetailView({ params }: { params: { id: string } }) {
@@ -191,7 +192,7 @@ export default async function ProductDetailView({ params }: { params: { id: stri
                 {product.images.length > 0 ? (
                   <>
                     <div className="relative aspect-square w-full bg-slate-50 border border-slate-200 overflow-hidden">
-                      <Image
+                      <UploadedImage
                         src={product.images[0]}
                         alt={product.name}
                         fill
@@ -205,7 +206,7 @@ export default async function ProductDetailView({ params }: { params: { id: stri
                             key={idx}
                             className="relative aspect-square w-full bg-slate-50 border border-slate-200 overflow-hidden"
                           >
-                            <Image src={img} alt={`${product.name} ${idx}`} fill className="object-cover" />
+                            <UploadedImage src={img} alt={`${product.name} ${idx}`} fill className="object-cover" />
                           </div>
                         ))}
                       </div>

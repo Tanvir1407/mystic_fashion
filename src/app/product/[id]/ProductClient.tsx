@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import UploadedImage from "@/components/UploadedImage";
 import { useState } from "react";
 import { useCartStore } from "@/store/cartStore";
 import Link from "next/link";
@@ -108,7 +109,7 @@ export default function ProductClient({ product, sizeChartData, deliveryData }: 
             {/* Main Image */}
             <div className="relative w-full aspect-[4/5] bg-[#F9F9F9] flex items-center justify-center group overflow-hidden rounded-md shadow-sm border border-slate-100">
               {selectedImage ? (
-                <Image
+                <UploadedImage
                   src={selectedImage}
                   alt={product.name}
                   fill
@@ -156,7 +157,7 @@ export default function ProductClient({ product, sizeChartData, deliveryData }: 
                     : 'opacity-70 hover:opacity-100 border border-slate-200 hover:border-[#FFD700]'
                     }`}
                 >
-                  <Image src={img} alt={`${product.name} view ${idx + 1}`} fill className="object-cover" />
+                  <UploadedImage src={img} alt={`${product.name} view ${idx + 1}`} fill className="object-cover" />
                 </button>
               ))}
             </div>
