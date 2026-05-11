@@ -19,6 +19,7 @@ import { processSalesReturn } from "../../actions";
 import { StatusAlertModal } from "@/components/StatusAlertModal";
 import { ReturnStatus } from "@/generated/prisma/client";
 import { CustomSelect } from "@/components/CustomSelect";
+import { formatBDT } from "@/utils/formatPrice";
 
 interface OrderItem {
   id: string;
@@ -250,7 +251,7 @@ export default function ReturnsClient({
           </div>
           <div>
             <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider block">Total Delivery Loss</span>
-            <span className="text-xl font-bold font-mono text-slate-900 mt-0.5 block">৳ {summaries.deliveryLoss.toLocaleString()}</span>
+            <span className="text-xl font-bold font-mono text-slate-900 mt-0.5 block">{formatBDT(summaries.deliveryLoss)}</span>
           </div>
         </div>
 
@@ -260,7 +261,7 @@ export default function ReturnsClient({
           </div>
           <div>
             <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider block">Total Wastage Loss</span>
-            <span className="text-xl font-bold font-mono text-slate-900 mt-0.5 block">৳ {summaries.wastageLoss.toLocaleString()}</span>
+            <span className="text-xl font-bold font-mono text-slate-900 mt-0.5 block">{formatBDT(summaries.wastageLoss)}</span>
           </div>
         </div>
 
@@ -473,7 +474,7 @@ export default function ReturnsClient({
                           </span>
                         </td>
                         <td className="px-4 py-4 text-right font-mono text-xs font-bold text-slate-900 whitespace-nowrap">
-                          ৳ {returnLoss.toLocaleString()}
+                          {formatBDT(returnLoss)}
                         </td>
                         <td className="px-4 py-4">
                           <p className="text-xs text-slate-500 max-w-[140px] truncate" title={ret.returnReason}>

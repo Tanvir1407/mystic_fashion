@@ -1,11 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { User, MapPin, Phone, Edit2, Check, X, Package, Wallet, StickyNote, Save, Minus, VerifiedIcon, Trash2, Plus, Copy } from "lucide-react";
+import { User, MapPin, Phone, Edit2, Check, X, Package, Wallet, StickyNote, Save, Minus, VerifiedIcon, Trash2, Plus, Copy, Compass, CheckCircle2, Truck, PackageCheck, Printer, AlertCircle } from "lucide-react";
 import { updateOrderDetails, updateOrderRemark } from "../../actions";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { CustomSelect } from "@/components/CustomSelect";
+import { formatBDT } from "@/utils/formatPrice";
 
 export default function OrderDetailsClient({ order, deliverySettings, products = [] }: { order: any; deliverySettings: any; products?: any[] }) {
   const router = useRouter();
@@ -73,9 +74,7 @@ export default function OrderDetailsClient({ order, deliverySettings, products =
     setLoading(false);
   };
 
-  const formatBDT = (price: number) => {
-    return price === 0 ? "Free" : `৳${price.toLocaleString("en-IN")}`;
-  };
+
 
   const baseSubtotal = formData.items.reduce((acc: number, item: any) => acc + (item.price * item.quantity), 0);
   const totalDTFCost = formData.items.reduce((acc: number, item: any) => acc + (item.requiresPrint ? item.printCost * item.quantity : 0), 0);
@@ -113,9 +112,9 @@ export default function OrderDetailsClient({ order, deliverySettings, products =
     let price = product.price;
     if (product.discount) {
       if (product.discount.discountType === "PERCENTAGE") {
-        price = price - (price * (product.discount.value / 100));
+        price = Math.round(price - (price * (product.discount.value / 100)));
       } else {
-        price = price - product.discount.value;
+        price = Math.round(price - product.discount.value);
       }
     }
 
@@ -664,6 +663,88 @@ export default function OrderDetailsClient({ order, deliverySettings, products =
         </div>
       </div>
 
+      {/* Live Shipment Milestone */}
+      {(() => {
+        const STATUS_STEPS = [
+          { statusKey: "PENDING",   title: "Order Placed",       icon: Package },
+          { statusKey: "CONFIRMED", title: "Confirmed",          icon: CheckCircle2 },
+          { statusKey: "PRINTING",  title: "Printing",           icon: Printer },
+          { statusKey: "PACKAGING", title: "Packaging",          icon: PackageCheck },
+          { statusKey: "SHIPPED",   title: "Shipped",            icon: Truck },
+          { statusKey: "DELIVERED", title: "Delivered",          icon: Check },
+        ];
+        const STATUS_ORDER = ["PENDING", "CONFIRMED", "PRINTING", "PACKAGING", "SHIPPED", "DELIVERED"];
+
+        const isSpecial = order.status === "CANCELLED" || order.status === "RETURNED";
+        const currentIndex = STATUS_ORDER.indexOf(order.status);
+
+        const hasPrint = order.items?.some((i: any) => i.requiresPrint);
+        const filteredSteps = STATUS_STEPS.filter(s => s.statusKey !== "PRINTING" || hasPrint || order.status === "PRINTING");
+
+        return (
+          <div className="bg-white border border-slate-200 rounded-2xl p-4 sm:p-6">
+            <h3 className="font-bold text-slate-900 mb-5 uppercase tracking-widest text-[11px] flex items-center gap-2.5 pb-4 border-b border-slate-50">
+              <div className="p-1.5 bg-violet-50 rounded-md">
+                <Compass className="w-4 h-4 text-violet-500" />
+              </div>
+              Live Shipment Milestone
+            </h3>
+
+            {isSpecial ? (
+              <div className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold ${
+                order.status === "CANCELLED" ? "bg-red-50 text-red-700 border border-red-100" : "bg-slate-50 text-slate-700 border border-slate-200"
+              }`}>
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                Order {order.status}
+              </div>
+            ) : (
+              <div className="relative flex items-start">
+                {/* Horizontal connector line */}
+                <div
+                  className="absolute top-4 left-0 right-0 h-[2px] bg-slate-100"
+                  style={{ zIndex: 0 }}
+                />
+                <div className={`flex w-full`} style={{ position: "relative" }}>
+                  {filteredSteps.map((step, idx) => {
+                    const stepOrderIndex = STATUS_ORDER.indexOf(step.statusKey);
+                    const isCompleted = stepOrderIndex < currentIndex;
+                    const isActive = stepOrderIndex === currentIndex;
+                    const Icon = step.icon;
+                    return (
+                      <div key={step.statusKey} className="flex flex-col items-center flex-1 min-w-0">
+                        {/* Icon bubble */}
+                        <div className={`relative z-10 w-8 h-8 rounded-full border-2 flex items-center justify-center shrink-0 transition-all ${
+                          isActive
+                            ? "bg-violet-600 border-violet-600 text-white ring-4 ring-violet-100 shadow"
+                            : isCompleted
+                              ? "bg-emerald-500 border-emerald-500 text-white shadow-sm"
+                              : "bg-white border-slate-200 text-slate-400"
+                        }`}>
+                          {isCompleted && !isActive ? (
+                            <Check className="w-3.5 h-3.5 stroke-[3px]" />
+                          ) : (
+                            <Icon className="w-3.5 h-3.5 stroke-[2.5px]" />
+                          )}
+                        </div>
+                        {/* Label */}
+                        <span className={`mt-2 text-[10px] font-bold text-center leading-tight px-0.5 uppercase tracking-wide ${
+                          isActive
+                            ? "text-violet-600"
+                            : isCompleted
+                              ? "text-emerald-600"
+                              : "text-slate-400"
+                        }`}>
+                          {step.title}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
+        );
+      })()}
 
     </div>
   );

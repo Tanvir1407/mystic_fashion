@@ -5,6 +5,7 @@ import { trackCustomerOrder } from "../actions/pathao";
 import { Search, Package, CheckCircle2, Truck, PackageCheck, AlertCircle, Info, ArrowLeft, Check, Compass, Printer } from "lucide-react";
 import { formatDate } from "@/utils/formatDate";
 import Link from "next/link";
+import { formatBDT } from "@/utils/formatPrice";
 
 interface Step {
   statusKey: string;
@@ -272,15 +273,15 @@ export default function TrackOrderClient() {
                   <h4 className="text-[10px] uppercase font-black tracking-widest text-zinc-400">Payment Breakdown</h4>
                   <div className="flex justify-between text-zinc-500 font-medium">
                     <span>Total Bill</span>
-                    <span className="font-bold font-mono text-zinc-800">৳{result.order.totalAmount.toLocaleString("en-IN")}</span>
+                    <span className="font-bold font-mono text-zinc-800">{formatBDT(result.order.totalAmount)}</span>
                   </div>
                   <div className="flex justify-between text-zinc-500 font-medium">
                     <span>Advance Paid</span>
-                    <span className="font-bold font-mono text-emerald-600">- ৳{result.order.advancePaid.toLocaleString("en-IN")}</span>
+                    <span className="font-bold font-mono text-emerald-600">- {formatBDT(result.order.advancePaid)}</span>
                   </div>
                   <div className="flex justify-between font-extrabold text-zinc-900 pt-2 border-t border-zinc-100 mt-1">
                     <span>Due on Delivery</span>
-                    <span className="font-mono text-primary text-sm font-black">৳{(result.order.totalAmount - result.order.advancePaid).toLocaleString("en-IN")}</span>
+                    <span className="font-mono text-primary text-sm font-black">{formatBDT(result.order.totalAmount - result.order.advancePaid)}</span>
                   </div>
                 </div>
               </div>

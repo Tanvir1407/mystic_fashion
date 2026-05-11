@@ -5,6 +5,7 @@ import { useState } from "react";
 import { useCartStore } from "@/store/cartStore";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { formatBDT, roundPrice } from "@/utils/formatPrice";
 
 import { Check, ShoppingCart, ShoppingBag, Plus, Minus, ChevronLeft, ChevronRight, Play } from "lucide-react";
 
@@ -43,9 +44,7 @@ export default function ProductClient({ product, sizeChartData, deliveryData }: 
 
   const addItem = useCartStore((state) => state.addItem);
 
-  const formatBDT = (price: number) => {
-    return `৳${price.toLocaleString("en-IN")}`;
-  };
+
 
   const totalStock = product.variants.reduce((acc, v) => acc + v.stock, 0);
 
@@ -59,9 +58,9 @@ export default function ProductClient({ product, sizeChartData, deliveryData }: 
   if (product.discount && product.discount.active) {
     isDiscounted = true;
     if (product.discount.discountType === "PERCENTAGE") {
-      finalPrice = product.price - (product.price * (product.discount.value / 100));
+      finalPrice = roundPrice(product.price - (product.price * (product.discount.value / 100)));
     } else {
-      finalPrice = Math.max(0, product.price - product.discount.value);
+      finalPrice = roundPrice(Math.max(0, product.price - product.discount.value));
     }
   }
 

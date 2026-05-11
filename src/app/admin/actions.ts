@@ -98,6 +98,8 @@ export async function createProduct(data: {
     });
 
     revalidatePath("/admin/products");
+    revalidatePath("/");
+    revalidatePath("/product/[id]", "page");
     redirect("/admin/products");
     return { success: true, data: product };
   } catch (error: any) {
@@ -157,7 +159,10 @@ export async function updateProduct(id: string, data: {
     });
 
     revalidatePath("/admin/products");
+    revalidatePath(`/admin/products/${id}`);
+    revalidatePath("/");
     revalidatePath(`/product/${id}`);
+    revalidatePath("/product/[id]", "page");
     redirect("/admin/products");
     return { success: true, data: product };
   } catch (error: any) {

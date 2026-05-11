@@ -54,7 +54,7 @@ export async function placeOrderAction(payload: {
           phone: payload.phone,
           district: payload.district,
           address: payload.address,
-          totalAmount: payload.totalAmount,
+          totalAmount: Math.round(payload.totalAmount),
           advancePaid: calculatedAdvance,
           bkashNumber: payload.bkashNumber,
           bkashTrxId: payload.bkashTrxId,
@@ -169,7 +169,7 @@ export async function syncCartPrices(productIds: string[]) {
           finalPrice = finalPrice - product.discount.value;
         }
       }
-      return { id: product.id, price: finalPrice };
+      return { id: product.id, price: Math.round(finalPrice) };
     });
   } catch (error) {
     console.error("Failed to sync cart prices:", error);

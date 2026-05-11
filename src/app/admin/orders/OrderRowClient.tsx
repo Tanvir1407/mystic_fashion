@@ -9,6 +9,7 @@ import { deleteOrder } from "../actions";
 import { useRouter } from "next/navigation";
 import { StatusAlertModal } from "@/components/StatusAlertModal";
 import { formatDate } from "@/utils/formatDate";
+import { formatBDT } from "@/utils/formatPrice";
 
 export default function OrderRowClient({
   order,
@@ -120,13 +121,13 @@ export default function OrderRowClient({
         </div>
       </td>
       <td className="px-2 py-4 text-sm text-slate-900 font-mono font-medium">
-        ৳{order.advancePaid.toLocaleString("en-IN")}
+        {formatBDT(order.advancePaid)}
       </td>
       <td className="px-2 py-4 text-sm text-red-600 font-mono font-medium">
-        ৳{(order.totalAmount - order.advancePaid).toLocaleString("en-IN")}
+        {formatBDT(order.totalAmount - order.advancePaid)}
       </td>
       <td className="px-2 py-4 text-sm text-slate-900 font-mono font-medium">
-        ৳{order.totalAmount.toLocaleString("en-IN")}
+        {formatBDT(order.totalAmount)}
       </td>
       <td className="px-2 py-4 text-right">
         <select

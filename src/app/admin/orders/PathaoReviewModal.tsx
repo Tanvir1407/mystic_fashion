@@ -4,6 +4,7 @@ import { useState, useMemo } from "react";
 import { X, Truck, Loader2, AlertCircle, Info } from "lucide-react";
 import { bulkSendToPathaoAction } from "../actions";
 import { useRouter } from "next/navigation";
+import { formatBDT } from "@/utils/formatPrice";
 
 interface PathaoReviewModalProps {
   isOpen: boolean;
@@ -111,7 +112,7 @@ export default function PathaoReviewModal({ isOpen, onClose, selectedOrders, onS
                           <div className="font-medium">{order.customerName}</div>
                           <div className="text-[10px] text-slate-400 line-clamp-1">{order.address}</div>
                         </td>
-                        <td className="py-3 font-bold text-indigo-600">৳{due.toLocaleString()}</td>
+                        <td className="py-3 font-bold text-indigo-600">{formatBDT(due)}</td>
                       </tr>
                     );
                   })}

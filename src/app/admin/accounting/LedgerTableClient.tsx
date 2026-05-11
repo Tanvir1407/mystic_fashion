@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
+import { formatBDT } from "@/utils/formatPrice";
 
 export default function LedgerTableClient({ 
   transactions, 
@@ -66,7 +67,7 @@ export default function LedgerTableClient({
                     </span>
                   </td>
                   <td className="px-6 py-4 text-right font-medium text-gray-900 whitespace-nowrap">
-                    ৳ {tx.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    {formatBDT(Math.round(tx.amount))}
                   </td>
                 </tr>
               ))

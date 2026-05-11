@@ -1,6 +1,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import AddToBagButton from "./AddToBagButton";
+import { formatBDT, roundPrice } from "@/utils/formatPrice";
 
 interface ProductCardProps {
   product: {
@@ -18,9 +19,7 @@ interface ProductCardProps {
   };
 }
 
-function formatBDT(price: number) {
-  return `৳${price.toLocaleString("en-IN")}`;
-}
+
 
 export default function ProductCard({ product }: ProductCardProps) {
   let finalPrice = product.price;
@@ -29,9 +28,9 @@ export default function ProductCard({ product }: ProductCardProps) {
   if (product.discount && product.discount.active) {
     isDiscounted = true;
     if (product.discount.discountType === "PERCENTAGE") {
-      finalPrice = product.price - (product.price * (product.discount.value / 100));
+      finalPrice = roundPrice(product.price - (product.price * (product.discount.value / 100)));
     } else {
-      finalPrice = Math.max(0, product.price - product.discount.value);
+      finalPrice = roundPrice(Math.max(0, product.price - product.discount.value));
     }
   }
 
