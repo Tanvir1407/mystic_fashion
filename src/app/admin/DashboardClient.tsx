@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { Package, ShoppingCart, Truck, XCircle, DollarSign, TrendingUp, ArrowDownCircle, History, Eye } from "lucide-react";
+import { formatBDT } from "@/utils/formatPrice";
 
 interface Metrics {
   currentStockCount: number;
@@ -35,7 +36,6 @@ const STATUS_COLORS: Record<string, string> = {
 
 export default function DashboardClient({ filter, metrics, topProducts, recentOrders, chartData }: DashboardClientProps) {
   const router = useRouter();
-  const fmt = (n: number) => `৳${n.toLocaleString("en-IN")}`;
 
   const filters = [
     { label: "Weekly", value: "weekly" },
@@ -88,10 +88,10 @@ export default function DashboardClient({ filter, metrics, topProducts, recentOr
     { label: "Delivered", value: metrics.deliveredProductQty.toLocaleString(), suffix: "qty", icon: Truck, color: "bg-emerald-500/10 text-emerald-600" },
     { label: "Cancelled", value: metrics.cancelProductQty.toLocaleString(), suffix: "qty", icon: XCircle, color: "bg-red-500/10 text-red-600" },
     // Row 2 — Financial
-    { label: "Total Profit", value: fmt(metrics.totalProfit), suffix: null, icon: TrendingUp, color: "bg-indigo-500/10 text-indigo-600" },
-    { label: "Total Sales", value: fmt(metrics.totalSaleAmount), suffix: null, icon: DollarSign, color: "bg-emerald-500/10 text-emerald-600" },
-    { label: "Total Purchases ", value: fmt(metrics.totalPurchaseAmount), suffix: null, icon: ArrowDownCircle, color: "bg-sky-500/10 text-sky-600" },
-    { label: "Cancel Value", value: fmt(metrics.totalCancelAmount), suffix: null, icon: XCircle, color: "bg-red-500/10 text-red-600" },
+    { label: "Total Profit", value: formatBDT(metrics.totalProfit), suffix: null, icon: TrendingUp, color: "bg-indigo-500/10 text-indigo-600" },
+    { label: "Total Sales", value: formatBDT(metrics.totalSaleAmount), suffix: null, icon: DollarSign, color: "bg-emerald-500/10 text-emerald-600" },
+    { label: "Total Purchases ", value: formatBDT(metrics.totalPurchaseAmount), suffix: null, icon: ArrowDownCircle, color: "bg-sky-500/10 text-sky-600" },
+    { label: "Cancel Value", value: formatBDT(metrics.totalCancelAmount), suffix: null, icon: XCircle, color: "bg-red-500/10 text-red-600" },
   ];
 
   return (
@@ -238,7 +238,7 @@ export default function DashboardClient({ filter, metrics, topProducts, recentOr
                     <p className="text-sm font-bold text-slate-800 truncate">{p.name}</p>
                     <p className="text-[11px] text-slate-400 font-semibold">{p.sold} sold</p>
                   </div>
-                  <p className="text-sm font-extrabold text-slate-900 flex-shrink-0">{fmt(p.revenue)}</p>
+                  <p className="text-sm font-extrabold text-slate-900 flex-shrink-0">{formatBDT(p.revenue)}</p>
                 </div>
               ))
             )}
@@ -270,7 +270,7 @@ export default function DashboardClient({ filter, metrics, topProducts, recentOr
                     <span className={`px-2 py-0.5 text-[10px] font-bold uppercase rounded tracking-wider ${STATUS_COLORS[order.status] || "bg-slate-100 text-slate-600"}`}>
                       {order.status}
                     </span>
-                    <p className="text-sm font-extrabold text-slate-900 min-w-[70px] text-right">{fmt(order.totalAmount)}</p>
+                    <p className="text-sm font-extrabold text-slate-900 min-w-[70px] text-right">{formatBDT(order.totalAmount)}</p>
                   </div>
                 </div>
               ))

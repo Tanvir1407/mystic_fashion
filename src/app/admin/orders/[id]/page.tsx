@@ -25,10 +25,7 @@ export default async function SingleOrderPage({ params }: { params: { id: string
     notFound();
   }
 
-  // Format BDT utility
-  const formatBDT = (price: number) => {
-    return price === 0 ? "Free" : `৳${price.toLocaleString("en-IN")}`;
-  };
+
 
   const itemSubtotal = order.items.reduce((acc, item) => acc + (item.price * item.quantity), 0);
   const deliveryDelta = order.totalAmount - itemSubtotal;

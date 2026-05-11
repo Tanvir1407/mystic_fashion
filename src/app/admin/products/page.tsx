@@ -3,7 +3,7 @@ import Link from "next/link";
 import { deleteProduct } from "../actions";
 import { Plus, Edit2, Filter, Star, Eye, EyeOff } from "lucide-react";
 import { ProductDeleteButton } from "./ProductDeleteButton";
-
+import { formatBDT } from "@/utils/formatPrice";
 import { AdminPagination } from "@/components/AdminPagination";
 import ProductFilterClient from "./ProductFilterClient";
 
@@ -129,9 +129,9 @@ export default async function AdminProductsPage({ searchParams }: { searchParams
                     </td>
                     <td className="px-2 py-4 text-sm text-slate-600 font-mono">
                       <div className="flex flex-col">
-                        <span>৳{product.price.toLocaleString("en-IN")}</span>
+                        <span>{formatBDT(product.price)}</span>
                         {product.purchasePrice && (
-                          <span className="text-[10px] text-slate-400 mt-0.5 ">Cost: ৳{product.purchasePrice}</span>
+                          <span className="text-[10px] text-slate-400 mt-0.5 ">Cost: {formatBDT(product.purchasePrice)}</span>
                         )}
                       </div>
                     </td>

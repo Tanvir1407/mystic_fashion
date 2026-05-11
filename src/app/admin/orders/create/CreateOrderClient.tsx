@@ -7,6 +7,7 @@ import { createAdminOrder } from "../../actions";
 import { useRouter } from "next/navigation";
 import { getPathaoCities, getPathaoZones, getPathaoAreas } from "@/app/actions/pathao";
 import { CustomSelect } from "@/components/CustomSelect";
+import { formatBDT, roundPrice } from "@/utils/formatPrice";
 
 interface Product {
   id: string;
@@ -159,9 +160,9 @@ export default function CreateOrderClient({ products, deliverySettings }: { prod
   const getDiscountedPrice = (product: Product) => {
     if (!product.discount) return product.price;
     if (product.discount.discountType === "PERCENTAGE") {
-      return product.price - (product.price * product.discount.value) / 100;
+      return roundPrice(product.price - (product.price * product.discount.value) / 100);
     }
-    return product.price - product.discount.value;
+    return roundPrice(product.price - product.discount.value);
   };
 
   const addToOrder = () => {
@@ -483,7 +484,7 @@ export default function CreateOrderClient({ products, deliverySettings }: { prod
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center justify-between gap-2">
                               <span className="text-sm font-bold text-slate-800 truncate">{p.name}</span>
-                              <span className="text-sm font-mono font-black text-indigo-600">৳{p.price.toLocaleString()}</span>
+                              <span className="text-sm font-mono font-black text-indigo-600">{formatBDT(p.price)}</span>
                             </div>
                             <div className="flex items-center gap-2 mt-0.5">
                               <span className="text-[10px] text-slate-400 uppercase font-bold tracking-tight bg-slate-100 px-1.5 py-0.5 rounded leading-none">{p.team || "General"}</span>
@@ -595,7 +596,7 @@ export default function CreateOrderClient({ products, deliverySettings }: { prod
                         </td>
                         <td className="px-4 py-3 text-center"><span className="px-2 py-0.5 bg-slate-100 rounded text-[10px] font-black">{item.size}</span></td>
                         <td className="px-4 py-3 text-center font-semibold">{item.quantity}</td>
-                        <td className="px-4 py-3 text-right font-mono">৳{item.price.toLocaleString()}</td>
+                        <td className="px-4 py-3 text-right font-mono">{formatBDT(item.price)}</td>
                         <td className="px-4 py-3 text-right">
                           <button onClick={() => removeItem(idx)} className="p-1.5 text-slate-300 hover:text-red-500 transition-colors">
                             <Trash2 className="w-4 h-4" />
@@ -622,11 +623,11 @@ export default function CreateOrderClient({ products, deliverySettings }: { prod
           <div className="p-6 space-y-4">
             <div className="flex justify-between text-sm text-slate-500">
               <span>Subtotal ({orderItems.length} items)</span>
-              <span className="font-mono font-bold text-slate-800">৳{subtotal.toLocaleString()}</span>
+              <span className="font-mono font-bold text-slate-800">{formatBDT(subtotal)}</span>
             </div>
             <div className="flex justify-between text-sm text-slate-500">
               <span>Delivery Charge</span>
-              <span className="font-mono font-bold text-slate-800">৳{deliveryCharge.toLocaleString()}</span>
+              <span className="font-mono font-bold text-slate-800">{formatBDT(deliveryCharge)}</span>
             </div>
 
             <div className="pt-4 border-t border-dashed border-slate-200 space-y-2">
@@ -635,27 +636,27 @@ export default function CreateOrderClient({ products, deliverySettings }: { prod
                 <div className="flex justify-between items-center">
                   <span className="text-sm ">Manual Discount</span>
                   <span className="text-lg font-bold font-mono">
-                    - ৳{calculatedDiscount.toLocaleString()}
+                    - {formatBDT(calculatedDiscount)}
                   </span>
                 </div>
               )}
               <div className="flex justify-between items-center">
                 <span className="text-sm">Advance Paid</span>
                 <span className="text-lg font-bold font-mono">
-                  - ৳{advancePaid.toLocaleString()}
+                  - {formatBDT(advancePaid)}
                 </span>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-sm font-bold text-slate-500 uppercase tracking-tighter">Grand Total</span>
                 <span className="text-lg font-bold text-slate-800 font-mono">
-                  ৳{totalAmount.toLocaleString()}
+                  {formatBDT(totalAmount)}
                 </span>
               </div>
               <div className="pt-2 border-t border-slate-100">
                 <div className="flex justify-between items-center">
                   <span className="text-sm font-black text-slate-900 uppercase tracking-widest">Net Due</span>
                   <span className="text-2xl font-black text-indigo-600 font-mono tracking-tighter">
-                    ৳{(totalAmount - advancePaid).toLocaleString()}
+                    {formatBDT(totalAmount - advancePaid)}
                   </span>
                 </div>
               </div>

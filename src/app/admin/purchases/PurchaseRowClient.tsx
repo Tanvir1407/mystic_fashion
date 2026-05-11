@@ -5,6 +5,7 @@ import { useState } from "react";
 import { DeleteWarningModal } from "@/components/DeleteWarningModal";
 import { Edit } from "lucide-react";
 import Link from "next/link";
+import { formatBDT } from "@/utils/formatPrice";
 
 export default function PurchaseRowClient({ purchase }: { purchase: any }) {
   const [status, setStatus] = useState<string>(purchase.status);
@@ -44,7 +45,7 @@ export default function PurchaseRowClient({ purchase }: { purchase: any }) {
         </div>
       </td>
       <td className="px-6 py-4 text-sm text-slate-900 font-mono font-medium">
-        ৳{purchase.totalAmount.toLocaleString("en-IN")}
+        {formatBDT(purchase.totalAmount)}
       </td>
       <td className="px-6 py-4 flex items-center justify-end gap-3">
         <select

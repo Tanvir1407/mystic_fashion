@@ -6,6 +6,7 @@
 import React from "react";
 import { formatDate } from "@/utils/formatDate";
 import Barcode from "react-barcode";
+import { formatBDT } from "@/utils/formatPrice";
 
 interface OrderItem {
   id: string;
@@ -180,8 +181,8 @@ export default function InvoicePrintView({ orders }: { orders: Order[] }) {
                             )}
                           </td>
                           <td className="py-1 px-2 text-center align-top">{item.quantity}</td>
-                          <td className="py-1 px-2 text-center align-top">৳{item.price.toLocaleString("en-IN")}</td>
-                          <td className="py-1 px-2 text-right align-top">৳{(item.price * item.quantity).toLocaleString("en-IN")}</td>
+                          <td className="py-1 px-2 text-center align-top">{formatBDT(item.price)}</td>
+                          <td className="py-1 px-2 text-right align-top">{formatBDT(item.price * item.quantity)}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -193,7 +194,7 @@ export default function InvoicePrintView({ orders }: { orders: Order[] }) {
                   <div className="w-3/5 bg-[#E5E7EB]" />{/* spacer matching wash care column */}
                   <div className="w-2/5 bg-[#E5E7EB] flex justify-between">
                     <div className=" py-1.5 pl-2 font-bold uppercase">Subtotal</div>
-                    <div className="py-1.5 px-2 text-right">৳{baseSubtotal.toLocaleString("en-IN")}</div>
+                    <div className="py-1.5 px-2 text-right">{formatBDT(baseSubtotal)}</div>
                   </div>
                 </div>
 
@@ -215,16 +216,16 @@ export default function InvoicePrintView({ orders }: { orders: Order[] }) {
                     {dtfTotal > 0 && (
                       <div className="w-full flex justify-between py-1 px-2 uppercase font-bold text-gray-700">
                         <span>Printing Cost</span>
-                        <span>৳{dtfTotal.toLocaleString("en-IN")}</span>
+                        <span>{formatBDT(dtfTotal)}</span>
                       </div>
                     )}
                     <div className="w-full flex justify-between py-1 px-2 uppercase">
                       <span>Discount {order.couponCode && `(${order.couponCode})`}</span>
-                      <span>৳{discount.toLocaleString("en-IN")}</span>
+                      <span>{formatBDT(discount)}</span>
                     </div>
                     <div className="w-full flex justify-between py-1 px-2 uppercase">
                       <span>Delivery Charge</span>
-                      <span>৳{deliveryCharge.toLocaleString("en-IN")}</span>
+                      <span>{formatBDT(deliveryCharge)}</span>
                     </div>
                     <div className="w-full flex justify-between py-1 px-2 uppercase">
                       <span>Tax</span>
@@ -232,11 +233,11 @@ export default function InvoicePrintView({ orders }: { orders: Order[] }) {
                     </div>
                     <div className="w-full flex justify-between py-1 px-2 uppercase">
                       <span>Advance Paid</span>
-                      <span>৳{order.advancePaid.toLocaleString("en-IN")}</span>
+                      <span>{formatBDT(order.advancePaid)}</span>
                     </div>
                     <div className="w-full flex justify-between py-1 px-2 mt-1 font-bold text-sm uppercase">
                       <span>Balance Due</span>
-                      <span>৳{(order.totalAmount - order.advancePaid).toLocaleString("en-IN")}</span>
+                      <span>{formatBDT(order.totalAmount - order.advancePaid)}</span>
                     </div>
                   </div>
                 </div>

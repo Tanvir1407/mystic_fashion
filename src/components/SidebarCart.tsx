@@ -7,6 +7,7 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { syncCartPrices } from "@/app/checkout/actions";
+import { formatBDT } from "@/utils/formatPrice";
 
 export default function SidebarCart() {
   const { items, isOpen, toggleCart, updateQuantity, removeItem, getTotalPrice, updateItem } = useCartStore();
@@ -17,9 +18,7 @@ export default function SidebarCart() {
     router.push('/checkout');
   };
 
-  const formatBDT = (price: number) => {
-    return `৳${price.toLocaleString("en-IN")}`;
-  };
+
 
   useEffect(() => {
     if (isOpen && items.length > 0) {

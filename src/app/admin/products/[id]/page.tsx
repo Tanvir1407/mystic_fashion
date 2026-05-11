@@ -18,6 +18,7 @@ import {
   AlertCircle,
 } from 'lucide-react';
 import Image from 'next/image';
+import { formatBDT } from '@/utils/formatPrice';
 
 export default async function ProductDetailView({ params }: { params: { id: string } }) {
   const product = await prisma.product.findUnique({
@@ -155,7 +156,7 @@ export default async function ProductDetailView({ params }: { params: { id: stri
         />
         <MetricCard
           title="Total Revenue"
-          value={`৳${totalRevenue.toLocaleString()}`}
+          value={`${formatBDT(Math.round(totalRevenue))}`}
           icon={DollarSign}
         />
         <MetricCard
@@ -171,7 +172,7 @@ export default async function ProductDetailView({ params }: { params: { id: stri
         />
         <MetricCard
           title="Est. Margin/Unit"
-          value={`৳${estimatedProfitMargin.toLocaleString()}`}
+          value={`${formatBDT(Math.round(estimatedProfitMargin))}`}
           icon={TrendingUp}
           valueColor={estimatedProfitMargin > 0 ? 'text-green-600' : 'text-red-600'}
         />
@@ -234,7 +235,7 @@ export default async function ProductDetailView({ params }: { params: { id: stri
                       Base Selling Price
                     </h3>
                     <p className="text-lg font-bold text-slate-900">
-                      ৳{product.price.toLocaleString()}
+                      {formatBDT(product.price)}
                     </p>
                   </div>
                   <div>
@@ -242,7 +243,7 @@ export default async function ProductDetailView({ params }: { params: { id: stri
                       Purchase Price
                     </h3>
                     <p className="text-lg font-bold text-slate-700">
-                      {product.purchasePrice ? `৳${product.purchasePrice.toLocaleString()}` : 'N/A'}
+                      {product.purchasePrice ? formatBDT(product.purchasePrice) : 'N/A'}
                     </p>
                   </div>
                 </div>

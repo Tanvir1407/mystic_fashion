@@ -9,6 +9,7 @@ import Link from "next/link";
 import { ArrowLeft, CheckCircle2, X, ChevronDown, Ticket, Loader2, CheckCircle, Tag, Edit2, Sparkles } from "lucide-react";
 import { useState, useTransition, useEffect } from "react";
 import { placeOrderAction, validateCoupon, syncCartPrices } from "./actions";
+import { formatBDT } from "@/utils/formatPrice";
 import { CustomSelect } from "@/components/CustomSelect";
 import { getPathaoCities, getPathaoZones, getPathaoAreas } from "@/app/actions/pathao";
 
@@ -58,10 +59,7 @@ export default function CheckoutClient({
   const [loadingZones, setLoadingZones] = useState(false);
   const [loadingAreas, setLoadingAreas] = useState(false);
 
-  // Format BDT utility
-  const formatBDT = (price: number) => {
-    return price === 0 ? "Free" : `৳${price.toLocaleString("en-IN")}`;
-  };
+
 
   useEffect(() => {
     if (items.length > 0) {
@@ -453,9 +451,9 @@ export default function CheckoutClient({
                           </div>
                           <div className="flex items-center gap-2">
                             {item.originalPrice && item.originalPrice > item.price && (
-                              <span className="text-[10px] font-bold text-slate-300 line-through">৳{item.originalPrice.toLocaleString()}</span>
+                              <span className="text-[10px] font-bold text-slate-300 line-through">{formatBDT(item.originalPrice)}</span>
                             )}
-                            <p className="font-black text-slate-900 text-xs">৳{item.price.toLocaleString()}</p>
+                            <p className="font-black text-slate-900 text-xs">{formatBDT(item.price)}</p>
                           </div>
                         </div>
                       </div>

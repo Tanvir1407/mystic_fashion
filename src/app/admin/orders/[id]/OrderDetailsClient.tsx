@@ -6,6 +6,7 @@ import { updateOrderDetails, updateOrderRemark } from "../../actions";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { CustomSelect } from "@/components/CustomSelect";
+import { formatBDT } from "@/utils/formatPrice";
 
 export default function OrderDetailsClient({ order, deliverySettings, products = [] }: { order: any; deliverySettings: any; products?: any[] }) {
   const router = useRouter();
@@ -73,9 +74,7 @@ export default function OrderDetailsClient({ order, deliverySettings, products =
     setLoading(false);
   };
 
-  const formatBDT = (price: number) => {
-    return price === 0 ? "Free" : `৳${price.toLocaleString("en-IN")}`;
-  };
+
 
   const baseSubtotal = formData.items.reduce((acc: number, item: any) => acc + (item.price * item.quantity), 0);
   const totalDTFCost = formData.items.reduce((acc: number, item: any) => acc + (item.requiresPrint ? item.printCost * item.quantity : 0), 0);
@@ -113,9 +112,9 @@ export default function OrderDetailsClient({ order, deliverySettings, products =
     let price = product.price;
     if (product.discount) {
       if (product.discount.discountType === "PERCENTAGE") {
-        price = price - (price * (product.discount.value / 100));
+        price = Math.round(price - (price * (product.discount.value / 100)));
       } else {
-        price = price - product.discount.value;
+        price = Math.round(price - product.discount.value);
       }
     }
 
