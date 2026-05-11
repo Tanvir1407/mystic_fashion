@@ -5,6 +5,7 @@ import { User, MapPin, Phone, Edit2, Check, X, Package, Wallet, StickyNote, Save
 import { updateOrderDetails, updateOrderRemark } from "../../actions";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
+import UploadedImage from "@/components/UploadedImage";
 import { CustomSelect } from "@/components/CustomSelect";
 import { formatBDT } from "@/utils/formatPrice";
 
@@ -511,7 +512,7 @@ export default function OrderDetailsClient({ order, deliverySettings, products =
               <div key={item.id} className="p-5 flex gap-4 hover:bg-slate-50/50 transition-colors group">
                 <div className="w-16 h-20 relative bg-slate-50 rounded-lg overflow-hidden border border-slate-100 flex-shrink-0 group-hover:scale-[1.02] transition-transform">
                   {item.product.images[0] && (
-                    <Image src={item.product.images[0]} alt={item.product.name} fill className="object-cover" />
+                    <UploadedImage src={item.product.images[0]} alt={item.product.name} fill className="object-cover" />
                   )}
                 </div>
                 <div className="flex-1 min-w-0 py-0.5">

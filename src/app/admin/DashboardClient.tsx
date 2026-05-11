@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
+import UploadedImage from "@/components/UploadedImage";
 import { Package, ShoppingCart, Truck, XCircle, DollarSign, TrendingUp, ArrowDownCircle, History, Eye } from "lucide-react";
 import { formatBDT } from "@/utils/formatPrice";
 
@@ -229,7 +230,7 @@ export default function DashboardClient({ filter, metrics, topProducts, recentOr
                   <span className="text-xs font-black text-slate-300 w-4 text-right">{idx + 1}</span>
                   <div className="w-9 h-9 rounded-lg overflow-hidden relative flex-shrink-0 bg-slate-100 border border-slate-200">
                     {p.image ? (
-                      <Image src={p.image} alt={p.name} fill className="object-cover" />
+                      <UploadedImage src={p.image} alt={p.name} fill className="object-cover" />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center text-slate-300"><Package className="w-4 h-4" /></div>
                     )}
