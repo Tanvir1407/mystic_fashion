@@ -21,7 +21,10 @@ export async function placeOrderAction(payload: {
 }) {
   try {
     return await prisma.$transaction(async (tx) => {
-      const calculatedAdvance = payload.items.reduce((sum, item) => sum + (item.requiresPrint ? (item.printCost || 0) * item.quantity : 0), 0);
+      const calculatedAdvance = payload.items.reduce((sum, item) => {
+        const printCount = item.printDetails?.length || (item.requiresPrint ? 1 : 0);
+        return sum + (printCount * (item.printCost || 0));
+      }, 0);
 
       // Generate Custom Order ID
       const now = new Date();
@@ -65,16 +68,45 @@ export async function placeOrderAction(payload: {
           pathaoZoneId: payload.pathaoZoneId,
           pathaoAreaId: payload.pathaoAreaId,
           items: {
-            create: payload.items.map((item) => ({
-              productId: item.id,
-              size: item.size || "M",
-              quantity: item.quantity,
-              price: item.price,
-              requiresPrint: item.requiresPrint || false,
-              printName: item.printName || null,
-              printNumber: item.printNumber || null,
-              printCost: item.printCost || 0,
-            })),
+            create: payload.items.flatMap((item) => {
+              if (item.requiresPrint && item.printDetails && item.printDetails.length > 0) {
+                const printedItems = item.printDetails.map((pd: any) => ({
+                  productId: item.id,
+                  size: item.size || "M",
+                  quantity: 1,
+                  price: item.price,
+                  requiresPrint: true,
+                  printName: pd.name || null,
+                  printNumber: pd.number || null,
+                  printCost: item.printCost || 0,
+                }));
+                const remainingQty = item.quantity - item.printDetails.length;
+                if (remainingQty > 0) {
+                  printedItems.push({
+                    productId: item.id,
+                    size: item.size || "M",
+                    quantity: remainingQty,
+                    price: item.price,
+                    requiresPrint: false,
+                    printName: null,
+                    printNumber: null,
+                    printCost: 0,
+                  });
+                }
+                return printedItems;
+              } else {
+                return [{
+                  productId: item.id,
+                  size: item.size || "M",
+                  quantity: item.quantity,
+                  price: item.price,
+                  requiresPrint: item.requiresPrint || false,
+                  printName: item.printName || null,
+                  printNumber: item.printNumber || null,
+                  printCost: item.printCost || 0,
+                }];
+              }
+            }),
           },
         },
       });

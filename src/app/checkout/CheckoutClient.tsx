@@ -39,7 +39,7 @@ export default function CheckoutClient({
   const [bkashTrxId, setBkashTrxId] = useState("");
   // DTF Modal State
   const [showDTFModal, setShowDTFModal] = useState(false);
-  const [activeItem, setActiveItem] = useState<{ id: string, size: string | undefined } | null>(null);
+  const [activeItem, setActiveItem] = useState<{ id: string, size: string | undefined, editIndex: number } | null>(null);
   const [dtfForm, setDtfForm] = useState({
     type: "messi" as "messi" | "ronaldo" | "neymar" | "custom",
     name: "",
@@ -128,7 +128,11 @@ export default function CheckoutClient({
 
   // Pricing Logic (Excluding DTF from discounts)
   const baseSubtotal = getTotalPrice();
-  const totalDTFCost = items.reduce((sum, item) => sum + (item.requiresPrint ? dtfCostPerItem * item.quantity : 0), 0);
+  const totalDTFCost = items.reduce((sum, item) => {
+    if (!item.requiresPrint) return sum;
+    const printCount = item.printDetails?.length || 1;
+    return sum + (printCount * dtfCostPerItem);
+  }, 0);
   const total = baseSubtotal - couponDiscount + totalDTFCost + (items.length > 0 ? deliveryFee : 0);
 
   const originalBaseSubtotal = items.reduce((total, item) => total + (item.originalPrice || item.price) * item.quantity, 0);
@@ -215,7 +219,7 @@ export default function CheckoutClient({
 
   const handleDTFToggle = (id: string, size: string | undefined, checked: boolean) => {
     if (checked) {
-      setActiveItem({ id, size });
+      setActiveItem({ id, size, editIndex: -1 });
       setDtfForm({ type: "messi", name: "Messi", number: "10" });
       setShowDTFModal(true);
     } else {
@@ -223,7 +227,8 @@ export default function CheckoutClient({
         requiresPrint: false,
         printName: "",
         printNumber: "",
-        printCost: 0
+        printCost: 0,
+        printDetails: []
       });
     }
   };
@@ -238,11 +243,21 @@ export default function CheckoutClient({
     if (type === "ronaldo") { finalName = "Ronaldo"; finalNumber = "7"; }
     if (type === "neymar") { finalName = "Neymar"; finalNumber = "10"; }
 
+    const currentItem = items.find(i => i.id === activeItem.id && i.size === activeItem.size);
+    let newDetails = currentItem?.printDetails ? [...currentItem.printDetails] : [];
+
+    if (activeItem.editIndex >= 0) {
+      newDetails[activeItem.editIndex] = { name: finalName, number: finalNumber };
+    } else {
+      newDetails.push({ name: finalName, number: finalNumber });
+    }
+
     updateItem(activeItem.id, activeItem.size, {
       requiresPrint: true,
       printName: finalName,
       printNumber: finalNumber,
-      printCost: dtfCostPerItem
+      printCost: dtfCostPerItem,
+      printDetails: newDetails
     });
     setShowDTFModal(false);
     setActiveItem(null);
@@ -469,22 +484,55 @@ export default function CheckoutClient({
                           />
                           <span className="text-[10px] font-bold text-slate-600 uppercase">Add DTF Print (+৳{dtfCostPerItem})</span>
                         </label>
-                        {item.requiresPrint && item.printName && (
-                          <div className="flex items-center gap-3 bg-slate-50 p-2 rounded-lg border border-slate-100">
-                            <div className="flex flex-col">
-                              <span className="text-[8px] font-bold text-slate-400 uppercase tracking-widest">Print Details</span>
-                              <span className="text-[10px] font-black uppercase text-slate-900">{item.printName} ({item.printNumber})</span>
-                            </div>
-                            <button
-                              onClick={() => {
-                                setActiveItem({ id: item.id, size: item.size });
-                                setDtfForm({ type: "custom", name: item.printName || "", number: item.printNumber || "" });
-                                setShowDTFModal(true);
-                              }}
-                              className="ml-auto text-primary hover:scale-110 transition-transform"
-                            >
-                              <Edit2 className="w-3 h-3" />
-                            </button>
+                        {item.requiresPrint && item.printDetails && item.printDetails.length > 0 && (
+                          <div className="flex flex-col gap-2 mt-1">
+                            {item.printDetails.map((detail, idx) => (
+                              <div key={idx} className="flex items-center gap-3 bg-slate-50 p-2 rounded-lg border border-slate-100">
+                                <div className="flex flex-col">
+                                  <span className="text-[8px] font-bold text-slate-400 uppercase tracking-widest">Print {idx + 1}</span>
+                                  <span className="text-[10px] font-black uppercase text-slate-900">{detail.name} ({detail.number})</span>
+                                </div>
+                                <div className="ml-auto flex items-center gap-2">
+                                  <button
+                                    onClick={(e) => {
+                                      e.preventDefault();
+                                      setActiveItem({ id: item.id, size: item.size, editIndex: idx });
+                                      setDtfForm({ type: "custom", name: detail.name, number: detail.number });
+                                      setShowDTFModal(true);
+                                    }}
+                                    className="text-primary hover:scale-110 transition-transform p-1"
+                                  >
+                                    <Edit2 className="w-3 h-3" />
+                                  </button>
+                                  <button
+                                    onClick={(e) => {
+                                      e.preventDefault();
+                                      const newDetails = item.printDetails!.filter((_, i) => i !== idx);
+                                      updateItem(item.id, item.size, { 
+                                        printDetails: newDetails, 
+                                        requiresPrint: newDetails.length > 0 
+                                      });
+                                    }}
+                                    className="text-red-500 hover:scale-110 transition-transform p-1"
+                                  >
+                                    <X className="w-3.5 h-3.5" />
+                                  </button>
+                                </div>
+                              </div>
+                            ))}
+                            {item.printDetails.length < item.quantity && (
+                              <button
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  setActiveItem({ id: item.id, size: item.size, editIndex: -1 });
+                                  setDtfForm({ type: "custom", name: "", number: "" });
+                                  setShowDTFModal(true);
+                                }}
+                                className="text-[10px] font-bold text-primary border border-primary/20 bg-primary/5 py-2 rounded-lg border-dashed hover:bg-primary/10 transition-colors w-full text-center mt-1 uppercase tracking-widest"
+                              >
+                                + Add Print For Next Item
+                              </button>
+                            )}
                           </div>
                         )}
                       </div>
