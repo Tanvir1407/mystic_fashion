@@ -9,7 +9,7 @@ import UploadedImage from "@/components/UploadedImage";
 import { CustomSelect } from "@/components/CustomSelect";
 import { formatBDT } from "@/utils/formatPrice";
 
-export default function OrderDetailsClient({ order, deliverySettings, products = [] }: { order: any; deliverySettings: any; products?: any[] }) {
+export default function OrderDetailsClient({ order, deliverySettings, products = [], pathaoInfo = null }: { order: any; deliverySettings: any; products?: any[]; pathaoInfo?: any }) {
   const router = useRouter();
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -682,14 +682,37 @@ export default function OrderDetailsClient({ order, deliverySettings, products =
         const hasPrint = order.items?.some((i: any) => i.requiresPrint);
         const filteredSteps = STATUS_STEPS.filter(s => s.statusKey !== "PRINTING" || hasPrint || order.status === "PRINTING");
 
+        // Pathao status helpers
+        const pathaoStatus = pathaoInfo?.order_status || pathaoInfo?.order_status_slug || null;
+        const pathaoStatusLower = (pathaoStatus || '').toLowerCase();
+        const pathaoStatusColor = pathaoStatusLower.includes('delivered')
+          ? 'bg-emerald-100 text-emerald-700'
+          : pathaoStatusLower.includes('cancel')
+            ? 'bg-red-100 text-red-700'
+            : 'bg-indigo-100 text-indigo-700';
+
         return (
           <div className="bg-white border border-slate-200 rounded-2xl p-4 sm:p-6">
-            <h3 className="font-bold text-slate-900 mb-5 uppercase tracking-widest text-[11px] flex items-center gap-2.5 pb-4 border-b border-slate-50">
-              <div className="p-1.5 bg-violet-50 rounded-md">
-                <Compass className="w-4 h-4 text-violet-500" />
-              </div>
-              Live Shipment Milestone
-            </h3>
+            {/* Card Header */}
+            <div className="flex items-center justify-between pb-4 border-b border-slate-50 mb-5">
+              <h3 className="font-bold text-slate-900 uppercase tracking-widest text-[11px] flex items-center gap-2.5">
+                <div className="p-1.5 bg-violet-50 rounded-md">
+                  <Compass className="w-4 h-4 text-violet-500" />
+                </div>
+                Live Shipment Milestone
+              </h3>
+
+              {/* Pathao live dot — only when SHIPPED */}
+              {order.status === 'SHIPPED' && order.pathaoConsignmentId && (
+                <div className="flex items-center gap-1.5">
+                  <span className="relative flex h-2 w-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75" />
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-indigo-500" />
+                  </span>
+                  <span className="text-[10px] font-bold text-indigo-500 uppercase tracking-wider">Live</span>
+                </div>
+              )}
+            </div>
 
             {isSpecial ? (
               <div className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold ${
@@ -705,18 +728,20 @@ export default function OrderDetailsClient({ order, deliverySettings, products =
                   className="absolute top-4 left-0 right-0 h-[2px] bg-slate-100"
                   style={{ zIndex: 0 }}
                 />
-                <div className={`flex w-full`} style={{ position: "relative" }}>
-                  {filteredSteps.map((step, idx) => {
+                <div className="flex w-full" style={{ position: "relative" }}>
+                  {filteredSteps.map((step) => {
                     const stepOrderIndex = STATUS_ORDER.indexOf(step.statusKey);
                     const isCompleted = stepOrderIndex < currentIndex;
                     const isActive = stepOrderIndex === currentIndex;
+                    const isShippedStep = step.statusKey === "SHIPPED";
+                    const showPathao = isShippedStep && order.pathaoConsignmentId;
                     const Icon = step.icon;
                     return (
                       <div key={step.statusKey} className="flex flex-col items-center flex-1 min-w-0">
                         {/* Icon bubble */}
-                        <div className={`relative z-10 w-8 h-8 rounded-full border-2 flex items-center justify-center shrink-0 transition-all ${
+                        <div className={`relative z-10 w-8 h-8 rounded-full border-2 flex items-center justify-center shrink-0 transition-all duration-300 ${
                           isActive
-                            ? "bg-violet-600 border-violet-600 text-white ring-4 ring-violet-100 shadow"
+                            ? "bg-violet-600 border-violet-600 text-white ring-4 ring-violet-100 shadow-lg scale-110"
                             : isCompleted
                               ? "bg-emerald-500 border-emerald-500 text-white shadow-sm"
                               : "bg-white border-slate-200 text-slate-400"
@@ -727,16 +752,44 @@ export default function OrderDetailsClient({ order, deliverySettings, products =
                             <Icon className="w-3.5 h-3.5 stroke-[2.5px]" />
                           )}
                         </div>
+
                         {/* Label */}
                         <span className={`mt-2 text-[10px] font-bold text-center leading-tight px-0.5 uppercase tracking-wide ${
-                          isActive
-                            ? "text-violet-600"
-                            : isCompleted
-                              ? "text-emerald-600"
-                              : "text-slate-400"
+                          isActive ? "text-violet-600" : isCompleted ? "text-emerald-600" : "text-slate-400"
                         }`}>
                           {step.title}
                         </span>
+
+                        {/* Pathao status pill — beneath "Shipped" label only */}
+                        {showPathao && (
+                          <div className="mt-1.5 flex flex-col items-center gap-1">
+                            {pathaoStatus ? (
+                              <span className={`inline-flex items-center gap-1 text-[9px] font-black px-2 py-0.5 rounded-full border tracking-wider uppercase ${
+                                pathaoStatusLower.includes('delivered')
+                                  ? 'bg-emerald-50 text-emerald-600 border-emerald-200'
+                                  : pathaoStatusLower.includes('cancel')
+                                    ? 'bg-red-50 text-red-500 border-red-200'
+                                    : 'bg-indigo-50 text-indigo-600 border-indigo-200'
+                              }`}>
+                                <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${
+                                  pathaoStatusLower.includes('delivered') ? 'bg-emerald-500' :
+                                  pathaoStatusLower.includes('cancel') ? 'bg-red-500' : 'bg-indigo-500'
+                                }`} />
+                                {pathaoStatus}
+                              </span>
+                            ) : (
+                              <span className="text-[9px] text-slate-400 italic font-medium">Syncing…</span>
+                            )}
+                            {pathaoInfo?.updated_at && (
+                              <span className="text-[8px] text-slate-400 font-medium text-center leading-tight">
+                                {new Date(pathaoInfo.updated_at).toLocaleString('en-GB', {
+                                  day: '2-digit', month: 'short',
+                                  hour: '2-digit', minute: '2-digit'
+                                })}
+                              </span>
+                            )}
+                          </div>
+                        )}
                       </div>
                     );
                   })}
