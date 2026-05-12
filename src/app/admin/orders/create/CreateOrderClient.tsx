@@ -264,8 +264,8 @@ export default function CreateOrderClient({
       return alert("Please fill in all customer details and add at least one item.");
     }
 
-    if (district !== "Self Pickup" && (!selectedCityId || !selectedZoneId || !selectedAreaId)) {
-      return alert("Please select a City, Zone, and Area for delivery.");
+    if (district !== "Self Pickup" && (!selectedCityId)) {
+      return alert("Please select a City for delivery.");
     }
 
     const cityName = cities.find(c => c.value === selectedCityId?.toString())?.label || "";
