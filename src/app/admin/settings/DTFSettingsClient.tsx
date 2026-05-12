@@ -17,35 +17,39 @@ export default function DTFSettingsClient({ initialCost }: { initialCost: number
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
-      <div>
-        <label className="block text-sm font-semibold text-slate-900 mb-2">
-          DTF Print Cost per Item (৳)
+    <form onSubmit={handleSubmit} className="space-y-5">
+      <div className="space-y-1.5">
+        <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+          DTF Print Cost Per Item
         </label>
-        <input
-          type="number"
-          value={printCost}
-          onChange={(e) => setPrintCost(e.target.value)}
-          className="w-full max-w-xs px-4 py-2 border border-slate-300 rounded-md focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 text-sm font-mono"
-          required
-          min="0"
-        />
-        <p className="text-xs text-slate-500 mt-1">
-          This is the additional charge applied per jersey when a customer enables DTF (name & number) printing at checkout.
+        <div className="relative max-w-xs">
+          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-bold text-slate-400">৳</span>
+          <input
+            type="number"
+            value={printCost}
+            onChange={(e) => setPrintCost(e.target.value)}
+            className="w-full pl-8 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm font-bold focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all outline-none"
+            required
+            min="0"
+          />
+        </div>
+        <p className="text-[10px] text-slate-400 leading-tight italic max-w-md">
+          Applied automatically when customers opt for custom jersey printing. 
         </p>
       </div>
-      <div className="flex justify-end pt-2">
+
+      <div className="flex justify-end pt-2 border-t border-slate-100">
         <button
           type="submit"
           disabled={loading}
-          className="px-6 py-2.5 bg-slate-900 text-white font-medium rounded-md flex items-center justify-center gap-2 hover:bg-slate-800 transition-colors disabled:opacity-75 shadow-sm"
+          className="px-5 py-2.5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold uppercase tracking-wider rounded-lg flex items-center justify-center gap-2 transition-all shadow-md shadow-slate-200 active:scale-[0.97] disabled:opacity-50"
         >
           {loading ? (
-            <div className="w-4 h-4 border-2 border-white/50 border-t-white rounded-full animate-spin" />
+            <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
           ) : (
-            <Save className="w-4 h-4" />
+            <Save className="w-3.5 h-3.5" />
           )}
-          Save Settings
+          Update Price
         </button>
       </div>
     </form>
