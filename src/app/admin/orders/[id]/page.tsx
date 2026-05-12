@@ -1,5 +1,6 @@
 import prisma from "@/lib/prisma";
 import { getDeliverySettings, getProductsForOrder } from "../../actions";
+import { pathaoClient } from "@/lib/pathao/PathaoClient";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Package, User, MapPin, Phone, CalendarDays, Wallet } from "lucide-react";
@@ -23,6 +24,17 @@ export default async function SingleOrderPage({ params }: { params: { id: string
 
   if (!order) {
     notFound();
+  }
+
+  // Fetch live Pathao courier status only when order is SHIPPED and has a consignment ID
+  let pathaoInfo: any = null;
+  if (order.status === 'SHIPPED' && order.pathaoConsignmentId) {
+    try {
+      pathaoInfo = await pathaoClient.getOrderInfo(order.pathaoConsignmentId);
+    } catch (e) {
+      // Non-fatal: page still renders without live courier data
+      console.error('[AdminOrderPage] Failed to fetch Pathao order info:', e);
+    }
   }
 
 
@@ -61,7 +73,7 @@ export default async function SingleOrderPage({ params }: { params: { id: string
       </div>
 
       <div className="w-full">
-        <OrderDetailsClient order={order} deliverySettings={deliverySettings} products={products} />
+        <OrderDetailsClient order={order} deliverySettings={deliverySettings} products={products} pathaoInfo={pathaoInfo} />
       </div>
     </div>
   );
