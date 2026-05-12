@@ -33,22 +33,32 @@ export default async function AdminSettingsPage() {
         </div>
       </div>
 
-      {/* Delivery Settings */}
-      <div className="bg-white border border-slate-200 rounded-lg shadow-sm p-6 max-w-2xl">
-        <div className="flex items-center gap-2 mb-6 border-b border-slate-100 pb-4">
-          <Settings className="w-5 h-5 text-slate-500" />
-          <h2 className="text-lg font-semibold text-slate-800">Delivery Configuration</h2>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+        {/* Delivery Settings */}
+        <div className="bg-white border border-slate-200 rounded-xl shadow-[0_1px_3px_rgba(0,0,0,0.04)] overflow-hidden animate-in fade-in slide-in-from-bottom-2 duration-300">
+          <div className="flex items-center gap-2 px-6 py-4 border-b border-slate-100 bg-slate-50/50">
+            <div className="w-8 h-8 rounded-lg bg-indigo-50 flex items-center justify-center">
+              <Settings className="w-4 h-4 text-indigo-600" />
+            </div>
+            <h2 className="text-sm font-bold text-slate-900 uppercase tracking-wider">Delivery Configuration</h2>
+          </div>
+          <div className="p-6">
+            <DeliverySettingsClient initialData={settings} />
+          </div>
         </div>
-        <DeliverySettingsClient initialData={settings} />
-      </div>
 
-      {/* DTF Print Settings */}
-      <div className="bg-white border border-slate-200 rounded-lg shadow-sm p-6 max-w-2xl">
-        <div className="flex items-center gap-2 mb-6 border-b border-slate-100 pb-4">
-          <Printer className="w-5 h-5 text-slate-500" />
-          <h2 className="text-lg font-semibold text-slate-800">DTF Print Cost</h2>
+        {/* DTF Print Settings */}
+        <div className="bg-white border border-slate-200 rounded-xl shadow-[0_1px_3px_rgba(0,0,0,0.04)] overflow-hidden animate-in fade-in slide-in-from-bottom-2 duration-300 delay-75">
+          <div className="flex items-center gap-2 px-6 py-4 border-b border-slate-100 bg-slate-50/50">
+            <div className="w-8 h-8 rounded-lg bg-indigo-50 flex items-center justify-center">
+              <Printer className="w-4 h-4 text-indigo-600" />
+            </div>
+            <h2 className="text-sm font-bold text-slate-900 uppercase tracking-wider">DTF Print Cost</h2>
+          </div>
+          <div className="p-6">
+            <DTFSettingsClient initialCost={dtfCost} />
+          </div>
         </div>
-        <DTFSettingsClient initialCost={dtfCost} />
       </div>
     </div>
   );

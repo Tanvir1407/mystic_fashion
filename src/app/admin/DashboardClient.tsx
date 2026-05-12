@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import UploadedImage from "@/components/UploadedImage";
-import { Package, ShoppingCart, Truck, XCircle, DollarSign, TrendingUp, ArrowDownCircle, History, Eye } from "lucide-react";
+import { Package, ShoppingCart, Truck, XCircle, DollarSign, TrendingUp, ArrowDownCircle, History, Eye, Plus } from "lucide-react";
 import { formatBDT } from "@/utils/formatPrice";
 
 interface Metrics {
@@ -118,6 +118,31 @@ export default function DashboardClient({ filter, metrics, topProducts, recentOr
             </button>
           ))}
         </div>
+      </div>
+
+      {/* ── Quick Actions ── */}
+      <div className="flex flex-wrap items-center gap-3 animate-in fade-in slide-in-from-top-1 duration-300">
+        <Link 
+          href="/admin/orders/create" 
+          className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg shadow-sm text-xs font-bold uppercase tracking-wide transition-all hover:shadow-md active:scale-[0.97]"
+        >
+          <Plus className="w-3.5 h-3.5 stroke-[3]" />
+          Create Order
+        </Link>
+        <Link 
+          href="/admin/products/new" 
+          className="flex items-center gap-2 px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-lg shadow-sm text-xs font-bold uppercase tracking-wide transition-all hover:shadow-md active:scale-[0.97]"
+        >
+          <Plus className="w-3.5 h-3.5 stroke-[3]" />
+          Add Product
+        </Link>
+        <Link 
+          href="/admin/purchases/new" 
+          className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 hover:border-slate-300 hover:bg-slate-50 text-slate-700 rounded-lg shadow-sm text-xs font-bold uppercase tracking-wide transition-all hover:shadow-sm active:scale-[0.97]"
+        >
+          <Plus className="w-3.5 h-3.5 stroke-[3] text-slate-400" />
+          New Purchase
+        </Link>
       </div>
 
       {/* ── Metric Cards — 4 per row ── */}
