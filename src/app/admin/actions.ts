@@ -858,11 +858,11 @@ export async function createAdminOrder(data: {
   phone: string;
   district: string;
   address: string;
-  items: { 
-    productId: string; 
-    size: string; 
-    quantity: number; 
-    price: number; 
+  items: {
+    productId: string;
+    size: string;
+    quantity: number;
+    price: number;
     requiresPrint?: boolean;
     printName?: string;
     printNumber?: string;
@@ -1061,8 +1061,8 @@ export async function bulkSendToPathaoAction(orderIds: string[]) {
         continue;
       }
 
-      if (!order.pathaoCityId || !order.pathaoZoneId) {
-        errors.push(`${order.id}: Missing Pathao City or Zone ID.`);
+      if (!order.pathaoCityId) {
+        errors.push(`${order.id}: Missing Pathao City ID.`);
         continue;
       }
 
@@ -1086,7 +1086,7 @@ export async function bulkSendToPathaoAction(orderIds: string[]) {
           recipient_phone: sanitizePhone(order.phone),
           recipient_address: order.address,
           recipient_city: order.pathaoCityId,
-          recipient_zone: order.pathaoZoneId,
+          recipient_zone: order.pathaoZoneId || undefined,
           recipient_area: order.pathaoAreaId || undefined,
           delivery_type: 48,
           item_type: 2,
