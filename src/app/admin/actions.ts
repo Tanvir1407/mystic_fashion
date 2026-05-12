@@ -858,7 +858,17 @@ export async function createAdminOrder(data: {
   phone: string;
   district: string;
   address: string;
-  items: { productId: string; size: string; quantity: number; price: number }[];
+  items: { 
+    productId: string; 
+    size: string; 
+    quantity: number; 
+    price: number; 
+    requiresPrint?: boolean;
+    printName?: string;
+    printNumber?: string;
+    printCost?: number;
+    printDetails?: { name: string; number: string }[];
+  }[];
   totalAmount: number;
   advancePaid: number;
   discountAmount: number;
@@ -894,12 +904,45 @@ export async function createAdminOrder(data: {
           pathaoAreaId: data.pathaoAreaId,
           status: orderStatus,
           items: {
-            create: data.items.map((item) => ({
-              productId: item.productId,
-              size: item.size,
-              quantity: item.quantity,
-              price: item.price,
-            })),
+            create: data.items.flatMap((item) => {
+              if (item.requiresPrint && item.printDetails && item.printDetails.length > 0) {
+                const printedItems = item.printDetails.map((pd) => ({
+                  productId: item.productId,
+                  size: item.size,
+                  quantity: 1,
+                  price: item.price,
+                  requiresPrint: true,
+                  printName: pd.name,
+                  printNumber: pd.number,
+                  printCost: item.printCost || 0,
+                }));
+                const remainingQty = item.quantity - item.printDetails.length;
+                if (remainingQty > 0) {
+                  printedItems.push({
+                    productId: item.productId,
+                    size: item.size,
+                    quantity: remainingQty,
+                    price: item.price,
+                    requiresPrint: false,
+                    printName: null,
+                    printNumber: null,
+                    printCost: 0,
+                  });
+                }
+                return printedItems;
+              } else {
+                return [{
+                  productId: item.productId,
+                  size: item.size,
+                  quantity: item.quantity,
+                  price: item.price,
+                  requiresPrint: item.requiresPrint || false,
+                  printName: item.printName || null,
+                  printNumber: item.printNumber || null,
+                  printCost: item.printCost || 0,
+                }];
+              }
+            }),
           },
         },
       });
