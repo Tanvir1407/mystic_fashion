@@ -600,6 +600,7 @@ export default function OrderDetailsClient({ order, deliverySettings, products =
                           options={(products.find(p => p.id === newProductData.productId)?.variants || []).map((v: any) => ({ value: v.size, label: `${v.size} (Stock: ${v.stock})` }))}
                           value={newProductData.size}
                           onChange={(val) => setNewProductData({ ...newProductData, size: val })}
+                          openUpwards={true}
                         />
                       </div>
                     )}

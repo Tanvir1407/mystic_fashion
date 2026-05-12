@@ -508,9 +508,9 @@ export default function CheckoutClient({
                                     onClick={(e) => {
                                       e.preventDefault();
                                       const newDetails = item.printDetails!.filter((_, i) => i !== idx);
-                                      updateItem(item.id, item.size, { 
-                                        printDetails: newDetails, 
-                                        requiresPrint: newDetails.length > 0 
+                                      updateItem(item.id, item.size, {
+                                        printDetails: newDetails,
+                                        requiresPrint: newDetails.length > 0
                                       });
                                     }}
                                     className="text-red-500 hover:scale-110 transition-transform p-1"
@@ -751,7 +751,7 @@ export default function CheckoutClient({
                       onChange={(e) => setDtfForm({ ...dtfForm, name: e.target.value.toUpperCase() })}
                       className="w-full bg-white border border-slate-200 rounded-lg px-4 py-2 text-xs font-bold focus:border-primary outline-none transition-colors"
                       placeholder="NAME"
-                      maxLength={12}
+                      maxLength={200}
                     />
                   </div>
                   <div className="space-y-1">
@@ -762,7 +762,7 @@ export default function CheckoutClient({
                       onChange={(e) => setDtfForm({ ...dtfForm, number: e.target.value.replace(/\D/g, '') })}
                       className="w-full bg-white border border-slate-200 rounded-lg px-4 py-2 text-xs font-bold focus:border-primary outline-none transition-colors"
                       placeholder="00"
-                      maxLength={2}
+                      maxLength={10}
                     />
                   </div>
                 </div>
