@@ -52,8 +52,8 @@ export interface PathaoOrderPayload {
   recipient_name: string;
   recipient_phone: string;
   recipient_address: string;
-  recipient_city: number;
-  recipient_zone: number;
+  recipient_city?: number;
+  recipient_zone?: number;
   recipient_area?: number;
   delivery_type: number; // 48: normal, 12: on demand
   item_type: number; // 1: document, 2: parcel

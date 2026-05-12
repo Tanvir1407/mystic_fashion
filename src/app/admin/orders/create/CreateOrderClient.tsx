@@ -264,17 +264,19 @@ export default function CreateOrderClient({
       return alert("Please fill in all customer details and add at least one item.");
     }
 
-    if (district !== "Self Pickup" && (!selectedCityId)) {
-      return alert("Please select a City for delivery.");
-    }
 
     const cityName = cities.find(c => c.value === selectedCityId?.toString())?.label || "";
     const zoneName = zones.find(z => z.value === selectedZoneId?.toString())?.label || "";
     const areaName = areas.find(a => a.value === selectedAreaId?.toString())?.label || "";
 
+    const addressParts = [address];
+    if (areaName) addressParts.push(areaName);
+    if (zoneName) addressParts.push(zoneName);
+    if (cityName) addressParts.push(cityName);
+
     const fullDeliveryAddress = district === "Self Pickup"
       ? address
-      : `${address}, ${areaName}, ${zoneName}, ${cityName}`;
+      : addressParts.filter(Boolean).map(p => p.trim()).join(", ");
 
     startTransition(async () => {
       try {
