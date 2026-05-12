@@ -1061,10 +1061,8 @@ export async function bulkSendToPathaoAction(orderIds: string[]) {
         continue;
       }
 
-      if (!order.pathaoCityId) {
-        errors.push(`${order.id}: Missing Pathao City ID.`);
-        continue;
-      }
+      // (Removed City Gatekeeping as per request)
+
 
       try {
         const collectionAmount = Math.max(0, order.totalAmount - (order.advancePaid || 0));
@@ -1085,7 +1083,7 @@ export async function bulkSendToPathaoAction(orderIds: string[]) {
           recipient_name: order.customerName,
           recipient_phone: sanitizePhone(order.phone),
           recipient_address: order.address,
-          recipient_city: order.pathaoCityId,
+          recipient_city: order.pathaoCityId || undefined,
           recipient_zone: order.pathaoZoneId || undefined,
           recipient_area: order.pathaoAreaId || undefined,
           delivery_type: 48,
