@@ -24,9 +24,20 @@ interface OrderItem {
   quantity: number;
   price: number; // Unit price at calculation
   stock: number;
+  requiresPrint?: boolean;
+  printCost?: number;
+  printDetails?: { name: string; number: string }[];
 }
 
-export default function CreateOrderClient({ products, deliverySettings }: { products: any[]; deliverySettings: any }) {
+export default function CreateOrderClient({
+  products,
+  deliverySettings,
+  dtfCostPerItem = 300
+}: {
+  products: any[];
+  deliverySettings: any;
+  dtfCostPerItem?: number;
+}) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
 
@@ -116,6 +127,10 @@ export default function CreateOrderClient({ products, deliverySettings }: { prod
   const [quantity, setQuantity] = useState(1);
   const [focusedIndex, setFocusedIndex] = useState(-1);
 
+  // DTF States for the pending item
+  const [requiresPrint, setRequiresPrint] = useState(false);
+  const [pendingPrintDetails, setPendingPrintDetails] = useState<{ name: string; number: string }[]>([]);
+
   // Filtered products for search
   const filteredProducts = useMemo(() => {
     if (!searchQuery || selectedProductId === products.find(p => p.name === searchQuery)?.id) return [];
@@ -173,9 +188,9 @@ export default function CreateOrderClient({ products, deliverySettings }: { prod
 
     const unitPrice = getDiscountedPrice(selectedProduct);
 
-    // Check if item already exists
+    // Check if item already exists (only merge if NEITHER requires print)
     const existingIndex = orderItems.findIndex(
-      item => item.productId === selectedProductId && item.size === selectedSize
+      item => item.productId === selectedProductId && item.size === selectedSize && !item.requiresPrint && !requiresPrint
     );
 
     if (existingIndex > -1) {
@@ -189,7 +204,10 @@ export default function CreateOrderClient({ products, deliverySettings }: { prod
         size: selectedSize,
         quantity: quantity,
         price: unitPrice,
-        stock: variant.stock
+        stock: variant.stock,
+        requiresPrint: requiresPrint,
+        printCost: dtfCostPerItem,
+        printDetails: requiresPrint ? [...pendingPrintDetails] : []
       }]);
     }
 
@@ -198,6 +216,8 @@ export default function CreateOrderClient({ products, deliverySettings }: { prod
     setSelectedProductId("");
     setSelectedSize("");
     setQuantity(1);
+    setRequiresPrint(false);
+    setPendingPrintDetails([]);
   };
 
   const removeItem = (index: number) => {
@@ -206,6 +226,15 @@ export default function CreateOrderClient({ products, deliverySettings }: { prod
 
   const subtotal = useMemo(() =>
     orderItems.reduce((acc, item) => acc + (item.price * item.quantity), 0),
+    [orderItems]
+  );
+
+  const totalDTFCost = useMemo(() =>
+    orderItems.reduce((acc, item) => {
+      if (!item.requiresPrint) return acc;
+      const count = item.printDetails && item.printDetails.length > 0 ? item.printDetails.length : 1;
+      return acc + (count * (item.printCost || dtfCostPerItem));
+    }, 0),
     [orderItems]
   );
 
@@ -222,7 +251,7 @@ export default function CreateOrderClient({ products, deliverySettings }: { prod
     return manualDiscountValue;
   }, [subtotal, manualDiscountValue, manualDiscountType]);
 
-  const totalAmount = (subtotal + deliveryCharge) - calculatedDiscount;
+  const totalAmount = (subtotal + totalDTFCost + deliveryCharge) - calculatedDiscount;
 
   // If any item was added from a 0 or negative stock variant, this is a backorder
   const hasBackorderItems = useMemo(() =>
@@ -265,7 +294,10 @@ export default function CreateOrderClient({ products, deliverySettings }: { prod
             productId: item.productId,
             size: item.size,
             quantity: item.quantity,
-            price: item.price
+            price: item.price,
+            requiresPrint: item.requiresPrint,
+            printCost: item.printCost,
+            printDetails: item.printDetails
           })),
           hasBackorderItems,
         });
@@ -562,10 +594,95 @@ export default function CreateOrderClient({ products, deliverySettings }: { prod
                   disabled={!selectedProductId || !selectedSize}
                   className="w-full h-[38px] flex items-center justify-center bg-slate-900 text-white rounded-lg hover:bg-slate-700 disabled:bg-slate-100 disabled:text-slate-300 transition-all shadow-sm"
                 >
-
                   <Plus className="w-5 h-5" />
                 </button>
               </div>
+
+              {/* DTF Print Section */}
+              {selectedProductId && selectedSize && (
+                <div className="md:col-span-12 pt-3 mt-2 border-t border-dashed border-slate-200">
+                  <label className="inline-flex items-center gap-2 cursor-pointer group mb-2">
+                    <input
+                      type="checkbox"
+                      checked={requiresPrint}
+                      onChange={(e) => {
+                        setRequiresPrint(e.target.checked);
+                        if (e.target.checked && pendingPrintDetails.length === 0) {
+                          setPendingPrintDetails([{ name: "", number: "" }]);
+                        }
+                      }}
+                      className="rounded text-indigo-600  focus:ring-indigo-500 w-4 h-4"
+                    />
+                    <span className="text-xs font-bold text-slate-700 group-hover:text-indigo-600 transition-colors uppercase tracking-wide">
+                      Add Jersey Customization (DTF) (+৳{dtfCostPerItem}/item)
+                    </span>
+                  </label>
+
+                  {requiresPrint && (
+                    <div className="bg-slate-50 p-3 rounded-lg border border-slate-200 space-y-2 animate-in fade-in slide-in-from-top-1 duration-200">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[9px] font-black text-indigo-500 uppercase tracking-widest">Customization Data</span>
+                        <span className="text-[9px] font-bold text-slate-500 italic">Limit: {quantity} items</span>
+                      </div>
+                      <div className="space-y-2">
+                        {pendingPrintDetails.map((detail, idx) => (
+                          <div key={idx} className="grid grid-cols-12 gap-2 items-center bg-white p-1.5 rounded border border-slate-100 shadow-sm">
+                            <div className="col-span-1 text-center">
+                              <span className="text-[9px] font-black bg-slate-100 text-slate-500 w-4 h-4 inline-flex items-center justify-center rounded-full">
+                                {idx + 1}
+                              </span>
+                            </div>
+                            <div className="col-span-6">
+                              <input
+                                type="text"
+                                placeholder="Name on jersey"
+                                value={detail.name}
+                                onChange={(e) => {
+                                  const updated = [...pendingPrintDetails];
+                                  updated[idx].name = e.target.value;
+                                  setPendingPrintDetails(updated);
+                                }}
+                                className="w-full px-2 py-1 text-xs border uppercase border-slate-200 rounded font-bold focus:outline-indigo-500"
+                              />
+                            </div>
+                            <div className="col-span-4">
+                              <input
+                                type="text"
+                                placeholder="00"
+                                value={detail.number}
+                                onChange={(e) => {
+                                  const updated = [...pendingPrintDetails];
+                                  updated[idx].number = e.target.value;
+                                  setPendingPrintDetails(updated);
+                                }}
+                                className="w-full px-2 py-1 text-xs border border-slate-200 rounded font-bold focus:outline-indigo-500"
+                              />
+                            </div>
+                            <div className="col-span-1 flex justify-end">
+                              <button
+                                type="button"
+                                onClick={() => setPendingPrintDetails(pendingPrintDetails.filter((_, i) => i !== idx))}
+                                className="text-red-400 hover:text-red-600"
+                              >
+                                <Trash2 className="w-3 h-3" />
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                      {pendingPrintDetails.length < quantity ? (
+                        <button
+                          type="button"
+                          onClick={() => setPendingPrintDetails([...pendingPrintDetails, { name: "", number: "" }])}
+                          className="text-[9px] font-black text-indigo-600 bg-indigo-50/50 hover:bg-indigo-50 px-2 py-1.5 rounded border border-indigo-100 flex items-center gap-1 w-fit transition-all mt-1"
+                        >
+                          <Plus className="w-3 h-3" /> Add Customization
+                        </button>
+                      ) : null}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* Selected Items Table */}
@@ -588,10 +705,19 @@ export default function CreateOrderClient({ products, deliverySettings }: { prod
                   ) : (
                     orderItems.map((item, idx) => (
                       <tr key={`${item.productId}-${item.size}`} className={`hover:bg-slate-50 transition-colors ${item.stock <= 0 ? "bg-orange-50/40" : ""}`}>
-                        <td className="px-4 py-3 font-bold">
-                          <span>{item.productName}</span>
+                        <td className="px-4 py-3">
+                          <div className="font-bold text-slate-900">{item.productName}</div>
                           {item.stock <= 0 && (
-                            <span className="ml-2 text-[9px] font-black text-orange-500 bg-orange-100 px-1.5 py-0.5 rounded">⚠ BACKORDER</span>
+                            <div className="mt-0.5 inline-block text-[9px] font-black text-orange-500 bg-orange-100 px-1.5 py-0.5 rounded">⚠ BACKORDER</div>
+                          )}
+                          {item.requiresPrint && (
+                            <div className="mt-1 space-y-0.5">
+                              {(item.printDetails || []).map((pd, pidx) => (
+                                <div key={pidx} className="text-[9px] font-bold text-indigo-700 bg-indigo-50 px-1.5 py-0.5 rounded inline-block mr-1">
+                                  {pd.name || "???"} {pd.number ? `${pd.number}` : ""}
+                                </div>
+                              ))}
+                            </div>
                           )}
                         </td>
                         <td className="px-4 py-3 text-center"><span className="px-2 py-0.5 bg-slate-100 rounded text-[10px] font-black">{item.size}</span></td>
@@ -629,6 +755,12 @@ export default function CreateOrderClient({ products, deliverySettings }: { prod
               <span>Delivery Charge</span>
               <span className="font-mono font-bold text-slate-800">{formatBDT(deliveryCharge)}</span>
             </div>
+            {totalDTFCost > 0 && (
+              <div className="flex justify-between text-sm text-indigo-600 font-medium">
+                <span>DTF Customization Cost</span>
+                <span className="font-mono font-bold">{formatBDT(totalDTFCost)}</span>
+              </div>
+            )}
 
             <div className="pt-4 border-t border-dashed border-slate-200 space-y-2">
 

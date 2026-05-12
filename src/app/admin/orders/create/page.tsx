@@ -1,9 +1,10 @@
-import { getProductsForOrder, getDeliverySettings } from "../../actions";
+import { getProductsForOrder, getDeliverySettings, getDTFPrintSetting } from "../../actions";
 import CreateOrderClient from "./CreateOrderClient";
 
 export default async function CreateOrderPage() {
   const products = await getProductsForOrder();
   const deliverySettings = await getDeliverySettings();
+  const dtfSetting = await getDTFPrintSetting();
 
   return (
     <div className="space-y-6">
@@ -14,7 +15,11 @@ export default async function CreateOrderPage() {
         </div>
       </div>
 
-      <CreateOrderClient products={products} deliverySettings={deliverySettings} />
+      <CreateOrderClient 
+        products={products} 
+        deliverySettings={deliverySettings} 
+        dtfCostPerItem={dtfSetting.printCost} 
+      />
     </div>
   );
 }
