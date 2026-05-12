@@ -378,7 +378,7 @@ export default function CreateOrderClient({
                 />
               </div>
               <div className="space-y-1.5">
-                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Select Zone *</label>
+                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Select Zone</label>
                 <CustomSelect
                   options={zones}
                   value={selectedZoneId?.toString() || ""}
@@ -392,7 +392,7 @@ export default function CreateOrderClient({
                 />
               </div>
               <div className="space-y-1.5">
-                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Select Area *</label>
+                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Select Area </label>
                 <CustomSelect
                   options={areas}
                   value={selectedAreaId?.toString() || ""}
@@ -404,12 +404,12 @@ export default function CreateOrderClient({
               </div>
             </div>
             <div className="space-y-1.5 md:col-span-2">
-              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">House / Road / Flat No. / Landmark</label>
+              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Full Address *</label>
               <input
                 type="text"
                 value={address}
                 onChange={e => setAddress(e.target.value)}
-                placeholder="e.g., House 12, Road 4, Block C"
+                placeholder="e.g., House 12, Road 4, Block C, Mirpur 2, Dhaka"
                 className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
               />
             </div>
