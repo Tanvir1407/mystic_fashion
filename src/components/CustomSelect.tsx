@@ -19,6 +19,7 @@ interface CustomSelectProps {
   searchable?: boolean;
   className?: string;
   disabled?: boolean;
+  openUpwards?: boolean;
 }
 
 export function CustomSelect({
@@ -30,6 +31,7 @@ export function CustomSelect({
   searchable = false,
   className = "",
   disabled = false,
+  openUpwards = false,
 }: CustomSelectProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [search, setSearch] = useState("");
@@ -78,11 +80,13 @@ export function CustomSelect({
       <AnimatePresence>
         {isOpen && (
           <motion.div
-            initial={{ opacity: 0, y: -10 }}
+            initial={{ opacity: 0, y: openUpwards ? 10 : -10 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
+            exit={{ opacity: 0, y: openUpwards ? 10 : -10 }}
             transition={{ duration: 0.2, ease: "easeOut" }}
-            className="absolute z-50 w-full mt-2 bg-white border border-slate-200 rounded-xl shadow-xl overflow-hidden ring-1 ring-black/5"
+            className={`absolute z-50 w-full bg-white border border-slate-200 rounded-xl shadow-xl overflow-hidden ring-1 ring-black/5 ${
+              openUpwards ? "bottom-full mb-2" : "top-full mt-2"
+            }`}
           >
             {searchable && (
               <div className="p-2 border-b border-slate-100 bg-slate-50/50">
