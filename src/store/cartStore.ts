@@ -15,6 +15,7 @@ export interface CartItem {
   printName?: string;
   printNumber?: string;
   printCost?: number;
+  printDetails?: { name: string; number: string }[];
 }
 
 interface CartStore {
