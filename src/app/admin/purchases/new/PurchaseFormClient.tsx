@@ -14,6 +14,7 @@ export default function PurchaseFormClient({ products, initialData }: { products
   const [invoiceNumber, setInvoiceNumber] = useState(initialData?.invoiceNumber || "");
   const [totalDiscount, setTotalDiscount] = useState((initialData?.discountAmount || 0).toString());
   const [loading, setLoading] = useState(false);
+  const [isAutoSizeEnabled, setIsAutoSizeEnabled] = useState(true);
 
   // Initialize items or default to one blank item
   const defaultItems = initialData?.items?.length > 0
@@ -37,12 +38,12 @@ export default function PurchaseFormClient({ products, initialData }: { products
   const grandTotal = subtotal - (parseFloat(totalDiscount) || 0);
 
   const addItem = () => {
-    setItems([{ id: Date.now().toString(), productId: "", variantId: "", quantity: 1, unitPrice: 0 }, ...items]);
+    setItems([{ id: Date.now().toString(), productId: "", variantId: "", quantity: 0, unitPrice: 0 }, ...items]);
   };
 
   const clearItems = () => {
     if (confirm("Are you sure you want to clear all rows?")) {
-      setItems([{ id: Date.now().toString(), productId: "", variantId: "", quantity: 1, unitPrice: 0 }]);
+      setItems([{ id: Date.now().toString(), productId: "", variantId: "", quantity: 0, unitPrice: 0 }]);
     }
   };
 
@@ -52,6 +53,31 @@ export default function PurchaseFormClient({ products, initialData }: { products
   };
 
   const updateItem = (id: string, field: string, value: any) => {
+    if (field === 'productId' && isAutoSizeEnabled && value) {
+      const selectedProduct = products.find(p => p.id === value);
+      const variants = selectedProduct?.variants || [];
+
+      if (variants.length > 0) {
+        setItems(prevItems => {
+          const currentItemIndex = prevItems.findIndex(i => i.id === id);
+          if (currentItemIndex === -1) return prevItems;
+
+          const currentItem = prevItems[currentItemIndex];
+          const newRows = variants.map((v: any, index: number) => ({
+            ...currentItem,
+            id: index === 0 ? currentItem.id : Date.now().toString() + "-" + index,
+            productId: value,
+            variantId: v.id,
+          }));
+
+          const nextItems = [...prevItems];
+          nextItems.splice(currentItemIndex, 1, ...newRows);
+          return nextItems;
+        });
+        return;
+      }
+    }
+
     setItems(items.map(i => {
       if (i.id === id && field === 'productId') {
         return { ...i, [field]: value, variantId: "" };
@@ -136,6 +162,15 @@ export default function PurchaseFormClient({ products, initialData }: { products
           <div className="bg-slate-50 px-4 py-3 border-b border-slate-200 flex justify-between items-center rounded-t-md">
             <h3 className="text-sm font-semibold text-slate-700">Add Products Form</h3>
             <div className="flex items-center gap-2">
+              <label className="flex items-center gap-2 text-xs font-bold text-slate-600 cursor-pointer mr-2">
+                <input
+                  type="checkbox"
+                  checked={isAutoSizeEnabled}
+                  onChange={(e) => setIsAutoSizeEnabled(e.target.checked)}
+                  className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer transition-colors"
+                />
+                Auto Size Select
+              </label>
               <button
                 type="button"
                 onClick={clearItems}
