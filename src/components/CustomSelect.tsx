@@ -39,7 +39,10 @@ export function CustomSelect({
 }: CustomSelectProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [search, setSearch] = useState("");
+  const [activeIndex, setActiveIndex] = useState(0);
+  
   const containerRef = useRef<HTMLDivElement>(null);
+  const optionsListRef = useRef<HTMLDivElement>(null);
 
   const selectedOption = options.find((opt) => opt.value === value);
 
@@ -57,8 +60,55 @@ export function CustomSelect({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  // Reset active index when search or open state changes
+  useEffect(() => {
+    setActiveIndex(0);
+  }, [search, isOpen]);
+
+  // Auto-scroll to active item
+  useEffect(() => {
+    if (isOpen && activeIndex >= 0 && optionsListRef.current) {
+      const activeElement = optionsListRef.current.children[activeIndex] as HTMLElement;
+      if (activeElement) {
+        activeElement.scrollIntoView({ block: 'nearest' });
+      }
+    }
+  }, [activeIndex, isOpen]);
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (!isOpen) {
+      if (e.key === "Enter" || e.key === " " || e.key === "ArrowDown") {
+        e.preventDefault();
+        if (!disabled) setIsOpen(true);
+      }
+      return;
+    }
+
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setActiveIndex(prev => (prev < filteredOptions.length - 1 ? prev + 1 : prev));
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setActiveIndex(prev => (prev > 0 ? prev - 1 : 0));
+    } else if (e.key === "Enter") {
+      e.preventDefault();
+      if (filteredOptions.length > 0 && activeIndex >= 0 && activeIndex < filteredOptions.length) {
+        onChange(filteredOptions[activeIndex].value);
+        setIsOpen(false);
+        setSearch("");
+      }
+    } else if (e.key === "Escape") {
+      e.preventDefault();
+      setIsOpen(false);
+    }
+  };
+
   return (
-    <div className={`relative ${className}`} ref={containerRef}>
+    <div 
+      className={`relative ${className}`} 
+      ref={containerRef}
+      onKeyDown={handleKeyDown}
+    >
       {label && (
         <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1.5">
           {label}
@@ -108,9 +158,12 @@ export function CustomSelect({
               </div>
             )}
 
-            <div className="max-h-60 overflow-y-auto custom-scrollbar">
+            <div 
+              ref={optionsListRef}
+              className="max-h-60 overflow-y-auto custom-scrollbar"
+            >
               {filteredOptions.length > 0 ? (
-                filteredOptions.map((opt) => (
+                filteredOptions.map((opt, index) => (
                   <button
                     key={opt.value}
                     type="button"
@@ -119,9 +172,13 @@ export function CustomSelect({
                       setIsOpen(false);
                       setSearch("");
                     }}
-                    className={`w-full text-left px-4 py-2.5 text-sm transition-colors flex items-center justify-between group ${value === opt.value
-                      ? "bg-primary/5 text-primary font-bold"
-                      : "hover:bg-slate-50 text-slate-700"
+                    onMouseEnter={() => setActiveIndex(index)}
+                    className={`w-full text-left px-4 py-2.5 text-sm transition-colors flex items-center justify-between group ${
+                      value === opt.value
+                        ? "bg-primary/5 text-primary font-bold"
+                        : activeIndex === index
+                        ? "bg-slate-100 text-slate-900"
+                        : "hover:bg-slate-50 text-slate-700"
                       } ${opt.colorClass || ""}`}
                   >
                     <span>{opt.label}</span>
