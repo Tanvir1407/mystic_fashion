@@ -83,7 +83,7 @@ export default function AdjustmentClient({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedVariantId || quantity === "" || quantity <= 0) return;
+    if (!selectedVariantId || quantity === "" || quantity < 0) return;
 
     startTransition(async () => {
       const res = await adjustStock({
@@ -185,7 +185,7 @@ export default function AdjustmentClient({
                   type="number"
                   value={quantity}
                   onChange={(e) => setQuantity(e.target.value === "" ? "" : Number(e.target.value))}
-                  min="1"
+                  min="0"
                   required
                   placeholder="0"
                   className="w-full px-4 py-2 border border-slate-300 rounded-md focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 text-sm font-mono"

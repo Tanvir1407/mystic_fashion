@@ -316,16 +316,16 @@ export default function ProductClient({ product, sizeChartData, deliveryData }: 
         <div className="container mx-auto grid grid-cols-1 md:grid-cols-2 gap-12 border-t border-slate-200 pt-16 mt-16 pb-16">
           <div className="space-y-8 text-zinc-600 leading-relaxed">
             <div>
-              <h3 className="text-xl font-black text-zinc-900 uppercase tracking-tight mb-4">Masterclass Design</h3>
-              <div 
+              <h3 className="text-lg font-semibold text-zinc-900 uppercase tracking-tight mb-4">Product Details</h3>
+              <div
                 className="prose max-w-none text-zinc-600 leading-relaxed whitespace-pre-wrap"
-                dangerouslySetInnerHTML={{ __html: product.description || "" }} 
+                dangerouslySetInnerHTML={{ __html: product.description || "" }}
               />
             </div>
 
           </div>
           <div className="space-y-6 text-zinc-600 leading-relaxed">
-            <h3 className="text-xl font-black text-zinc-900 uppercase tracking-tight mb-2">Delivery Details</h3>
+            <h3 className="text-lg font-semibold text-zinc-900 uppercase tracking-tight mb-2">Delivery Details</h3>
             <div className=" p-6 ">
               <ul className="space-y-4">
                 <li className="flex items-start gap-3">

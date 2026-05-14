@@ -5,6 +5,7 @@ import { createPurchase, updatePurchase } from "../../actions";
 import { Plus, Trash2, Save, ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { CustomSelect } from "@/components/CustomSelect";
 
 export default function PurchaseFormClient({ products, initialData }: { products: any[], initialData?: any }) {
   const router = useRouter();
@@ -13,6 +14,7 @@ export default function PurchaseFormClient({ products, initialData }: { products
   const [invoiceNumber, setInvoiceNumber] = useState(initialData?.invoiceNumber || "");
   const [totalDiscount, setTotalDiscount] = useState((initialData?.discountAmount || 0).toString());
   const [loading, setLoading] = useState(false);
+  const [isAutoSizeEnabled, setIsAutoSizeEnabled] = useState(true);
 
   // Initialize items or default to one blank item
   const defaultItems = initialData?.items?.length > 0
@@ -23,7 +25,12 @@ export default function PurchaseFormClient({ products, initialData }: { products
       quantity: i.quantity,
       unitPrice: i.unitPrice
     }))
-    : [{ id: "1", productId: "", variantId: "", quantity: 1, unitPrice: 0 }];
+    : [{ id: "1", productId: "", variantId: "", quantity: 0, unitPrice: 0 }];
+
+  const productOptions = products.map(p => ({
+    value: p.id,
+    label: `${p.name} - ${p.category}`
+  }));
 
   const [items, setItems] = useState<{ id: string, productId: string, variantId: string, quantity: number, unitPrice: number }[]>(defaultItems);
   const totalUnits = items.reduce((acc, item) => acc + (Number(item.quantity) || 0), 0);
@@ -31,7 +38,13 @@ export default function PurchaseFormClient({ products, initialData }: { products
   const grandTotal = subtotal - (parseFloat(totalDiscount) || 0);
 
   const addItem = () => {
-    setItems([...items, { id: Date.now().toString(), productId: "", variantId: "", quantity: 1, unitPrice: 0 }]);
+    setItems([{ id: Date.now().toString(), productId: "", variantId: "", quantity: 0, unitPrice: 0 }, ...items]);
+  };
+
+  const clearItems = () => {
+    if (confirm("Are you sure you want to clear all rows?")) {
+      setItems([{ id: Date.now().toString(), productId: "", variantId: "", quantity: 0, unitPrice: 0 }]);
+    }
   };
 
   const removeItem = (id: string) => {
@@ -40,6 +53,31 @@ export default function PurchaseFormClient({ products, initialData }: { products
   };
 
   const updateItem = (id: string, field: string, value: any) => {
+    if (field === 'productId' && isAutoSizeEnabled && value) {
+      const selectedProduct = products.find(p => p.id === value);
+      const variants = selectedProduct?.variants || [];
+
+      if (variants.length > 0) {
+        setItems(prevItems => {
+          const currentItemIndex = prevItems.findIndex(i => i.id === id);
+          if (currentItemIndex === -1) return prevItems;
+
+          const currentItem = prevItems[currentItemIndex];
+          const newRows = variants.map((v: any, index: number) => ({
+            ...currentItem,
+            id: index === 0 ? currentItem.id : Date.now().toString() + "-" + index,
+            productId: value,
+            variantId: v.id,
+          }));
+
+          const nextItems = [...prevItems];
+          nextItems.splice(currentItemIndex, 1, ...newRows);
+          return nextItems;
+        });
+        return;
+      }
+    }
+
     setItems(items.map(i => {
       if (i.id === id && field === 'productId') {
         return { ...i, [field]: value, variantId: "" };
@@ -114,18 +152,45 @@ export default function PurchaseFormClient({ products, initialData }: { products
               type="text"
               value={invoiceNumber}
               onChange={(e) => setInvoiceNumber(e.target.value)}
-              placeholder="INV-2023-XXXX"
+              placeholder="INV-XXXXX"
               className="w-full px-4 py-2 border border-slate-300 rounded-md focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 text-sm"
             />
           </div>
         </div>
 
-        <div className="border border-slate-200 rounded-md overflow-hidden mb-8">
-          <div className="bg-slate-50 px-4 py-3 border-b border-slate-200 flex justify-between items-center">
-            <h3 className="text-sm font-semibold text-slate-700">Relational Delivery Grid</h3>
-            <p className="text-xs text-slate-500 font-medium">Selecting items forces backend stock upgrades</p>
+        <div className="border border-slate-200 rounded-md mb-8">
+          <div className="bg-slate-50 px-4 py-3 border-b border-slate-200 flex justify-between items-center rounded-t-md">
+            <h3 className="text-sm font-semibold text-slate-700">Add Products Form</h3>
+            <div className="flex items-center gap-2">
+              <label className="flex items-center gap-2 text-xs font-bold text-slate-600 cursor-pointer mr-2">
+                <input
+                  type="checkbox"
+                  checked={isAutoSizeEnabled}
+                  onChange={(e) => setIsAutoSizeEnabled(e.target.checked)}
+                  className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer transition-colors"
+                />
+                Auto Size Select
+              </label>
+              <button
+                type="button"
+                onClick={clearItems}
+                disabled={items.length === 0 || (items.length === 1 && !items[0].productId)}
+                className="text-xs font-bold text-red-600 border border-red-300 flex items-center justify-center gap-1.5 px-4 py-1.5 rounded-md shadow-sm hover:shadow transition-all active:scale-95 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                Clear
+              </button>
+              <button
+                type="button"
+                onClick={addItem}
+                className="text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 flex items-center justify-center gap-1.5 px-4 py-2 rounded-md shadow-sm hover:shadow transition-all active:scale-95 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                Add New Row
+              </button>
+            </div>
           </div>
-          <div className="overflow-x-auto">
+          <div className="overflow-visible">
             <table className="w-full text-left border-collapse min-w-[700px]">
               <thead>
                 <tr className="bg-slate-50/50 border-b border-slate-100">
@@ -143,38 +208,33 @@ export default function PurchaseFormClient({ products, initialData }: { products
                   const availableVariants = selectedProduct?.variants || [];
                   return (
                     <tr key={item.id}>
-                      <td className="px-4 py-2">
-                        <select
+                      <td className="px-4 py-2 min-w-[300px]">
+                        <CustomSelect
+                          options={productOptions}
                           value={item.productId}
-                          onChange={(e) => updateItem(item.id, "productId", e.target.value)}
-                          className="w-full px-3 py-1.5 border border-slate-200 rounded text-sm focus:outline-none focus:border-indigo-500 bg-white"
-                          required
-                        >
-                          <option value="">-- Target Catalog Item --</option>
-                          {products.map(p => (
-                            <option key={p.id} value={p.id}>{p.name} - {p.category}</option>
-                          ))}
-                        </select>
+                          onChange={(val) => updateItem(item.id, "productId", val)}
+                          placeholder="-- Target Catalog Item --"
+                          searchable={true}
+                          heightClass="h-9"
+                          textClass="text-sm"
+                        />
                       </td>
-                      <td className="px-4 py-2">
-                        <select
+                      <td className="px-4 py-2 min-w-[150px]">
+                        <CustomSelect
+                          options={availableVariants.map((v: any) => ({ value: v.id, label: v.size }))}
                           value={item.variantId}
-                          onChange={(e) => updateItem(item.id, "variantId", e.target.value)}
-                          className="w-full px-3 py-1.5 border border-slate-200 rounded text-sm focus:outline-none focus:border-indigo-500 bg-white"
+                          onChange={(val) => updateItem(item.id, "variantId", val)}
+                          placeholder="-- Size --"
                           disabled={!item.productId || availableVariants.length === 0}
-                          required
-                        >
-                          <option value="">-- Size --</option>
-                          {availableVariants.map((v: any) => (
-                            <option key={v.id} value={v.id}>{v.size}</option>
-                          ))}
-                        </select>
+                          heightClass="h-9"
+                          textClass="text-sm"
+                        />
                       </td>
                       <td className="px-4 py-2">
                         <input
                           type="text"
                           value={item.quantity}
-                          onChange={(e) => updateItem(item.id, "quantity", parseInt(e.target.value) || 1)}
+                          onChange={(e) => updateItem(item.id, "quantity", parseInt(e.target.value) || 0)}
                           className="w-full px-3 py-1.5 border border-slate-200 rounded text-sm focus:outline-none focus:border-indigo-500 font-mono"
                         />
                       </td>
@@ -208,16 +268,6 @@ export default function PurchaseFormClient({ products, initialData }: { products
                 })}
               </tbody>
             </table>
-          </div>
-          <div className="bg-white p-3 text-center border-t border-slate-100">
-            <button
-              type="button"
-              onClick={addItem}
-              className="text-xs font-medium text-indigo-600 hover:text-indigo-800 flex items-center justify-center gap-1 mx-auto bg-indigo-50 px-3 py-1.5 rounded-full transition-colors"
-            >
-              <Plus className="w-3 h-3" />
-              Add Relational Mapping Row
-            </button>
           </div>
         </div>
 
