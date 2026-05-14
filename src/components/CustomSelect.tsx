@@ -20,6 +20,8 @@ interface CustomSelectProps {
   className?: string;
   disabled?: boolean;
   openUpwards?: boolean;
+  heightClass?: string;
+  textClass?: string;
 }
 
 export function CustomSelect({
@@ -32,6 +34,8 @@ export function CustomSelect({
   className = "",
   disabled = false,
   openUpwards = false,
+  heightClass = "h-12",
+  textClass = "text-sm",
 }: CustomSelectProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [search, setSearch] = useState("");
@@ -65,7 +69,7 @@ export function CustomSelect({
         type="button"
         disabled={disabled}
         onClick={() => !disabled && setIsOpen(!isOpen)}
-        className={`w-full h-12 flex items-center justify-between px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm transition-all focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none ${disabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer"
+        className={`w-full ${heightClass} flex items-center justify-between px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg ${textClass} transition-all focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none ${disabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer"
           } ${selectedOption?.colorClass || "text-slate-900"}`}
       >
         <span className="truncate font-semibold text-slate-400">

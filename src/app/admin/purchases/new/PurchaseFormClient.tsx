@@ -5,6 +5,7 @@ import { createPurchase, updatePurchase } from "../../actions";
 import { Plus, Trash2, Save, ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { CustomSelect } from "@/components/CustomSelect";
 
 export default function PurchaseFormClient({ products, initialData }: { products: any[], initialData?: any }) {
   const router = useRouter();
@@ -24,6 +25,11 @@ export default function PurchaseFormClient({ products, initialData }: { products
       unitPrice: i.unitPrice
     }))
     : [{ id: "1", productId: "", variantId: "", quantity: 1, unitPrice: 0 }];
+
+  const productOptions = products.map(p => ({
+    value: p.id,
+    label: `${p.name} - ${p.category}`
+  }));
 
   const [items, setItems] = useState<{ id: string, productId: string, variantId: string, quantity: number, unitPrice: number }[]>(defaultItems);
   const totalUnits = items.reduce((acc, item) => acc + (Number(item.quantity) || 0), 0);
@@ -120,12 +126,12 @@ export default function PurchaseFormClient({ products, initialData }: { products
           </div>
         </div>
 
-        <div className="border border-slate-200 rounded-md overflow-hidden mb-8">
-          <div className="bg-slate-50 px-4 py-3 border-b border-slate-200 flex justify-between items-center">
+        <div className="border border-slate-200 rounded-md mb-8">
+          <div className="bg-slate-50 px-4 py-3 border-b border-slate-200 flex justify-between items-center rounded-t-md">
             <h3 className="text-sm font-semibold text-slate-700">Relational Delivery Grid</h3>
             <p className="text-xs text-slate-500 font-medium">Selecting items forces backend stock upgrades</p>
           </div>
-          <div className="overflow-x-auto">
+          <div className="overflow-visible">
             <table className="w-full text-left border-collapse min-w-[700px]">
               <thead>
                 <tr className="bg-slate-50/50 border-b border-slate-100">
@@ -143,32 +149,27 @@ export default function PurchaseFormClient({ products, initialData }: { products
                   const availableVariants = selectedProduct?.variants || [];
                   return (
                     <tr key={item.id}>
-                      <td className="px-4 py-2">
-                        <select
+                      <td className="px-4 py-2 min-w-[300px]">
+                        <CustomSelect
+                          options={productOptions}
                           value={item.productId}
-                          onChange={(e) => updateItem(item.id, "productId", e.target.value)}
-                          className="w-full px-3 py-1.5 border border-slate-200 rounded text-sm focus:outline-none focus:border-indigo-500 bg-white"
-                          required
-                        >
-                          <option value="">-- Target Catalog Item --</option>
-                          {products.map(p => (
-                            <option key={p.id} value={p.id}>{p.name} - {p.category}</option>
-                          ))}
-                        </select>
+                          onChange={(val) => updateItem(item.id, "productId", val)}
+                          placeholder="-- Target Catalog Item --"
+                          searchable={true}
+                          heightClass="h-9"
+                          textClass="text-sm"
+                        />
                       </td>
-                      <td className="px-4 py-2">
-                        <select
+                      <td className="px-4 py-2 min-w-[150px]">
+                        <CustomSelect
+                          options={availableVariants.map((v: any) => ({ value: v.id, label: v.size }))}
                           value={item.variantId}
-                          onChange={(e) => updateItem(item.id, "variantId", e.target.value)}
-                          className="w-full px-3 py-1.5 border border-slate-200 rounded text-sm focus:outline-none focus:border-indigo-500 bg-white"
+                          onChange={(val) => updateItem(item.id, "variantId", val)}
+                          placeholder="-- Size --"
                           disabled={!item.productId || availableVariants.length === 0}
-                          required
-                        >
-                          <option value="">-- Size --</option>
-                          {availableVariants.map((v: any) => (
-                            <option key={v.id} value={v.id}>{v.size}</option>
-                          ))}
-                        </select>
+                          heightClass="h-9"
+                          textClass="text-sm"
+                        />
                       </td>
                       <td className="px-4 py-2">
                         <input
