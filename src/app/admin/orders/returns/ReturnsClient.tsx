@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition, useMemo, useEffect } from "react";
+import { useState, useTransition, useMemo, useEffect, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
 import {
   History,
@@ -15,7 +15,7 @@ import {
   TrendingDown
 } from "lucide-react";
 import Link from "next/link";
-import { processSalesReturn } from "../../actions";
+import { processSalesReturn, getOrderById } from "../../actions";
 import { StatusAlertModal } from "@/components/StatusAlertModal";
 import { ReturnStatus } from "@/generated/prisma/client";
 import { CustomSelect } from "@/components/CustomSelect";
@@ -77,6 +77,15 @@ export default function ReturnsClient({
 }) {
   const [isPending, startTransition] = useTransition();
   const [returns, setReturns] = useState<SalesReturn[]>(initialReturns);
+  const [fetchedOrders, setFetchedOrders] = useState<Order[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+
+  // Merge default orders with fetched orders
+  const allOrders = useMemo(() => {
+    const merged = [...orders, ...fetchedOrders];
+    // Filter unique by ID
+    return Array.from(new Map(merged.map((o) => [o.id, o])).values());
+  }, [orders, fetchedOrders]);
 
   // Form State
   const [selectedOrderId, setSelectedOrderId] = useState("");
@@ -90,11 +99,14 @@ export default function ReturnsClient({
 
   useEffect(() => {
     setSelectedOrderId(queryOrderId || "");
-  }, [queryOrderId]);
+    if (queryOrderId && !allOrders.some(o => o.id === queryOrderId)) {
+      handleSearch(queryOrderId);
+    }
+  }, [queryOrderId, allOrders]);
 
   useEffect(() => {
-    if (selectedOrderId && orders) {
-      const order = orders.find((o) => o.id === selectedOrderId);
+    if (selectedOrderId && allOrders) {
+      const order = allOrders.find((o) => o.id === selectedOrderId);
       if (order && order.items.length === 1) {
         handleItemChange(order.items[0].id);
       } else {
@@ -112,15 +124,35 @@ export default function ReturnsClient({
   const [successMessage, setSuccessMessage] = useState("");
 
   const orderOptions = useMemo(() => {
-    return orders.map((o) => ({
+    return allOrders.map((o) => ({
       value: o.id,
       label: `${o.id} - ${o.customerName} (${o.phone})`
     }));
-  }, [orders]);
+  }, [allOrders]);
 
   const selectedOrder = useMemo(() => {
-    return orders.find((o) => o.id === selectedOrderId);
-  }, [orders, selectedOrderId]);
+    return allOrders.find((o) => o.id === selectedOrderId);
+  }, [allOrders, selectedOrderId]);
+
+  const handleSearch = useCallback(async (val: string) => {
+    // Only search if it looks like an order ID and isn't already in the list
+    const orderIdPattern = /^MJEPE-\d+/i;
+    if (orderIdPattern.test(val) && val.length >= 10) {
+      const searchId = val.toUpperCase();
+      const exists = allOrders.some(o => o.id === searchId);
+      if (!exists) {
+        setIsSearching(true);
+        try {
+          const res = await getOrderById(searchId);
+          if (res.success && res.data) {
+            setFetchedOrders(prev => [...prev, res.data as any]);
+          }
+        } finally {
+          setIsSearching(false);
+        }
+      }
+    }
+  }, [allOrders]);
 
   const itemOptions = useMemo(() => {
     if (!selectedOrder) return [];
@@ -296,6 +328,8 @@ export default function ReturnsClient({
                 setSelectedOrderItemId("");
               }}
               searchable={true}
+              onSearchValueChange={handleSearch}
+              isLoading={isSearching}
               className="text-sm"
             />
 

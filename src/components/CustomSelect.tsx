@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { ChevronDown, Search, Check } from "lucide-react";
+import { ChevronDown, Search, Check, Loader2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 interface Option {
@@ -22,6 +22,8 @@ interface CustomSelectProps {
   openUpwards?: boolean;
   heightClass?: string;
   textClass?: string;
+  onSearchValueChange?: (value: string) => void;
+  isLoading?: boolean;
 }
 
 export function CustomSelect({
@@ -36,6 +38,8 @@ export function CustomSelect({
   openUpwards = false,
   heightClass = "h-12",
   textClass = "text-sm",
+  onSearchValueChange,
+  isLoading = false,
 }: CustomSelectProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [search, setSearch] = useState("");
@@ -149,7 +153,11 @@ export function CustomSelect({
                   <input
                     type="text"
                     value={search}
-                    onChange={(e) => setSearch(e.target.value)}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setSearch(val);
+                      onSearchValueChange?.(val);
+                    }}
                     placeholder="Search..."
                     className="w-full pl-9 pr-4 py-2 text-xs bg-white border border-slate-200 rounded-md focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all font-medium"
                     autoFocus
@@ -162,7 +170,12 @@ export function CustomSelect({
               ref={optionsListRef}
               className="max-h-60 overflow-y-auto custom-scrollbar"
             >
-              {filteredOptions.length > 0 ? (
+              {isLoading ? (
+                <div className="px-4 py-8 text-center text-xs text-slate-400 flex items-center justify-center gap-2">
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span>Searching...</span>
+                </div>
+              ) : filteredOptions.length > 0 ? (
                 filteredOptions.map((opt, index) => (
                   <button
                     key={opt.value}
