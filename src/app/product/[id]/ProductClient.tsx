@@ -102,12 +102,28 @@ export default function ProductClient({ product, sizeChartData, deliveryData }: 
       <div className="container mx-auto px-4 py-8 md:py-16">
 
         {/* Top Product Section */}
-        <div className="flex flex-col lg:flex-row items-start gap-12 lg:gap-24 mb-24">
+        <div className="flex flex-col lg:flex-row items-start gap-8 lg:gap-12 mb-8">
 
           {/* Left: Product Images */}
-          <div className="w-full lg:w-1/2 flex flex-col gap-4">
+          <div className="w-full lg:w-1/2 flex flex-col lg:flex-row gap-4">
+            {/* Thumbnails Row/Column */}
+            <div className="flex flex-row lg:flex-col gap-3 overflow-auto scrollbar-hide w-full lg:w-24 flex-shrink-0 order-2 lg:order-1">
+              {product.images.map((img, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => setSelectedImageIndex(idx)}
+                  className={`relative w-20 h-24 lg:w-full lg:h-32 flex-shrink-0 bg-[#F9F9F9] rounded-md overflow-hidden transition-all box-border ${selectedImageIndex === idx
+                    ? 'opacity-100 border-[3px] border-[#800020] shadow-sm'
+                    : 'opacity-70 hover:opacity-100 border border-slate-200 hover:border-[#FFD700]'
+                    }`}
+                >
+                  <UploadedImage src={img} alt={`${product.name} view ${idx + 1}`} fill className="object-cover" />
+                </button>
+              ))}
+            </div>
+
             {/* Main Image */}
-            <div className="relative w-full aspect-[4/5] bg-[#F9F9F9] flex items-center justify-center group overflow-hidden rounded-md shadow-sm border border-slate-100">
+            <div className="relative flex-1 aspect-[4/5] bg-[#F9F9F9] flex items-center justify-center group overflow-hidden rounded-md shadow-sm border border-slate-100 order-1 lg:order-2">
               {selectedImage ? (
                 <UploadedImage
                   src={selectedImage}
@@ -144,22 +160,6 @@ export default function ProductClient({ product, sizeChartData, deliveryData }: 
                     : `৳${product.discount!.value} OFF`}
                 </div>
               )}
-            </div>
-
-            {/* Thumbnails Row */}
-            <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-hide w-full">
-              {product.images.map((img, idx) => (
-                <button
-                  key={idx}
-                  onClick={() => setSelectedImageIndex(idx)}
-                  className={`relative w-24 h-32 flex-shrink-0 bg-[#F9F9F9] rounded-md overflow-hidden transition-all box-border ${selectedImageIndex === idx
-                    ? 'opacity-100 border-[3px] border-[#800020] shadow-sm'
-                    : 'opacity-70 hover:opacity-100 border border-slate-200 hover:border-[#FFD700]'
-                    }`}
-                >
-                  <UploadedImage src={img} alt={`${product.name} view ${idx + 1}`} fill className="object-cover" />
-                </button>
-              ))}
             </div>
           </div>
 
@@ -238,7 +238,7 @@ export default function ProductClient({ product, sizeChartData, deliveryData }: 
             {!selectedSize && <p className="text-xs text-red-500 font-medium mt-3">Please select a size to continue</p>}
 
             {/* Action Buttons */}
-            <div className="flex flex-col sm:flex-row gap-3 mt-8">
+            <div className="flex flex-col sm:flex-row gap-3 mt-4">
               <button
                 onClick={handleAddToCart}
                 disabled={!selectedSize}
