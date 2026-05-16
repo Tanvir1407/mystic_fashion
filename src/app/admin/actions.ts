@@ -1194,6 +1194,71 @@ export async function adjustStock(data: {
   }
 }
 
+export async function bulkAdjustStock(adjustments: {
+  variantId: string;
+  adjustmentType: AdjustmentType;
+  quantity: number;
+  reason?: string;
+}[]) {
+  try {
+    const results = await prisma.$transaction(async (tx) => {
+      const createdAdjustments = [];
+      
+      for (const adj of adjustments) {
+        const { variantId, adjustmentType, quantity, reason } = adj;
+        
+        const variant = await tx.productVariant.findUnique({
+          where: { id: variantId },
+          select: { stock: true, id: true },
+        });
+
+        if (!variant) throw new Error(`Product variant not found: ${variantId}`);
+
+        const previousQuantity = variant.stock;
+        let newQuantity = previousQuantity;
+
+        if (adjustmentType === "ADDITION") {
+          newQuantity = previousQuantity + quantity;
+        } else if (adjustmentType === "SUBTRACTION") {
+          newQuantity = previousQuantity - quantity;
+        } else if (adjustmentType === "SET") {
+          newQuantity = quantity;
+        }
+
+        if (adjustmentType === "SUBTRACTION" && newQuantity < 0) {
+          throw new Error(`Stock cannot go below zero for variant ${variantId}`);
+        }
+
+        await tx.productVariant.update({
+          where: { id: variantId },
+          data: { stock: newQuantity },
+        });
+
+        const adjustment = await tx.stockAdjustment.create({
+          data: {
+            variantId,
+            adjustmentType,
+            quantity,
+            previousQuantity,
+            newQuantity,
+            reason,
+          },
+        });
+        
+        createdAdjustments.push(adjustment);
+      }
+      return createdAdjustments;
+    });
+
+    revalidatePath("/admin/inventory");
+    revalidatePath("/admin/inventory/adjustments");
+    return { success: true, data: results };
+  } catch (error: any) {
+    console.error("Bulk stock adjustment error:", error);
+    return { success: false, error: error.message || "Failed to process bulk stock adjustments" };
+  }
+}
+
 export async function getRecentAdjustments() {
   return await prisma.stockAdjustment.findMany({
     include: {
