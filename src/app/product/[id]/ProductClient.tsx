@@ -181,8 +181,6 @@ export default function ProductClient({ product, sizeChartData, deliveryData }: 
               ) : null}
             </div>
 
-            <div className="w-12 h-1 bg-[#800020] mb-8"></div>
-
             {/* Size Selector */}
             <div className="mb-8">
               <div className="flex justify-between items-center mb-3">
