@@ -210,69 +210,60 @@ export default function ProductClient({ product, sizeChartData, deliveryData }: 
               )}
             </div>
 
-            {/* Quantity Selector */}
+            {/* Quantity and Action Buttons */}
             <div className="mb-10">
-              <div className="flex justify-between items-center mb-3">
-                <h3 className="font-semibold text-zinc-900 text-sm uppercase tracking-widest">Quantity</h3>
-              </div>
-              <div className="inline-flex border border-zinc-200 h-12">
-                <button
-                  onClick={decrementQuantity}
-                  className="w-12 h-full flex items-center justify-center text-zinc-500 hover:text-zinc-900 hover:bg-zinc-50 transition-colors"
-                >
-                  <Minus className="w-4 h-4" strokeWidth={1.5} />
-                </button>
-                <div className="w-12 h-full flex items-center justify-center font-medium text-sm text-zinc-900 border-l border-r border-zinc-200">
-                  {quantity}
+              <h3 className="font-bold text-zinc-900 text-sm mb-3">Quantity</h3>
+              
+              <div className="flex flex-col gap-3">
+                <div className="flex items-center gap-3">
+                  {/* Quantity Selector */}
+                  <div className="flex items-center bg-zinc-100 h-14 px-2 rounded-sm w-32 justify-between">
+                    <button
+                      onClick={decrementQuantity}
+                      className="w-10 h-full flex items-center justify-center text-zinc-600 hover:text-zinc-900 transition-colors"
+                    >
+                      <Minus className="w-4 h-4" />
+                    </button>
+                    <div className="flex-1 flex items-center justify-center font-bold text-sm text-zinc-900">
+                      {quantity}
+                    </div>
+                    <button
+                      onClick={incrementQuantity}
+                      className="w-10 h-full flex items-center justify-center text-zinc-600 hover:text-zinc-900 transition-colors"
+                    >
+                      <Plus className="w-4 h-4" />
+                    </button>
+                  </div>
+
+                  {/* Add to Cart Button */}
+                  <button
+                    onClick={handleAddToCart}
+                    disabled={!selectedSize}
+                    className={`flex-1 h-14 font-bold text-sm transition-all rounded-sm flex items-center justify-center ${(!selectedSize)
+                      ? 'bg-zinc-100 text-zinc-400 cursor-not-allowed'
+                      : addedEffect
+                        ? 'bg-green-600 text-white'
+                        : 'bg-primary text-white hover:opacity-95 active:scale-[0.98]'
+                      }`}
+                  >
+                    {addedEffect ? 'Added To Cart' : (selectedSize ? 'Add To Cart' : 'Select Size')}
+                  </button>
                 </div>
+
+                {/* Buy Now Button */}
                 <button
-                  onClick={incrementQuantity}
-                  className="w-12 h-full flex items-center justify-center text-zinc-500 hover:text-zinc-900 hover:bg-zinc-50 transition-colors"
+                  onClick={handleBuyNow}
+                  disabled={!selectedSize}
+                  className={`w-full h-14 font-bold text-sm transition-all rounded-sm flex items-center justify-center ${(!selectedSize)
+                    ? 'bg-zinc-100 text-zinc-400 cursor-not-allowed'
+                    : 'bg-primary text-white hover:opacity-95 active:scale-[0.98]'
+                    }`}
                 >
-                  <Plus className="w-4 h-4" strokeWidth={1.5} />
+                  Buy Now
                 </button>
               </div>
-            </div>
 
-
-            {!selectedSize && <p className="text-xs text-red-500 font-medium mt-3">Please select a size to continue</p>}
-
-            {/* Action Buttons */}
-            <div className="flex flex-col sm:flex-row gap-3 mt-4">
-              <button
-                onClick={handleAddToCart}
-                disabled={!selectedSize}
-                className={`md:flex-1 h-14 font-semibold text-xs md:text-sm uppercase tracking-[0.1em] flex items-center justify-center gap-2 transition-colors border ${(!selectedSize)
-                  ? 'border-zinc-200 bg-zinc-50 text-zinc-400 cursor-not-allowed'
-                  : addedEffect
-                    ? 'border-green-600 bg-white text-green-600'
-                    : 'border-primary bg-white text-primary hover:bg-primary hover:text-white'
-                  }`}
-              >
-                {addedEffect ? (
-                  <>
-                    <Check className="w-4 h-4" />
-                    Added to Bag
-                  </>
-                ) : (
-                  <>
-                    <ShoppingBag className="w-4 h-4" />
-                    {selectedSize ? 'Add to Bag' : 'Select Size'}
-                  </>
-                )}
-              </button>
-
-              <button
-                onClick={handleBuyNow}
-                disabled={!selectedSize}
-                className={`md:flex-1 h-14 font-semibold text-xs md:text-sm uppercase tracking-[0.1em] flex items-center justify-center gap-2 transition-colors border ${(!selectedSize)
-                  ? 'border-zinc-200 bg-zinc-200 text-zinc-400 cursor-not-allowed'
-                  : 'border-primary bg-primary text-white hover:bg-primary/90 hover:border-primary/90'
-                  }`}
-              >
-                <ShoppingCart className="w-4 h-4" />
-                Buy it Now
-              </button>
+              {!selectedSize && <p className="text-xs text-red-500 font-medium mt-3">Please select a size to continue</p>}
             </div>
 
             {/* Size Chart Data Table */}
