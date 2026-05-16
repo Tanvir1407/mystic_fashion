@@ -1437,3 +1437,23 @@ export async function getRecentSalesReturns() {
   }
 }
 
+export async function getOrderById(id: string) {
+  try {
+    const order = await prisma.order.findUnique({
+      where: { id },
+      include: {
+        items: {
+          include: {
+            product: {
+              select: { name: true, price: true, purchasePrice: true }
+            }
+          }
+        }
+      }
+    });
+    return { success: true, data: order };
+  } catch (error: any) {
+    console.error("Get order by ID error:", error);
+    return { success: false, error: error.message || "Failed to fetch order." };
+  }
+}

@@ -102,12 +102,28 @@ export default function ProductClient({ product, sizeChartData, deliveryData }: 
       <div className="container mx-auto px-4 py-8 md:py-16">
 
         {/* Top Product Section */}
-        <div className="flex flex-col lg:flex-row items-start gap-12 lg:gap-24 mb-24">
+        <div className="flex flex-col lg:flex-row items-start gap-8 lg:gap-12 mb-8">
 
           {/* Left: Product Images */}
-          <div className="w-full lg:w-1/2 flex flex-col gap-4">
+          <div className="w-full lg:w-1/2 flex flex-col lg:flex-row gap-4">
+            {/* Thumbnails Row/Column */}
+            <div className="flex flex-row lg:flex-col gap-3 overflow-auto scrollbar-hide w-full lg:w-24 flex-shrink-0 order-2 lg:order-1">
+              {product.images.map((img, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => setSelectedImageIndex(idx)}
+                  className={`relative w-20 h-24 lg:w-full lg:h-32 flex-shrink-0 bg-[#F9F9F9] overflow-hidden transition-all box-border ${selectedImageIndex === idx
+                    ? 'opacity-100 border-[2px] border-[#800020] shadow-sm'
+                    : 'opacity-70 hover:opacity-100 border border-slate-200 hover:border-[#FFD700]'
+                    }`}
+                >
+                  <UploadedImage src={img} alt={`${product.name} view ${idx + 1}`} fill className="object-cover" />
+                </button>
+              ))}
+            </div>
+
             {/* Main Image */}
-            <div className="relative w-full aspect-[4/5] bg-[#F9F9F9] flex items-center justify-center group overflow-hidden rounded-md shadow-sm border border-slate-100">
+            <div className="relative flex-1 aspect-[4/5] bg-[#F9F9F9] flex items-center justify-center group overflow-hidden shadow-sm border border-slate-100 order-1 lg:order-2">
               {selectedImage ? (
                 <UploadedImage
                   src={selectedImage}
@@ -138,28 +154,12 @@ export default function ProductClient({ product, sizeChartData, deliveryData }: 
               )}
               {/* Discount Badge on Main Image */}
               {isDiscounted && (
-                <div className="absolute top-4 left-4 z-20 bg-red-600 text-white text-xs font-black uppercase tracking-widest px-3 py-1.5 rounded-sm shadow-md">
+                <div className="absolute top-4 left-4 z-20 bg-red-600 text-white text-xs font-black uppercase tracking-widest px-3 py-1.5 shadow-md">
                   {product.discount!.discountType === "PERCENTAGE"
                     ? `${product.discount!.value}% OFF`
                     : `৳${product.discount!.value} OFF`}
                 </div>
               )}
-            </div>
-
-            {/* Thumbnails Row */}
-            <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-hide w-full">
-              {product.images.map((img, idx) => (
-                <button
-                  key={idx}
-                  onClick={() => setSelectedImageIndex(idx)}
-                  className={`relative w-24 h-32 flex-shrink-0 bg-[#F9F9F9] rounded-md overflow-hidden transition-all box-border ${selectedImageIndex === idx
-                    ? 'opacity-100 border-[3px] border-[#800020] shadow-sm'
-                    : 'opacity-70 hover:opacity-100 border border-slate-200 hover:border-[#FFD700]'
-                    }`}
-                >
-                  <UploadedImage src={img} alt={`${product.name} view ${idx + 1}`} fill className="object-cover" />
-                </button>
-              ))}
             </div>
           </div>
 
@@ -180,8 +180,6 @@ export default function ProductClient({ product, sizeChartData, deliveryData }: 
                 <p className="text-lg font-bold text-zinc-400 line-through mb-1.5">{formatBDT(product.price)}</p>
               ) : null}
             </div>
-
-            <div className="w-12 h-1 bg-[#800020] mb-8"></div>
 
             {/* Size Selector */}
             <div className="mb-8">
@@ -212,68 +210,61 @@ export default function ProductClient({ product, sizeChartData, deliveryData }: 
               )}
             </div>
 
-            {/* Quantity Selector */}
+            {/* Quantity and Action Buttons */}
             <div className="mb-10">
-              <div className="flex justify-between items-center mb-3">
-                <h3 className="font-semibold text-zinc-900 text-sm uppercase tracking-widest">Quantity</h3>
-              </div>
-              <div className="inline-flex border border-zinc-200 h-12">
-                <button
-                  onClick={decrementQuantity}
-                  className="w-12 h-full flex items-center justify-center text-zinc-500 hover:text-zinc-900 hover:bg-zinc-50 transition-colors"
-                >
-                  <Minus className="w-4 h-4" strokeWidth={1.5} />
-                </button>
-                <div className="w-12 h-full flex items-center justify-center font-medium text-sm text-zinc-900 border-l border-r border-zinc-200">
-                  {quantity}
+              <h3 className="font-bold text-zinc-900 text-sm mb-3">Quantity</h3>
+
+              <div className="flex flex-col gap-3">
+                <div className="flex items-center gap-3">
+                  {/* Quantity Selector */}
+                  <div className="flex items-center bg-zinc-100 h-14 px-2 w-32 justify-between">
+                    <button
+                      onClick={decrementQuantity}
+                      className="w-10 h-full flex items-center justify-center text-zinc-600 hover:text-zinc-900 transition-colors"
+                    >
+                      <Minus className="w-4 h-4" />
+                    </button>
+                    <div className="flex-1 flex items-center justify-center font-bold text-sm text-zinc-900">
+                      {quantity}
+                    </div>
+                    <button
+                      onClick={incrementQuantity}
+                      className="w-10 h-full flex items-center justify-center text-zinc-600 hover:text-zinc-900 transition-colors"
+                    >
+                      <Plus className="w-4 h-4" />
+                    </button>
+                  </div>
+
+                  {/* Add to Cart Button */}
+                  <button
+                    onClick={handleAddToCart}
+                    disabled={!selectedSize}
+                    className={`flex-1 h-14 font-bold text-sm transition-all flex items-center justify-center ${(!selectedSize)
+                      ? 'bg-zinc-100 text-zinc-400 cursor-not-allowed'
+                      : addedEffect
+                        ? 'bg-green-600 text-white'
+                        : 'bg-primary text-white hover:opacity-95 active:scale-[0.98]'
+                      }`}
+                  >
+                    {addedEffect ? 'Added To Cart' : (selectedSize ? 'Add To Cart' : 'Select Size')}
+                  </button>
                 </div>
+
+                {/* Buy Now Button */}
                 <button
-                  onClick={incrementQuantity}
-                  className="w-12 h-full flex items-center justify-center text-zinc-500 hover:text-zinc-900 hover:bg-zinc-50 transition-colors"
+                  onClick={handleBuyNow}
+                  disabled={!selectedSize}
+                  className={`w-full h-14 font-bold text-sm transition-all flex items-center justify-center ${(!selectedSize)
+                    ? 'bg-zinc-100 text-zinc-400 cursor-not-allowed'
+                    : 'bg-primary text-white hover:opacity-95 active:scale-[0.98]'
+                    }`}
                 >
-                  <Plus className="w-4 h-4" strokeWidth={1.5} />
+                  Buy Now
                 </button>
               </div>
-            </div>
 
-            {/* Action Buttons */}
-            <div className="flex flex-col sm:flex-row gap-3 mt-8">
-              <button
-                onClick={handleAddToCart}
-                disabled={!selectedSize}
-                className={`md:flex-1 h-14 font-semibold text-xs md:text-sm uppercase tracking-[0.1em] flex items-center justify-center gap-2 transition-colors border ${(!selectedSize)
-                  ? 'border-zinc-200 bg-zinc-50 text-zinc-400 cursor-not-allowed'
-                  : addedEffect
-                    ? 'border-green-600 bg-white text-green-600'
-                    : 'border-primary bg-white text-primary hover:bg-primary hover:text-white'
-                  }`}
-              >
-                {addedEffect ? (
-                  <>
-                    <Check className="w-4 h-4" />
-                    Added to Bag
-                  </>
-                ) : (
-                  <>
-                    <ShoppingBag className="w-4 h-4" />
-                    {selectedSize ? 'Add to Bag' : 'Select Size'}
-                  </>
-                )}
-              </button>
-
-              <button
-                onClick={handleBuyNow}
-                disabled={!selectedSize}
-                className={`md:flex-1 h-14 font-semibold text-xs md:text-sm uppercase tracking-[0.1em] flex items-center justify-center gap-2 transition-colors border ${(!selectedSize)
-                  ? 'border-zinc-200 bg-zinc-200 text-zinc-400 cursor-not-allowed'
-                  : 'border-primary bg-primary text-white hover:bg-primary/90 hover:border-primary/90'
-                  }`}
-              >
-                <ShoppingCart className="w-4 h-4" />
-                Buy it Now
-              </button>
+              {!selectedSize && <p className="text-xs text-red-500 font-medium mt-3">Please select a size to continue</p>}
             </div>
-            {!selectedSize && <p className="text-xs text-red-500 font-medium mt-3">Please select a size to continue</p>}
 
             {/* Size Chart Data Table */}
             {sizeChartData && Array.isArray(sizeChartData.data) && sizeChartData.data.length > 0 && (

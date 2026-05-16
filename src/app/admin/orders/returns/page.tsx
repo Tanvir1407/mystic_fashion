@@ -4,8 +4,16 @@ import ReturnsClient from "./ReturnsClient";
 import { Suspense } from "react";
 
 export default async function ReturnsPage() {
-  // Fetch recent orders with their items and products
+  const now = new Date();
+  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
+  // Fetch current month orders with their items and products
   const orders = await prisma.order.findMany({
+    where: {
+      createdAt: {
+        gte: startOfMonth
+      }
+    },
     include: {
       items: {
         include: {
@@ -16,7 +24,6 @@ export default async function ReturnsPage() {
       }
     },
     orderBy: { createdAt: "desc" },
-    take: 100
   });
 
   const recentReturns = await getRecentSalesReturns();
