@@ -17,9 +17,9 @@ export default function HeroCarousel({ slides }: { slides: Slide[] }) {
   if (slides.length === 0) return null;
 
   return (
-    // 1. Removed `container mx-auto` to allow full edge-to-edge width
-    // 2. Removed fixed mt-10 so it sits flush with the header on mobile
-    <div className="relative w-full overflow-hidden mt-0 md:mt-2">
+    // 1. Added `container mx-auto` to align with page content
+    // 2. Maintained mt-0 md:mt-2 for consistent spacing
+    <div className="container mx-auto relative overflow-hidden mt-0 md:mt-2 px-4 md:px-0">
       <Swiper
         modules={[Autoplay, Navigation, Pagination]}
         spaceBetween={0}
