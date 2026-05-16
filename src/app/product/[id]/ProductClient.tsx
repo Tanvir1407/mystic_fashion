@@ -112,8 +112,8 @@ export default function ProductClient({ product, sizeChartData, deliveryData }: 
                 <button
                   key={idx}
                   onClick={() => setSelectedImageIndex(idx)}
-                  className={`relative w-20 h-24 lg:w-full lg:h-32 flex-shrink-0 bg-[#F9F9F9] rounded-md overflow-hidden transition-all box-border ${selectedImageIndex === idx
-                    ? 'opacity-100 border-[3px] border-[#800020] shadow-sm'
+                  className={`relative w-20 h-24 lg:w-full lg:h-32 flex-shrink-0 bg-[#F9F9F9] overflow-hidden transition-all box-border ${selectedImageIndex === idx
+                    ? 'opacity-100 border-[2px] border-[#800020] shadow-sm'
                     : 'opacity-70 hover:opacity-100 border border-slate-200 hover:border-[#FFD700]'
                     }`}
                 >
@@ -123,7 +123,7 @@ export default function ProductClient({ product, sizeChartData, deliveryData }: 
             </div>
 
             {/* Main Image */}
-            <div className="relative flex-1 aspect-[4/5] bg-[#F9F9F9] flex items-center justify-center group overflow-hidden rounded-md shadow-sm border border-slate-100 order-1 lg:order-2">
+            <div className="relative flex-1 aspect-[4/5] bg-[#F9F9F9] flex items-center justify-center group overflow-hidden shadow-sm border border-slate-100 order-1 lg:order-2">
               {selectedImage ? (
                 <UploadedImage
                   src={selectedImage}
@@ -154,7 +154,7 @@ export default function ProductClient({ product, sizeChartData, deliveryData }: 
               )}
               {/* Discount Badge on Main Image */}
               {isDiscounted && (
-                <div className="absolute top-4 left-4 z-20 bg-red-600 text-white text-xs font-black uppercase tracking-widest px-3 py-1.5 rounded-sm shadow-md">
+                <div className="absolute top-4 left-4 z-20 bg-red-600 text-white text-xs font-black uppercase tracking-widest px-3 py-1.5 shadow-md">
                   {product.discount!.discountType === "PERCENTAGE"
                     ? `${product.discount!.value}% OFF`
                     : `৳${product.discount!.value} OFF`}
@@ -213,11 +213,11 @@ export default function ProductClient({ product, sizeChartData, deliveryData }: 
             {/* Quantity and Action Buttons */}
             <div className="mb-10">
               <h3 className="font-bold text-zinc-900 text-sm mb-3">Quantity</h3>
-              
+
               <div className="flex flex-col gap-3">
                 <div className="flex items-center gap-3">
                   {/* Quantity Selector */}
-                  <div className="flex items-center bg-zinc-100 h-14 px-2 rounded-sm w-32 justify-between">
+                  <div className="flex items-center bg-zinc-100 h-14 px-2 w-32 justify-between">
                     <button
                       onClick={decrementQuantity}
                       className="w-10 h-full flex items-center justify-center text-zinc-600 hover:text-zinc-900 transition-colors"
@@ -239,7 +239,7 @@ export default function ProductClient({ product, sizeChartData, deliveryData }: 
                   <button
                     onClick={handleAddToCart}
                     disabled={!selectedSize}
-                    className={`flex-1 h-14 font-bold text-sm transition-all rounded-sm flex items-center justify-center ${(!selectedSize)
+                    className={`flex-1 h-14 font-bold text-sm transition-all flex items-center justify-center ${(!selectedSize)
                       ? 'bg-zinc-100 text-zinc-400 cursor-not-allowed'
                       : addedEffect
                         ? 'bg-green-600 text-white'
@@ -254,7 +254,7 @@ export default function ProductClient({ product, sizeChartData, deliveryData }: 
                 <button
                   onClick={handleBuyNow}
                   disabled={!selectedSize}
-                  className={`w-full h-14 font-bold text-sm transition-all rounded-sm flex items-center justify-center ${(!selectedSize)
+                  className={`w-full h-14 font-bold text-sm transition-all flex items-center justify-center ${(!selectedSize)
                     ? 'bg-zinc-100 text-zinc-400 cursor-not-allowed'
                     : 'bg-primary text-white hover:opacity-95 active:scale-[0.98]'
                     }`}
