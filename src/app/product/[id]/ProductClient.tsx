@@ -236,6 +236,9 @@ export default function ProductClient({ product, sizeChartData, deliveryData }: 
               </div>
             </div>
 
+
+            {!selectedSize && <p className="text-xs text-red-500 font-medium mt-3">Please select a size to continue</p>}
+
             {/* Action Buttons */}
             <div className="flex flex-col sm:flex-row gap-3 mt-8">
               <button
@@ -273,7 +276,6 @@ export default function ProductClient({ product, sizeChartData, deliveryData }: 
                 Buy it Now
               </button>
             </div>
-            {!selectedSize && <p className="text-xs text-red-500 font-medium mt-3">Please select a size to continue</p>}
 
             {/* Size Chart Data Table */}
             {sizeChartData && Array.isArray(sizeChartData.data) && sizeChartData.data.length > 0 && (
