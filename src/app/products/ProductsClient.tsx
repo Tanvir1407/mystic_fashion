@@ -4,6 +4,7 @@ import { useState, useMemo, useEffect } from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { ChevronDown, ChevronUp, SlidersHorizontal, X, Check, Grid, List } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import ProductCard from "@/components/ProductCard";
 
 interface Subcategory {
@@ -85,16 +86,6 @@ export default function ProductsClient({
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
-  // State
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-  const [selectedSubcategory, setSelectedSubcategory] = useState<string | null>(null);
-  const [selectedBrands, setSelectedBrands] = useState<string[]>([]);
-  const [minPriceInput, setMinPriceInput] = useState<string>("");
-  const [maxPriceInput, setMaxPriceInput] = useState<string>("");
-  const [sortBy, setSortBy] = useState<string>("newest");
-  const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
-  const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>({});
-
   // Calculate the global min and max prices from published products
   const { globalMinPrice, globalMaxPrice } = useMemo(() => {
     if (products.length === 0) return { globalMinPrice: 0, globalMaxPrice: 10000 };
@@ -105,16 +96,67 @@ export default function ProductsClient({
     };
   }, [products]);
 
-  // Sync initial query params to states
+  // State initialized directly with initial props for perfect server-client sync!
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(() => {
+    if (initialCategory) {
+      const foundCat = categories.find(
+        (c) =>
+          c.id === initialCategory ||
+          c.name.toLowerCase() === initialCategory.toLowerCase()
+      );
+      return foundCat ? foundCat.id : initialCategory;
+    }
+    return null;
+  });
+
+  const [selectedSubcategory, setSelectedSubcategory] = useState<string | null>(() => {
+    return initialSubcategory || null;
+  });
+
+  const [selectedBrands, setSelectedBrands] = useState<string[]>(() => {
+    if (initialBrand) {
+      const foundBrand = brands.find(
+        (b) =>
+          b.id === initialBrand ||
+          b.name.toLowerCase() === initialBrand.toLowerCase()
+      );
+      return foundBrand ? [foundBrand.id] : [initialBrand];
+    }
+    return [];
+  });
+
+  const [minPriceInput, setMinPriceInput] = useState<string>(globalMinPrice.toString());
+  const [maxPriceInput, setMaxPriceInput] = useState<string>(globalMaxPrice.toString());
+  const [sortBy, setSortBy] = useState<string>("newest");
+  const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
+  
+  // Expand category by default if selected category is active
+  const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>(() => {
+    if (initialCategory) {
+      const foundCat = categories.find(
+        (c) =>
+          c.id === initialCategory ||
+          c.name.toLowerCase() === initialCategory.toLowerCase()
+      );
+      if (foundCat) {
+        return { [foundCat.id]: true };
+      }
+    }
+    return {};
+  });
+
+  // Sync initial query params to states (for back button / path change navigation)
   useEffect(() => {
     if (initialCategory) {
-      // Find category by slug/name/id
       const foundCat = categories.find(
         (c) =>
           c.id === initialCategory ||
           c.name.toLowerCase() === initialCategory.toLowerCase()
       );
       setSelectedCategory(foundCat ? foundCat.id : initialCategory);
+      if (foundCat) {
+        setExpandedCategories((prev) => ({ ...prev, [foundCat.id]: true }));
+      }
     } else {
       setSelectedCategory(null);
     }
@@ -137,10 +179,10 @@ export default function ProductsClient({
     }
   }, [initialCategory, initialBrand, initialSubcategory, categories, brands]);
 
-  // Set default min/max inputs when global prices are loaded
+  // Set default min/max inputs when global prices are loaded or changed
   useEffect(() => {
-    if (minPriceInput === "") setMinPriceInput(globalMinPrice.toString());
-    if (maxPriceInput === "") setMaxPriceInput(globalMaxPrice.toString());
+    setMinPriceInput(globalMinPrice.toString());
+    setMaxPriceInput(globalMaxPrice.toString());
   }, [globalMinPrice, globalMaxPrice]);
 
   // Toggle brand selection
@@ -508,168 +550,185 @@ export default function ProductsClient({
       </div>
 
       {/* MOBILE FILTER OVERLAY / MODAL */}
-      {isMobileFilterOpen && (
-        <div className="fixed inset-0 bg-black/60 z-[100] md:hidden flex justify-end">
-          <div className="w-80 h-full bg-white dark:bg-zinc-900 flex flex-col shadow-2xl relative animate-in slide-in-from-right duration-300">
+      <AnimatePresence>
+        {isMobileFilterOpen && (
+          <>
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsMobileFilterOpen(false)}
+              className="fixed inset-0 bg-black/60 backdrop-blur-xs z-[100] md:hidden"
+            />
 
-            {/* Mobile Filter Header */}
-            <div className="flex items-center justify-between p-4 border-b border-slate-200 dark:border-zinc-800">
-              <h3 className="text-sm font-black text-slate-900 dark:text-zinc-50 flex items-center gap-2">
-                <SlidersHorizontal className="w-4.5 h-4.5 text-primary" />
-                Filters by
-              </h3>
-              <div className="flex items-center gap-3">
-                {isAnyFilterActive && (
+            {/* Slide in from left Filter Drawer */}
+            <motion.div
+              initial={{ x: "-100%" }}
+              animate={{ x: 0 }}
+              exit={{ x: "-100%" }}
+              transition={{ type: "spring", damping: 25, stiffness: 220 }}
+              className="fixed left-0 top-0 h-full w-80 bg-white dark:bg-zinc-900 flex flex-col shadow-2xl z-[101] md:hidden"
+            >
+              {/* Mobile Filter Header */}
+              <div className="flex items-center justify-between p-4 border-b border-slate-200 dark:border-zinc-800">
+                <h3 className="text-sm font-black text-slate-900 dark:text-zinc-50 flex items-center gap-2">
+                  <SlidersHorizontal className="w-4.5 h-4.5 text-primary" />
+                  Filters by
+                </h3>
+                <div className="flex items-center gap-3">
+                  {isAnyFilterActive && (
+                    <button
+                      onClick={handleClearFilters}
+                      className="text-[10px] font-black   text-primary hover:underline"
+                    >
+                      Clear
+                    </button>
+                  )}
                   <button
-                    onClick={handleClearFilters}
-                    className="text-[10px] font-black   text-primary hover:underline"
+                    onClick={() => setIsMobileFilterOpen(false)}
+                    className="p-1 hover:bg-slate-100 dark:hover:bg-zinc-800 rounded-none transition-colors"
                   >
-                    Clear
+                    <X className="w-5 h-5 text-slate-500" />
                   </button>
-                )}
-                <button
-                  onClick={() => setIsMobileFilterOpen(false)}
-                  className="p-1 hover:bg-slate-100 dark:hover:bg-zinc-800 rounded-none transition-colors"
-                >
-                  <X className="w-5 h-5 text-slate-500" />
-                </button>
-              </div>
-            </div>
-
-            {/* Mobile Filter Scrollable Body */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-6">
-
-              {/* Category Filter */}
-              <div className="space-y-3">
-                <h4 className="text-xs font-black uppercase tracking-widest text-slate-400">Categories</h4>
-                <div className="space-y-1">
-                  {categories.map((cat) => {
-                    const isCatSelected = selectedCategory === cat.id;
-                    const isExpanded = !!expandedCategories[cat.id];
-                    return (
-                      <div key={cat.id} className="space-y-1">
-                        <div
-                          onClick={() => handleSelectCategory(cat.id)}
-                          className={`flex items-center justify-between px-3 py-2 text-xs font-bold   cursor-pointer hover:bg-slate-50 dark:hover:bg-zinc-800 transition-colors ${isCatSelected
-                            ? "bg-primary/5 text-primary border-l-2 border-primary"
-                            : "text-slate-700 dark:text-zinc-300"
-                            }`}
-                        >
-                          <span>{cat.name}</span>
-                          {cat.subcategories.length > 0 && (
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                toggleExpandCategory(cat.id);
-                              }}
-                              className="p-0.5 hover:bg-slate-100 dark:hover:bg-zinc-700 rounded-none transition-colors"
-                            >
-                              {isExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
-                            </button>
-                          )}
-                        </div>
-
-                        {isExpanded && cat.subcategories.length > 0 && (
-                          <div className="pl-4 pr-1 py-1 space-y-1 border-l border-slate-100 dark:border-zinc-800 ml-3">
-                            {cat.subcategories.map((sub) => {
-                              const isSubSelected = selectedSubcategory === sub.id;
-                              return (
-                                <button
-                                  key={sub.id}
-                                  onClick={(e) => {
-                                    handleSelectSubcategory(sub.id, e);
-                                    setIsMobileFilterOpen(false); // Auto close mobile modal to display filtered results instantly
-                                  }}
-                                  className={`w-full text-left px-3 py-1.5 text-[11px] font-bold   transition-colors hover:text-primary ${isSubSelected
-                                    ? "text-primary bg-primary/5 border-r border-primary"
-                                    : "text-slate-500 dark:text-zinc-400"
-                                    }`}
-                                >
-                                  {sub.name}
-                                </button>
-                              );
-                            })}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
                 </div>
               </div>
 
-              {/* Price Filter */}
-              <div className="space-y-3 pt-4 border-t border-slate-100 dark:border-zinc-800">
-                <h4 className="text-xs font-black uppercase tracking-widest text-slate-400">Price Range (৳)</h4>
-                <div className="flex items-center gap-2">
-                  <div className="flex-1 flex items-center bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 px-2 py-1.5 h-9 rounded-none">
-                    <span className="text-[10px] font-bold text-slate-400 mr-1.5">Min:</span>
-                    <input
-                      type="number"
-                      value={minPriceInput}
-                      onChange={(e) => setMinPriceInput(e.target.value)}
-                      className="w-full bg-transparent border-none text-xs font-bold text-slate-800 dark:text-zinc-100 outline-none"
-                      placeholder={globalMinPrice.toString()}
-                    />
-                  </div>
-                  <span className="text-slate-400 text-xs font-bold">—</span>
-                  <div className="flex-1 flex items-center bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 px-2 py-1.5 h-9 rounded-none">
-                    <span className="text-[10px] font-bold text-slate-400 mr-1.5">Max:</span>
-                    <input
-                      type="number"
-                      value={maxPriceInput}
-                      onChange={(e) => setMaxPriceInput(e.target.value)}
-                      className="w-full bg-transparent border-none text-xs font-bold text-slate-800 dark:text-zinc-100 outline-none"
-                      placeholder={globalMaxPrice.toString()}
-                    />
-                  </div>
-                </div>
-              </div>
+              {/* Mobile Filter Scrollable Body */}
+              <div className="flex-1 overflow-y-auto p-4 space-y-6">
 
-              {/* Brands Filter */}
-              {brands.length > 0 && (
-                <div className="space-y-3 pt-4 border-t border-slate-100 dark:border-zinc-800">
-                  <h4 className="text-xs font-black uppercase tracking-widest text-slate-400">Brands</h4>
-                  <div className="space-y-1.5">
-                    {brands.map((brand) => {
-                      const isBrandChecked = selectedBrands.includes(brand.id);
+                {/* Category Filter */}
+                <div className="space-y-3">
+                  <h4 className="text-xs font-black uppercase tracking-widest text-slate-400">Categories</h4>
+                  <div className="space-y-1">
+                    {categories.map((cat) => {
+                      const isCatSelected = selectedCategory === cat.id;
+                      const isExpanded = !!expandedCategories[cat.id];
                       return (
-                        <label
-                          key={brand.id}
-                          className="flex items-center gap-2.5 px-1 py-1 cursor-pointer group text-slate-700 dark:text-zinc-300"
-                        >
+                        <div key={cat.id} className="space-y-1">
                           <div
-                            onClick={() => handleToggleBrand(brand.id)}
-                            className={`w-4.5 h-4.5 border flex items-center justify-center transition-colors rounded-none ${isBrandChecked
-                              ? "bg-primary border-primary text-white"
-                              : "border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-900"
+                            onClick={() => handleSelectCategory(cat.id)}
+                            className={`flex items-center justify-between px-3 py-2 text-xs font-bold   cursor-pointer hover:bg-slate-50 dark:hover:bg-zinc-800 transition-colors ${isCatSelected
+                              ? "bg-primary/5 text-primary border-l-2 border-primary"
+                              : "text-slate-700 dark:text-zinc-300"
                               }`}
                           >
-                            {isBrandChecked && <Check className="w-3.5 h-3.5 stroke-[3]" />}
+                            <span>{cat.name}</span>
+                            {cat.subcategories.length > 0 && (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  toggleExpandCategory(cat.id);
+                                }}
+                                className="p-0.5 hover:bg-slate-100 dark:hover:bg-zinc-700 rounded-none transition-colors"
+                              >
+                                {isExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                              </button>
+                            )}
                           </div>
-                          <span className="text-xs font-bold   select-none">
-                            {brand.name}
-                          </span>
-                        </label>
+
+                          {isExpanded && cat.subcategories.length > 0 && (
+                            <div className="pl-4 pr-1 py-1 space-y-1 border-l border-slate-100 dark:border-zinc-800 ml-3">
+                              {cat.subcategories.map((sub) => {
+                                const isSubSelected = selectedSubcategory === sub.id;
+                                return (
+                                  <button
+                                    key={sub.id}
+                                    onClick={(e) => {
+                                      handleSelectSubcategory(sub.id, e);
+                                      setIsMobileFilterOpen(false); // Auto close mobile modal to display filtered results instantly
+                                    }}
+                                    className={`w-full text-left px-3 py-1.5 text-[11px] font-bold   transition-colors hover:text-primary ${isSubSelected
+                                      ? "text-primary bg-primary/5 border-r border-primary"
+                                      : "text-slate-500 dark:text-zinc-400"
+                                      }`}
+                                  >
+                                    {sub.name}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </div>
                       );
                     })}
                   </div>
                 </div>
-              )}
-            </div>
 
-            {/* Mobile Filter Footer */}
-            <div className="p-4 border-t border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-950">
-              <button
-                onClick={() => setIsMobileFilterOpen(false)}
-                className="w-full py-3 bg-primary text-white font-bold   text-xs rounded-none hover:bg-opacity-90 transition-colors"
-              >
-                Apply Filters ({filteredProducts.length})
-              </button>
-            </div>
+                {/* Price Filter */}
+                <div className="space-y-3 pt-4 border-t border-slate-100 dark:border-zinc-800">
+                  <h4 className="text-xs font-black uppercase tracking-widest text-slate-400">Price Range (৳)</h4>
+                  <div className="flex items-center gap-2">
+                    <div className="flex-1 flex items-center bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 px-2 py-1.5 h-9 rounded-none">
+                      <span className="text-[10px] font-bold text-slate-400 mr-1.5">Min:</span>
+                      <input
+                        type="number"
+                        value={minPriceInput}
+                        onChange={(e) => setMinPriceInput(e.target.value)}
+                        className="w-full bg-transparent border-none text-xs font-bold text-slate-800 dark:text-zinc-100 outline-none"
+                        placeholder={globalMinPrice.toString()}
+                      />
+                    </div>
+                    <span className="text-slate-400 text-xs font-bold">—</span>
+                    <div className="flex-1 flex items-center bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 px-2 py-1.5 h-9 rounded-none">
+                      <span className="text-[10px] font-bold text-slate-400 mr-1.5">Max:</span>
+                      <input
+                        type="number"
+                        value={maxPriceInput}
+                        onChange={(e) => setMaxPriceInput(e.target.value)}
+                        className="w-full bg-transparent border-none text-xs font-bold text-slate-800 dark:text-zinc-100 outline-none"
+                        placeholder={globalMaxPrice.toString()}
+                      />
+                    </div>
+                  </div>
+                </div>
 
-          </div>
-        </div>
-      )}
+                {/* Brands Filter */}
+                {brands.length > 0 && (
+                  <div className="space-y-3 pt-4 border-t border-slate-100 dark:border-zinc-800">
+                    <h4 className="text-xs font-black uppercase tracking-widest text-slate-400">Brands</h4>
+                    <div className="space-y-1.5">
+                      {brands.map((brand) => {
+                        const isBrandChecked = selectedBrands.includes(brand.id);
+                        return (
+                          <label
+                            key={brand.id}
+                            className="flex items-center gap-2.5 px-1 py-1 cursor-pointer group text-slate-700 dark:text-zinc-300"
+                          >
+                            <div
+                              onClick={() => handleToggleBrand(brand.id)}
+                              className={`w-4.5 h-4.5 border flex items-center justify-center transition-colors rounded-none ${isBrandChecked
+                                ? "bg-primary border-primary text-white"
+                                : "border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-900"
+                                }`}
+                            >
+                              {isBrandChecked && <Check className="w-3.5 h-3.5 stroke-[3]" />}
+                            </div>
+                            <span className="text-xs font-bold   select-none">
+                              {brand.name}
+                            </span>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Mobile Filter Footer */}
+              <div className="p-4 border-t border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-950">
+                <button
+                  onClick={() => setIsMobileFilterOpen(false)}
+                  className="w-full py-3 bg-primary text-white font-bold   text-xs rounded-none hover:bg-opacity-90 transition-colors"
+                >
+                  Apply Filters ({filteredProducts.length})
+                </button>
+              </div>
+
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
 
     </div>
   );
