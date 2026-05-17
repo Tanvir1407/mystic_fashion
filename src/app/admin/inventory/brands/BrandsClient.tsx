@@ -1,65 +1,46 @@
 "use client";
 
-import { useState } from "react";
-import { createBrand, deleteBrand } from "../catalog-actions";
-import { Plus, Trash2 } from "lucide-react";
+import { useState, useTransition } from "react";
+import { deleteBrand } from "../catalog-actions";
+import { Plus, Trash2, Edit2 } from "lucide-react";
 import { AdminPagination } from "@/components/AdminPagination";
+import { BrandForm } from "./BrandForm";
+import { useRouter } from "next/navigation";
 
 export default function BrandsClient({ brands, currentPage, totalPages }: { brands: any[], currentPage: number, totalPages: number }) {
-  const [newBrandName, setNewBrandName] = useState("");
-  const [loading, setLoading] = useState(false);
-
-  const handleAdd = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newBrandName.trim()) return;
-
-    setLoading(true);
-    const res = await createBrand({ name: newBrandName });
-    setLoading(false);
-
-    if (res.success && res.brand) {
-      setNewBrandName("");
-    } else {
-      alert(res.error);
-    }
-  };
+  const [showForm, setShowForm] = useState(false);
+  const [editingBrand, setEditingBrand] = useState<any>(null);
+  const router = useRouter();
+  const [isPending, startTransition] = useTransition();
 
   const handleDelete = async (id: string) => {
     if (!confirm("Are you sure you want to delete this brand?")) return;
     
-    const res = await deleteBrand(id);
-    if (!res.success) {
-      alert(res.error);
-    }
+    startTransition(async () => {
+      const res = await deleteBrand(id);
+      if (!res.success) {
+        alert(res.error);
+      }
+    });
   };
 
   return (
     <div className="max-w-8xl mx-auto space-y-6">
-      <div className="flex items-center justify-between border-b border-slate-200 pb-4">
-        <h1 className="text-xl font-bold text-slate-900 uppercase tracking-tight">Brands</h1>
-      </div>
-
-      <div className="bg-white border border-slate-200 rounded-none p-6">
-        <h2 className="text-sm font-bold text-slate-800 uppercase mb-4">Add New Brand</h2>
-        <form onSubmit={handleAdd} className="flex gap-4">
-          <input
-            type="text"
-            value={newBrandName}
-            onChange={(e) => setNewBrandName(e.target.value)}
-            placeholder="Brand Name"
-            className="flex-1 px-4 py-2 border border-slate-300 rounded-none text-sm focus:outline-none focus:border-slate-900"
-            required
-            disabled={loading}
-          />
-          <button
-            type="submit"
-            disabled={loading}
-            className="bg-slate-900 text-white px-6 py-2 rounded-none text-sm font-bold uppercase tracking-wider hover:bg-slate-800 transition-colors disabled:opacity-50 flex items-center gap-2"
-          >
-            <Plus className="w-4 h-4" />
-            Add
-          </button>
-        </form>
+      <div className="flex items-start sm:items-center justify-between flex-col sm:flex-row gap-4 border-b border-slate-200 pb-4">
+        <div>
+          <h1 className="text-xl font-bold text-slate-900 uppercase tracking-tight">Brands</h1>
+          <p className="text-sm text-slate-500 mt-1">Manage your product catalog brands.</p>
+        </div>
+        <button
+          onClick={() => {
+            setEditingBrand(null);
+            setShowForm(true);
+          }}
+          className="h-10 px-4 bg-slate-900 text-white text-sm font-bold uppercase tracking-wider rounded-none flex items-center justify-center gap-2 hover:bg-slate-800 transition-colors"
+        >
+          <Plus className="w-4 h-4" />
+          Add Brand
+        </button>
       </div>
 
       <div className="bg-white border border-slate-200 rounded-none overflow-hidden">
@@ -80,13 +61,26 @@ export default function BrandsClient({ brands, currentPage, totalPages }: { bran
                 <tr key={brand.id} className="hover:bg-slate-50 transition-colors">
                   <td className="px-6 py-4 text-sm font-medium text-slate-900">{brand.name}</td>
                   <td className="px-6 py-4 text-center">
-                    <button
-                      onClick={() => handleDelete(brand.id)}
-                      className="text-slate-400 hover:text-red-600 transition-colors p-1"
-                      title="Delete Brand"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
+                    <div className="flex items-center justify-center gap-2">
+                      <button
+                        onClick={() => {
+                          setEditingBrand(brand);
+                          setShowForm(true);
+                        }}
+                        className="text-slate-400 hover:text-indigo-600 transition-colors p-1"
+                        title="Edit Brand"
+                      >
+                        <Edit2 className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => handleDelete(brand.id)}
+                        disabled={isPending}
+                        className="text-slate-400 hover:text-red-600 transition-colors p-1 disabled:opacity-50"
+                        title="Delete Brand"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))
@@ -95,6 +89,21 @@ export default function BrandsClient({ brands, currentPage, totalPages }: { bran
         </table>
         <AdminPagination currentPage={currentPage} totalPages={totalPages} />
       </div>
+
+      {showForm && (
+        <BrandForm
+          brand={editingBrand}
+          onClose={() => {
+            setShowForm(false);
+            setEditingBrand(null);
+          }}
+          onSuccess={() => {
+            setShowForm(false);
+            setEditingBrand(null);
+            router.refresh();
+          }}
+        />
+      )}
     </div>
   );
 }

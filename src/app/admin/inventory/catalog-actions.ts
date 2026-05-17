@@ -17,6 +17,21 @@ export async function createBrand(data: { name: string }) {
   }
 }
 
+export async function updateBrand(id: string, data: { name: string }) {
+  try {
+    const brand = await prisma.brand.update({
+      where: { id },
+      data: { name: data.name.trim() }
+    });
+    revalidatePath("/admin/inventory/brands");
+    revalidatePath("/admin/products/new");
+    return { success: true, brand };
+  } catch (error: any) {
+    if (error.code === 'P2002') return { success: false, error: "Brand name already exists." };
+    return { success: false, error: error.message || "Failed to update brand" };
+  }
+}
+
 export async function deleteBrand(id: string) {
   try {
     await prisma.brand.delete({ where: { id } });
@@ -38,6 +53,21 @@ export async function createCategory(data: { name: string }) {
   } catch (error: any) {
     if (error.code === 'P2002') return { success: false, error: "Category already exists." };
     return { success: false, error: error.message || "Failed to create category" };
+  }
+}
+
+export async function updateCategory(id: string, data: { name: string }) {
+  try {
+    const category = await prisma.category.update({
+      where: { id },
+      data: { name: data.name.trim() }
+    });
+    revalidatePath("/admin/inventory/categories");
+    revalidatePath("/admin/products/new");
+    return { success: true, category };
+  } catch (error: any) {
+    if (error.code === 'P2002') return { success: false, error: "Category name already exists." };
+    return { success: false, error: error.message || "Failed to update category" };
   }
 }
 
@@ -64,6 +94,23 @@ export async function createSubcategory(data: { name: string; categoryId: string
     return { success: true, subcategory };
   } catch (error: any) {
     return { success: false, error: error.message || "Failed to create subcategory" };
+  }
+}
+
+export async function updateSubcategory(id: string, data: { name: string; categoryId: string }) {
+  try {
+    const subcategory = await prisma.subcategory.update({
+      where: { id },
+      data: { 
+        name: data.name.trim(),
+        categoryId: data.categoryId
+      }
+    });
+    revalidatePath("/admin/inventory/subcategories");
+    revalidatePath("/admin/products/new");
+    return { success: true, subcategory };
+  } catch (error: any) {
+    return { success: false, error: error.message || "Failed to update subcategory" };
   }
 }
 
