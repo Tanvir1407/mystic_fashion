@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { Search, Menu, X, Phone, Truck } from "lucide-react";
+import { Search, Menu, X, Phone, Truck, User } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useCartStore } from "../store/cartStore";
 
@@ -73,21 +73,11 @@ export default function Header() {
 
       {/* Main Header Row */}
       <div className="w-full relative">
-        <div className="container mx-auto h-20 md:h-24 grid grid-cols-3 items-center px-2 md:px-4">
+        <div className="container mx-auto h-14 mm:h-16 md:h-20 flex items-center justify-between px-4 gap-4">
 
-          {/* Left: Search Trigger */}
-          <div className="flex justify-start">
-            <button
-              onClick={() => setIsSearchOpen(true)}
-              className="p-2 text-foreground hover:text-primary transition-colors flex items-center gap-2 group"
-            >
-              <Search className="w-6 h-6 group-hover:scale-110 transition-transform" />
-            </button>
-          </div>
-
-          {/* Center: Logo */}
-          <div className="flex justify-center">
-            <Link href="/" className="relative h-12 w-48 mm:h-14 mm:w-56 md:h-16 md:w-64">
+          {/* Left: Logo */}
+          <div className="flex items-center flex-shrink-0">
+            <Link href="/" className="relative h-10 w-48 mm:h-12 mm:w-56 md:h-14 md:w-60">
               <Image
                 src="/images/logo.png"
                 alt="Mystic Fashion"
@@ -98,18 +88,57 @@ export default function Header() {
             </Link>
           </div>
 
+          {/* Center: Search Bar (Desktop only) */}
+          <form onSubmit={handleSearch} className="hidden md:flex items-center border-[2px] border-primary w-full max-w-md lg:max-w-xl xl:max-w-2xl bg-white overflow-hidden rounded-none h-11 focus-within:border-primary mx-4">
+            <input
+              type="text"
+              placeholder="Search for Products..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="flex-1 px-4 py-2 text-sm text-slate-800 placeholder:text-slate-400 bg-transparent outline-none "
+            />
+            <button
+              type="submit"
+              className="bg-primary text-white px-6 h-full flex items-center justify-center hover:bg-opacity-90 transition-colors rounded-none"
+            >
+              <Search className="w-5 h-5" />
+            </button>
+          </form>
+
           {/* Right: Utilities */}
-          <div className="flex justify-end items-center gap-2 md:gap-4 lg:gap-6">
+          <div className="flex items-center gap-3 md:gap-4 lg:gap-6 flex-shrink-0">
+            {/* Track Order */}
             <Link
               href="/track"
-              className="hidden md:flex relative p-2 text-primary rounded-full transition-colors items-center justify-center group"
+              className="hidden lg:flex relative p-2 text-primary rounded-full transition-colors items-center justify-center group"
               title="Track Order"
             >
               <Truck className="w-[1.5rem] h-[1.5rem] group-hover:scale-110 transition-transform" />
             </Link>
+
+            {/* Account (Desktop only) */}
+            <Link href="/admin" className="hidden md:flex items-center gap-2.5 group">
+              <div className="w-10 h-10 rounded-full border border-slate-200 flex items-center justify-center text-slate-600 group-hover:border-primary group-hover:text-primary transition-colors">
+                <User className="w-5 h-5" />
+              </div>
+              <div className="flex flex-col text-left">
+                <span className="text-[11px] text-slate-500 leading-none">Sign In</span>
+                <span className="text-xs font-bold text-slate-900 mt-0.5 leading-tight group-hover:text-primary transition-colors">Your Account</span>
+              </div>
+            </Link>
+
+            {/* Search Trigger (Mobile only) */}
+            <button
+              onClick={() => setIsSearchOpen(true)}
+              className="md:hidden p-2 text-foreground hover:text-primary transition-colors flex items-center justify-center"
+            >
+              <Search className="w-6 h-6" />
+            </button>
+
+            {/* Cart (Desktop and Mobile) */}
             <button
               onClick={toggleCart}
-              className="hidden md:flex relative p-2 text-foreground rounded-full transition-colors items-center justify-center group"
+              className="relative p-2 text-foreground rounded-full transition-colors flex items-center justify-center group"
             >
               <svg width="21" height="22" viewBox="0 0 21 22" fill="none" xmlns="http://www.w3.org/2000/svg" className="group-hover:scale-110 transition-transform">
                 <path fill-rule="evenodd" clip-rule="evenodd" d="M6.48626 20.5H14.8341C17.9004 20.5 20.2528 19.3924 19.5847 14.9348L18.8066 8.89359C18.3947 6.66934 16.976 5.81808 15.7311 5.81808H5.55262C4.28946 5.81808 2.95308 6.73341 2.4771 8.89359L1.69907 14.9348C1.13157 18.889 3.4199 20.5 6.48626 20.5Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></path>
@@ -121,6 +150,8 @@ export default function Header() {
                 {mounted ? getTotalItems() : 0}
               </span>
             </button>
+
+            {/* Mobile Menu Toggle */}
             <button
               className="md:hidden p-2 text-foreground"
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
