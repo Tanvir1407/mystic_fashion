@@ -178,38 +178,6 @@ export default function ProductFormClient({
     initialData?.variants?.map((v: any, idx: number) => ({ id: String(idx), size: v.size, color: v.color || "Default", colorCode: v.colorCode || "", sku: v.sku || "", stock: v.stock })) || []
   );
 
-  const [inputColor, setInputColor] = useState("");
-  const [inputSize, setInputSize] = useState("");
-  const [selectedColors, setSelectedColors] = useState<string[]>([]);
-  const [selectedSizes, setSelectedSizes] = useState<string[]>([]);
-
-  const addSelectedColor = () => {
-    if (inputColor.trim() && !selectedColors.includes(inputColor.trim())) {
-      setSelectedColors([...selectedColors, inputColor.trim()]);
-      setInputColor("");
-    }
-  };
-
-  const addSelectedSize = () => {
-    if (inputSize.trim() && !selectedSizes.includes(inputSize.trim().toUpperCase())) {
-      setSelectedSizes([...selectedSizes, inputSize.trim().toUpperCase()]);
-      setInputSize("");
-    }
-  };
-
-  const generateVariants = () => {
-    if (selectedColors.length === 0 || selectedSizes.length === 0) return alert("Select at least one color and one size.");
-    const newVariants = [...variants];
-    selectedColors.forEach(color => {
-      selectedSizes.forEach(size => {
-        if (!newVariants.some(v => v.size === size && v.color === color)) {
-           newVariants.push({ id: Date.now() + Math.random().toString(), size, color, colorCode: "", sku: "", stock: 0 });
-        }
-      });
-    });
-    setVariants(newVariants);
-  };
-
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
 
   const handleDragStart = (index: number) => {
@@ -252,11 +220,11 @@ export default function ProductFormClient({
 
     setLoading(true);
 
-    // Check duplicate sizes+colors in UI
-    const combinationsSet = new Set(variants.map(v => `${v.size.trim().toLowerCase()}-${v.color.trim().toLowerCase()}`));
+    // Check duplicate sizes in UI
+    const combinationsSet = new Set(variants.map(v => v.size.trim().toLowerCase()));
     if (combinationsSet.size !== variants.length) {
       setLoading(false);
-      return alert("Duplicate Size+Color combinations found. Each variant must be unique.");
+      return alert("Duplicate Size found. Each variant size must be unique.");
     }
 
     // ✅ FIX 2: Filter out any undefined, null, or empty strings from images array
@@ -278,7 +246,13 @@ export default function ProductFormClient({
       discountId: discountId || null,
       isFeatured,
       isPublished,
-      variants: variants.map(({ size, color, colorCode, sku, stock }) => ({ size: size.trim(), color: color.trim(), colorCode: colorCode?.trim() || undefined, sku: sku.trim() || undefined, stock }))
+      variants: variants.map(({ size, sku, stock }) => ({
+        size: size.trim(),
+        color: "Default",
+        colorCode: undefined,
+        sku: sku.trim() || undefined,
+        stock
+      }))
     };
 
     try {
@@ -697,52 +671,14 @@ export default function ProductFormClient({
           )}
         </div>
 
-        <div className="mb-6 p-4 bg-slate-50 border border-slate-200 rounded-none">
-          <h3 className="text-xs font-bold text-slate-800 uppercase mb-3">Variant Generator</h3>
-          <div className="flex flex-col sm:flex-row gap-4 mb-4">
-            <div className="flex-1">
-              <label className="block text-[10px] font-bold text-slate-600 uppercase mb-1">Colors</label>
-              <div className="flex gap-2 mb-2">
-                <input type="text" value={inputColor} onChange={e => setInputColor(e.target.value)} placeholder="e.g. Black" className="flex-1 px-2 py-1 border border-slate-300 text-xs rounded-none focus:outline-none focus:border-slate-900" />
-                <button type="button" onClick={addSelectedColor} className="px-3 py-1 bg-slate-800 text-white text-xs font-bold rounded-none hover:bg-slate-900">Add</button>
-              </div>
-              <div className="flex flex-wrap gap-1">
-                {selectedColors.map(c => (
-                  <span key={c} className="text-[10px] bg-slate-200 text-slate-700 px-2 py-0.5 rounded-none flex items-center gap-1">
-                    {c} <button type="button" onClick={() => setSelectedColors(selectedColors.filter(sc => sc !== c))} className="hover:text-red-500">&times;</button>
-                  </span>
-                ))}
-              </div>
-            </div>
-            <div className="flex-1">
-              <label className="block text-[10px] font-bold text-slate-600 uppercase mb-1">Sizes</label>
-              <div className="flex gap-2 mb-2">
-                <input type="text" value={inputSize} onChange={e => setInputSize(e.target.value)} placeholder="e.g. XL" className="flex-1 px-2 py-1 border border-slate-300 text-xs rounded-none focus:outline-none focus:border-slate-900 uppercase" />
-                <button type="button" onClick={addSelectedSize} className="px-3 py-1 bg-slate-800 text-white text-xs font-bold rounded-none hover:bg-slate-900">Add</button>
-              </div>
-              <div className="flex flex-wrap gap-1">
-                {selectedSizes.map(s => (
-                  <span key={s} className="text-[10px] bg-slate-200 text-slate-700 px-2 py-0.5 rounded-none flex items-center gap-1">
-                    {s} <button type="button" onClick={() => setSelectedSizes(selectedSizes.filter(ss => ss !== s))} className="hover:text-red-500">&times;</button>
-                  </span>
-                ))}
-              </div>
-            </div>
-          </div>
-          <button type="button" onClick={generateVariants} className="w-full py-2 bg-indigo-600 text-white text-xs font-bold uppercase rounded-none hover:bg-indigo-700 transition-colors">
-            Generate Matrix
-          </button>
-        </div>
-
         <div className="overflow-hidden border border-slate-200 rounded-none">
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-slate-50 border-b border-slate-200">
                 <th className="w-8 py-2 text-center"></th>
-                <th className="px-3 py-2 text-xs font-semibold text-slate-500 uppercase tracking-wider w-1/4">Color</th>
-                <th className="px-3 py-2 text-xs font-semibold text-slate-500 uppercase tracking-wider w-1/4">Size</th>
-                <th className="px-3 py-2 text-xs font-semibold text-slate-500 uppercase tracking-wider w-1/4">SKU</th>
-                <th className="px-3 py-2 text-xs font-semibold text-slate-500 uppercase tracking-wider w-1/4">Stock</th>
+                <th className="px-3 py-2 text-xs font-semibold text-slate-500 uppercase tracking-wider w-1/3">Size</th>
+                <th className="px-3 py-2 text-xs font-semibold text-slate-500 uppercase tracking-wider w-1/3">SKU</th>
+                <th className="px-3 py-2 text-xs font-semibold text-slate-500 uppercase tracking-wider w-1/3">Stock</th>
                 <th className="w-8 py-2 text-center"></th>
               </tr>
             </thead>
@@ -758,25 +694,6 @@ export default function ProductFormClient({
                 >
                   <td className="py-2 text-slate-400 cursor-grab active:cursor-grabbing text-center select-none">
                     <GripVertical className="w-3.5 h-3.5 mx-auto" />
-                  </td>
-                  <td className="px-3 py-2">
-                    <div className="flex gap-1 items-center">
-                      <input
-                        type="color"
-                        value={v.colorCode || "#000000"}
-                        onChange={(e) => updateVariant(v.id, "colorCode", e.target.value)}
-                        className="w-6 h-6 p-0 border-0 rounded-none cursor-pointer"
-                        title="Pick Color"
-                      />
-                      <input
-                        type="text"
-                        value={v.color}
-                        onChange={(e) => updateVariant(v.id, "color", e.target.value)}
-                        placeholder="Color"
-                        className="w-full px-2 py-1.5 border border-slate-200 rounded-none text-xs focus:outline-none focus:border-slate-900 font-semibold"
-                        required
-                      />
-                    </div>
                   </td>
                   <td className="px-3 py-2">
                     <input
@@ -835,7 +752,7 @@ export default function ProductFormClient({
               className="text-xs font-semibold text-slate-600 hover:text-slate-900 flex items-center justify-center gap-1.5 mx-auto bg-white border border-slate-200 hover:bg-slate-50 px-3 py-1.5 rounded-none transition-colors"
             >
               <Plus className="w-3.5 h-3.5" />
-              Add Single Row
+              Add Size Row
             </button>
           </div>
         </div>
