@@ -169,10 +169,10 @@ export default function Header() {
         <div className="container mx-auto py-1.5 flex items-center justify-between px-4">
           {/* Left side categories */}
           <div className="flex items-center gap-6">
-            <Link href="/search?q=shoes" className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-zinc-300 hover:text-primary transition-colors">Shoes</Link>
-            <Link href="/search?q=jersey" className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-zinc-300 hover:text-primary transition-colors">Jersey</Link>
-            <Link href="/search?q=polo" className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-zinc-300 hover:text-primary transition-colors">Polo</Link>
-            <Link href="/search?q=jeans" className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-zinc-300 hover:text-primary transition-colors">Jeans</Link>
+            <Link href="/products?category=shoes" className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-zinc-300 hover:text-primary transition-colors">Shoes</Link>
+            <Link href="/products?category=jersey" className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-zinc-300 hover:text-primary transition-colors">Jersey</Link>
+            <Link href="/products?category=polo" className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-zinc-300 hover:text-primary transition-colors">Polo</Link>
+            <Link href="/products?category=jeans" className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-zinc-300 hover:text-primary transition-colors">Jeans</Link>
           </div>
           {/* Right side track your order */}
           <div>
@@ -196,10 +196,10 @@ export default function Header() {
             <div className="py-6 px-4 space-y-4">
               <div className="space-y-1">
                 {[
-                  { label: "Shoes", href: "/search?q=shoes" },
-                  { label: "Jersey", href: "/search?q=jersey" },
-                  { label: "Polo", href: "/search?q=polo" },
-                  { label: "Jeans", href: "/search?q=jeans" },
+                  { label: "Shoes", href: "/products?category=shoes" },
+                  { label: "Jersey", href: "/products?category=jersey" },
+                  { label: "Polo", href: "/products?category=polo" },
+                  { label: "Jeans", href: "/products?category=jeans" },
                 ].map((link) => (
                   <Link
                     key={link.href}
