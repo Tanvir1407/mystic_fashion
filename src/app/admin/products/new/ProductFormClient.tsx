@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import { createProduct, updateProduct, uploadImage } from "../../actions";
 import { createBrand, createSubcategory, createCategory } from "../../inventory/catalog-actions";
-import { Plus, Trash2, Save, ArrowLeft, GripVertical, Bold, Italic, Underline, List, ListOrdered, Undo, Redo, Eraser, X, Loader2 } from "lucide-react";
+import { Plus, Trash2, Save, ArrowLeft, GripVertical, Bold, Italic, Underline, List, ListOrdered, Undo, Redo, Eraser, X, Loader2, ChevronDown } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
@@ -512,16 +512,16 @@ export default function ProductFormClient({
                     </button>
                   </div>
                 ) : (
-                  <select
+                  <CustomFormSelect
+                    options={[
+                      { value: "", label: "No Brand" },
+                      ...localBrands.map((b) => ({ value: b.id, label: b.name })),
+                    ]}
                     value={brandId}
-                    onChange={(e) => setBrandId(e.target.value)}
-                    className="w-full px-4 py-2 border border-slate-300 rounded-none focus:outline-none focus:border-slate-900 text-sm bg-white"
-                  >
-                    <option value="">No Brand</option>
-                    {localBrands?.map((b: any) => (
-                      <option key={b.id} value={b.id}>{b.name}</option>
-                    ))}
-                  </select>
+                    onChange={(val) => setBrandId(val)}
+                    placeholder="No Brand"
+                    searchable={true}
+                  />
                 )}
               </div>
 
@@ -570,20 +570,19 @@ export default function ProductFormClient({
                     </button>
                   </div>
                 ) : (
-                  <select
+                  <CustomFormSelect
+                    options={[
+                      { value: "", label: "Select Category" },
+                      ...localCategories.map((c) => ({ value: c.id, label: c.name })),
+                    ]}
                     value={categoryId}
-                    onChange={(e) => {
-                      setCategoryId(e.target.value);
+                    onChange={(val) => {
+                      setCategoryId(val);
                       setSubcategoryId("");
                     }}
-                    className="w-full px-4 py-2 border border-slate-300 rounded-none focus:outline-none focus:border-slate-900 text-sm bg-white"
-                    required
-                  >
-                    <option value="">Select Category</option>
-                    {localCategories?.map((c: any) => (
-                      <option key={c.id} value={c.id}>{c.name}</option>
-                    ))}
-                  </select>
+                    placeholder="Select Category"
+                    searchable={true}
+                  />
                 )}
               </div>
 
@@ -633,50 +632,49 @@ export default function ProductFormClient({
                       </button>
                     </div>
                   ) : (
-                    <select
+                    <CustomFormSelect
+                      options={[
+                        { value: "", label: "None" },
+                        ...(localCategories.find((c: any) => c.id === categoryId)?.subcategories || []).map((sc: any) => ({ value: sc.id, label: sc.name })),
+                      ]}
                       value={subcategoryId}
-                      onChange={(e) => setSubcategoryId(e.target.value)}
-                      className="w-full px-4 py-2 border border-slate-300 rounded-none focus:outline-none focus:border-slate-900 text-sm bg-white"
-                    >
-                      <option value="">None</option>
-                      {localCategories
-                        .find((c: any) => c.id === categoryId)
-                        ?.subcategories?.map((sc: any) => (
-                          <option key={sc.id} value={sc.id}>{sc.name}</option>
-                        ))}
-                    </select>
+                      onChange={(val) => setSubcategoryId(val)}
+                      placeholder="None"
+                      searchable={true}
+                    />
                   )}
                 </div>
               )}
 
               <div>
                 <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Size Chart Reference</label>
-                <select
+                <CustomFormSelect
+                  options={[
+                    { value: "", label: "None Assigned (Ad-hoc sizing)" },
+                    ...sizeCharts.map(chart => ({ value: chart.id, label: chart.category })),
+                  ]}
                   value={sizeChartId}
-                  onChange={(e) => setSizeChartId(e.target.value)}
-                  className="w-full px-4 py-2 border border-slate-300 rounded-none focus:outline-none focus:border-slate-900 text-sm bg-white"
-                >
-                  <option value="">None Assigned (Ad-hoc sizing)</option>
-                  {sizeCharts.map(chart => (
-                    <option key={chart.id} value={chart.id}>{chart.category}</option>
-                  ))}
-                </select>
+                  onChange={(val) => setSizeChartId(val)}
+                  placeholder="None Assigned (Ad-hoc sizing)"
+                  searchable={true}
+                />
               </div>
 
               <div>
                 <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Discount</label>
-                <select
+                <CustomFormSelect
+                  options={[
+                    { value: "", label: "No Active Promotion" },
+                    ...discounts.map(disc => ({
+                      value: disc.id,
+                      label: `${disc.name} (${disc.discountType === "PERCENTAGE" ? `${disc.value}% OFF` : `৳${disc.value} OFF`})`
+                    })),
+                  ]}
                   value={discountId}
-                  onChange={(e) => setDiscountId(e.target.value)}
-                  className="w-full px-4 py-2 border border-slate-300 rounded-none focus:outline-none focus:border-slate-900 text-sm bg-white"
-                >
-                  <option value="">No Active Promotion</option>
-                  {discounts.map(disc => (
-                    <option key={disc.id} value={disc.id}>
-                      {disc.name} ({disc.discountType === "PERCENTAGE" ? `${disc.value}% OFF` : `৳${disc.value} OFF`})
-                    </option>
-                  ))}
-                </select>
+                  onChange={(val) => setDiscountId(val)}
+                  placeholder="No Active Promotion"
+                  searchable={true}
+                />
               </div>
             </div>
           </div>
@@ -949,6 +947,103 @@ function SimpleRichTextEditor({ value, onChange }: SimpleRichTextEditorProps) {
         className="prose prose-sm max-w-none min-h-[180px] max-h-[400px] overflow-y-auto px-4 py-3 bg-white focus:outline-none text-slate-900"
         style={{ outline: "none" }}
       />
+    </div>
+  );
+}
+
+interface FormOption {
+  value: string;
+  label: string;
+}
+
+interface CustomFormSelectProps {
+  options: FormOption[];
+  value: string;
+  onChange: (value: string) => void;
+  placeholder?: string;
+  searchable?: boolean;
+}
+
+function CustomFormSelect({
+  options,
+  value,
+  onChange,
+  placeholder = "Select Option",
+  searchable = false
+}: CustomFormSelectProps) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [search, setSearch] = useState("");
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  const selectedOption = options.find((opt) => opt.value === value);
+
+  const filteredOptions = options.filter((opt) =>
+    opt.label.toLowerCase().includes(search.toLowerCase())
+  );
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  return (
+    <div className="relative w-full" ref={containerRef}>
+      <button
+        type="button"
+        onClick={() => setIsOpen(!isOpen)}
+        className="w-full h-[38px] flex items-center justify-between px-4 py-2 border border-slate-300 rounded-none bg-white text-sm focus:outline-none focus:border-slate-900 text-slate-800"
+      >
+        <span className="truncate">{selectedOption ? selectedOption.label : placeholder}</span>
+        <ChevronDown className={`w-4 h-4 text-slate-500 transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`} />
+      </button>
+
+      {isOpen && (
+        <div className="absolute left-0 right-0 z-50 mt-1 bg-white border border-slate-300 rounded-none shadow-none max-h-60 overflow-hidden flex flex-col">
+          {searchable && (
+            <div className="p-2 border-b border-slate-200 bg-slate-50">
+              <input
+                type="text"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search..."
+                className="w-full px-2.5 py-1 border border-slate-300 rounded-none focus:outline-none focus:border-slate-900 text-xs bg-white"
+                autoFocus
+              />
+            </div>
+          )}
+          <div className="overflow-y-auto max-h-48 custom-scrollbar">
+            {filteredOptions.length > 0 ? (
+              filteredOptions.map((opt) => (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() => {
+                    onChange(opt.value);
+                    setIsOpen(false);
+                    setSearch("");
+                  }}
+                  className={`w-full text-left px-4 py-2 text-xs transition-colors flex items-center justify-between ${
+                    value === opt.value
+                      ? "bg-[#800020] text-white font-bold"
+                      : "hover:bg-slate-100 text-slate-700"
+                  }`}
+                >
+                  <span>{opt.label}</span>
+                </button>
+              ))
+            ) : (
+              <div className="px-4 py-3 text-center text-xs text-slate-400 italic">
+                No options found
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
