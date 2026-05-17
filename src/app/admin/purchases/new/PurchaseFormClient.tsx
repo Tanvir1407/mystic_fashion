@@ -243,14 +243,14 @@ export default function PurchaseFormClient({ products, initialData }: { products
                         <input
                           type="text"
                           value={item.unitPrice}
-                          onChange={(e) => updateItem(item.id, "unitPrice", e.target.value)}
+                          onChange={(e) => updateItem(item.id, "unitPrice", (e.target.value))}
                           className="w-full px-3 py-1.5 border border-slate-200 rounded text-sm focus:outline-none focus:border-indigo-500 font-mono"
                         />
                       </td>
                       <td className="px-4 py-2">
                         <input
                           type="text"
-                          value={(item.quantity * (Number(item.unitPrice) || 0)).toFixed(3)}
+                          value={Number((item.quantity * (Number(item.unitPrice) || 0)).toFixed(3))}
                           readOnly
                           className="w-full px-3 py-1.5 border border-slate-100 rounded text-sm bg-slate-50 text-slate-500 font-mono text-right"
                         />
@@ -281,7 +281,7 @@ export default function PurchaseFormClient({ products, initialData }: { products
 
             <div className="flex items-center justify-between text-sm">
               <span className="text-slate-500 font-medium">Subtotal (Item Sum)</span>
-              <span className="text-slate-900 font-mono font-bold text-lg">৳ {subtotal.toFixed(3)}</span>
+              <span className="text-slate-900 font-mono font-bold text-lg">৳ {Number(subtotal.toFixed(3))}</span>
             </div>
 
             <div className="flex items-center justify-between">
@@ -301,7 +301,7 @@ export default function PurchaseFormClient({ products, initialData }: { products
 
           <div className="mt-5 pt-5 border-t border-slate-200 flex items-center justify-between">
             <span className="text-base font-semibold text-slate-900">Grand Total Paid</span>
-            <span className="text-2xl font-bold text-indigo-600 font-mono">৳ {grandTotal.toFixed(3)}</span>
+            <span className="text-2xl font-bold text-indigo-600 font-mono">৳ {Number(grandTotal.toFixed(3))}</span>
           </div>
         </div>
 

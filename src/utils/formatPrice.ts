@@ -4,11 +4,11 @@
  *   <  .5 decimal → round down (e.g. 2698.4 → 2698)
  */
 export function roundPrice(price: number): number {
-  return Math.round(price * 1000) / 1000;
+  return Math.round(price);
 }
 
 /**
- * Formats a price as a BDT string with 3 decimal places.
+ * Formats a price as a BDT string with no decimal places.
  * Uses standard rounding before formatting.
  *
  * @param price     - The numeric price value
@@ -17,5 +17,5 @@ export function roundPrice(price: number): number {
 export function formatBDT(price: number, zeroLabel?: string): string {
   const rounded = roundPrice(price);
   if (zeroLabel !== undefined && rounded === 0) return zeroLabel;
-  return `৳${rounded.toLocaleString("en-IN", { minimumFractionDigits: 3, maximumFractionDigits: 3 })}`;
+  return `৳${rounded.toLocaleString("en-IN")}`;
 }
