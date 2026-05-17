@@ -40,7 +40,7 @@ export default function ProductCard({ product }: ProductCardProps) {
 
         {/* Discount Badge */}
         {isDiscounted && (
-          <div className="absolute top-3 right-3 z-10 bg-red-600 text-white text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded-sm shadow-md">
+          <div className="absolute top-3 right-3 z-10 bg-primary text-white text-[10px] font-black  px-2 py-1 ">
             {product.discount!.discountType === "PERCENTAGE"
               ? `${product.discount!.value}% OFF`
               : `৳${product.discount!.value} OFF`}
@@ -65,11 +65,8 @@ export default function ProductCard({ product }: ProductCardProps) {
         </div>
 
         {/* Product Info */}
-        <div className="p-3 md:p-4 flex flex-col gap-1.5 flex-1">
-          <h3 className="text-xs mm:text-sm md:text-[15px] font-semibold text-zinc-800 dark:text-zinc-100 leading-snug line-clamp-2 group-hover:text-[#800020] transition-colors duration-300">
-            {product.name}
-          </h3>
-          <div className="flex items-baseline gap-2 mt-auto pt-1">
+        <div className="px-3 pb-4 pt-3 flex flex-col gap-1.5 flex-1">
+          <div className="flex items-baseline gap-2 mt-auto ">
             {isDiscounted && (
               <span className="text-zinc-400 dark:text-zinc-500 font-medium text-sm line-through">
                 {formatBDT(product.price)}
@@ -79,10 +76,14 @@ export default function ProductCard({ product }: ProductCardProps) {
               {formatBDT(finalPrice)}
             </span>
           </div>
+          <h3 className="text-xs mm:text-sm md:text-[13px] font-medium text-zinc-800 dark:text-zinc-100 leading-snug line-clamp-2 group-hover:text-[#800020] transition-colors duration-300">
+            {product.name}
+          </h3>
+
         </div>
 
         {/* Add to Bag */}
-        <div className="px-3 pb-3 md:px-4 md:pb-4 mt-auto">
+        {/* <div className="px-3 pb-3 md:px-4 md:pb-4 mt-auto">
           <AddToBagButton product={{
             id: product.id,
             name: product.name,
@@ -92,7 +93,7 @@ export default function ProductCard({ product }: ProductCardProps) {
             image: product.images[0] || "",
             variants: product.variants
           }} />
-        </div>
+        </div> */}
       </div>
     </Link>
   );

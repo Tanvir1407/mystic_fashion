@@ -67,7 +67,7 @@ export default function LedgerTableClient({
                     </span>
                   </td>
                   <td className="px-6 py-4 text-right font-medium text-gray-900 whitespace-nowrap">
-                    {formatBDT(Math.round(tx.amount))}
+                    {formatBDT(tx.amount)}
                   </td>
                 </tr>
               ))

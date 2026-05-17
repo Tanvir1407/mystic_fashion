@@ -1,6 +1,7 @@
 import { getAccounts, getFinancialSummary, getLedger } from "./actions";
 import LedgerTableClient from "./LedgerTableClient";
 import AccountingModalsClient from "./AccountingModalsClient";
+import { formatBDT } from "@/utils/formatPrice";
 
 export const metadata = {
   title: "Accounting Dashboard | Admin",
@@ -62,7 +63,7 @@ export default async function AccountingPage({
             <svg className="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" /></svg>
           </div>
           <div className="text-sm font-medium text-gray-500 mb-1">Total Income</div>
-          <div className="text-3xl font-bold text-gray-900">৳ {Math.round(summary.totalIncome).toLocaleString("en-IN")}</div>
+          <div className="text-3xl font-bold text-gray-900">{formatBDT(summary.totalIncome)}</div>
         </div>
 
         <div className="bg-white p-6 rounded-xl border border-red-100 shadow-sm relative overflow-hidden">
@@ -70,7 +71,7 @@ export default async function AccountingPage({
             <svg className="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 17h8m0 0V9m0 8l-8-8-4 4-6-6" /></svg>
           </div>
           <div className="text-sm font-medium text-gray-500 mb-1">Total Expense</div>
-          <div className="text-3xl font-bold text-gray-900">৳ {Math.round(summary.totalExpense).toLocaleString("en-IN")}</div>
+          <div className="text-3xl font-bold text-gray-900">{formatBDT(summary.totalExpense)}</div>
         </div>
 
         <div className="bg-gradient-to-br from-gray-900 to-black p-6 rounded-xl shadow-md text-white relative overflow-hidden">
@@ -79,7 +80,7 @@ export default async function AccountingPage({
           <div className="relative z-10">
             <div className="text-sm font-medium text-gray-300 mb-1">Net Balance (Profit/Loss)</div>
             <div className="text-3xl font-bold flex items-center">
-              {summary.netProfit >= 0 ? '+' : '-'} ৳ {Math.round(Math.abs(summary.netProfit)).toLocaleString("en-IN")}
+              {summary.netProfit >= 0 ? '+' : '-'} {formatBDT(Math.abs(summary.netProfit))}
             </div>
           </div>
         </div>

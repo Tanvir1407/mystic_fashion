@@ -2,18 +2,23 @@
 
 import { useState, useRef, useEffect } from "react";
 import { createProduct, updateProduct, uploadImage } from "../../actions";
-import { Plus, Trash2, Save, ArrowLeft, GripVertical, Bold, Italic, Underline, List, ListOrdered, Undo, Redo, Eraser } from "lucide-react";
+import { createBrand, createSubcategory, createCategory } from "../../inventory/catalog-actions";
+import { Plus, Trash2, Save, ArrowLeft, GripVertical, Bold, Italic, Underline, List, ListOrdered, Undo, Redo, Eraser, X, Loader2, ChevronDown } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 export default function ProductFormClient({
   initialData,
   sizeCharts,
-  discounts
+  discounts,
+  brands = [],
+  categories = []
 }: {
   initialData?: any,
   sizeCharts: any[],
-  discounts: any[]
+  discounts: any[],
+  brands?: any[],
+  categories?: any[]
 }) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
@@ -24,6 +29,113 @@ export default function ProductFormClient({
   const [isUploading, setIsUploading] = useState(false);
   const [isFeatured, setIsFeatured] = useState(initialData?.isFeatured || false);
   const [isPublished, setIsPublished] = useState(initialData?.isPublished ?? true);
+
+  // Dynamic state arrays to handle inline additions seamlessly
+  const [localBrands, setLocalBrands] = useState<any[]>(brands);
+  const [localCategories, setLocalCategories] = useState<any[]>(categories);
+
+  useEffect(() => {
+    setLocalBrands(brands);
+  }, [brands]);
+
+  useEffect(() => {
+    setLocalCategories(categories);
+  }, [categories]);
+
+  // Inline creation states
+  const [isAddingBrand, setIsAddingBrand] = useState(false);
+  const [newBrandName, setNewBrandName] = useState("");
+  const [brandSubmitting, setBrandSubmitting] = useState(false);
+
+  const [isAddingCategory, setIsAddingCategory] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState("");
+  const [categorySubmitting, setCategorySubmitting] = useState(false);
+
+  const [isAddingSubcategory, setIsAddingSubcategory] = useState(false);
+  const [newSubcategoryName, setNewSubcategoryName] = useState("");
+  const [subcategorySubmitting, setSubcategorySubmitting] = useState(false);
+
+  const handleAddCategoryInline = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newCategoryName.trim()) return;
+    setCategorySubmitting(true);
+    try {
+      const res = await createCategory({ name: newCategoryName.trim() });
+      if (res.success && res.category) {
+        const newCategoryObj = { ...res.category, subcategories: [] };
+        setLocalCategories((prev) => [...prev, newCategoryObj]);
+        setCategoryId(res.category.id);
+        setSubcategoryId("");
+        setNewCategoryName("");
+        setIsAddingCategory(false);
+      } else {
+        alert(res.error || "Failed to create category");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Failed to create category. Check console.");
+    } finally {
+      setCategorySubmitting(false);
+    }
+  };
+
+  const handleAddBrandInline = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newBrandName.trim()) return;
+    setBrandSubmitting(true);
+    try {
+      const res = await createBrand({ name: newBrandName.trim() });
+      if (res.success && res.brand) {
+        setLocalBrands((prev) => [...prev, res.brand]);
+        setBrandId(res.brand.id);
+        setNewBrandName("");
+        setIsAddingBrand(false);
+      } else {
+        alert(res.error || "Failed to create brand");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Failed to create brand. Check console.");
+    } finally {
+      setBrandSubmitting(false);
+    }
+  };
+
+  const handleAddSubcategoryInline = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newSubcategoryName.trim()) return;
+    if (!categoryId) return alert("Please select a parent category first.");
+    setSubcategorySubmitting(true);
+    try {
+      const res = await createSubcategory({
+        name: newSubcategoryName.trim(),
+        categoryId: categoryId,
+      });
+      if (res.success && res.subcategory) {
+        setLocalCategories((prev) =>
+          prev.map((c) => {
+            if (c.id === categoryId) {
+              return {
+                ...c,
+                subcategories: [...(c.subcategories || []), res.subcategory],
+              };
+            }
+            return c;
+          })
+        );
+        setSubcategoryId(res.subcategory.id);
+        setNewSubcategoryName("");
+        setIsAddingSubcategory(false);
+      } else {
+        alert(res.error || "Failed to create subcategory");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Failed to create subcategory. Check console.");
+    } finally {
+      setSubcategorySubmitting(false);
+    }
+  };
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -56,15 +168,14 @@ export default function ProductFormClient({
   const removeImage = (index: number) => {
     setImages(images.filter((_, i) => i !== index));
   };
-  const [team, setTeam] = useState(initialData?.team || "");
-  const [category, setCategory] = useState(initialData?.category || "");
+  const [brandId, setBrandId] = useState(initialData?.brandId || "");
+  const [categoryId, setCategoryId] = useState(initialData?.categoryId || "");
+  const [subcategoryId, setSubcategoryId] = useState(initialData?.subcategoryId || "");
   const [sizeChartId, setSizeChartId] = useState(initialData?.sizeChartId || "");
   const [discountId, setDiscountId] = useState(initialData?.discountId || "");
 
-  const [variants, setVariants] = useState<{ id: string, size: string, stock: number }[]>(
-    initialData?.variants?.map((v: any, idx: number) => ({ id: String(idx), size: v.size, stock: v.stock })) || [
-      { id: "1", size: "M", stock: 0 }
-    ]
+  const [variants, setVariants] = useState<{ id: string, size: string, color: string, colorCode: string, sku: string, stock: number }[]>(
+    initialData?.variants?.map((v: any, idx: number) => ({ id: String(idx), size: v.size, color: v.color || "Default", colorCode: v.colorCode || "", sku: v.sku || "", stock: v.stock })) || []
   );
 
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
@@ -90,47 +201,58 @@ export default function ProductFormClient({
   };
 
   const addVariant = () => {
-    setVariants([...variants, { id: Date.now().toString(), size: "", stock: 0 }]);
+    setVariants([...variants, { id: Date.now().toString(), size: "", color: "Default", colorCode: "", sku: "", stock: 0 }]);
   };
 
   const removeVariant = (id: string) => {
     setVariants(variants.filter(v => v.id !== id));
   };
 
-  const updateVariant = (id: string, field: "size" | "stock", value: any) => {
+  const updateVariant = (id: string, field: "size" | "stock" | "sku" | "color" | "colorCode", value: any) => {
     setVariants(variants.map(v => v.id === id ? { ...v, [field]: value } : v));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim() || !category.trim()) return alert("Name and Category are required.");
+    if (!name.trim()) return alert("Name is required.");
     if (!price || isNaN(Number(price))) return alert("Price must be a number.");
-    if (variants.length === 0) return alert("You must add at least one Size Variant.");
+    if (variants.length === 0) return alert("You must add at least one Variant.");
 
     setLoading(true);
 
     // Check duplicate sizes in UI
-    const sizesSet = new Set(variants.map(v => v.size.trim().toLowerCase()));
-    if (sizesSet.size !== variants.length) {
+    const combinationsSet = new Set(variants.map(v => v.size.trim().toLowerCase()));
+    if (combinationsSet.size !== variants.length) {
       setLoading(false);
-      return alert("Duplicate size names found. Each variant must have a unique size.");
+      return alert("Duplicate Size found. Each variant size must be unique.");
     }
 
     // ✅ FIX 2: Filter out any undefined, null, or empty strings from images array
     const validImages = images.filter((img) => typeof img === 'string' && img.trim() !== "");
+
+    const selectedCategoryObj = localCategories?.find(c => c.id === categoryId);
+    const categoryName = selectedCategoryObj ? selectedCategoryObj.name : "Uncategorized";
 
     const productPayload = {
       name: name.trim(),
       description: description.trim(),
       price: parseFloat(price),
       images: validImages, // Send the cleaned array
-      team: team.trim(),
-      category: category.trim(),
-      sizeChartId: sizeChartId || undefined,
+      category: categoryName,
+      brandId: brandId || null,
+      categoryId: categoryId || null,
+      subcategoryId: subcategoryId || null,
+      sizeChartId: sizeChartId || null,
       discountId: discountId || null,
       isFeatured,
       isPublished,
-      variants: variants.map(({ size, stock }) => ({ size: size.trim(), stock }))
+      variants: variants.map(({ size, sku, stock }) => ({
+        size: size.trim(),
+        color: "Default",
+        colorCode: undefined,
+        sku: sku.trim() || undefined,
+        stock
+      }))
     };
 
     try {
@@ -154,7 +276,7 @@ export default function ProductFormClient({
       {/* Header Section */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-slate-200 pb-5">
         <div className="flex items-center gap-4">
-          <Link href="/admin/products" className="p-2 bg-slate-100 hover:bg-slate-200 rounded-md transition-colors text-slate-500 font-bold flex items-center justify-center">
+          <Link href="/admin/products" className="p-2 bg-slate-100 hover:bg-slate-200 rounded-none transition-colors text-slate-500 font-bold flex items-center justify-center">
             <ArrowLeft className="w-5 h-5" />
           </Link>
           <div>
@@ -164,11 +286,11 @@ export default function ProductFormClient({
             <p className="text-xs sm:text-sm text-slate-500 mt-1">Configure product details, variants, and stock dependencies.</p>
           </div>
         </div>
-        
+
         <button
           type="submit"
           disabled={loading}
-          className="px-6 py-2.5 bg-slate-900 text-white text-xs font-bold uppercase tracking-widest rounded-md flex items-center justify-center gap-2 hover:bg-slate-800 transition-all disabled:opacity-75 shadow-sm active:scale-[0.98]"
+          className="px-6 py-2.5 bg-slate-900 text-white text-xs font-bold uppercase tracking-widest rounded-none flex items-center justify-center gap-2 hover:bg-slate-800 transition-all disabled:opacity-75 shadow-none active:scale-[0.98]"
         >
           {loading ? (
             <div className="w-4 h-4 border-2 border-white/50 border-t-white rounded-full animate-spin" />
@@ -184,11 +306,11 @@ export default function ProductFormClient({
         {/* Left Column (2/3 of Page) - Core Information */}
         <div className="lg:col-span-2 space-y-6">
           {/* Card 1: Product Information */}
-          <div className="bg-white border border-slate-200 rounded-lg p-6 shadow-sm">
+          <div className="bg-white border border-slate-200 rounded-none p-6 shadow-none">
             <h2 className="text-sm font-bold text-slate-900 uppercase tracking-wider mb-4 border-b border-slate-100 pb-2">
               Product Information
             </h2>
-            
+
             <div className="space-y-6">
               <div>
                 <label className="block text-sm font-semibold text-slate-900 mb-2">Product Name *</label>
@@ -197,7 +319,7 @@ export default function ProductFormClient({
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder="e.g. Mystic Classic Jersey"
-                  className="w-full px-4 py-2.5 border border-slate-300 rounded-md focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 text-sm"
+                  className="w-full px-4 py-2.5 border border-slate-300 rounded-none focus:outline-none focus:border-slate-900 focus:ring-0 focus:border-slate-900 text-sm"
                   required
                 />
               </div>
@@ -210,16 +332,16 @@ export default function ProductFormClient({
           </div>
 
           {/* Card 2: Gallery Images */}
-          <div className="bg-white border border-slate-200 rounded-lg p-6 shadow-sm">
+          <div className="bg-white border border-slate-200 rounded-none p-6 shadow-none">
             <h2 className="text-sm font-bold text-slate-900 uppercase tracking-wider mb-4 border-b border-slate-100 pb-2">
               Media Gallery
             </h2>
-            
+
             <div className="flex flex-col gap-6">
               {images.length > 0 && (
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6">
                   {images.map((img, idx) => (
-                    <div key={idx} className="relative group aspect-square border border-slate-200 rounded-md overflow-hidden bg-slate-50 shadow-sm">
+                    <div key={idx} className="relative group aspect-square border border-slate-200 rounded-none overflow-hidden bg-slate-50 shadow-none">
                       <img src={img} alt={`Uploaded ${idx}`} className="w-full h-full object-cover" />
                       <button
                         type="button"
@@ -234,7 +356,7 @@ export default function ProductFormClient({
                 </div>
               )}
 
-              <div className="relative border-2 border-dashed border-slate-300 rounded-lg p-8 hover:border-indigo-500 transition-colors bg-slate-50 text-center flex flex-col items-center justify-center">
+              <div className="relative border-2 border-dashed border-slate-300 rounded-none p-8 hover:border-indigo-500 transition-colors bg-slate-50 text-center flex flex-col items-center justify-center">
                 <input
                   type="file"
                   accept="image/*"
@@ -263,13 +385,13 @@ export default function ProductFormClient({
         {/* Right Column (1/3 of Page) - Pricing, Sizing & Organization */}
         <div className="space-y-6">
           {/* Card 3: Status & Visibility */}
-          <div className="bg-white border border-slate-200 rounded-lg p-6 shadow-sm">
+          <div className="bg-white border border-slate-200 rounded-none p-6 shadow-none">
             <h2 className="text-sm font-bold text-slate-900 uppercase tracking-wider mb-4 border-b border-slate-100 pb-2">
               Visibility & Publishing
             </h2>
-            
-            <div className="space-y-4">
-              <div className="flex items-center gap-3 p-3 bg-emerald-50 border border-emerald-100 rounded-lg">
+
+            <div className="space-y-1">
+              <div className="flex items-center gap-3 p-2 rounded-none">
                 <input
                   type="checkbox"
                   id="isPublished"
@@ -283,7 +405,7 @@ export default function ProductFormClient({
                 </label>
               </div>
 
-              <div className="flex items-center gap-3 p-3 bg-amber-50 border border-amber-100 rounded-lg">
+              <div className="flex items-center gap-3 p-2 rounded-none">
                 <input
                   type="checkbox"
                   id="isFeatured"
@@ -300,171 +422,338 @@ export default function ProductFormClient({
           </div>
 
           {/* Card 4: Pricing & Organization */}
-          <div className="bg-white border border-slate-200 rounded-lg p-6 shadow-sm">
+          <div className="bg-white border border-slate-200 rounded-none p-6 shadow-none">
             <h2 className="text-sm font-bold text-slate-900 uppercase tracking-wider mb-4 border-b border-slate-100 pb-2">
               Pricing & Categories
             </h2>
-            
+
             <div className="space-y-5">
               <div>
                 <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Selling Price (৳) *</label>
                 <input
                   type="number"
-                  step="0.01"
+                  step="0.001"
                   value={price}
                   onChange={(e) => setPrice(e.target.value)}
                   placeholder="5000"
-                  className="w-full px-4 py-2 border border-slate-300 rounded-md focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 text-sm font-mono"
+                  className="w-full px-4 py-2 border border-slate-300 rounded-none focus:outline-none focus:border-slate-900 text-sm font-mono"
                   required
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Team / Brand *</label>
-                <input
-                  type="text"
-                  value={team}
-                  onChange={(e) => setTeam(e.target.value)}
-                  placeholder="e.g. Mystic FC"
-                  className="w-full px-4 py-2 border border-slate-300 rounded-md focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 text-sm"
-                  required
-                />
+                <div className="flex items-center justify-between mb-2">
+                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">Brand</label>
+                  {!isAddingBrand && (
+                    <button
+                      type="button"
+                      onClick={() => setIsAddingBrand(true)}
+                      className="text-[10px] font-bold text-[#800020] hover:underline flex items-center gap-0.5"
+                    >
+                      <Plus className="w-3 h-3" /> Add New
+                    </button>
+                  )}
+                </div>
+                {isAddingBrand ? (
+                  <div className="flex gap-2 items-center bg-slate-50 p-2 border border-slate-200">
+                    <input
+                      type="text"
+                      value={newBrandName}
+                      onChange={(e) => setNewBrandName(e.target.value)}
+                      placeholder="Enter brand name..."
+                      className="flex-1 px-3 py-1.5 border border-slate-300 rounded-none focus:outline-none focus:border-slate-900 text-xs bg-white"
+                      disabled={brandSubmitting}
+                      autoFocus
+                    />
+                    <button
+                      type="button"
+                      onClick={handleAddBrandInline}
+                      disabled={brandSubmitting || !newBrandName.trim()}
+                      className="px-3 py-1.5 bg-[#800020] text-white text-xs font-bold rounded-none hover:bg-opacity-95 transition-all disabled:opacity-50"
+                    >
+                      {brandSubmitting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : "Save"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsAddingBrand(false);
+                        setNewBrandName("");
+                      }}
+                      disabled={brandSubmitting}
+                      className="p-1.5 bg-slate-200 text-slate-700 hover:bg-slate-300 transition-colors rounded-none"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                ) : (
+                  <CustomFormSelect
+                    options={[
+                      { value: "", label: "No Brand" },
+                      ...localBrands.map((b) => ({ value: b.id, label: b.name })),
+                    ]}
+                    value={brandId}
+                    onChange={(val) => setBrandId(val)}
+                    placeholder="No Brand"
+                    searchable={true}
+                  />
+                )}
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Product Category *</label>
-                <input
-                  type="text"
-                  value={category}
-                  onChange={(e) => setCategory(e.target.value)}
-                  placeholder="e.g. Jerseys"
-                  className="w-full px-4 py-2 border border-slate-300 rounded-md focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 text-sm"
-                  required
-                />
+                <div className="flex items-center justify-between mb-2">
+                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">Category *</label>
+                  {!isAddingCategory && (
+                    <button
+                      type="button"
+                      onClick={() => setIsAddingCategory(true)}
+                      className="text-[10px] font-bold text-[#800020] hover:underline flex items-center gap-0.5"
+                    >
+                      <Plus className="w-3 h-3" /> Add New
+                    </button>
+                  )}
+                </div>
+                {isAddingCategory ? (
+                  <div className="flex gap-2 items-center bg-slate-50 p-2 border border-slate-200">
+                    <input
+                      type="text"
+                      value={newCategoryName}
+                      onChange={(e) => setNewCategoryName(e.target.value)}
+                      placeholder="Enter category name..."
+                      className="flex-1 px-3 py-1.5 border border-slate-300 rounded-none focus:outline-none focus:border-slate-900 text-xs bg-white"
+                      disabled={categorySubmitting}
+                      autoFocus
+                    />
+                    <button
+                      type="button"
+                      onClick={handleAddCategoryInline}
+                      disabled={categorySubmitting || !newCategoryName.trim()}
+                      className="px-3 py-1.5 bg-[#800020] text-white text-xs font-bold rounded-none hover:bg-opacity-95 transition-all disabled:opacity-50"
+                    >
+                      {categorySubmitting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : "Save"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsAddingCategory(false);
+                        setNewCategoryName("");
+                      }}
+                      disabled={categorySubmitting}
+                      className="p-1.5 bg-slate-200 text-slate-700 hover:bg-slate-300 transition-colors rounded-none"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                ) : (
+                  <CustomFormSelect
+                    options={[
+                      { value: "", label: "Select Category" },
+                      ...localCategories.map((c) => ({ value: c.id, label: c.name })),
+                    ]}
+                    value={categoryId}
+                    onChange={(val) => {
+                      setCategoryId(val);
+                      setSubcategoryId("");
+                    }}
+                    placeholder="Select Category"
+                    searchable={true}
+                  />
+                )}
               </div>
+
+              {categoryId && (
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">Subcategory</label>
+                    {!isAddingSubcategory && (
+                      <button
+                        type="button"
+                        onClick={() => setIsAddingSubcategory(true)}
+                        className="text-[10px] font-bold text-[#800020] hover:underline flex items-center gap-0.5"
+                      >
+                        <Plus className="w-3 h-3" /> Add New
+                      </button>
+                    )}
+                  </div>
+                  {isAddingSubcategory ? (
+                    <div className="flex gap-2 items-center bg-slate-50 p-2 border border-slate-200">
+                      <input
+                        type="text"
+                        value={newSubcategoryName}
+                        onChange={(e) => setNewSubcategoryName(e.target.value)}
+                        placeholder="Enter subcategory name..."
+                        className="flex-1 px-3 py-1.5 border border-slate-300 rounded-none focus:outline-none focus:border-slate-900 text-xs bg-white"
+                        disabled={subcategorySubmitting}
+                        autoFocus
+                      />
+                      <button
+                        type="button"
+                        onClick={handleAddSubcategoryInline}
+                        disabled={subcategorySubmitting || !newSubcategoryName.trim()}
+                        className="px-3 py-1.5 bg-[#800020] text-white text-xs font-bold rounded-none hover:bg-opacity-95 transition-all disabled:opacity-50"
+                      >
+                        {subcategorySubmitting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : "Save"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsAddingSubcategory(false);
+                          setNewSubcategoryName("");
+                        }}
+                        disabled={subcategorySubmitting}
+                        className="p-1.5 bg-slate-200 text-slate-700 hover:bg-slate-300 transition-colors rounded-none"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  ) : (
+                    <CustomFormSelect
+                      options={[
+                        { value: "", label: "None" },
+                        ...(localCategories.find((c: any) => c.id === categoryId)?.subcategories || []).map((sc: any) => ({ value: sc.id, label: sc.name })),
+                      ]}
+                      value={subcategoryId}
+                      onChange={(val) => setSubcategoryId(val)}
+                      placeholder="None"
+                      searchable={true}
+                    />
+                  )}
+                </div>
+              )}
 
               <div>
                 <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Size Chart Reference</label>
-                <select
+                <CustomFormSelect
+                  options={[
+                    { value: "", label: "None Assigned (Ad-hoc sizing)" },
+                    ...sizeCharts.map(chart => ({ value: chart.id, label: chart.category })),
+                  ]}
                   value={sizeChartId}
-                  onChange={(e) => setSizeChartId(e.target.value)}
-                  className="w-full px-4 py-2 border border-slate-300 rounded-md focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 text-sm bg-white"
-                >
-                  <option value="">None Assigned (Ad-hoc sizing)</option>
-                  {sizeCharts.map(chart => (
-                    <option key={chart.id} value={chart.id}>{chart.category}</option>
-                  ))}
-                </select>
+                  onChange={(val) => setSizeChartId(val)}
+                  placeholder="None Assigned (Ad-hoc sizing)"
+                  searchable={true}
+                />
               </div>
 
               <div>
                 <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Discount</label>
-                <select
+                <CustomFormSelect
+                  options={[
+                    { value: "", label: "No Active Promotion" },
+                    ...discounts.map(disc => ({
+                      value: disc.id,
+                      label: `${disc.name} (${disc.discountType === "PERCENTAGE" ? `${disc.value}% OFF` : `৳${disc.value} OFF`})`
+                    })),
+                  ]}
                   value={discountId}
-                  onChange={(e) => setDiscountId(e.target.value)}
-                  className="w-full px-4 py-2 border border-slate-300 rounded-md focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 text-sm bg-white"
-                >
-                  <option value="">No Active Promotion</option>
-                  {discounts.map(disc => (
-                    <option key={disc.id} value={disc.id}>
-                      {disc.name} ({disc.discountType === "PERCENTAGE" ? `${disc.value}% OFF` : `৳${disc.value} OFF`})
-                    </option>
-                  ))}
-                </select>
+                  onChange={(val) => setDiscountId(val)}
+                  placeholder="No Active Promotion"
+                  searchable={true}
+                />
               </div>
             </div>
           </div>
 
-          {/* Card 5: Size Variants & Stock */}
-          <div className="bg-white border border-slate-200 rounded-lg p-6 shadow-sm">
-            <div className="flex flex-col gap-2 mb-4 border-b border-slate-100 pb-3">
-              <h2 className="text-sm font-bold text-slate-900 uppercase tracking-wider">
-                Size Variants & Stock
-              </h2>
-              {initialData?.id ? (
-                <span className="text-[9px] font-bold text-orange-600 bg-orange-50 border border-orange-100 px-2 py-1 rounded w-fit">
-                  🔒 Stock managed by Purchases & Orders
-                </span>
-              ) : (
-                <span className="text-[10px] text-slate-500 font-medium">Set initial stock for new product</span>
-              )}
-            </div>
 
-            <div className="overflow-hidden border border-slate-200 rounded-md">
-              <table className="w-full text-left border-collapse">
-                <thead>
-                  <tr className="bg-slate-50 border-b border-slate-200">
-                    <th className="w-8 py-2 text-center"></th>
-                    <th className="px-3 py-2 text-xs font-semibold text-slate-500 uppercase tracking-wider">Size</th>
-                    <th className="px-3 py-2 text-xs font-semibold text-slate-500 uppercase tracking-wider w-24">Stock</th>
-                    <th className="w-8 py-2 text-center"></th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {variants.map((v, index) => (
-                    <tr
-                      key={v.id}
-                      draggable
-                      onDragStart={() => handleDragStart(index)}
-                      onDragOver={(e) => handleDragOver(e, index)}
-                      onDragEnd={handleDragEnd}
-                      className={`transition-all duration-150 ${draggedIndex === index ? "bg-slate-100 opacity-55" : "hover:bg-slate-50/50"}`}
-                    >
-                      <td className="py-2 text-slate-400 cursor-grab active:cursor-grabbing text-center select-none">
-                        <GripVertical className="w-3.5 h-3.5 mx-auto" />
-                      </td>
-                      <td className="px-3 py-2">
-                        <input
-                          type="text"
-                          value={v.size}
-                          onChange={(e) => updateVariant(v.id, "size", e.target.value.toUpperCase())}
-                          placeholder="XL"
-                          className="w-full px-2 py-1 border border-slate-200 rounded text-xs focus:outline-none focus:border-indigo-500 uppercase font-semibold"
-                          required
-                        />
-                      </td>
-                      <td className="px-3 py-2">
-                        {initialData?.id ? (
-                          <input
-                            type="number"
-                            value={v.stock}
-                            readOnly
-                            className="w-full px-2 py-1 border border-slate-100 bg-slate-50 rounded text-xs font-mono cursor-not-allowed text-slate-500"
-                          />
-                        ) : (
-                          <input
-                            type="number"
-                            min="0"
-                            value={v.stock}
-                            onChange={(e) => updateVariant(v.id, "stock", parseInt(e.target.value) || 0)}
-                            className="w-full px-2 py-1 border border-slate-200 bg-white rounded text-xs focus:outline-none focus:border-indigo-500 font-mono"
-                          />
-                        )}
-                      </td>
-                      <td className="py-2 text-center">
-                        <button
-                          type="button"
-                          onClick={() => removeVariant(v.id)}
-                          className="text-slate-400 hover:text-red-600 transition-colors p-1"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-              <div className="bg-slate-50/50 p-2 text-center border-t border-slate-150">
-                <button
-                  type="button"
-                  onClick={addVariant}
-                  className="text-[11px] font-bold text-indigo-600 hover:text-indigo-800 flex items-center justify-center gap-1 mx-auto bg-indigo-50/80 px-2.5 py-1 rounded-full transition-colors"
+        </div>
+      </div>
+      {/* Card 5: Size Variants & Stock */}
+      <div className="bg-white border border-slate-200 rounded-none p-6 shadow-none">
+        <div className="flex flex-col gap-2 mb-4 border-b border-slate-100 pb-3">
+          <h2 className="text-sm font-bold text-slate-900 uppercase tracking-wider">
+            Size Variants & Stock
+          </h2>
+          {initialData?.id ? (
+            <span className="text-[9px] font-bold text-orange-600 bg-orange-50 border border-orange-100 px-2 py-1 rounded-none w-fit">
+              🔒 Stock managed by Purchases & Orders
+            </span>
+          ) : (
+            <span className="text-[10px] text-slate-500 font-medium">Set initial stock for new product</span>
+          )}
+        </div>
+
+        <div className="overflow-hidden border border-slate-200 rounded-none">
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="bg-slate-50 border-b border-slate-200">
+                <th className="w-8 py-2 text-center"></th>
+                <th className="px-3 py-2 text-xs font-semibold text-slate-500 uppercase tracking-wider w-1/3">Size</th>
+                <th className="px-3 py-2 text-xs font-semibold text-slate-500 uppercase tracking-wider w-1/3">SKU</th>
+                <th className="px-3 py-2 text-xs font-semibold text-slate-500 uppercase tracking-wider w-1/3">Stock</th>
+                <th className="w-8 py-2 text-center"></th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {variants.map((v, index) => (
+                <tr
+                  key={v.id}
+                  draggable
+                  onDragStart={() => handleDragStart(index)}
+                  onDragOver={(e) => handleDragOver(e, index)}
+                  onDragEnd={handleDragEnd}
+                  className={`transition-all duration-150 ${draggedIndex === index ? "bg-slate-100 opacity-55" : "hover:bg-slate-50/50"}`}
                 >
-                  <Plus className="w-3 h-3" />
-                  Add Size
-                </button>
-              </div>
-            </div>
+                  <td className="py-2 text-slate-400 cursor-grab active:cursor-grabbing text-center select-none">
+                    <GripVertical className="w-3.5 h-3.5 mx-auto" />
+                  </td>
+                  <td className="px-3 py-2">
+                    <input
+                      type="text"
+                      value={v.size}
+                      onChange={(e) => updateVariant(v.id, "size", e.target.value.toUpperCase())}
+                      placeholder="XL"
+                      className="w-full px-2 py-1.5 border border-slate-200 rounded-none text-xs focus:outline-none focus:border-slate-900 uppercase font-semibold"
+                      required
+                    />
+                  </td>
+                  <td className="px-3 py-2">
+                    <input
+                      type="text"
+                      value={v.sku}
+                      onChange={(e) => updateVariant(v.id, "sku", e.target.value)}
+                      placeholder="SKU-..."
+                      className="w-full px-2 py-1.5 border border-slate-200 rounded-none text-xs focus:outline-none focus:border-slate-900 uppercase font-mono"
+                    />
+                  </td>
+                  <td className="px-3 py-2">
+                    {initialData?.id ? (
+                      <input
+                        type="number"
+                        value={v.stock}
+                        readOnly
+                        className="w-full px-2 py-1.5 border border-slate-100 bg-slate-50 rounded-none text-xs font-mono cursor-not-allowed text-slate-500"
+                      />
+                    ) : (
+                      <input
+                        type="number"
+                        min="0"
+                        value={v.stock}
+                        onChange={(e) => updateVariant(v.id, "stock", parseInt(e.target.value) || 0)}
+                        className="w-full px-2 py-1.5 border border-slate-200 bg-white rounded-none text-xs focus:outline-none focus:border-slate-900 font-mono"
+                      />
+                    )}
+                  </td>
+                  <td className="py-2 text-center">
+                    <button
+                      type="button"
+                      onClick={() => removeVariant(v.id)}
+                      className="text-slate-400 hover:text-red-600 transition-colors p-1"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <div className="bg-slate-50/50 p-2 text-center border-t border-slate-200">
+            <button
+              type="button"
+              onClick={addVariant}
+              className="text-xs font-semibold text-slate-600 hover:text-slate-900 flex items-center justify-center gap-1.5 mx-auto bg-white border border-slate-200 hover:bg-slate-50 px-3 py-1.5 rounded-none transition-colors"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              Add Size Row
+            </button>
           </div>
         </div>
       </div>
@@ -499,7 +788,7 @@ function SimpleRichTextEditor({ value, onChange }: SimpleRichTextEditorProps) {
   };
 
   return (
-    <div className="border border-slate-300 rounded-md overflow-hidden focus-within:border-indigo-500 focus-within:ring-1 focus-within:ring-indigo-500">
+    <div className="border border-slate-300 rounded-none overflow-hidden focus-within:border-slate-900 focus-within:ring-0 focus-within:border-slate-900">
       <div className="flex flex-wrap items-center gap-1 bg-slate-50 border-b border-slate-200 p-2 text-slate-600 select-none">
         <button
           type="button"
@@ -575,6 +864,103 @@ function SimpleRichTextEditor({ value, onChange }: SimpleRichTextEditorProps) {
         className="prose prose-sm max-w-none min-h-[180px] max-h-[400px] overflow-y-auto px-4 py-3 bg-white focus:outline-none text-slate-900"
         style={{ outline: "none" }}
       />
+    </div>
+  );
+}
+
+interface FormOption {
+  value: string;
+  label: string;
+}
+
+interface CustomFormSelectProps {
+  options: FormOption[];
+  value: string;
+  onChange: (value: string) => void;
+  placeholder?: string;
+  searchable?: boolean;
+}
+
+function CustomFormSelect({
+  options,
+  value,
+  onChange,
+  placeholder = "Select Option",
+  searchable = false
+}: CustomFormSelectProps) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [search, setSearch] = useState("");
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  const selectedOption = options.find((opt) => opt.value === value);
+
+  const filteredOptions = options.filter((opt) =>
+    opt.label.toLowerCase().includes(search.toLowerCase())
+  );
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  return (
+    <div className="relative w-full" ref={containerRef}>
+      <button
+        type="button"
+        onClick={() => setIsOpen(!isOpen)}
+        className="w-full h-[38px] flex items-center justify-between px-4 py-2 border border-slate-300 rounded-none bg-white text-sm focus:outline-none focus:border-slate-900 text-slate-800"
+      >
+        <span className="truncate">{selectedOption ? selectedOption.label : placeholder}</span>
+        <ChevronDown className={`w-4 h-4 text-slate-500 transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`} />
+      </button>
+
+      {isOpen && (
+        <div className="absolute left-0 right-0 z-50 mt-1 bg-white border border-slate-300 rounded-none shadow-none max-h-60 overflow-hidden flex flex-col">
+          {searchable && (
+            <div className="p-2 border-b border-slate-200 bg-slate-50">
+              <input
+                type="text"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search..."
+                className="w-full px-2.5 py-1 border border-slate-300 rounded-none focus:outline-none focus:border-slate-900 text-xs bg-white"
+                autoFocus
+              />
+            </div>
+          )}
+          <div className="overflow-y-auto max-h-48 custom-scrollbar">
+            {filteredOptions.length > 0 ? (
+              filteredOptions.map((opt) => (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() => {
+                    onChange(opt.value);
+                    setIsOpen(false);
+                    setSearch("");
+                  }}
+                  className={`w-full text-left px-4 py-2 text-xs transition-colors flex items-center justify-between ${
+                    value === opt.value
+                      ? "bg-[#800020] text-white font-bold"
+                      : "hover:bg-slate-100 text-slate-700"
+                  }`}
+                >
+                  <span>{opt.label}</span>
+                </button>
+              ))
+            ) : (
+              <div className="px-4 py-3 text-center text-xs text-slate-400 italic">
+                No options found
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

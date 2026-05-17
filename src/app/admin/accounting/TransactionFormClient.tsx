@@ -93,7 +93,7 @@ export default function TransactionFormClient({ accounts, onSuccessCallback }: {
               </div>
               <input
                 type="number"
-                step="0.01"
+                step="0.001"
                 min="0"
                 value={form.amount}
                 onChange={(e) => setForm({ ...form, amount: e.target.value })}

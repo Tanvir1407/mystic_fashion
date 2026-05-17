@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import UploadedImage from "@/components/UploadedImage";
 import { CustomSelect } from "@/components/CustomSelect";
-import { formatBDT } from "@/utils/formatPrice";
+import { formatBDT, roundPrice } from "@/utils/formatPrice";
 
 export default function OrderDetailsClient({ order, deliverySettings, products = [], pathaoInfo = null }: { order: any; deliverySettings: any; products?: any[]; pathaoInfo?: any }) {
   const router = useRouter();
@@ -113,9 +113,9 @@ export default function OrderDetailsClient({ order, deliverySettings, products =
     let price = product.price;
     if (product.discount) {
       if (product.discount.discountType === "PERCENTAGE") {
-        price = Math.round(price - (price * (product.discount.value / 100)));
+        price = roundPrice(price - (price * (product.discount.value / 100)));
       } else {
-        price = Math.round(price - product.discount.value);
+        price = roundPrice(price - product.discount.value);
       }
     }
 

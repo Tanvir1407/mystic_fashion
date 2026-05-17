@@ -66,13 +66,16 @@ export async function createProduct(data: {
   description: string;
   price: number;
   images: string[];
-  team: string;
+  team?: string;
   category: string;
-  sizeChartId?: string;
+  brandId?: string | null;
+  categoryId?: string | null;
+  subcategoryId?: string | null;
+  sizeChartId?: string | null;
   discountId?: string | null;
   isFeatured: boolean;
   isPublished: boolean;
-  variants: { size: string; stock: number }[];
+  variants: { size: string; color: string; colorCode?: string; sku?: string; stock: number }[];
 }) {
   try {
     const product = await prisma.product.create({
@@ -83,13 +86,19 @@ export async function createProduct(data: {
         images: data.images,
         team: data.team,
         category: data.category,
+        brandId: data.brandId || null,
+        categoryId: data.categoryId || null,
+        subcategoryId: data.subcategoryId || null,
         isFeatured: data.isFeatured,
         isPublished: data.isPublished,
-        sizeChartId: data.sizeChartId,
-        discountId: data.discountId,
+        sizeChartId: data.sizeChartId || null,
+        discountId: data.discountId || null,
         variants: {
           create: data.variants.map((v, idx) => ({
             size: v.size,
+            color: v.color,
+            colorCode: v.colorCode,
+            sku: v.sku,
             stock: v.stock,
             order: idx,
           })),
@@ -116,13 +125,16 @@ export async function updateProduct(id: string, data: {
   description: string;
   price: number;
   images: string[];
-  team: string;
+  team?: string;
   category: string;
-  sizeChartId?: string;
+  brandId?: string | null;
+  categoryId?: string | null;
+  subcategoryId?: string | null;
+  sizeChartId?: string | null;
   discountId?: string | null;
   isFeatured: boolean;
   isPublished: boolean;
-  variants: { size: string; stock: number }[];
+  variants: { size: string; color: string; colorCode?: string; sku?: string; stock: number }[];
 }) {
   try {
     const product = await prisma.product.update({
@@ -134,27 +146,32 @@ export async function updateProduct(id: string, data: {
         images: data.images,
         team: data.team,
         category: data.category,
+        brandId: data.brandId || null,
+        categoryId: data.categoryId || null,
+        subcategoryId: data.subcategoryId || null,
         isFeatured: data.isFeatured,
         isPublished: data.isPublished,
-        sizeChartId: data.sizeChartId,
-        discountId: data.discountId,
+        sizeChartId: data.sizeChartId || null,
+        discountId: data.discountId || null,
       },
     });
 
-    await prisma.$transaction(
+    const upsertedVariants = await prisma.$transaction(
       data.variants.map((v, idx) =>
         prisma.productVariant.upsert({
-          where: { productId_size: { productId: id, size: v.size } },
-          update: { stock: v.stock, order: idx },
-          create: { productId: id, size: v.size, stock: v.stock, order: idx },
+          where: { productId_size_color: { productId: id, size: v.size, color: v.color } },
+          update: { sku: v.sku, stock: v.stock, order: idx, colorCode: v.colorCode },
+          create: { productId: id, size: v.size, color: v.color, colorCode: v.colorCode, sku: v.sku, stock: v.stock, order: idx },
         })
       )
     );
 
+    const keptVariantIds = upsertedVariants.map(v => v.id);
+
     await prisma.productVariant.deleteMany({
       where: {
         productId: id,
-        size: { notIn: data.variants.map((v) => v.size) },
+        id: { notIn: keptVariantIds },
       },
     });
 
@@ -217,9 +234,10 @@ export async function updateOrderStatus(orderId: string, status: OrderStatus) {
         for (const item of order.items) {
           await tx.productVariant.update({
             where: {
-              productId_size: {
+              productId_size_color: {
                 productId: item.productId,
                 size: item.size,
+                color: (item as any).color || "Default",
               },
             },
             data: { stock: { decrement: item.quantity } },
@@ -362,7 +380,7 @@ export async function updateOrderDetails(id: string, data: {
             const diff = newItem.quantity - oldItem.quantity;
             if (diff !== 0) {
               await tx.productVariant.update({
-                where: { productId_size: { productId: newItem.productId, size: newItem.size } },
+                where: { productId_size_color: { productId: newItem.productId, size: newItem.size, color: (newItem as any).color || "Default" } },
                 data: { stock: { decrement: diff } } // If increased (diff > 0), decrement stock
               });
             }
@@ -370,7 +388,7 @@ export async function updateOrderDetails(id: string, data: {
           } else {
             // New Item added
             await tx.productVariant.update({
-              where: { productId_size: { productId: newItem.productId, size: newItem.size } },
+              where: { productId_size_color: { productId: newItem.productId, size: newItem.size, color: (newItem as any).color || "Default" } },
               data: { stock: { decrement: newItem.quantity } }
             });
           }
@@ -379,7 +397,7 @@ export async function updateOrderDetails(id: string, data: {
         // Remaining items in oldItemsMap are deleted items
         for (const remainingOld of oldItemsMap.values()) {
           await tx.productVariant.update({
-            where: { productId_size: { productId: remainingOld.productId, size: remainingOld.size } },
+            where: { productId_size_color: { productId: remainingOld.productId, size: remainingOld.size, color: (remainingOld as any).color || "Default" } },
             data: { stock: { increment: remainingOld.quantity } }
           });
         }
@@ -542,14 +560,33 @@ export async function createPurchase(
       });
 
       for (const item of items) {
-        await tx.productVariant.update({
-          where: { id: item.variantId },
-          data: { stock: { increment: item.quantity } },
-        });
-        await tx.product.update({
+        const productBefore = await tx.product.findUnique({
           where: { id: item.productId },
-          data: { purchasePrice: item.unitPrice },
+          include: { variants: true },
         });
+
+        if (productBefore) {
+          const oldTotalStock = productBefore.variants.reduce((sum: number, v: any) => sum + v.stock, 0);
+          const oldAvgPrice = productBefore.purchasePrice || 0;
+
+          await tx.productVariant.update({
+            where: { id: item.variantId },
+            data: { stock: { increment: item.quantity } },
+          });
+
+          let newAvgPrice = item.unitPrice;
+          if (oldTotalStock > 0) {
+            const oldTotalValue = oldTotalStock * oldAvgPrice;
+            const newValueAdded = item.quantity * item.unitPrice;
+            const newTotalStock = oldTotalStock + item.quantity;
+            newAvgPrice = (oldTotalValue + newValueAdded) / newTotalStock;
+          }
+
+          await tx.product.update({
+            where: { id: item.productId },
+            data: { purchasePrice: newAvgPrice },
+          });
+        }
       }
 
       const account = await getOrCreateSystemAccount(tx, "Inventory Purchases", "EXPENSE");
@@ -633,14 +670,33 @@ export async function updatePurchase(
 
       // 5. Apply New Items (Increment Stock and Update Product Price)
       for (const item of items) {
-        await tx.productVariant.update({
-          where: { id: item.variantId },
-          data: { stock: { increment: item.quantity } },
-        });
-        await tx.product.update({
+        const productBefore = await tx.product.findUnique({
           where: { id: item.productId },
-          data: { purchasePrice: item.unitPrice },
+          include: { variants: true },
         });
+
+        if (productBefore) {
+          const oldTotalStock = productBefore.variants.reduce((sum: number, v: any) => sum + v.stock, 0);
+          const oldAvgPrice = productBefore.purchasePrice || 0;
+
+          await tx.productVariant.update({
+            where: { id: item.variantId },
+            data: { stock: { increment: item.quantity } },
+          });
+
+          let newAvgPrice = item.unitPrice;
+          if (oldTotalStock > 0) {
+            const oldTotalValue = oldTotalStock * oldAvgPrice;
+            const newValueAdded = item.quantity * item.unitPrice;
+            const newTotalStock = oldTotalStock + item.quantity;
+            newAvgPrice = (oldTotalValue + newValueAdded) / newTotalStock;
+          }
+
+          await tx.product.update({
+            where: { id: item.productId },
+            data: { purchasePrice: newAvgPrice },
+          });
+        }
       }
 
       // 6. Update Accounting Ledger seamlessly
@@ -951,9 +1007,10 @@ export async function createAdminOrder(data: {
       for (const item of data.items) {
         await tx.productVariant.update({
           where: {
-            productId_size: {
+            productId_size_color: {
               productId: item.productId,
               size: item.size,
+              color: (item as any).color || "Default"
             },
           },
           data: {
@@ -1299,12 +1356,13 @@ export async function processSalesReturn(data: {
         throw new Error("Order ID mismatch for the specified order item");
       }
 
-      // 2. Fetch ProductVariant using productId and size
+      // 2. Fetch ProductVariant using productId, size, and color
       const variant = await tx.productVariant.findUnique({
         where: {
-          productId_size: {
+          productId_size_color: {
             productId: orderItem.productId,
             size: orderItem.size,
+            color: (orderItem as any).color || "Default",
           },
         },
       });

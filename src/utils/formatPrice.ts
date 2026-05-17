@@ -15,7 +15,7 @@ export function roundPrice(price: number): number {
  * @param zeroLabel - Optional label to return when price is 0 (e.g. "Free")
  */
 export function formatBDT(price: number, zeroLabel?: string): string {
-  const rounded = Math.round(price);
+  const rounded = roundPrice(price);
   if (zeroLabel !== undefined && rounded === 0) return zeroLabel;
   return `৳${rounded.toLocaleString("en-IN")}`;
 }

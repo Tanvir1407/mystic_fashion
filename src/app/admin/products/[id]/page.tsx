@@ -157,7 +157,7 @@ export default async function ProductDetailView({ params }: { params: { id: stri
         />
         <MetricCard
           title="Total Revenue"
-          value={`${formatBDT(Math.round(totalRevenue))}`}
+          value={`${formatBDT(totalRevenue)}`}
           icon={DollarSign}
         />
         <MetricCard
@@ -173,7 +173,7 @@ export default async function ProductDetailView({ params }: { params: { id: stri
         />
         <MetricCard
           title="Est. Margin/Unit"
-          value={`${formatBDT(Math.round(estimatedProfitMargin))}`}
+          value={`${formatBDT(estimatedProfitMargin)}`}
           icon={TrendingUp}
           valueColor={estimatedProfitMargin > 0 ? 'text-green-600' : 'text-red-600'}
         />
