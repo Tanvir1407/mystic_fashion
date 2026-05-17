@@ -17,6 +17,11 @@ export default async function EditProductPage({ params }: { params: { id: string
 
   const sizeCharts = await prisma.sizeChart.findMany();
   const discounts = await prisma.discount.findMany({ where: { active: true } });
+  const brands = await prisma.brand.findMany({ orderBy: { name: 'asc' } });
+  const categories = await prisma.category.findMany({
+    orderBy: { name: 'asc' },
+    include: { subcategories: { orderBy: { name: 'asc' } } }
+  });
 
-  return <ProductFormClient initialData={product} sizeCharts={sizeCharts} discounts={discounts} />;
+  return <ProductFormClient initialData={product} sizeCharts={sizeCharts} discounts={discounts} brands={brands} categories={categories} />;
 }

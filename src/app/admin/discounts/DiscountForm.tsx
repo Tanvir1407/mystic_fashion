@@ -106,7 +106,7 @@ export function DiscountForm({ discount, onClose, onSuccess }: DiscountFormProps
                     type="number"
                     required
                     min="0"
-                    step="0.01"
+                    step="0.001"
                     value={formData.value}
                     onChange={(e) => setFormData({ ...formData, value: parseFloat(e.target.value) || 0 })}
                     className="w-full pl-4 pr-10 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold focus:bg-white focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all outline-none font-mono"

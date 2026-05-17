@@ -2,6 +2,7 @@
 
 import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
+import { roundPrice } from "@/utils/formatPrice";
 
 export async function placeOrderAction(payload: {
   fullName: string;
@@ -57,7 +58,7 @@ export async function placeOrderAction(payload: {
           phone: payload.phone,
           district: payload.district,
           address: payload.address,
-          totalAmount: Math.round(payload.totalAmount),
+          totalAmount: roundPrice(payload.totalAmount),
           advancePaid: calculatedAdvance,
           bkashNumber: payload.bkashNumber,
           bkashTrxId: payload.bkashTrxId,
@@ -119,9 +120,10 @@ export async function placeOrderAction(payload: {
 
         const variant = await tx.productVariant.findUnique({
           where: {
-            productId_size: {
+            productId_size_color: {
               productId: item.id,
-              size: item.size
+              size: item.size,
+              color: item.color || "Default"
             }
           }
         });
@@ -174,7 +176,7 @@ export async function validateCoupon(code: string, baseSubtotal: number) {
 
     return {
       success: true,
-      discountAmount: Math.round(discountAmount),
+      discountAmount: roundPrice(discountAmount),
       couponCode: coupon.code
     };
   } catch (error: any) {
@@ -201,7 +203,7 @@ export async function syncCartPrices(productIds: string[]) {
           finalPrice = finalPrice - product.discount.value;
         }
       }
-      return { id: product.id, price: Math.round(finalPrice) };
+      return { id: product.id, price: roundPrice(finalPrice) };
     });
   } catch (error) {
     console.error("Failed to sync cart prices:", error);

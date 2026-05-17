@@ -9,11 +9,15 @@ import { useRouter } from "next/navigation";
 export default function ProductFormClient({
   initialData,
   sizeCharts,
-  discounts
+  discounts,
+  brands = [],
+  categories = []
 }: {
   initialData?: any,
   sizeCharts: any[],
-  discounts: any[]
+  discounts: any[],
+  brands?: any[],
+  categories?: any[]
 }) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
@@ -56,16 +60,47 @@ export default function ProductFormClient({
   const removeImage = (index: number) => {
     setImages(images.filter((_, i) => i !== index));
   };
-  const [team, setTeam] = useState(initialData?.team || "");
-  const [category, setCategory] = useState(initialData?.category || "");
+  const [brandId, setBrandId] = useState(initialData?.brandId || "");
+  const [categoryId, setCategoryId] = useState(initialData?.categoryId || "");
+  const [subcategoryId, setSubcategoryId] = useState(initialData?.subcategoryId || "");
   const [sizeChartId, setSizeChartId] = useState(initialData?.sizeChartId || "");
   const [discountId, setDiscountId] = useState(initialData?.discountId || "");
 
-  const [variants, setVariants] = useState<{ id: string, size: string, stock: number }[]>(
-    initialData?.variants?.map((v: any, idx: number) => ({ id: String(idx), size: v.size, stock: v.stock })) || [
-      { id: "1", size: "M", stock: 0 }
-    ]
+  const [variants, setVariants] = useState<{ id: string, size: string, color: string, colorCode: string, sku: string, stock: number }[]>(
+    initialData?.variants?.map((v: any, idx: number) => ({ id: String(idx), size: v.size, color: v.color || "Default", colorCode: v.colorCode || "", sku: v.sku || "", stock: v.stock })) || []
   );
+
+  const [inputColor, setInputColor] = useState("");
+  const [inputSize, setInputSize] = useState("");
+  const [selectedColors, setSelectedColors] = useState<string[]>([]);
+  const [selectedSizes, setSelectedSizes] = useState<string[]>([]);
+
+  const addSelectedColor = () => {
+    if (inputColor.trim() && !selectedColors.includes(inputColor.trim())) {
+      setSelectedColors([...selectedColors, inputColor.trim()]);
+      setInputColor("");
+    }
+  };
+
+  const addSelectedSize = () => {
+    if (inputSize.trim() && !selectedSizes.includes(inputSize.trim().toUpperCase())) {
+      setSelectedSizes([...selectedSizes, inputSize.trim().toUpperCase()]);
+      setInputSize("");
+    }
+  };
+
+  const generateVariants = () => {
+    if (selectedColors.length === 0 || selectedSizes.length === 0) return alert("Select at least one color and one size.");
+    const newVariants = [...variants];
+    selectedColors.forEach(color => {
+      selectedSizes.forEach(size => {
+        if (!newVariants.some(v => v.size === size && v.color === color)) {
+           newVariants.push({ id: Date.now() + Math.random().toString(), size, color, colorCode: "", sku: "", stock: 0 });
+        }
+      });
+    });
+    setVariants(newVariants);
+  };
 
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
 
@@ -90,47 +125,52 @@ export default function ProductFormClient({
   };
 
   const addVariant = () => {
-    setVariants([...variants, { id: Date.now().toString(), size: "", stock: 0 }]);
+    setVariants([...variants, { id: Date.now().toString(), size: "", color: "Default", colorCode: "", sku: "", stock: 0 }]);
   };
 
   const removeVariant = (id: string) => {
     setVariants(variants.filter(v => v.id !== id));
   };
 
-  const updateVariant = (id: string, field: "size" | "stock", value: any) => {
+  const updateVariant = (id: string, field: "size" | "stock" | "sku" | "color" | "colorCode", value: any) => {
     setVariants(variants.map(v => v.id === id ? { ...v, [field]: value } : v));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim() || !category.trim()) return alert("Name and Category are required.");
+    if (!name.trim()) return alert("Name is required.");
     if (!price || isNaN(Number(price))) return alert("Price must be a number.");
-    if (variants.length === 0) return alert("You must add at least one Size Variant.");
+    if (variants.length === 0) return alert("You must add at least one Variant.");
 
     setLoading(true);
 
-    // Check duplicate sizes in UI
-    const sizesSet = new Set(variants.map(v => v.size.trim().toLowerCase()));
-    if (sizesSet.size !== variants.length) {
+    // Check duplicate sizes+colors in UI
+    const combinationsSet = new Set(variants.map(v => `${v.size.trim().toLowerCase()}-${v.color.trim().toLowerCase()}`));
+    if (combinationsSet.size !== variants.length) {
       setLoading(false);
-      return alert("Duplicate size names found. Each variant must have a unique size.");
+      return alert("Duplicate Size+Color combinations found. Each variant must be unique.");
     }
 
     // ✅ FIX 2: Filter out any undefined, null, or empty strings from images array
     const validImages = images.filter((img) => typeof img === 'string' && img.trim() !== "");
+
+    const selectedCategoryObj = categories?.find(c => c.id === categoryId);
+    const categoryName = selectedCategoryObj ? selectedCategoryObj.name : "Uncategorized";
 
     const productPayload = {
       name: name.trim(),
       description: description.trim(),
       price: parseFloat(price),
       images: validImages, // Send the cleaned array
-      team: team.trim(),
-      category: category.trim(),
+      category: categoryName,
+      brandId: brandId || undefined,
+      categoryId: categoryId || undefined,
+      subcategoryId: subcategoryId || undefined,
       sizeChartId: sizeChartId || undefined,
       discountId: discountId || null,
       isFeatured,
       isPublished,
-      variants: variants.map(({ size, stock }) => ({ size: size.trim(), stock }))
+      variants: variants.map(({ size, color, colorCode, sku, stock }) => ({ size: size.trim(), color: color.trim(), colorCode: colorCode?.trim() || undefined, sku: sku.trim() || undefined, stock }))
     };
 
     try {
@@ -154,7 +194,7 @@ export default function ProductFormClient({
       {/* Header Section */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-slate-200 pb-5">
         <div className="flex items-center gap-4">
-          <Link href="/admin/products" className="p-2 bg-slate-100 hover:bg-slate-200 rounded-md transition-colors text-slate-500 font-bold flex items-center justify-center">
+          <Link href="/admin/products" className="p-2 bg-slate-100 hover:bg-slate-200 rounded-none transition-colors text-slate-500 font-bold flex items-center justify-center">
             <ArrowLeft className="w-5 h-5" />
           </Link>
           <div>
@@ -164,11 +204,11 @@ export default function ProductFormClient({
             <p className="text-xs sm:text-sm text-slate-500 mt-1">Configure product details, variants, and stock dependencies.</p>
           </div>
         </div>
-        
+
         <button
           type="submit"
           disabled={loading}
-          className="px-6 py-2.5 bg-slate-900 text-white text-xs font-bold uppercase tracking-widest rounded-md flex items-center justify-center gap-2 hover:bg-slate-800 transition-all disabled:opacity-75 shadow-sm active:scale-[0.98]"
+          className="px-6 py-2.5 bg-slate-900 text-white text-xs font-bold uppercase tracking-widest rounded-none flex items-center justify-center gap-2 hover:bg-slate-800 transition-all disabled:opacity-75 shadow-none active:scale-[0.98]"
         >
           {loading ? (
             <div className="w-4 h-4 border-2 border-white/50 border-t-white rounded-full animate-spin" />
@@ -184,11 +224,11 @@ export default function ProductFormClient({
         {/* Left Column (2/3 of Page) - Core Information */}
         <div className="lg:col-span-2 space-y-6">
           {/* Card 1: Product Information */}
-          <div className="bg-white border border-slate-200 rounded-lg p-6 shadow-sm">
+          <div className="bg-white border border-slate-200 rounded-none p-6 shadow-none">
             <h2 className="text-sm font-bold text-slate-900 uppercase tracking-wider mb-4 border-b border-slate-100 pb-2">
               Product Information
             </h2>
-            
+
             <div className="space-y-6">
               <div>
                 <label className="block text-sm font-semibold text-slate-900 mb-2">Product Name *</label>
@@ -197,7 +237,7 @@ export default function ProductFormClient({
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder="e.g. Mystic Classic Jersey"
-                  className="w-full px-4 py-2.5 border border-slate-300 rounded-md focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 text-sm"
+                  className="w-full px-4 py-2.5 border border-slate-300 rounded-none focus:outline-none focus:border-slate-900 focus:ring-0 focus:border-slate-900 text-sm"
                   required
                 />
               </div>
@@ -210,16 +250,16 @@ export default function ProductFormClient({
           </div>
 
           {/* Card 2: Gallery Images */}
-          <div className="bg-white border border-slate-200 rounded-lg p-6 shadow-sm">
+          <div className="bg-white border border-slate-200 rounded-none p-6 shadow-none">
             <h2 className="text-sm font-bold text-slate-900 uppercase tracking-wider mb-4 border-b border-slate-100 pb-2">
               Media Gallery
             </h2>
-            
+
             <div className="flex flex-col gap-6">
               {images.length > 0 && (
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6">
                   {images.map((img, idx) => (
-                    <div key={idx} className="relative group aspect-square border border-slate-200 rounded-md overflow-hidden bg-slate-50 shadow-sm">
+                    <div key={idx} className="relative group aspect-square border border-slate-200 rounded-none overflow-hidden bg-slate-50 shadow-none">
                       <img src={img} alt={`Uploaded ${idx}`} className="w-full h-full object-cover" />
                       <button
                         type="button"
@@ -234,7 +274,7 @@ export default function ProductFormClient({
                 </div>
               )}
 
-              <div className="relative border-2 border-dashed border-slate-300 rounded-lg p-8 hover:border-indigo-500 transition-colors bg-slate-50 text-center flex flex-col items-center justify-center">
+              <div className="relative border-2 border-dashed border-slate-300 rounded-none p-8 hover:border-indigo-500 transition-colors bg-slate-50 text-center flex flex-col items-center justify-center">
                 <input
                   type="file"
                   accept="image/*"
@@ -263,13 +303,13 @@ export default function ProductFormClient({
         {/* Right Column (1/3 of Page) - Pricing, Sizing & Organization */}
         <div className="space-y-6">
           {/* Card 3: Status & Visibility */}
-          <div className="bg-white border border-slate-200 rounded-lg p-6 shadow-sm">
+          <div className="bg-white border border-slate-200 rounded-none p-6 shadow-none">
             <h2 className="text-sm font-bold text-slate-900 uppercase tracking-wider mb-4 border-b border-slate-100 pb-2">
               Visibility & Publishing
             </h2>
-            
-            <div className="space-y-4">
-              <div className="flex items-center gap-3 p-3 bg-emerald-50 border border-emerald-100 rounded-lg">
+
+            <div className="space-y-1">
+              <div className="flex items-center gap-3 p-2 rounded-none">
                 <input
                   type="checkbox"
                   id="isPublished"
@@ -283,7 +323,7 @@ export default function ProductFormClient({
                 </label>
               </div>
 
-              <div className="flex items-center gap-3 p-3 bg-amber-50 border border-amber-100 rounded-lg">
+              <div className="flex items-center gap-3 p-2 rounded-none">
                 <input
                   type="checkbox"
                   id="isFeatured"
@@ -300,55 +340,79 @@ export default function ProductFormClient({
           </div>
 
           {/* Card 4: Pricing & Organization */}
-          <div className="bg-white border border-slate-200 rounded-lg p-6 shadow-sm">
+          <div className="bg-white border border-slate-200 rounded-none p-6 shadow-none">
             <h2 className="text-sm font-bold text-slate-900 uppercase tracking-wider mb-4 border-b border-slate-100 pb-2">
               Pricing & Categories
             </h2>
-            
+
             <div className="space-y-5">
               <div>
                 <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Selling Price (৳) *</label>
                 <input
                   type="number"
-                  step="0.01"
+                  step="0.001"
                   value={price}
                   onChange={(e) => setPrice(e.target.value)}
                   placeholder="5000"
-                  className="w-full px-4 py-2 border border-slate-300 rounded-md focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 text-sm font-mono"
+                  className="w-full px-4 py-2 border border-slate-300 rounded-none focus:outline-none focus:border-slate-900 text-sm font-mono"
                   required
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Team / Brand *</label>
-                <input
-                  type="text"
-                  value={team}
-                  onChange={(e) => setTeam(e.target.value)}
-                  placeholder="e.g. Mystic FC"
-                  className="w-full px-4 py-2 border border-slate-300 rounded-md focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 text-sm"
-                  required
-                />
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Brand</label>
+                <select
+                  value={brandId}
+                  onChange={(e) => setBrandId(e.target.value)}
+                  className="w-full px-4 py-2 border border-slate-300 rounded-none focus:outline-none focus:border-slate-900 text-sm bg-white"
+                >
+                  <option value="">No Brand</option>
+                  {brands?.map((b: any) => (
+                    <option key={b.id} value={b.id}>{b.name}</option>
+                  ))}
+                </select>
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Product Category *</label>
-                <input
-                  type="text"
-                  value={category}
-                  onChange={(e) => setCategory(e.target.value)}
-                  placeholder="e.g. Jerseys"
-                  className="w-full px-4 py-2 border border-slate-300 rounded-md focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 text-sm"
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Category *</label>
+                <select
+                  value={categoryId}
+                  onChange={(e) => {
+                    setCategoryId(e.target.value);
+                    setSubcategoryId("");
+                  }}
+                  className="w-full px-4 py-2 border border-slate-300 rounded-none focus:outline-none focus:border-slate-900 text-sm bg-white"
                   required
-                />
+                >
+                  <option value="">Select Category</option>
+                  {categories?.map((c: any) => (
+                    <option key={c.id} value={c.id}>{c.name}</option>
+                  ))}
+                </select>
               </div>
+
+              {categoryId && categories?.find((c: any) => c.id === categoryId)?.subcategories?.length > 0 && (
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Subcategory</label>
+                  <select
+                    value={subcategoryId}
+                    onChange={(e) => setSubcategoryId(e.target.value)}
+                    className="w-full px-4 py-2 border border-slate-300 rounded-none focus:outline-none focus:border-slate-900 text-sm bg-white"
+                  >
+                    <option value="">None</option>
+                    {categories?.find((c: any) => c.id === categoryId)?.subcategories?.map((sc: any) => (
+                      <option key={sc.id} value={sc.id}>{sc.name}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
 
               <div>
                 <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Size Chart Reference</label>
                 <select
                   value={sizeChartId}
                   onChange={(e) => setSizeChartId(e.target.value)}
-                  className="w-full px-4 py-2 border border-slate-300 rounded-md focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 text-sm bg-white"
+                  className="w-full px-4 py-2 border border-slate-300 rounded-none focus:outline-none focus:border-slate-900 text-sm bg-white"
                 >
                   <option value="">None Assigned (Ad-hoc sizing)</option>
                   {sizeCharts.map(chart => (
@@ -362,7 +426,7 @@ export default function ProductFormClient({
                 <select
                   value={discountId}
                   onChange={(e) => setDiscountId(e.target.value)}
-                  className="w-full px-4 py-2 border border-slate-300 rounded-md focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 text-sm bg-white"
+                  className="w-full px-4 py-2 border border-slate-300 rounded-none focus:outline-none focus:border-slate-900 text-sm bg-white"
                 >
                   <option value="">No Active Promotion</option>
                   {discounts.map(disc => (
@@ -375,96 +439,164 @@ export default function ProductFormClient({
             </div>
           </div>
 
-          {/* Card 5: Size Variants & Stock */}
-          <div className="bg-white border border-slate-200 rounded-lg p-6 shadow-sm">
-            <div className="flex flex-col gap-2 mb-4 border-b border-slate-100 pb-3">
-              <h2 className="text-sm font-bold text-slate-900 uppercase tracking-wider">
-                Size Variants & Stock
-              </h2>
-              {initialData?.id ? (
-                <span className="text-[9px] font-bold text-orange-600 bg-orange-50 border border-orange-100 px-2 py-1 rounded w-fit">
-                  🔒 Stock managed by Purchases & Orders
-                </span>
-              ) : (
-                <span className="text-[10px] text-slate-500 font-medium">Set initial stock for new product</span>
-              )}
-            </div>
 
-            <div className="overflow-hidden border border-slate-200 rounded-md">
-              <table className="w-full text-left border-collapse">
-                <thead>
-                  <tr className="bg-slate-50 border-b border-slate-200">
-                    <th className="w-8 py-2 text-center"></th>
-                    <th className="px-3 py-2 text-xs font-semibold text-slate-500 uppercase tracking-wider">Size</th>
-                    <th className="px-3 py-2 text-xs font-semibold text-slate-500 uppercase tracking-wider w-24">Stock</th>
-                    <th className="w-8 py-2 text-center"></th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {variants.map((v, index) => (
-                    <tr
-                      key={v.id}
-                      draggable
-                      onDragStart={() => handleDragStart(index)}
-                      onDragOver={(e) => handleDragOver(e, index)}
-                      onDragEnd={handleDragEnd}
-                      className={`transition-all duration-150 ${draggedIndex === index ? "bg-slate-100 opacity-55" : "hover:bg-slate-50/50"}`}
-                    >
-                      <td className="py-2 text-slate-400 cursor-grab active:cursor-grabbing text-center select-none">
-                        <GripVertical className="w-3.5 h-3.5 mx-auto" />
-                      </td>
-                      <td className="px-3 py-2">
-                        <input
-                          type="text"
-                          value={v.size}
-                          onChange={(e) => updateVariant(v.id, "size", e.target.value.toUpperCase())}
-                          placeholder="XL"
-                          className="w-full px-2 py-1 border border-slate-200 rounded text-xs focus:outline-none focus:border-indigo-500 uppercase font-semibold"
-                          required
-                        />
-                      </td>
-                      <td className="px-3 py-2">
-                        {initialData?.id ? (
-                          <input
-                            type="number"
-                            value={v.stock}
-                            readOnly
-                            className="w-full px-2 py-1 border border-slate-100 bg-slate-50 rounded text-xs font-mono cursor-not-allowed text-slate-500"
-                          />
-                        ) : (
-                          <input
-                            type="number"
-                            min="0"
-                            value={v.stock}
-                            onChange={(e) => updateVariant(v.id, "stock", parseInt(e.target.value) || 0)}
-                            className="w-full px-2 py-1 border border-slate-200 bg-white rounded text-xs focus:outline-none focus:border-indigo-500 font-mono"
-                          />
-                        )}
-                      </td>
-                      <td className="py-2 text-center">
-                        <button
-                          type="button"
-                          onClick={() => removeVariant(v.id)}
-                          className="text-slate-400 hover:text-red-600 transition-colors p-1"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-              <div className="bg-slate-50/50 p-2 text-center border-t border-slate-150">
-                <button
-                  type="button"
-                  onClick={addVariant}
-                  className="text-[11px] font-bold text-indigo-600 hover:text-indigo-800 flex items-center justify-center gap-1 mx-auto bg-indigo-50/80 px-2.5 py-1 rounded-full transition-colors"
-                >
-                  <Plus className="w-3 h-3" />
-                  Add Size
-                </button>
+        </div>
+      </div>
+      {/* Card 5: Size Variants & Stock */}
+      <div className="bg-white border border-slate-200 rounded-none p-6 shadow-none">
+        <div className="flex flex-col gap-2 mb-4 border-b border-slate-100 pb-3">
+          <h2 className="text-sm font-bold text-slate-900 uppercase tracking-wider">
+            Size Variants & Stock
+          </h2>
+          {initialData?.id ? (
+            <span className="text-[9px] font-bold text-orange-600 bg-orange-50 border border-orange-100 px-2 py-1 rounded-none w-fit">
+              🔒 Stock managed by Purchases & Orders
+            </span>
+          ) : (
+            <span className="text-[10px] text-slate-500 font-medium">Set initial stock for new product</span>
+          )}
+        </div>
+
+        <div className="mb-6 p-4 bg-slate-50 border border-slate-200 rounded-none">
+          <h3 className="text-xs font-bold text-slate-800 uppercase mb-3">Variant Generator</h3>
+          <div className="flex flex-col sm:flex-row gap-4 mb-4">
+            <div className="flex-1">
+              <label className="block text-[10px] font-bold text-slate-600 uppercase mb-1">Colors</label>
+              <div className="flex gap-2 mb-2">
+                <input type="text" value={inputColor} onChange={e => setInputColor(e.target.value)} placeholder="e.g. Black" className="flex-1 px-2 py-1 border border-slate-300 text-xs rounded-none focus:outline-none focus:border-slate-900" />
+                <button type="button" onClick={addSelectedColor} className="px-3 py-1 bg-slate-800 text-white text-xs font-bold rounded-none hover:bg-slate-900">Add</button>
+              </div>
+              <div className="flex flex-wrap gap-1">
+                {selectedColors.map(c => (
+                  <span key={c} className="text-[10px] bg-slate-200 text-slate-700 px-2 py-0.5 rounded-none flex items-center gap-1">
+                    {c} <button type="button" onClick={() => setSelectedColors(selectedColors.filter(sc => sc !== c))} className="hover:text-red-500">&times;</button>
+                  </span>
+                ))}
               </div>
             </div>
+            <div className="flex-1">
+              <label className="block text-[10px] font-bold text-slate-600 uppercase mb-1">Sizes</label>
+              <div className="flex gap-2 mb-2">
+                <input type="text" value={inputSize} onChange={e => setInputSize(e.target.value)} placeholder="e.g. XL" className="flex-1 px-2 py-1 border border-slate-300 text-xs rounded-none focus:outline-none focus:border-slate-900 uppercase" />
+                <button type="button" onClick={addSelectedSize} className="px-3 py-1 bg-slate-800 text-white text-xs font-bold rounded-none hover:bg-slate-900">Add</button>
+              </div>
+              <div className="flex flex-wrap gap-1">
+                {selectedSizes.map(s => (
+                  <span key={s} className="text-[10px] bg-slate-200 text-slate-700 px-2 py-0.5 rounded-none flex items-center gap-1">
+                    {s} <button type="button" onClick={() => setSelectedSizes(selectedSizes.filter(ss => ss !== s))} className="hover:text-red-500">&times;</button>
+                  </span>
+                ))}
+              </div>
+            </div>
+          </div>
+          <button type="button" onClick={generateVariants} className="w-full py-2 bg-indigo-600 text-white text-xs font-bold uppercase rounded-none hover:bg-indigo-700 transition-colors">
+            Generate Matrix
+          </button>
+        </div>
+
+        <div className="overflow-hidden border border-slate-200 rounded-none">
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="bg-slate-50 border-b border-slate-200">
+                <th className="w-8 py-2 text-center"></th>
+                <th className="px-3 py-2 text-xs font-semibold text-slate-500 uppercase tracking-wider w-1/4">Color</th>
+                <th className="px-3 py-2 text-xs font-semibold text-slate-500 uppercase tracking-wider w-1/4">Size</th>
+                <th className="px-3 py-2 text-xs font-semibold text-slate-500 uppercase tracking-wider w-1/4">SKU</th>
+                <th className="px-3 py-2 text-xs font-semibold text-slate-500 uppercase tracking-wider w-1/4">Stock</th>
+                <th className="w-8 py-2 text-center"></th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {variants.map((v, index) => (
+                <tr
+                  key={v.id}
+                  draggable
+                  onDragStart={() => handleDragStart(index)}
+                  onDragOver={(e) => handleDragOver(e, index)}
+                  onDragEnd={handleDragEnd}
+                  className={`transition-all duration-150 ${draggedIndex === index ? "bg-slate-100 opacity-55" : "hover:bg-slate-50/50"}`}
+                >
+                  <td className="py-2 text-slate-400 cursor-grab active:cursor-grabbing text-center select-none">
+                    <GripVertical className="w-3.5 h-3.5 mx-auto" />
+                  </td>
+                  <td className="px-3 py-2">
+                    <div className="flex gap-1 items-center">
+                      <input
+                        type="color"
+                        value={v.colorCode || "#000000"}
+                        onChange={(e) => updateVariant(v.id, "colorCode", e.target.value)}
+                        className="w-6 h-6 p-0 border-0 rounded-none cursor-pointer"
+                        title="Pick Color"
+                      />
+                      <input
+                        type="text"
+                        value={v.color}
+                        onChange={(e) => updateVariant(v.id, "color", e.target.value)}
+                        placeholder="Color"
+                        className="w-full px-2 py-1.5 border border-slate-200 rounded-none text-xs focus:outline-none focus:border-slate-900 font-semibold"
+                        required
+                      />
+                    </div>
+                  </td>
+                  <td className="px-3 py-2">
+                    <input
+                      type="text"
+                      value={v.size}
+                      onChange={(e) => updateVariant(v.id, "size", e.target.value.toUpperCase())}
+                      placeholder="XL"
+                      className="w-full px-2 py-1.5 border border-slate-200 rounded-none text-xs focus:outline-none focus:border-slate-900 uppercase font-semibold"
+                      required
+                    />
+                  </td>
+                  <td className="px-3 py-2">
+                    <input
+                      type="text"
+                      value={v.sku}
+                      onChange={(e) => updateVariant(v.id, "sku", e.target.value)}
+                      placeholder="SKU-..."
+                      className="w-full px-2 py-1.5 border border-slate-200 rounded-none text-xs focus:outline-none focus:border-slate-900 uppercase font-mono"
+                    />
+                  </td>
+                  <td className="px-3 py-2">
+                    {initialData?.id ? (
+                      <input
+                        type="number"
+                        value={v.stock}
+                        readOnly
+                        className="w-full px-2 py-1.5 border border-slate-100 bg-slate-50 rounded-none text-xs font-mono cursor-not-allowed text-slate-500"
+                      />
+                    ) : (
+                      <input
+                        type="number"
+                        min="0"
+                        value={v.stock}
+                        onChange={(e) => updateVariant(v.id, "stock", parseInt(e.target.value) || 0)}
+                        className="w-full px-2 py-1.5 border border-slate-200 bg-white rounded-none text-xs focus:outline-none focus:border-slate-900 font-mono"
+                      />
+                    )}
+                  </td>
+                  <td className="py-2 text-center">
+                    <button
+                      type="button"
+                      onClick={() => removeVariant(v.id)}
+                      className="text-slate-400 hover:text-red-600 transition-colors p-1"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <div className="bg-slate-50/50 p-2 text-center border-t border-slate-200">
+            <button
+              type="button"
+              onClick={addVariant}
+              className="text-xs font-semibold text-slate-600 hover:text-slate-900 flex items-center justify-center gap-1.5 mx-auto bg-white border border-slate-200 hover:bg-slate-50 px-3 py-1.5 rounded-none transition-colors"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              Add Single Row
+            </button>
           </div>
         </div>
       </div>
@@ -499,7 +631,7 @@ function SimpleRichTextEditor({ value, onChange }: SimpleRichTextEditorProps) {
   };
 
   return (
-    <div className="border border-slate-300 rounded-md overflow-hidden focus-within:border-indigo-500 focus-within:ring-1 focus-within:ring-indigo-500">
+    <div className="border border-slate-300 rounded-none overflow-hidden focus-within:border-slate-900 focus-within:ring-0 focus-within:border-slate-900">
       <div className="flex flex-wrap items-center gap-1 bg-slate-50 border-b border-slate-200 p-2 text-slate-600 select-none">
         <button
           type="button"

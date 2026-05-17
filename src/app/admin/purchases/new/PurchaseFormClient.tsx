@@ -25,25 +25,25 @@ export default function PurchaseFormClient({ products, initialData }: { products
       quantity: i.quantity,
       unitPrice: i.unitPrice
     }))
-    : [{ id: "1", productId: "", variantId: "", quantity: 0, unitPrice: 0 }];
+    : [{ id: "1", productId: "", variantId: "", quantity: 0, unitPrice: "" as number | string }];
 
   const productOptions = products.map(p => ({
     value: p.id,
     label: `${p.name} - ${p.category}`
   }));
 
-  const [items, setItems] = useState<{ id: string, productId: string, variantId: string, quantity: number, unitPrice: number }[]>(defaultItems);
+  const [items, setItems] = useState<{ id: string, productId: string, variantId: string, quantity: number, unitPrice: number | string }[]>(defaultItems);
   const totalUnits = items.reduce((acc, item) => acc + (Number(item.quantity) || 0), 0);
   const subtotal = items.reduce((acc, item) => acc + ((Number(item.quantity) || 0) * (Number(item.unitPrice) || 0)), 0);
   const grandTotal = subtotal - (parseFloat(totalDiscount) || 0);
 
   const addItem = () => {
-    setItems([{ id: Date.now().toString(), productId: "", variantId: "", quantity: 0, unitPrice: 0 }, ...items]);
+    setItems([{ id: Date.now().toString(), productId: "", variantId: "", quantity: 0, unitPrice: "" }, ...items]);
   };
 
   const clearItems = () => {
     if (confirm("Are you sure you want to clear all rows?")) {
-      setItems([{ id: Date.now().toString(), productId: "", variantId: "", quantity: 0, unitPrice: 0 }]);
+      setItems([{ id: Date.now().toString(), productId: "", variantId: "", quantity: 0, unitPrice: "" }]);
     }
   };
 
@@ -95,11 +95,12 @@ export default function PurchaseFormClient({ products, initialData }: { products
     for (const item of items) {
       if (!item.productId || !item.variantId) return alert("All purchase items must have a valid Product and Size Variant selected.");
       if (item.quantity <= 0) return alert("Quantities must be greater than 0.");
-      if (item.unitPrice < 0) return alert("Unit cost cannot be negative.");
+      const unitPriceNum = Number(item.unitPrice);
+      if (isNaN(unitPriceNum) || unitPriceNum < 0) return alert("Unit cost must be a valid non-negative number.");
     }
 
     setLoading(true);
-    const cleanedItems = items.map(({ id, ...rest }) => rest);
+    const cleanedItems = items.map(({ id, ...rest }) => ({ ...rest, unitPrice: Number(rest.unitPrice) || 0 }));
 
     if (isEditing) {
       await updatePurchase(
@@ -242,14 +243,14 @@ export default function PurchaseFormClient({ products, initialData }: { products
                         <input
                           type="text"
                           value={item.unitPrice}
-                          onChange={(e) => updateItem(item.id, "unitPrice", parseFloat(e.target.value) || 0)}
+                          onChange={(e) => updateItem(item.id, "unitPrice", e.target.value)}
                           className="w-full px-3 py-1.5 border border-slate-200 rounded text-sm focus:outline-none focus:border-indigo-500 font-mono"
                         />
                       </td>
                       <td className="px-4 py-2">
                         <input
                           type="text"
-                          value={(item.quantity * item.unitPrice).toFixed(2)}
+                          value={(item.quantity * (Number(item.unitPrice) || 0)).toFixed(3)}
                           readOnly
                           className="w-full px-3 py-1.5 border border-slate-100 rounded text-sm bg-slate-50 text-slate-500 font-mono text-right"
                         />
@@ -280,7 +281,7 @@ export default function PurchaseFormClient({ products, initialData }: { products
 
             <div className="flex items-center justify-between text-sm">
               <span className="text-slate-500 font-medium">Subtotal (Item Sum)</span>
-              <span className="text-slate-900 font-mono font-bold text-lg">৳ {subtotal.toFixed(2)}</span>
+              <span className="text-slate-900 font-mono font-bold text-lg">৳ {subtotal.toFixed(3)}</span>
             </div>
 
             <div className="flex items-center justify-between">
@@ -289,7 +290,7 @@ export default function PurchaseFormClient({ products, initialData }: { products
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-mono text-sm">৳</span>
                 <input
                   type="number"
-                  step="0.01"
+                  step="0.001"
                   value={totalDiscount}
                   onChange={(e) => setTotalDiscount(e.target.value)}
                   className="w-32 pl-7 pr-3 py-1.5 bg-white border border-slate-300 rounded-md focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 text-sm font-mono text-right transition-colors"
@@ -300,7 +301,7 @@ export default function PurchaseFormClient({ products, initialData }: { products
 
           <div className="mt-5 pt-5 border-t border-slate-200 flex items-center justify-between">
             <span className="text-base font-semibold text-slate-900">Grand Total Paid</span>
-            <span className="text-2xl font-bold text-indigo-600 font-mono">৳ {grandTotal.toFixed(2)}</span>
+            <span className="text-2xl font-bold text-indigo-600 font-mono">৳ {grandTotal.toFixed(3)}</span>
           </div>
         </div>
 
