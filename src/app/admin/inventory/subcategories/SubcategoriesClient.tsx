@@ -38,7 +38,7 @@ export default function SubcategoriesClient({
     <div className="max-w-8xl mx-auto space-y-6">
       <div className="flex items-start sm:items-center justify-between flex-col sm:flex-row gap-4 border-b border-slate-200 pb-4">
         <div>
-          <h1 className="text-xl font-bold text-slate-900 uppercase tracking-tight">Subcategories</h1>
+          <h1 className="text-xl font-bold text-slate-900">Subcategories</h1>
           <p className="text-sm text-slate-500 mt-1">Manage your product catalog subcategories.</p>
         </div>
         <button

@@ -15,7 +15,7 @@ export default function BrandsClient({ brands, currentPage, totalPages }: { bran
 
   const handleDelete = async (id: string) => {
     if (!confirm("Are you sure you want to delete this brand?")) return;
-    
+
     startTransition(async () => {
       const res = await deleteBrand(id);
       if (!res.success) {
@@ -28,7 +28,7 @@ export default function BrandsClient({ brands, currentPage, totalPages }: { bran
     <div className="max-w-8xl mx-auto space-y-6">
       <div className="flex items-start sm:items-center justify-between flex-col sm:flex-row gap-4 border-b border-slate-200 pb-4">
         <div>
-          <h1 className="text-xl font-bold text-slate-900 uppercase tracking-tight">Brands</h1>
+          <h1 className="text-xl font-bold text-slate-900">Brands</h1>
           <p className="text-sm text-slate-500 mt-1">Manage your product catalog brands.</p>
         </div>
         <button
