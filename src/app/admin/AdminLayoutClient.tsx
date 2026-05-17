@@ -4,23 +4,23 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { adminLogout } from "./actions";
 import { useState, useEffect, useMemo } from "react";
-import { 
-  Package, 
-  ShoppingCart, 
-  LogOut, 
-  Search, 
-  Bell, 
-  User, 
-  Users, 
-  Truck, 
-  Settings, 
-  ImagePlay, 
-  Tag, 
-  AlertTriangle, 
-  TicketIcon, 
-  Banknote, 
-  Menu, 
-  X, 
+import {
+  Package,
+  ShoppingCart,
+  LogOut,
+  Search,
+  Bell,
+  User,
+  Users,
+  Truck,
+  Settings,
+  ImagePlay,
+  Tag,
+  AlertTriangle,
+  TicketIcon,
+  Banknote,
+  Menu,
+  X,
   Database,
   ChevronDown,
   LayoutDashboard,
@@ -38,6 +38,9 @@ const NAV_LINKS = [
     icon: <Boxes className="w-4 h-4 shrink-0" />,
     children: [
       { href: "/admin/products", label: "Products", action: "VIEW", subject: "PRODUCTS" },
+      { href: "/admin/inventory/brands", label: "Brands", action: "VIEW", subject: "PRODUCTS" },
+      { href: "/admin/inventory/categories", label: "Categories", action: "VIEW", subject: "PRODUCTS" },
+      { href: "/admin/inventory/subcategories", label: "Subcategories", action: "VIEW", subject: "PRODUCTS" },
       { href: "/admin/inventory/adjustments", label: "Stock Adjustments", action: "VIEW", subject: "STOCK_ADJUSTMENTS" },
       { href: "/admin/inventory/low-stock", label: "Low Stock Alerts", action: "VIEW", subject: "LOW_STOCK_ALERTS" },
     ]
@@ -105,8 +108,8 @@ export default function AdminLayoutClient({ children, session }: { children: Rea
         if (checkPermission(group.action!, group.subject!)) return group;
         return null;
       }
-      
-      const authorizedChildren = group.children?.filter(child => 
+
+      const authorizedChildren = group.children?.filter(child =>
         checkPermission(child.action!, child.subject!)
       );
 
@@ -119,7 +122,7 @@ export default function AdminLayoutClient({ children, session }: { children: Rea
 
   // Automatically open groups that contain the active link
   useEffect(() => {
-    const activeGroup = authorizedNavLinks.find(group => 
+    const activeGroup = authorizedNavLinks.find(group =>
       group.children?.some(child => pathname.includes(child.href))
     );
     if (activeGroup && !openGroups.includes(activeGroup.label)) {
@@ -128,7 +131,7 @@ export default function AdminLayoutClient({ children, session }: { children: Rea
   }, [pathname, authorizedNavLinks]);
 
   const toggleGroup = (label: string) => {
-    setOpenGroups(prev => 
+    setOpenGroups(prev =>
       prev.includes(label) ? prev.filter(l => l !== label) : [...prev, label]
     );
   };
@@ -144,7 +147,7 @@ export default function AdminLayoutClient({ children, session }: { children: Rea
 
   const filteredLinks = useMemo(() => {
     if (!searchQuery.trim()) return [];
-    return allFlatLinks.filter(link => 
+    return allFlatLinks.filter(link =>
       link.label.toLowerCase().includes(searchQuery.toLowerCase())
     );
   }, [searchQuery, allFlatLinks]);
@@ -166,22 +169,21 @@ export default function AdminLayoutClient({ children, session }: { children: Rea
       <div className="flex h-screen bg-slate-50 dark:bg-zinc-950 overflow-hidden relative">
         {/* Mobile Backdrop */}
         {isSidebarOpen && (
-          <div 
-            className="fixed inset-0 z-40 bg-black/50 md:hidden transition-opacity duration-300" 
-            onClick={() => setIsSidebarOpen(false)} 
+          <div
+            className="fixed inset-0 z-40 bg-black/50 md:hidden transition-opacity duration-300"
+            onClick={() => setIsSidebarOpen(false)}
           />
         )}
 
         {/* Sidebar - Dark Enterprise Theme */}
-        <aside className={`fixed inset-y-0 left-0 z-50 bg-slate-900 border-r border-slate-800 text-slate-300 flex flex-col flex-shrink-0 shadow-lg transform transition-all duration-300 ease-in-out print:hidden overflow-x-hidden ${
-          isSidebarOpen ? "translate-x-0 w-64" : "-translate-x-full w-64"
-        } md:relative md:translate-x-0 ${isCollapsed ? "md:w-[4.5rem]" : "md:w-64"}`}>
+        <aside className={`fixed inset-y-0 left-0 z-50 bg-slate-900 border-r border-slate-800 text-slate-300 flex flex-col flex-shrink-0 shadow-lg transform transition-all duration-300 ease-in-out print:hidden overflow-x-hidden ${isSidebarOpen ? "translate-x-0 w-64" : "-translate-x-full w-64"
+          } md:relative md:translate-x-0 ${isCollapsed ? "md:w-[4.5rem]" : "md:w-64"}`}>
           <div className="h-16 flex items-center justify-between px-5 border-b border-slate-800 shrink-0">
             <Link href="/admin" className="font-bold text-lg tracking-tight text-white flex items-center gap-3 overflow-hidden whitespace-nowrap">
               <div className="w-8 h-8 shrink-0 bg-gold rounded-md flex items-center justify-center text-slate-900 font-black shadow-sm">M</div>
               <span className={`transition-opacity duration-300 ${isCollapsed ? "opacity-0" : "opacity-100"}`}>Mystic Admin</span>
             </Link>
-            <button 
+            <button
               className="md:hidden text-slate-400 hover:text-white transition-colors"
               onClick={() => setIsSidebarOpen(false)}
             >
@@ -204,7 +206,7 @@ export default function AdminLayoutClient({ children, session }: { children: Rea
           <div className={`px-5 py-6 font-semibold text-[10px] tracking-wider text-slate-500 uppercase transition-all duration-300 whitespace-nowrap ${isCollapsed ? "opacity-0 h-0 py-0 overflow-hidden" : "opacity-100"}`}>
             Main Menu
           </div>
-          
+
           <nav className="flex-1 px-3 space-y-1 overflow-y-auto overflow-x-hidden scrollbar-thin scrollbar-thumb-slate-700 pb-20">
             {authorizedNavLinks.map((item) => {
               if (item.href) {
@@ -229,7 +231,7 @@ export default function AdminLayoutClient({ children, session }: { children: Rea
 
               // Render Group
               const isGroupOpen = openGroups.includes(item.label);
-              const isAnyChildActive = item.children?.some(child => 
+              const isAnyChildActive = item.children?.some(child =>
                 child.exact ? pathname === child.href : pathname.includes(child.href)
               );
 
@@ -237,9 +239,8 @@ export default function AdminLayoutClient({ children, session }: { children: Rea
                 <div key={item.label} className="space-y-1">
                   <button
                     onClick={() => toggleGroup(item.label)}
-                    className={`w-full flex items-center justify-between px-3 py-2.5 rounded-md text-sm font-medium transition-colors whitespace-nowrap group ${
-                      isAnyChildActive ? "text-white" : "text-slate-400 hover:bg-slate-800 hover:text-white"
-                    }`}
+                    className={`w-full flex items-center justify-between px-3 py-2.5 rounded-md text-sm font-medium transition-colors whitespace-nowrap group ${isAnyChildActive ? "text-white" : "text-slate-400 hover:bg-slate-800 hover:text-white"
+                      }`}
                   >
                     <div className="flex items-center gap-3">
                       {item.icon}
@@ -260,11 +261,10 @@ export default function AdminLayoutClient({ children, session }: { children: Rea
                           <Link
                             key={child.href}
                             href={child.href}
-                            className={`flex items-center gap-3 px-3 py-2 text-xs font-medium transition-colors whitespace-nowrap rounded-r-md border-l-2 ${
-                              isChildActive 
-                              ? "text-gold border-gold bg-gold/5" 
-                              : "text-slate-500 border-transparent hover:text-slate-300 hover:bg-slate-800/50"
-                            }`}
+                            className={`flex items-center gap-3 px-3 py-2 text-xs font-medium transition-colors whitespace-nowrap rounded-r-md border-l-2 ${isChildActive
+                                ? "text-gold border-gold bg-gold/5"
+                                : "text-slate-500 border-transparent hover:text-slate-300 hover:bg-slate-800/50"
+                              }`}
                           >
                             {child.label}
                           </Link>
@@ -296,13 +296,13 @@ export default function AdminLayoutClient({ children, session }: { children: Rea
           {/* Topbar */}
           <header className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-4 md:px-6 flex-shrink-0 z-10 print:hidden">
             <div className="flex items-center gap-4 flex-1">
-              <button 
+              <button
                 className="p-2 -ml-2 text-slate-600 hover:bg-slate-100 rounded-md md:hidden transition-colors"
                 onClick={() => setIsSidebarOpen(true)}
               >
                 <Menu className="w-6 h-6" />
               </button>
-              <button 
+              <button
                 className="p-2 -ml-2 text-slate-600 hover:bg-slate-100 rounded-md hidden md:block transition-colors"
                 onClick={() => setIsCollapsed(!isCollapsed)}
               >
