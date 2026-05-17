@@ -2,7 +2,8 @@
 
 import { useState, useRef, useEffect } from "react";
 import { createProduct, updateProduct, uploadImage } from "../../actions";
-import { Plus, Trash2, Save, ArrowLeft, GripVertical, Bold, Italic, Underline, List, ListOrdered, Undo, Redo, Eraser } from "lucide-react";
+import { createBrand, createSubcategory, createCategory } from "../../inventory/catalog-actions";
+import { Plus, Trash2, Save, ArrowLeft, GripVertical, Bold, Italic, Underline, List, ListOrdered, Undo, Redo, Eraser, X, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
@@ -28,6 +29,113 @@ export default function ProductFormClient({
   const [isUploading, setIsUploading] = useState(false);
   const [isFeatured, setIsFeatured] = useState(initialData?.isFeatured || false);
   const [isPublished, setIsPublished] = useState(initialData?.isPublished ?? true);
+
+  // Dynamic state arrays to handle inline additions seamlessly
+  const [localBrands, setLocalBrands] = useState<any[]>(brands);
+  const [localCategories, setLocalCategories] = useState<any[]>(categories);
+
+  useEffect(() => {
+    setLocalBrands(brands);
+  }, [brands]);
+
+  useEffect(() => {
+    setLocalCategories(categories);
+  }, [categories]);
+
+  // Inline creation states
+  const [isAddingBrand, setIsAddingBrand] = useState(false);
+  const [newBrandName, setNewBrandName] = useState("");
+  const [brandSubmitting, setBrandSubmitting] = useState(false);
+
+  const [isAddingCategory, setIsAddingCategory] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState("");
+  const [categorySubmitting, setCategorySubmitting] = useState(false);
+
+  const [isAddingSubcategory, setIsAddingSubcategory] = useState(false);
+  const [newSubcategoryName, setNewSubcategoryName] = useState("");
+  const [subcategorySubmitting, setSubcategorySubmitting] = useState(false);
+
+  const handleAddCategoryInline = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newCategoryName.trim()) return;
+    setCategorySubmitting(true);
+    try {
+      const res = await createCategory({ name: newCategoryName.trim() });
+      if (res.success && res.category) {
+        const newCategoryObj = { ...res.category, subcategories: [] };
+        setLocalCategories((prev) => [...prev, newCategoryObj]);
+        setCategoryId(res.category.id);
+        setSubcategoryId("");
+        setNewCategoryName("");
+        setIsAddingCategory(false);
+      } else {
+        alert(res.error || "Failed to create category");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Failed to create category. Check console.");
+    } finally {
+      setCategorySubmitting(false);
+    }
+  };
+
+  const handleAddBrandInline = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newBrandName.trim()) return;
+    setBrandSubmitting(true);
+    try {
+      const res = await createBrand({ name: newBrandName.trim() });
+      if (res.success && res.brand) {
+        setLocalBrands((prev) => [...prev, res.brand]);
+        setBrandId(res.brand.id);
+        setNewBrandName("");
+        setIsAddingBrand(false);
+      } else {
+        alert(res.error || "Failed to create brand");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Failed to create brand. Check console.");
+    } finally {
+      setBrandSubmitting(false);
+    }
+  };
+
+  const handleAddSubcategoryInline = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newSubcategoryName.trim()) return;
+    if (!categoryId) return alert("Please select a parent category first.");
+    setSubcategorySubmitting(true);
+    try {
+      const res = await createSubcategory({
+        name: newSubcategoryName.trim(),
+        categoryId: categoryId,
+      });
+      if (res.success && res.subcategory) {
+        setLocalCategories((prev) =>
+          prev.map((c) => {
+            if (c.id === categoryId) {
+              return {
+                ...c,
+                subcategories: [...(c.subcategories || []), res.subcategory],
+              };
+            }
+            return c;
+          })
+        );
+        setSubcategoryId(res.subcategory.id);
+        setNewSubcategoryName("");
+        setIsAddingSubcategory(false);
+      } else {
+        alert(res.error || "Failed to create subcategory");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Failed to create subcategory. Check console.");
+    } finally {
+      setSubcategorySubmitting(false);
+    }
+  };
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -154,7 +262,7 @@ export default function ProductFormClient({
     // ✅ FIX 2: Filter out any undefined, null, or empty strings from images array
     const validImages = images.filter((img) => typeof img === 'string' && img.trim() !== "");
 
-    const selectedCategoryObj = categories?.find(c => c.id === categoryId);
+    const selectedCategoryObj = localCategories?.find(c => c.id === categoryId);
     const categoryName = selectedCategoryObj ? selectedCategoryObj.name : "Uncategorized";
 
     const productPayload = {
@@ -163,10 +271,10 @@ export default function ProductFormClient({
       price: parseFloat(price),
       images: validImages, // Send the cleaned array
       category: categoryName,
-      brandId: brandId || undefined,
-      categoryId: categoryId || undefined,
-      subcategoryId: subcategoryId || undefined,
-      sizeChartId: sizeChartId || undefined,
+      brandId: brandId || null,
+      categoryId: categoryId || null,
+      subcategoryId: subcategoryId || null,
+      sizeChartId: sizeChartId || null,
       discountId: discountId || null,
       isFeatured,
       isPublished,
@@ -360,50 +468,184 @@ export default function ProductFormClient({
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Brand</label>
-                <select
-                  value={brandId}
-                  onChange={(e) => setBrandId(e.target.value)}
-                  className="w-full px-4 py-2 border border-slate-300 rounded-none focus:outline-none focus:border-slate-900 text-sm bg-white"
-                >
-                  <option value="">No Brand</option>
-                  {brands?.map((b: any) => (
-                    <option key={b.id} value={b.id}>{b.name}</option>
-                  ))}
-                </select>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">Brand</label>
+                  {!isAddingBrand && (
+                    <button
+                      type="button"
+                      onClick={() => setIsAddingBrand(true)}
+                      className="text-[10px] font-bold text-[#800020] hover:underline flex items-center gap-0.5"
+                    >
+                      <Plus className="w-3 h-3" /> Add New
+                    </button>
+                  )}
+                </div>
+                {isAddingBrand ? (
+                  <div className="flex gap-2 items-center bg-slate-50 p-2 border border-slate-200">
+                    <input
+                      type="text"
+                      value={newBrandName}
+                      onChange={(e) => setNewBrandName(e.target.value)}
+                      placeholder="Enter brand name..."
+                      className="flex-1 px-3 py-1.5 border border-slate-300 rounded-none focus:outline-none focus:border-slate-900 text-xs bg-white"
+                      disabled={brandSubmitting}
+                      autoFocus
+                    />
+                    <button
+                      type="button"
+                      onClick={handleAddBrandInline}
+                      disabled={brandSubmitting || !newBrandName.trim()}
+                      className="px-3 py-1.5 bg-[#800020] text-white text-xs font-bold rounded-none hover:bg-opacity-95 transition-all disabled:opacity-50"
+                    >
+                      {brandSubmitting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : "Save"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsAddingBrand(false);
+                        setNewBrandName("");
+                      }}
+                      disabled={brandSubmitting}
+                      className="p-1.5 bg-slate-200 text-slate-700 hover:bg-slate-300 transition-colors rounded-none"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                ) : (
+                  <select
+                    value={brandId}
+                    onChange={(e) => setBrandId(e.target.value)}
+                    className="w-full px-4 py-2 border border-slate-300 rounded-none focus:outline-none focus:border-slate-900 text-sm bg-white"
+                  >
+                    <option value="">No Brand</option>
+                    {localBrands?.map((b: any) => (
+                      <option key={b.id} value={b.id}>{b.name}</option>
+                    ))}
+                  </select>
+                )}
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Category *</label>
-                <select
-                  value={categoryId}
-                  onChange={(e) => {
-                    setCategoryId(e.target.value);
-                    setSubcategoryId("");
-                  }}
-                  className="w-full px-4 py-2 border border-slate-300 rounded-none focus:outline-none focus:border-slate-900 text-sm bg-white"
-                  required
-                >
-                  <option value="">Select Category</option>
-                  {categories?.map((c: any) => (
-                    <option key={c.id} value={c.id}>{c.name}</option>
-                  ))}
-                </select>
-              </div>
-
-              {categoryId && categories?.find((c: any) => c.id === categoryId)?.subcategories?.length > 0 && (
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Subcategory</label>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">Category *</label>
+                  {!isAddingCategory && (
+                    <button
+                      type="button"
+                      onClick={() => setIsAddingCategory(true)}
+                      className="text-[10px] font-bold text-[#800020] hover:underline flex items-center gap-0.5"
+                    >
+                      <Plus className="w-3 h-3" /> Add New
+                    </button>
+                  )}
+                </div>
+                {isAddingCategory ? (
+                  <div className="flex gap-2 items-center bg-slate-50 p-2 border border-slate-200">
+                    <input
+                      type="text"
+                      value={newCategoryName}
+                      onChange={(e) => setNewCategoryName(e.target.value)}
+                      placeholder="Enter category name..."
+                      className="flex-1 px-3 py-1.5 border border-slate-300 rounded-none focus:outline-none focus:border-slate-900 text-xs bg-white"
+                      disabled={categorySubmitting}
+                      autoFocus
+                    />
+                    <button
+                      type="button"
+                      onClick={handleAddCategoryInline}
+                      disabled={categorySubmitting || !newCategoryName.trim()}
+                      className="px-3 py-1.5 bg-[#800020] text-white text-xs font-bold rounded-none hover:bg-opacity-95 transition-all disabled:opacity-50"
+                    >
+                      {categorySubmitting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : "Save"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsAddingCategory(false);
+                        setNewCategoryName("");
+                      }}
+                      disabled={categorySubmitting}
+                      className="p-1.5 bg-slate-200 text-slate-700 hover:bg-slate-300 transition-colors rounded-none"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                ) : (
                   <select
-                    value={subcategoryId}
-                    onChange={(e) => setSubcategoryId(e.target.value)}
+                    value={categoryId}
+                    onChange={(e) => {
+                      setCategoryId(e.target.value);
+                      setSubcategoryId("");
+                    }}
                     className="w-full px-4 py-2 border border-slate-300 rounded-none focus:outline-none focus:border-slate-900 text-sm bg-white"
+                    required
                   >
-                    <option value="">None</option>
-                    {categories?.find((c: any) => c.id === categoryId)?.subcategories?.map((sc: any) => (
-                      <option key={sc.id} value={sc.id}>{sc.name}</option>
+                    <option value="">Select Category</option>
+                    {localCategories?.map((c: any) => (
+                      <option key={c.id} value={c.id}>{c.name}</option>
                     ))}
                   </select>
+                )}
+              </div>
+
+              {categoryId && (
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">Subcategory</label>
+                    {!isAddingSubcategory && (
+                      <button
+                        type="button"
+                        onClick={() => setIsAddingSubcategory(true)}
+                        className="text-[10px] font-bold text-[#800020] hover:underline flex items-center gap-0.5"
+                      >
+                        <Plus className="w-3 h-3" /> Add New
+                      </button>
+                    )}
+                  </div>
+                  {isAddingSubcategory ? (
+                    <div className="flex gap-2 items-center bg-slate-50 p-2 border border-slate-200">
+                      <input
+                        type="text"
+                        value={newSubcategoryName}
+                        onChange={(e) => setNewSubcategoryName(e.target.value)}
+                        placeholder="Enter subcategory name..."
+                        className="flex-1 px-3 py-1.5 border border-slate-300 rounded-none focus:outline-none focus:border-slate-900 text-xs bg-white"
+                        disabled={subcategorySubmitting}
+                        autoFocus
+                      />
+                      <button
+                        type="button"
+                        onClick={handleAddSubcategoryInline}
+                        disabled={subcategorySubmitting || !newSubcategoryName.trim()}
+                        className="px-3 py-1.5 bg-[#800020] text-white text-xs font-bold rounded-none hover:bg-opacity-95 transition-all disabled:opacity-50"
+                      >
+                        {subcategorySubmitting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : "Save"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsAddingSubcategory(false);
+                          setNewSubcategoryName("");
+                        }}
+                        disabled={subcategorySubmitting}
+                        className="p-1.5 bg-slate-200 text-slate-700 hover:bg-slate-300 transition-colors rounded-none"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  ) : (
+                    <select
+                      value={subcategoryId}
+                      onChange={(e) => setSubcategoryId(e.target.value)}
+                      className="w-full px-4 py-2 border border-slate-300 rounded-none focus:outline-none focus:border-slate-900 text-sm bg-white"
+                    >
+                      <option value="">None</option>
+                      {localCategories
+                        .find((c: any) => c.id === categoryId)
+                        ?.subcategories?.map((sc: any) => (
+                          <option key={sc.id} value={sc.id}>{sc.name}</option>
+                        ))}
+                    </select>
+                  )}
                 </div>
               )}
 

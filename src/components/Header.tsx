@@ -59,7 +59,6 @@ export default function Header() {
                 />
                 <button
                   type="submit"
-                  className="bg-primary text-white px-4 h-full flex items-center justify-center hover:bg-opacity-90 transition-colors rounded-none"
                 >
                   <Search className="w-5 h-5" />
                 </button>
@@ -92,7 +91,7 @@ export default function Header() {
               onClick={() => setIsSearchOpen(true)}
               className="p-1 text-foreground hover:text-primary transition-colors flex items-center justify-center"
             >
-              <Search className="w-6 h-6" />
+              <Search className="w-4 h-6" />
             </button>
           </div>
 
@@ -120,7 +119,7 @@ export default function Header() {
             />
             <button
               type="submit"
-              className="bg-primary text-white px-6 h-full flex items-center justify-center hover:bg-opacity-90 transition-colors rounded-none"
+              className="bg-primary text-white px-4 h-full flex items-center justify-center hover:bg-opacity-90 transition-colors rounded-none"
             >
               <Search className="w-5 h-5" />
             </button>

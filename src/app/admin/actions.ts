@@ -68,10 +68,10 @@ export async function createProduct(data: {
   images: string[];
   team?: string;
   category: string;
-  brandId?: string;
-  categoryId?: string;
-  subcategoryId?: string;
-  sizeChartId?: string;
+  brandId?: string | null;
+  categoryId?: string | null;
+  subcategoryId?: string | null;
+  sizeChartId?: string | null;
   discountId?: string | null;
   isFeatured: boolean;
   isPublished: boolean;
@@ -86,13 +86,13 @@ export async function createProduct(data: {
         images: data.images,
         team: data.team,
         category: data.category,
-        brandId: data.brandId,
-        categoryId: data.categoryId,
-        subcategoryId: data.subcategoryId,
+        brandId: data.brandId || null,
+        categoryId: data.categoryId || null,
+        subcategoryId: data.subcategoryId || null,
         isFeatured: data.isFeatured,
         isPublished: data.isPublished,
-        sizeChartId: data.sizeChartId,
-        discountId: data.discountId,
+        sizeChartId: data.sizeChartId || null,
+        discountId: data.discountId || null,
         variants: {
           create: data.variants.map((v, idx) => ({
             size: v.size,
@@ -127,10 +127,10 @@ export async function updateProduct(id: string, data: {
   images: string[];
   team?: string;
   category: string;
-  brandId?: string;
-  categoryId?: string;
-  subcategoryId?: string;
-  sizeChartId?: string;
+  brandId?: string | null;
+  categoryId?: string | null;
+  subcategoryId?: string | null;
+  sizeChartId?: string | null;
   discountId?: string | null;
   isFeatured: boolean;
   isPublished: boolean;
@@ -146,13 +146,13 @@ export async function updateProduct(id: string, data: {
         images: data.images,
         team: data.team,
         category: data.category,
-        brandId: data.brandId,
-        categoryId: data.categoryId,
-        subcategoryId: data.subcategoryId,
+        brandId: data.brandId || null,
+        categoryId: data.categoryId || null,
+        subcategoryId: data.subcategoryId || null,
         isFeatured: data.isFeatured,
         isPublished: data.isPublished,
-        sizeChartId: data.sizeChartId,
-        discountId: data.discountId,
+        sizeChartId: data.sizeChartId || null,
+        discountId: data.discountId || null,
       },
     });
 
