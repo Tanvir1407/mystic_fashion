@@ -19,7 +19,7 @@ async function getOrCreateSystemAccount(tx: any, name: string, type: "INCOME" | 
   return account;
 }
 
-import { createSession, destroySession } from "@/lib/auth";
+import { createSession, destroySession, getSession } from "@/lib/auth";
 import { getRedirectUrlForSession } from "@/lib/permissions";
 
 export async function adminLogin(email: string, password: string) {
@@ -939,6 +939,9 @@ export async function createAdminOrder(data: {
   hasBackorderItems?: boolean;
 }) {
   try {
+    const session = await getSession();
+    const createdById = session?.userId || null;
+
     const order = await prisma.$transaction(async (tx) => {
       const customId = await generateOrderIdInternal(tx);
 
@@ -964,6 +967,7 @@ export async function createAdminOrder(data: {
           pathaoAreaId: data.pathaoAreaId,
           status: orderStatus,
           orderSource: "Salesman",
+          createdById: createdById,
           items: {
             create: data.items.flatMap((item) => {
               if (item.requiresPrint && item.printDetails && item.printDetails.length > 0) {

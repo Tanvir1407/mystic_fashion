@@ -72,6 +72,7 @@ export default async function AdminOrdersPage({ searchParams }: { searchParams: 
               product: true,
             },
           },
+          createdBy: true,
         },
       }),
       prisma.order.count({ where: whereClause }),

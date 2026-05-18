@@ -268,6 +268,22 @@ export default function OrderDetailsClient({ order, deliverySettings, products =
                 </a>
               )}
             </div>
+            <div>
+              <span className="block text-[10px] uppercase font-bold text-slate-400 mb-2 tracking-wider">Created By</span>
+              {order.createdBy ? (
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold text-indigo-700 bg-indigo-50 border border-indigo-100 rounded-lg">
+                  👤 {order.createdBy.username}
+                </span>
+              ) : order.orderSource === "eCommerce" ? (
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-100 rounded-lg">
+                  🌐 eCommerce
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold text-violet-700 bg-violet-50 border border-violet-100 rounded-lg">
+                  👤 Salesman (Legacy)
+                </span>
+              )}
+            </div>
           </div>
         </div>
 

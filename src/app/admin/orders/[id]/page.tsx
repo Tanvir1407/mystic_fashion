@@ -17,7 +17,8 @@ export default async function SingleOrderPage({ params }: { params: { id: string
         include: {
           product: true,
         }
-      }
+      },
+      createdBy: true,
     }
   });
   const deliverySettings = await getDeliverySettings();
