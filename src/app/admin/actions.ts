@@ -20,6 +20,7 @@ async function getOrCreateSystemAccount(tx: any, name: string, type: "INCOME" | 
 }
 
 import { createSession, destroySession } from "@/lib/auth";
+import { getRedirectUrlForSession } from "@/lib/permissions";
 
 export async function adminLogin(email: string, password: string) {
   try {
@@ -37,16 +38,19 @@ export async function adminLogin(email: string, password: string) {
         return { success: false, error: "Access denied: No role assigned." };
       }
 
-      const token = await createSession({
+      const sessionPayload = {
         userId: staff.id,
         roleName: staff.role.name,
         permissions: staff.role.name === "SUPERADMIN" ? [] : staff.role.permissions.map(p => ({
           action: p.action,
           subject: p.subject
         }))
-      });
+      };
 
-      return { success: true, token };
+      const token = await createSession(sessionPayload);
+      const redirectUrl = getRedirectUrlForSession(sessionPayload);
+
+      return { success: true, token, redirectUrl };
     } else {
       return { success: false, error: "Invalid email or password" };
     }
