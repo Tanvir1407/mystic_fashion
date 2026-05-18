@@ -143,12 +143,11 @@ export default function ThermalPrintView({ orders, storePhone, storeAddress }: T
             {/* Header: Logo and dynamic/default Shop Details */}
             <div className="flex justify-between items-start mb-2" style={{ gap: "2mm" }}>
               <div className="flex flex-col text-left">
-                <h2 className="text-[22px] font-bold font-serif tracking-[0.05em] text-black leading-none mb-0.5" style={{ fontFamily: "Georgia, serif" }}>
-                  MYSTIC
-                </h2>
-                <p className="text-[7.5px] tracking-[0.25em] text-black/80 uppercase font-sans whitespace-nowrap">
-                  The Art of Presence
-                </p>
+                <img
+                  src="/images/logo.png"
+                  alt="MYSTIC Logo"
+                  className="h-9 w-auto object-contain object-left"
+                />
               </div>
 
               <div className="text-right text-[9.5px] leading-tight text-black font-sans font-medium">
