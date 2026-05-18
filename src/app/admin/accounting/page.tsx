@@ -20,7 +20,7 @@ export default async function AccountingPage({
   const { transactions, total } = await getLedger(undefined, searchParams, page, limit);
 
   return (
-    <div className=" mx-auto space-y-8 p-4 sm:p-6 lg:p-8">
+    <div className=" mx-auto space-y-8">
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-gray-900">Accounting Dashboard</h1>

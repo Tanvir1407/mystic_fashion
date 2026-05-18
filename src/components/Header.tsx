@@ -59,6 +59,7 @@ export default function Header() {
                 />
                 <button
                   type="submit"
+                  className="bg-primary text-white px-4 h-full flex items-center justify-center hover:bg-opacity-90 transition-colors rounded-none"
                 >
                   <Search className="w-5 h-5" />
                 </button>
@@ -129,7 +130,7 @@ export default function Header() {
           <div className="flex items-center gap-2.5 md:gap-4 lg:gap-6 flex-shrink-0">
 
             {/* Account (Desktop only) */}
-            <Link href="/admin" className="hidden md:flex items-center gap-2.5 group">
+            {/* <Link href="/admin" className="hidden md:flex items-center gap-2.5 group">
               <div className="w-10 h-10 rounded-full border border-slate-200 flex items-center justify-center text-slate-600 group-hover:border-primary group-hover:text-primary transition-colors">
                 <User className="w-5 h-5" />
               </div>
@@ -137,7 +138,7 @@ export default function Header() {
                 <span className="text-[11px] text-slate-500 leading-none">Sign In</span>
                 <span className="text-xs font-bold text-slate-900 mt-0.5 leading-tight group-hover:text-primary transition-colors">Your Account</span>
               </div>
-            </Link>
+            </Link> */}
 
             {/* Cart (Desktop and Mobile) */}
             <button
@@ -156,9 +157,9 @@ export default function Header() {
             </button>
 
             {/* Account (Mobile only) */}
-            <Link href="/admin" className="md:hidden p-1 text-foreground hover:text-primary transition-colors flex items-center justify-center">
+            {/* <Link href="/admin" className="md:hidden p-1 text-foreground hover:text-primary transition-colors flex items-center justify-center">
               <User className="w-6 h-6" />
-            </Link>
+            </Link> */}
           </div>
         </div>
       </div>
