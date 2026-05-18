@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, TrendingUp, ShoppingBag, Coins, CheckCircle2, User, Mail, Shield, ChevronRight, Activity, Calendar } from "lucide-react";
+import { ArrowLeft, TrendingUp, ShoppingBag, Coins, CheckCircle2, User, Mail, Shield, ChevronLeft, ChevronRight, Activity, Calendar } from "lucide-react";
 import { formatBDT } from "@/utils/formatPrice";
 import { formatDate } from "@/utils/formatDate";
 
@@ -12,6 +12,10 @@ export default function StaffDetailsClient({ staff }: { staff: any }) {
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
 
   const orders = staff.orders || [];
+  const [ledgerPage, setLedgerPage] = useState(1);
+  const ledgerPerPage = 10;
+  const totalLedgerPages = Math.ceil(orders.length / ledgerPerPage);
+  const paginatedOrders = orders.slice((ledgerPage - 1) * ledgerPerPage, ledgerPage * ledgerPerPage);
   const totalOrders = orders.length;
 
   // Group sales by date
@@ -255,7 +259,7 @@ export default function StaffDetailsClient({ staff }: { staff: any }) {
           <div className="flex bg-slate-100 border border-slate-250 p-0.5 rounded-lg shrink-0">
             <button
               onClick={() => setChartMode("daily")}
-              className={`px-3 py-1.5 text-xs font-bold uppercase tracking-wider rounded-md transition-all ${chartMode === "daily"
+              className={`px-3 py-1.5 text-xs font-bold uppercase tracking-wider rounded-md transition-all cursor-pointer ${chartMode === "daily"
                   ? "bg-emerald-500 text-white shadow-sm font-extrabold"
                   : "text-slate-500 hover:text-slate-800"
                 }`}
@@ -264,7 +268,7 @@ export default function StaffDetailsClient({ staff }: { staff: any }) {
             </button>
             <button
               onClick={() => setChartMode("cumulative")}
-              className={`px-3 py-1.5 text-xs font-bold uppercase tracking-wider rounded-md transition-all ${chartMode === "cumulative"
+              className={`px-3 py-1.5 text-xs font-bold uppercase tracking-wider rounded-md transition-all cursor-pointer ${chartMode === "cumulative"
                   ? "bg-emerald-500 text-white shadow-sm font-extrabold"
                   : "text-slate-500 hover:text-slate-800"
                 }`}
@@ -560,7 +564,7 @@ export default function StaffDetailsClient({ staff }: { staff: any }) {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {orders.slice(0, 10).map((o: any) => (
+                  {paginatedOrders.map((o: any) => (
                     <tr key={o.id} className="hover:bg-slate-50/40 transition-colors group">
                       <td className="px-5 py-4">
                         <div className="flex flex-col">
@@ -604,11 +608,110 @@ export default function StaffDetailsClient({ staff }: { staff: any }) {
                   ))}
                 </tbody>
               </table>
-              {orders.length > 10 && (
-                <div className="p-4 text-center border-t border-slate-100 bg-slate-50/30">
-                  <span className="text-[10px] uppercase font-bold text-slate-400 tracking-widest">
-                    Showing latest 10 of {orders.length} orders
-                  </span>
+              {totalLedgerPages > 1 && (
+                <div className="flex items-center justify-between border-t border-slate-150 bg-slate-50/50 px-4 py-3 sm:px-6">
+                  <div className="flex flex-1 justify-between sm:hidden">
+                    {ledgerPage > 1 ? (
+                      <button
+                        onClick={() => setLedgerPage(prev => Math.max(prev - 1, 1))}
+                        className="relative inline-flex items-center rounded-md border border-slate-300 bg-white px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors cursor-pointer"
+                      >
+                        Previous
+                      </button>
+                    ) : (
+                      <span className="relative inline-flex items-center rounded-md border border-slate-200 bg-slate-50 px-4 py-2 text-xs font-semibold text-slate-400 cursor-not-allowed">
+                        Previous
+                      </span>
+                    )}
+                    {ledgerPage < totalLedgerPages ? (
+                      <button
+                        onClick={() => setLedgerPage(prev => Math.min(prev + 1, totalLedgerPages))}
+                        className="relative ml-3 inline-flex items-center rounded-md border border-slate-300 bg-white px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors cursor-pointer"
+                      >
+                        Next
+                      </button>
+                    ) : (
+                      <span className="relative ml-3 inline-flex items-center rounded-md border border-slate-200 bg-slate-50 px-4 py-2 text-xs font-semibold text-slate-400 cursor-not-allowed">
+                        Next
+                      </span>
+                    )}
+                  </div>
+                  <div className="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between">
+                    <div>
+                      <p className="text-xs font-semibold text-slate-500">
+                        Showing <span className="text-slate-800">{(ledgerPage - 1) * ledgerPerPage + 1}</span> to{" "}
+                        <span className="text-slate-800">{Math.min(ledgerPage * ledgerPerPage, orders.length)}</span> of{" "}
+                        <span className="text-slate-800">{orders.length}</span> orders
+                      </p>
+                    </div>
+                    <div>
+                      <nav className="isolate inline-flex -space-x-px rounded-md shadow-sm bg-white" aria-label="Pagination">
+                        {ledgerPage > 1 ? (
+                          <button
+                            onClick={() => setLedgerPage(prev => Math.max(prev - 1, 1))}
+                            className="relative inline-flex items-center rounded-l-md px-2 py-2 text-slate-400 ring-1 ring-inset ring-slate-200 hover:bg-slate-50 focus:z-20 transition-colors cursor-pointer"
+                          >
+                            <ChevronLeft className="h-4 w-4" aria-hidden="true" />
+                          </button>
+                        ) : (
+                          <span className="relative inline-flex items-center rounded-l-md px-2 py-2 text-slate-300 ring-1 ring-inset ring-slate-100 bg-slate-50 focus:z-20 cursor-not-allowed">
+                            <ChevronLeft className="h-4 w-4" aria-hidden="true" />
+                          </span>
+                        )}
+
+                        {Array.from({ length: totalLedgerPages }, (_, i) => i + 1).map((page) => {
+                          if (
+                            page === 1 ||
+                            page === totalLedgerPages ||
+                            (page >= ledgerPage - 1 && page <= ledgerPage + 1)
+                          ) {
+                            return (
+                              <button
+                                key={page}
+                                onClick={() => setLedgerPage(page)}
+                                className={`relative inline-flex items-center px-3.5 py-2 text-xs font-bold focus:z-20 transition-all cursor-pointer ${
+                                  page === ledgerPage
+                                    ? "z-10 bg-indigo-600 text-white shadow-sm ring-1 ring-indigo-600"
+                                    : "text-slate-700 ring-1 ring-inset ring-slate-200 hover:bg-slate-50"
+                                }`}
+                              >
+                                {page}
+                              </button>
+                            );
+                          }
+
+                          if (
+                            (page === ledgerPage - 2 && page > 1) ||
+                            (page === ledgerPage + 2 && page < totalLedgerPages)
+                          ) {
+                            return (
+                              <span
+                                key={page}
+                                className="relative inline-flex items-center px-3 py-2 text-xs font-semibold text-slate-400 ring-1 ring-inset ring-slate-200 focus:outline-offset-0 select-none bg-slate-50"
+                              >
+                                ...
+                              </span>
+                            );
+                          }
+
+                          return null;
+                        })}
+
+                        {ledgerPage < totalLedgerPages ? (
+                          <button
+                            onClick={() => setLedgerPage(prev => Math.min(prev + 1, totalLedgerPages))}
+                            className="relative inline-flex items-center rounded-r-md px-2 py-2 text-slate-400 ring-1 ring-inset ring-slate-200 hover:bg-slate-50 focus:z-20 transition-colors cursor-pointer"
+                          >
+                            <ChevronRight className="h-4 w-4" aria-hidden="true" />
+                          </button>
+                        ) : (
+                          <span className="relative inline-flex items-center rounded-r-md px-2 py-2 text-slate-300 ring-1 ring-inset ring-slate-100 bg-slate-50 focus:z-20 cursor-not-allowed">
+                            <ChevronRight className="h-4 w-4" aria-hidden="true" />
+                          </span>
+                        )}
+                      </nav>
+                    </div>
+                  </div>
                 </div>
               )}
             </div>
