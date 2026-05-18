@@ -97,7 +97,7 @@ export default function Header() {
           </div>
 
           {/* Center/Left: Logo (Desktop: static left, Mobile: absolute center) */}
-          <div className="absolute md:static left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 md:translate-x-0 md:translate-y-0 flex items-center justify-center md:justify-start flex-shrink-0">
+          <div className="absolute md:static left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 md:translate-x-0 md:translate-y-0 flex items-center justify-center md:justify-start flex-shrink-0 md:flex-1">
             <Link href="/" className="relative h-8 w-32 mm:h-10 mm:w-40 md:h-14 md:w-60">
               <Image
                 src="/images/logo.png"
@@ -127,7 +127,7 @@ export default function Header() {
           </form>
 
           {/* Right: Utilities */}
-          <div className="flex items-center gap-2.5 md:gap-4 lg:gap-6 flex-shrink-0">
+          <div className="flex items-center gap-2.5 md:gap-4 lg:gap-6 flex-shrink-0 md:flex-1 justify-end">
 
             {/* Account (Desktop only) */}
             {/* <Link href="/admin" className="hidden md:flex items-center gap-2.5 group">
