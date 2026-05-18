@@ -44,3 +44,41 @@ export function useAdminAuth() {
   }
   return context;
 }
+
+interface PermissionGuardProps {
+  action?: string;
+  subject?: string;
+  permissionName?: string;
+  children: React.ReactNode;
+  fallback?: React.ReactNode;
+}
+
+/**
+ * A declarative wrapper component to conditionally render content based on active session permissions.
+ */
+export function PermissionGuard({
+  action,
+  subject,
+  permissionName,
+  children,
+  fallback = null,
+}: PermissionGuardProps) {
+  const { checkPermission, hasPermissionName } = useAdminAuth();
+
+  let hasAccess = false;
+  if (permissionName) {
+    hasAccess = hasPermissionName(permissionName);
+  } else if (action && subject) {
+    hasAccess = checkPermission(action, subject);
+  }
+
+  return hasAccess ? <>{children}</> : <>{fallback}</>;
+}
+
+/**
+ * A simple hook for components to check single permissions reactively.
+ */
+export function usePermission(action: string, subject: string): boolean {
+  const { checkPermission } = useAdminAuth();
+  return checkPermission(action, subject);
+}

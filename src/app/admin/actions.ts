@@ -19,7 +19,8 @@ async function getOrCreateSystemAccount(tx: any, name: string, type: "INCOME" | 
   return account;
 }
 
-import { createSession, destroySession } from "@/lib/auth";
+import { createSession, destroySession, getSession } from "@/lib/auth";
+import { getRedirectUrlForSession } from "@/lib/permissions";
 
 export async function adminLogin(email: string, password: string) {
   try {
@@ -37,16 +38,19 @@ export async function adminLogin(email: string, password: string) {
         return { success: false, error: "Access denied: No role assigned." };
       }
 
-      const token = await createSession({
+      const sessionPayload = {
         userId: staff.id,
         roleName: staff.role.name,
         permissions: staff.role.name === "SUPERADMIN" ? [] : staff.role.permissions.map(p => ({
           action: p.action,
           subject: p.subject
         }))
-      });
+      };
 
-      return { success: true, token };
+      const token = await createSession(sessionPayload);
+      const redirectUrl = getRedirectUrlForSession(sessionPayload);
+
+      return { success: true, token, redirectUrl };
     } else {
       return { success: false, error: "Invalid email or password" };
     }
@@ -935,6 +939,9 @@ export async function createAdminOrder(data: {
   hasBackorderItems?: boolean;
 }) {
   try {
+    const session = await getSession();
+    const createdById = session?.userId || null;
+
     const order = await prisma.$transaction(async (tx) => {
       const customId = await generateOrderIdInternal(tx);
 
@@ -960,6 +967,7 @@ export async function createAdminOrder(data: {
           pathaoAreaId: data.pathaoAreaId,
           status: orderStatus,
           orderSource: "Salesman",
+          createdById: createdById,
           items: {
             create: data.items.flatMap((item) => {
               if (item.requiresPrint && item.printDetails && item.printDetails.length > 0) {

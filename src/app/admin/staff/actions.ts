@@ -6,7 +6,12 @@ import { revalidatePath } from "next/cache";
 export async function getStaff() {
   try {
     const staffList = await prisma.staff.findMany({
-      include: { role: true },
+      include: {
+        role: true,
+        _count: {
+          select: { orders: true }
+        }
+      },
       orderBy: { createdAt: "desc" },
     });
     return { success: true, data: staffList };

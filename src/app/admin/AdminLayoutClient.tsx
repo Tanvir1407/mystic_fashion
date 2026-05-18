@@ -28,7 +28,8 @@ import {
   Ruler,
   PanelBottom,
   Boxes,
-  ShieldAlert
+  ShieldAlert,
+  Lock
 } from "lucide-react";
 
 const NAV_LINKS = [
@@ -85,6 +86,7 @@ const NAV_LINKS = [
 ];
 
 import { AdminAuthProvider } from "./AdminAuthContext";
+import { isRouteAllowed, getRedirectUrlForSession } from "@/lib/permissions";
 
 export default function AdminLayoutClient({ children, session }: { children: React.ReactNode; session: any }) {
   const pathname = usePathname();
@@ -93,6 +95,11 @@ export default function AdminLayoutClient({ children, session }: { children: Rea
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [openGroups, setOpenGroups] = useState<string[]>([]);
+
+  const isAllowed = isRouteAllowed(pathname, session);
+  const hasAnyPermission = useMemo(() => {
+    return session?.roleName === "SUPERADMIN" || (session?.permissions && session.permissions.length > 0);
+  }, [session]);
 
   // Function to verify if user has a permission
   const checkPermission = (action: string, subject: string) => {
@@ -159,8 +166,8 @@ export default function AdminLayoutClient({ children, session }: { children: Rea
     }
   }, [searchQuery, filteredLinks, router]);
 
-  // Do not show sidebar on the login page
-  if (pathname === "/admin/login") {
+  // Do not show sidebar on the login page or unauthorized page
+  if (pathname === "/admin/login" || pathname === "/admin/unauthorized") {
     return <AdminAuthProvider session={session}>{children}</AdminAuthProvider>;
   }
 
@@ -355,7 +362,46 @@ export default function AdminLayoutClient({ children, session }: { children: Rea
           {/* Page Content */}
           <main className="flex-1 overflow-y-auto bg-slate-50 print:bg-white print:overflow-visible">
             <div className="p-6 md:p-8 mx-auto print:p-0 print:max-w-none">
-              {children}
+              {isAllowed ? (
+                children
+              ) : (
+                <div className="flex flex-col items-center justify-center min-h-[70vh] px-4">
+                  <div className="w-full max-w-md bg-white dark:bg-zinc-900 shadow-[0_4px_20px_rgba(0,0,0,0.05)] border border-slate-100 dark:border-zinc-800 rounded-xl p-8 md:p-10 text-center flex flex-col items-center">
+                    
+                    {/* Sleek Refined Lock Icon */}
+                    <div className="w-12 h-12 bg-[#800020]/5 rounded-full flex items-center justify-center mb-6">
+                      <Lock className="w-5 h-5 text-[#800020]" />
+                    </div>
+
+                    <h2 className="text-xl font-bold text-slate-900 dark:text-white tracking-tight mb-3">
+                      Access Restricted
+                    </h2>
+
+                    <p className="text-sm text-slate-500 dark:text-zinc-400 mb-8 leading-relaxed max-w-xs font-normal">
+                      You do not have permission to access this admin module. Please contact your administrator to assign permissions for your working area.
+                    </p>
+
+                    <div className="flex flex-col sm:flex-row items-center gap-3 w-full justify-center">
+                      {hasAnyPermission && (
+                        <button
+                          onClick={() => router.push(getRedirectUrlForSession(session))}
+                          className="w-full sm:w-auto h-10 px-5 bg-[#800020] hover:bg-[#600018] text-white text-xs font-semibold rounded-lg transition-colors flex items-center justify-center"
+                        >
+                          Go to Working Area
+                        </button>
+                      )}
+                      
+                      <button
+                        onClick={() => adminLogout()}
+                        className="w-full sm:w-auto h-10 px-5 border border-slate-200 hover:bg-slate-50 dark:border-zinc-800 dark:hover:bg-zinc-800 text-slate-600 dark:text-zinc-300 text-xs font-semibold rounded-lg transition-colors flex items-center justify-center"
+                      >
+                        Sign Out
+                      </button>
+                    </div>
+
+                  </div>
+                </div>
+              )}
             </div>
           </main>
         </div>

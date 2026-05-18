@@ -1,10 +1,11 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Plus, User, Mail, Shield, Edit2, Check, X, Key, Trash2 } from "lucide-react";
+import { Plus, User, Mail, Shield, Edit2, Check, X, Key, Trash2, TrendingUp } from "lucide-react";
 import { deleteStaff } from "./actions";
 import { DeleteWarningModal } from "@/components/DeleteWarningModal";
 import { StaffForm } from "./StaffForm";
+import Link from "next/link";
 
 interface Staff {
   id: string;
@@ -14,6 +15,9 @@ interface Staff {
   roleId?: string | null;
   role?: any;
   createdAt: Date;
+  _count?: {
+    orders: number;
+  };
 }
 
 export default function StaffClient({ initialStaff, availableRoles }: { initialStaff: Staff[], availableRoles: any[] }) {
@@ -70,6 +74,7 @@ export default function StaffClient({ initialStaff, availableRoles }: { initialS
                   <th className="px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Username</th>
                   <th className="px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Email</th>
                   <th className="px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Role</th>
+                  <th className="px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider text-center">Orders Created</th>
                   <th className="px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Created At</th>
                   <th className="px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider text-right">Actions</th>
                 </tr>
@@ -102,11 +107,22 @@ export default function StaffClient({ initialStaff, availableRoles }: { initialS
                         </span>
                       )}
                     </td>
+                    <td className="px-4 py-4 text-sm font-bold text-center text-indigo-600">
+                      {s._count?.orders || 0}
+                    </td>
                     <td className="px-4 py-4 text-sm text-slate-600 font-medium">
                       {new Date(s.createdAt).toLocaleDateString('en-GB')}
                     </td>
                     <td className="px-4 py-4 text-right">
                       <div className="flex justify-end items-center gap-2">
+                        <Link 
+                          href={`/admin/staff/${s.id}`}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-600 bg-slate-50 border border-slate-200 rounded-md hover:bg-slate-100 hover:border-slate-300 transition-colors"
+                        >
+                          <TrendingUp className="w-3.5 h-3.5 text-slate-400" />
+                          Performance
+                        </Link>
+
                         <button 
                           onClick={() => {
                             setEditingStaff(s);

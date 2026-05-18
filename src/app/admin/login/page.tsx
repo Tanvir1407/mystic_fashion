@@ -24,7 +24,7 @@ export default function LoginPage() {
         }
         router.refresh();
         setTimeout(() => {
-          router.push('/admin/products');
+          router.push((res as any).redirectUrl || '/admin');
         }, 150);
       } else {
         setError(res.error || "Login failed");

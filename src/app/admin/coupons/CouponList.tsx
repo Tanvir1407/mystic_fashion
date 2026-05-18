@@ -5,7 +5,17 @@ import { Ticket, Plus, Trash2, Edit2, CheckCircle2, XCircle, Search, Filter } fr
 import { deleteCoupon, toggleCouponStatus } from "./actions";
 import { CouponForm } from "./CouponForm";
 
-export function CouponList({ initialCoupons }: { initialCoupons: any[] }) {
+export function CouponList({ 
+  initialCoupons,
+  canCreate,
+  canEdit,
+  canDelete
+}: { 
+  initialCoupons: any[],
+  canCreate: boolean,
+  canEdit: boolean,
+  canDelete: boolean
+}) {
   const [coupons, setCoupons] = useState(initialCoupons);
   const [showForm, setShowForm] = useState(false);
   const [editingCoupon, setEditingCoupon] = useState<any>(null);
@@ -41,16 +51,18 @@ export function CouponList({ initialCoupons }: { initialCoupons: any[] }) {
           <h1 className="text-2xl font-semibold tracking-tight text-slate-900">Coupons & Rewards</h1>
           <p className="text-sm text-slate-500 mt-1">Create promotional codes and manage customer discounts.</p>
         </div>
-        <button
-          onClick={() => {
-            setEditingCoupon(null);
-            setShowForm(true);
-          }}
-          className="h-10 px-4 bg-slate-900 text-white text-sm font-medium rounded-md flex items-center justify-center gap-2 hover:bg-slate-800 transition-colors shadow-sm"
-        >
-          <Plus className="w-4 h-4" />
-          Add New Coupon
-        </button>
+        {canCreate && (
+          <button
+            onClick={() => {
+              setEditingCoupon(null);
+              setShowForm(true);
+            }}
+            className="h-10 px-4 bg-slate-900 text-white text-sm font-medium rounded-md flex items-center justify-center gap-2 hover:bg-slate-800 transition-colors shadow-sm"
+          >
+            <Plus className="w-4 h-4" />
+            Add New Coupon
+          </button>
+        )}
       </div>
 
       {/* Toolbar */}
@@ -81,7 +93,9 @@ export function CouponList({ initialCoupons }: { initialCoupons: any[] }) {
                 <th className="px-4 py-3 font-semibold text-xs text-slate-500 uppercase tracking-wider">Discount</th>
                 <th className="px-4 py-3 font-semibold text-xs text-slate-500 uppercase tracking-wider">Validity Period</th>
                 <th className="px-4 py-3 font-semibold text-xs text-slate-500 uppercase tracking-wider">Status</th>
-                <th className="px-4 py-3 font-semibold text-xs text-slate-500 uppercase tracking-wider text-right">Actions</th>
+                {(canEdit || canDelete) && (
+                  <th className="px-4 py-3 font-semibold text-xs text-slate-500 uppercase tracking-wider text-right">Actions</th>
+                )}
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
@@ -124,44 +138,62 @@ export function CouponList({ initialCoupons }: { initialCoupons: any[] }) {
                       </div>
                     </td>
                     <td className="px-4 py-4">
-                      <button
-                        onClick={() => handleToggleStatus(coupon.id, coupon.isActive)}
-                        className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-xs font-medium transition-colors ${
-                          coupon.isActive 
-                            ? 'bg-emerald-100 text-emerald-800 hover:bg-emerald-200' 
-                            : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                        }`}
-                      >
-                        {coupon.isActive ? "Active" : "Inactive"}
-                      </button>
-                    </td>
-                    <td className="px-4 py-4 text-right">
-                      <div className="flex items-center justify-end gap-2 outline-none">
+                      {canEdit ? (
                         <button
-                          onClick={() => {
-                            setEditingCoupon(coupon);
-                            setShowForm(true);
-                          }}
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-indigo-600 bg-indigo-50 border border-indigo-200 rounded-md hover:bg-indigo-100 hover:border-indigo-300 transition-colors"
+                          onClick={() => handleToggleStatus(coupon.id, coupon.isActive)}
+                          className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-xs font-medium transition-colors ${
+                            coupon.isActive 
+                              ? 'bg-emerald-100 text-emerald-800 hover:bg-emerald-200' 
+                              : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                          }`}
                         >
-                          <Edit2 className="w-3.5 h-3.5" />
-                          Edit
+                          {coupon.isActive ? "Active" : "Inactive"}
                         </button>
-                        <button
-                          onClick={() => handleDelete(coupon.id)}
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-red-600 bg-red-50 border border-red-200 rounded-md hover:bg-red-100 hover:border-red-300 transition-colors"
+                      ) : (
+                        <span
+                          className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-xs font-medium ${
+                            coupon.isActive 
+                              ? 'bg-emerald-100 text-emerald-800' 
+                              : 'bg-slate-100 text-slate-600'
+                          }`}
                         >
-                          <Trash2 className="w-3.5 h-3.5" />
-                          Delete
-                        </button>
-                      </div>
+                          {coupon.isActive ? "Active" : "Inactive"}
+                        </span>
+                      )}
                     </td>
+                    {(canEdit || canDelete) && (
+                      <td className="px-4 py-4 text-right">
+                        <div className="flex items-center justify-end gap-2 outline-none">
+                          {canEdit && (
+                            <button
+                              onClick={() => {
+                                setEditingCoupon(coupon);
+                                setShowForm(true);
+                              }}
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-indigo-600 bg-indigo-50 border border-indigo-200 rounded-md hover:bg-indigo-100 hover:border-indigo-300 transition-colors"
+                            >
+                              <Edit2 className="w-3.5 h-3.5" />
+                              Edit
+                            </button>
+                          )}
+                          {canDelete && (
+                            <button
+                              onClick={() => handleDelete(coupon.id)}
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-red-600 bg-red-50 border border-red-200 rounded-md hover:bg-red-100 hover:border-red-300 transition-colors"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                              Delete
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    )}
                   </tr>
                 );
               })}
               {filteredCoupons.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="px-6 py-20 text-center">
+                  <td colSpan={canEdit || canDelete ? 5 : 4} className="px-6 py-20 text-center">
                     <div className="flex flex-col items-center gap-3">
                       <div className="w-16 h-16 rounded-full bg-slate-50 flex items-center justify-center">
                         <Ticket className="w-8 h-8 text-slate-200" />

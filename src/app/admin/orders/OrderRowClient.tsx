@@ -8,19 +8,23 @@ import { Eye, Trash2 } from "lucide-react";
 import { deleteOrder } from "../actions";
 import { useRouter } from "next/navigation";
 import { StatusAlertModal } from "@/components/StatusAlertModal";
-import { formatDate } from "@/utils/formatDate";
+import { formatDate, formatDateTime } from "@/utils/formatDate";
 import { formatBDT } from "@/utils/formatPrice";
 
 export default function OrderRowClient({
   order,
   items,
   isSelected,
-  onSelect
+  onSelect,
+  canEdit,
+  canDelete
 }: {
   order: any,
   items: any[],
   isSelected?: boolean,
-  onSelect?: () => void
+  onSelect?: () => void,
+  canEdit: boolean,
+  canDelete: boolean
 }) {
   const [status, setStatus] = useState<OrderStatus>(order.status);
   const [loading, setLoading] = useState(false);
@@ -96,7 +100,7 @@ export default function OrderRowClient({
 
           </span>
           <div className="flex flex-col items-start gap-1">
-            <span className="text-xs text-slate-500">{formatDate(order.createdAt)}</span>
+            <span className="text-[10px] text-slate-500 font-semibold">{formatDateTime(order.createdAt)}</span>
             {order.orderSource === "eCommerce" ? (
               <span className="inline-flex items-center gap-1 bg-emerald-50 text-emerald-700 text-[10px] font-bold px-1.5 py-0.5 rounded border border-emerald-100 uppercase tracking-wider">
                 🌐 eCommerce
@@ -141,29 +145,43 @@ export default function OrderRowClient({
         {formatBDT(order.totalAmount)}
       </td>
       <td className="px-2 py-4 text-right">
-        <select
-          value={status}
-          onChange={handleStatusChange}
-          disabled={loading || status === "CANCELLED" || status === "RETURNED"}
-          className={`w-32 text-[11px] font-black uppercase tracking-wider px-2 py-1.5 rounded-md border transition-all cursor-pointer outline-none focus:ring-2 focus:ring-opacity-50 ${status === "PENDING" ? "bg-amber-50 text-amber-700 border-amber-200 focus:ring-amber-500" :
-            status === "CONFIRMED" ? "bg-blue-50 text-blue-700 border-blue-200 focus:ring-blue-500" :
-              status === "PRINTING" ? "bg-cyan-50 text-cyan-700 border-cyan-200 focus:ring-cyan-500" :
-                status === "PACKAGING" ? "bg-purple-50 text-purple-700 border-purple-200 focus:ring-purple-500" :
-                  status === "SHIPPED" ? "bg-indigo-50 text-indigo-700 border-indigo-200 focus:ring-indigo-500" :
-                    status === "DELIVERED" ? "bg-green-50 text-green-700 border-green-200 focus:ring-green-500" :
-                      status === "RETURNED" ? "bg-rose-50 text-rose-700 border-rose-200 focus:ring-rose-500" :
-                        "bg-red-50 text-red-700 border-red-200 focus:ring-red-500"
-            }`}
-        >
-          <option value="PENDING" disabled={status !== "PENDING"}>Pending</option>
-          <option value="CONFIRMED" disabled={status === "SHIPPED" || status === "DELIVERED" || status === "CANCELLED" || status === "RETURNED"}>Confirmed</option>
-          <option value="PRINTING" disabled={status === "SHIPPED" || status === "DELIVERED" || status === "CANCELLED" || status === "RETURNED"}>Printing</option>
-          <option value="PACKAGING" disabled={status === "SHIPPED" || status === "DELIVERED" || status === "CANCELLED" || status === "RETURNED"}>Packaging</option>
-          <option value="SHIPPED" disabled={status === "DELIVERED" || status === "CANCELLED" || status === "RETURNED"}>Shipped</option>
-          <option value="DELIVERED" disabled={status === "PENDING" || status === "CONFIRMED" || status === "PACKAGING" || status === "CANCELLED" || status === "RETURNED"}>Delivered</option>
-          <option value="RETURNED" disabled={status === "PENDING" || status === "CONFIRMED" || status === "PACKAGING" || status === "CANCELLED"}>Returned</option>
-          <option value="CANCELLED" disabled={status === "SHIPPED" || status === "DELIVERED" || status === "RETURNED"}>Cancelled</option>
-        </select>
+        {canEdit ? (
+          <select
+            value={status}
+            onChange={handleStatusChange}
+            disabled={loading || status === "CANCELLED" || status === "RETURNED"}
+            className={`w-32 text-[11px] font-black uppercase tracking-wider px-2 py-1.5 rounded-md border transition-all cursor-pointer outline-none focus:ring-2 focus:ring-opacity-50 ${status === "PENDING" ? "bg-amber-50 text-amber-700 border-amber-200 focus:ring-amber-500" :
+              status === "CONFIRMED" ? "bg-blue-50 text-blue-700 border-blue-200 focus:ring-blue-500" :
+                status === "PRINTING" ? "bg-cyan-50 text-cyan-700 border-cyan-200 focus:ring-cyan-500" :
+                  status === "PACKAGING" ? "bg-purple-50 text-purple-700 border-purple-200 focus:ring-purple-500" :
+                    status === "SHIPPED" ? "bg-indigo-50 text-indigo-700 border-indigo-200 focus:ring-indigo-500" :
+                      status === "DELIVERED" ? "bg-green-50 text-green-700 border-green-200 focus:ring-green-500" :
+                        status === "RETURNED" ? "bg-rose-50 text-rose-700 border-rose-200 focus:ring-rose-500" :
+                          "bg-red-50 text-red-700 border-red-200 focus:ring-red-500"
+              }`}
+          >
+            <option value="PENDING" disabled={status !== "PENDING"}>Pending</option>
+            <option value="CONFIRMED" disabled={status === "SHIPPED" || status === "DELIVERED" || status === "CANCELLED" || status === "RETURNED"}>Confirmed</option>
+            <option value="PRINTING" disabled={status === "SHIPPED" || status === "DELIVERED" || status === "CANCELLED" || status === "RETURNED"}>Printing</option>
+            <option value="PACKAGING" disabled={status === "SHIPPED" || status === "DELIVERED" || status === "CANCELLED" || status === "RETURNED"}>Packaging</option>
+            <option value="SHIPPED" disabled={status === "DELIVERED" || status === "CANCELLED" || status === "RETURNED"}>Shipped</option>
+            <option value="DELIVERED" disabled={status === "PENDING" || status === "CONFIRMED" || status === "PACKAGING" || status === "CANCELLED" || status === "RETURNED"}>Delivered</option>
+            <option value="RETURNED" disabled={status === "PENDING" || status === "CONFIRMED" || status === "PACKAGING" || status === "CANCELLED"}>Returned</option>
+            <option value="CANCELLED" disabled={status === "SHIPPED" || status === "DELIVERED" || status === "RETURNED"}>Cancelled</option>
+          </select>
+        ) : (
+          <span className={`inline-flex w-32 justify-center text-[11px] font-black uppercase tracking-wider px-2 py-1.5 rounded-md border ${status === "PENDING" ? "bg-amber-50 text-amber-700 border-amber-200" :
+            status === "CONFIRMED" ? "bg-blue-50 text-blue-700 border-blue-200" :
+              status === "PRINTING" ? "bg-cyan-50 text-cyan-700 border-cyan-200" :
+                status === "PACKAGING" ? "bg-purple-50 text-purple-700 border-purple-200" :
+                  status === "SHIPPED" ? "bg-indigo-50 text-indigo-700 border-indigo-200" :
+                    status === "DELIVERED" ? "bg-green-50 text-green-700 border-green-200" :
+                      status === "RETURNED" ? "bg-rose-50 text-rose-700 border-rose-200" :
+                        "bg-red-50 text-red-700 border-red-200"
+            }`}>
+            {status}
+          </span>
+        )}
       </td>
       <td className="px-2 py-4 text-right">
         <div className="flex items-center justify-end gap-2">
@@ -174,14 +192,16 @@ export default function OrderRowClient({
             <Eye className="w-4 h-4" />
             View
           </Link>
-          <button
-            onClick={handleDelete}
-            disabled={loading}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-red-600 bg-red-50 border border-red-200 rounded-md hover:bg-red-100 hover:border-red-300 transition-colors disabled:opacity-50"
-          >
-            <Trash2 className="w-4 h-4" />
-            Delete
-          </button>
+          {canDelete && (
+            <button
+              onClick={handleDelete}
+              disabled={loading}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-red-600 bg-red-50 border border-red-200 rounded-md hover:bg-red-100 hover:border-red-300 transition-colors disabled:opacity-50"
+            >
+              <Trash2 className="w-4 h-4" />
+              Delete
+            </button>
+          )}
         </div>
       </td>
       <StatusAlertModal

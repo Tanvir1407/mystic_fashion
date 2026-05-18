@@ -22,6 +22,9 @@ export default function OrderListClient({
   currentSearch = "",
   storePhone = "01920240230",
   storeAddress = "H# 68, R# 12, Sector 10, Uttara, Dhaka - 1230, Bangladesh",
+  canCreate,
+  canEdit,
+  canDelete
 }: {
   initialOrders: any[];
   currentPage?: number;
@@ -31,6 +34,9 @@ export default function OrderListClient({
   currentSearch?: string;
   storePhone?: string;
   storeAddress?: string;
+  canCreate: boolean;
+  canEdit: boolean;
+  canDelete: boolean;
 }) {
   const router = useRouter();
   const [searchValue, setSearchValue] = useState(currentSearch);
@@ -162,10 +168,10 @@ export default function OrderListClient({
       {/* Invoice print view — only this is visible during printing */}
       {printType === "A4" && <InvoicePrintView orders={selectedOrdersToPrint} />}
       {printType === "80MM" && (
-        <ThermalPrintView 
-          orders={selectedOrdersToPrint} 
-          storePhone={storePhone} 
-          storeAddress={storeAddress} 
+        <ThermalPrintView
+          orders={selectedOrdersToPrint}
+          storePhone={storePhone}
+          storeAddress={storeAddress}
         />
       )}
 
@@ -178,13 +184,15 @@ export default function OrderListClient({
             <h1 className="text-2xl font-semibold tracking-tight text-slate-900">Orders</h1>
             <p className="text-sm text-slate-500 mt-1">Manage customer orders and fulfillments.</p>
           </div>
-          <button
-            onClick={() => router.push("/admin/orders/create")}
-            className="flex items-center gap-2 px-4 py-2.5 bg-slate-900 text-white text-sm font-semibold rounded-lg hover:bg-slate-800 transition-colors shadow-sm whitespace-nowrap"
-          >
-            <Plus className="w-4 h-4" />
-            Create Order
-          </button>
+          {canCreate && (
+            <button
+              onClick={() => router.push("/admin/orders/create")}
+              className="flex items-center gap-2 px-4 py-2.5 bg-slate-900 text-white text-sm font-semibold rounded-lg hover:bg-slate-800 transition-colors shadow-sm whitespace-nowrap"
+            >
+              <Plus className="w-4 h-4" />
+              Create Order
+            </button>
+          )}
         </div>
 
         {/* Toolbar, Search & Bulk Actions */}
@@ -194,7 +202,7 @@ export default function OrderListClient({
             {/* Left Side: Search & Filter */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 flex-1">
               {/* Search Block */}
-              <div className="flex-1 relative group max-w-[300px]">
+              <div className="flex-1 relative group max-w-[400px]">
                 <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
                   <SearchIcon className="h-4 w-4 text-slate-400 group-focus-within:text-slate-900 transition-colors" />
                 </div>
@@ -238,80 +246,6 @@ export default function OrderListClient({
                   </button>
                 </div>
               </div>
-              {/* Right Side: Bulk Actions */}
-              {selectedIds.size > 0 && (
-                <div className="flex flex-wrap items-center gap-2 lg:gap-3  w-full xl:w-auto mt-4 xl:mt-0">
-
-
-                  <div className="flex items-center gap-2 flex-wrap">
-
-                    <span className="font-semibold text-sm bg-slate-100 border border-slate-200 text-slate-700 px-3 py-1 rounded-md">
-                      {selectedIds.size} Selected
-                    </span>
-                    <select
-                      value={bulkStatus}
-                      onChange={(e) => setBulkStatus(e.target.value as OrderStatus)}
-                      className="w-36 bg-white border border-slate-200 rounded-md px-3 py-1.5 text-xs font-semibold text-slate-700 focus:ring-4 focus:ring-slate-500/10 focus:border-slate-300 outline-none transition-all cursor-pointer"
-                    >
-                      {[
-                        { value: "PENDING", label: "Set Pending" },
-                        { value: "CONFIRMED", label: "Set Confirmed" },
-                        { value: "PRINTING", label: "Set Printing" },
-                        { value: "PACKAGING", label: "Set Packaging" },
-                        { value: "SHIPPED", label: "Set Shipped" },
-                        { value: "DELIVERED", label: "Set Delivered" },
-                        { value: "CANCELLED", label: "Set Cancelled" },
-                        { value: "RETURNED", label: "Set Returned" },
-                      ].map((opt) => (
-                        <option key={opt.value} value={opt.value}>
-                          {opt.label}
-                        </option>
-                      ))}
-                    </select>
-
-                    <button
-                      onClick={handleBulkUpdate}
-                      disabled={loading}
-                      className="text-xs font-semibold text-white bg-slate-900 px-3 py-1.5 rounded-md hover:bg-slate-800 transition disabled:opacity-50 shadow-sm"
-                    >
-                      {loading ? "Updating..." : "Update"}
-                    </button>
-
-                    <div className="w-px h-5 bg-slate-200 mx-1 hidden sm:block" />
-
-                    <button
-                      onClick={handlePrintSelected}
-                      className="flex items-center gap-1.5 text-xs font-semibold text-slate-700 bg-white border border-slate-200 px-3 py-1.5 rounded-md hover:bg-slate-50 transition shadow-sm"
-                    >
-                      <Printer className="w-3.5 h-3.5" />
-                      Print
-                    </button>
-                    <button
-                      onClick={handlePrint80mmSelected}
-                      className="flex items-center gap-1.5 text-xs font-semibold text-slate-700 bg-white border border-slate-200 px-3 py-1.5 rounded-md hover:bg-slate-50 transition shadow-sm"
-                    >
-                      <Printer className="w-3.5 h-3.5" />
-                      POS Print
-                    </button>
-                    <button
-                      onClick={() => setShowPathaoModal(true)}
-                      disabled={loading}
-                      className="flex items-center gap-1.5 text-xs font-semibold text-[#ee2e24] bg-white border border-slate-200 px-3 py-1.5 rounded-md hover:bg-slate-50 transition disabled:opacity-50 shadow-sm"
-                    >
-                      <Truck className="w-3.5 h-3.5" />
-                      Send to Pathao
-                    </button>
-                    <button
-                      onClick={handleBulkDelete}
-                      disabled={loading}
-                      className="flex items-center gap-1.5 text-xs font-semibold text-red-600 bg-white border border-slate-200 px-3 py-1.5 rounded-md hover:bg-red-50 hover:border-red-200 transition disabled:opacity-50 shadow-sm"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                      Delete
-                    </button>
-                  </div>
-                </div>
-              )}
 
               <div className="h-8 w-px bg-slate-200 hidden md:block" />
 
@@ -379,6 +313,100 @@ export default function OrderListClient({
 
 
           </div>
+
+          {/* Dedicated Bulk Actions Section below the Search and Filter section */}
+          {selectedIds.size > 0 && (
+            <div className="border-t border-slate-100 bg-indigo-50/20 px-4 py-3.5 flex flex-col lg:flex-row lg:items-center justify-between gap-4 animate-fade-in transition-all">
+              <div className="flex items-center gap-2">
+                <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-indigo-600 text-white font-bold text-[10px]">
+                  {selectedIds.size}
+                </span>
+                <span className="text-sm font-semibold text-slate-700">
+                  orders selected for bulk operations
+                </span>
+                <button
+                  onClick={() => setSelectedIds(new Set())}
+                  className="text-xs text-indigo-600 hover:text-indigo-800 font-semibold underline underline-offset-2 ml-2 transition-colors"
+                >
+                  Deselect all
+                </button>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2">
+                {canEdit && (
+                  <>
+                    <div className="flex items-center gap-1.5 bg-white border border-slate-200 rounded-lg p-1 shadow-sm">
+                      <select
+                        value={bulkStatus}
+                        onChange={(e) => setBulkStatus(e.target.value as OrderStatus)}
+                        className="bg-transparent border-0 rounded px-2 py-1 text-xs font-semibold text-slate-700 outline-none cursor-pointer focus:ring-0 focus:border-0"
+                      >
+                        {[
+                          { value: "PENDING", label: "Set Pending" },
+                          { value: "CONFIRMED", label: "Set Confirmed" },
+                          { value: "PRINTING", label: "Set Printing" },
+                          { value: "PACKAGING", label: "Set Packaging" },
+                          { value: "SHIPPED", label: "Set Shipped" },
+                          { value: "DELIVERED", label: "Set Delivered" },
+                          { value: "CANCELLED", label: "Set Cancelled" },
+                          { value: "RETURNED", label: "Set Returned" },
+                        ].map((opt) => (
+                          <option key={opt.value} value={opt.value}>
+                            {opt.label}
+                          </option>
+                        ))}
+                      </select>
+
+                      <button
+                        onClick={handleBulkUpdate}
+                        disabled={loading}
+                        className="text-xs font-semibold text-white bg-indigo-600 px-3 py-1 rounded-md hover:bg-indigo-700 transition disabled:opacity-50 shadow-sm"
+                      >
+                        {loading ? "Updating..." : "Update"}
+                      </button>
+                    </div>
+
+                    <div className="w-px h-5 bg-slate-200 mx-1 hidden lg:block" />
+                  </>
+                )}
+
+                <button
+                  onClick={handlePrintSelected}
+                  className="flex items-center gap-1.5 text-xs font-semibold text-slate-700 bg-white border border-slate-200 px-3 py-1.5 rounded-lg hover:bg-slate-50 transition shadow-sm"
+                >
+                  <Printer className="w-3.5 h-3.5" />
+                  Print
+                </button>
+                <button
+                  onClick={handlePrint80mmSelected}
+                  className="flex items-center gap-1.5 text-xs font-semibold text-slate-700 bg-white border border-slate-200 px-3 py-1.5 rounded-lg hover:bg-slate-50 transition shadow-sm"
+                >
+                  <Printer className="w-3.5 h-3.5" />
+                  POS Print
+                </button>
+                {canEdit && (
+                  <button
+                    onClick={() => setShowPathaoModal(true)}
+                    disabled={loading}
+                    className="flex items-center gap-1.5 text-xs font-semibold text-slate-700 bg-white border border-slate-200 px-3 py-1.5 rounded-lg hover:bg-slate-50 transition disabled:opacity-50 shadow-sm"
+                  >
+                    <Truck className="w-3.5 h-3.5 text-[#ee2e24]" />
+                    Send to Pathao
+                  </button>
+                )}
+                {canDelete && (
+                  <button
+                    onClick={handleBulkDelete}
+                    disabled={loading}
+                    className="flex items-center gap-1.5 text-xs font-semibold text-red-600 bg-red-50 border border-red-100 px-3 py-1.5 rounded-lg hover:bg-red-100 hover:border-red-200 transition disabled:opacity-50 shadow-sm"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    Delete
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Data Table */}
@@ -417,6 +445,8 @@ export default function OrderListClient({
                     items={order.items}
                     isSelected={selectedIds.has(order.id)}
                     onSelect={() => handleSelect(order.id)}
+                    canEdit={canEdit}
+                    canDelete={canDelete}
                   />
                 ))}
 

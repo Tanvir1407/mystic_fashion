@@ -25,7 +25,17 @@ interface Discount {
   active: boolean;
 }
 
-export default function DiscountManager({ initialDiscounts }: { initialDiscounts: Discount[] }) {
+export default function DiscountManager({ 
+  initialDiscounts,
+  canCreate,
+  canEdit,
+  canDelete
+}: { 
+  initialDiscounts: Discount[],
+  canCreate: boolean,
+  canEdit: boolean,
+  canDelete: boolean
+}) {
   const [discounts, setDiscounts] = useState<Discount[]>(initialDiscounts);
   const [isPending, startTransition] = useTransition();
   const [showForm, setShowForm] = useState(false);
@@ -53,16 +63,18 @@ export default function DiscountManager({ initialDiscounts }: { initialDiscounts
           <h1 className="text-2xl font-semibold tracking-tight text-slate-900">Discount</h1>
           <p className="text-sm text-slate-500 mt-1">Manage global promotional pricing and seasonal offers.</p>
         </div>
-        <button
-          onClick={() => {
-            setEditingDiscount(null);
-            setShowForm(true);
-          }}
-          className="h-10 px-4 bg-slate-900 text-white text-sm font-medium rounded-md flex items-center justify-center gap-2 hover:bg-slate-800 transition-colors shadow-sm"
-        >
-          <Plus className="w-4 h-4" />
-          New Discount
-        </button>
+        {canCreate && (
+          <button
+            onClick={() => {
+              setEditingDiscount(null);
+              setShowForm(true);
+            }}
+            className="h-10 px-4 bg-slate-900 text-white text-sm font-medium rounded-md flex items-center justify-center gap-2 hover:bg-slate-800 transition-colors shadow-sm"
+          >
+            <Plus className="w-4 h-4" />
+            New Discount
+          </button>
+        )}
       </div>
 
       {/* Toolbar */}
@@ -93,7 +105,9 @@ export default function DiscountManager({ initialDiscounts }: { initialDiscounts
                 <th className="px-4 py-3 font-semibold text-xs text-slate-500 uppercase tracking-wider text-center">Type</th>
                 <th className="px-4 py-3 font-semibold text-xs text-slate-500 uppercase tracking-wider text-center">Value</th>
                 <th className="px-4 py-3 font-semibold text-xs text-slate-500 uppercase tracking-wider text-center">Status</th>
-                <th className="px-4 py-3 font-semibold text-xs text-slate-500 uppercase tracking-wider text-right">Actions</th>
+                {(canEdit || canDelete) && (
+                  <th className="px-4 py-3 font-semibold text-xs text-slate-500 uppercase tracking-wider text-right">Actions</th>
+                )}
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
@@ -130,41 +144,58 @@ export default function DiscountManager({ initialDiscounts }: { initialDiscounts
                       </span>
                     </td>
                     <td className="px-4 py-4 text-center">
-                      <button
-                        onClick={() => handleToggleActive(d.id, d.active)}
-                        className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-xs font-medium transition-colors ${d.active
-                          ? 'bg-emerald-100 text-emerald-800 hover:bg-emerald-200'
-                          : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                          }`}
-                      >
-                        {d.active ? "Active" : "Hidden"}
-                      </button>
-                    </td>
-                    <td className="px-4 py-4 text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        <button 
-                          onClick={() => {
-                            setEditingDiscount(d);
-                            setShowForm(true);
-                          }} 
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-indigo-600 bg-indigo-50 border border-indigo-200 rounded-md hover:bg-indigo-100 hover:border-indigo-300 transition-colors"
+                      {canEdit ? (
+                        <button
+                          onClick={() => handleToggleActive(d.id, d.active)}
+                          className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-xs font-medium transition-colors ${d.active
+                            ? 'bg-emerald-100 text-emerald-800 hover:bg-emerald-200'
+                            : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                            }`}
                         >
-                          <Edit2 className="w-3.5 h-3.5" />
-                          Edit
+                          {d.active ? "Active" : "Hidden"}
                         </button>
-                        <DeleteWarningModal
-                          title={`Delete discount "${d.name}"?`}
-                          description="This will remove the discount from all associated products immediately."
-                          impacts={["Pricing will revert to base price"]}
-                          onConfirm={async () => {
-                            startTransition(async () => {
-                              await deleteDiscount(d.id);
-                              setDiscounts(prev => prev.filter(item => item.id !== d.id));
-                            });
-                          }}
-                        />
-                      </div>
+                      ) : (
+                        <span
+                          className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-xs font-medium ${d.active
+                            ? 'bg-emerald-100 text-emerald-800'
+                            : 'bg-slate-100 text-slate-600'
+                            }`}
+                        >
+                          {d.active ? "Active" : "Hidden"}
+                        </span>
+                      )}
                     </td>
+                    {(canEdit || canDelete) && (
+                      <td className="px-4 py-4 text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          {canEdit && (
+                            <button 
+                              onClick={() => {
+                                setEditingDiscount(d);
+                                setShowForm(true);
+                              }} 
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-indigo-600 bg-indigo-50 border border-indigo-200 rounded-md hover:bg-indigo-100 hover:border-indigo-300 transition-colors"
+                            >
+                              <Edit2 className="w-3.5 h-3.5" />
+                              Edit
+                            </button>
+                          )}
+                          {canDelete && (
+                            <DeleteWarningModal
+                              title={`Delete discount "${d.name}"?`}
+                              description="This will remove the discount from all associated products immediately."
+                              impacts={["Pricing will revert to base price"]}
+                              onConfirm={async () => {
+                                startTransition(async () => {
+                                  await deleteDiscount(d.id);
+                                  setDiscounts(prev => prev.filter(item => item.id !== d.id));
+                                });
+                              }}
+                            />
+                          )}
+                        </div>
+                      </td>
+                    )}
                   </tr>
                 ))
               )}

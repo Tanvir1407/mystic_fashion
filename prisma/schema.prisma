@@ -38,6 +38,7 @@ model Staff {
   updatedAt DateTime @updatedAt
   roleId    String?
   role      Role?    @relation(fields: [roleId], references: [id])
+  orders    Order[]
 }
 
 model Role {
@@ -165,6 +166,8 @@ model Order {
   pathaoCityId        Int?
   pathaoConsignmentId String?
   pathaoZoneId        Int?
+  createdById         String?
+  createdBy           Staff?        @relation(fields: [createdById], references: [id], onDelete: SetNull)
   coupon              Coupon?       @relation(fields: [couponCode], references: [code])
   items               OrderItem[]
   salesReturns        SalesReturn[]
