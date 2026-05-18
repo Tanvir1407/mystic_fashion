@@ -289,7 +289,7 @@ export default function OrderListClient({
                       className="flex items-center gap-1.5 text-xs font-semibold text-slate-700 bg-white border border-slate-200 px-3 py-1.5 rounded-md hover:bg-slate-50 transition shadow-sm"
                     >
                       <Printer className="w-3.5 h-3.5" />
-                      80mm Print
+                      POS Print
                     </button>
                     <button
                       onClick={() => setShowPathaoModal(true)}
