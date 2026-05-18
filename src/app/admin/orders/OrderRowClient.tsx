@@ -8,7 +8,7 @@ import { Eye, Trash2 } from "lucide-react";
 import { deleteOrder } from "../actions";
 import { useRouter } from "next/navigation";
 import { StatusAlertModal } from "@/components/StatusAlertModal";
-import { formatDate } from "@/utils/formatDate";
+import { formatDate, formatDateTime } from "@/utils/formatDate";
 import { formatBDT } from "@/utils/formatPrice";
 
 export default function OrderRowClient({
@@ -96,7 +96,7 @@ export default function OrderRowClient({
 
           </span>
           <div className="flex flex-col items-start gap-1">
-            <span className="text-xs text-slate-500">{formatDate(order.createdAt)}</span>
+            <span className="text-[10px] text-slate-500 font-semibold">{formatDateTime(order.createdAt)}</span>
             {order.orderSource === "eCommerce" ? (
               <span className="inline-flex items-center gap-1 bg-emerald-50 text-emerald-700 text-[10px] font-bold px-1.5 py-0.5 rounded border border-emerald-100 uppercase tracking-wider">
                 🌐 eCommerce
