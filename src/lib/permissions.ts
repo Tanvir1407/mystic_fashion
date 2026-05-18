@@ -102,3 +102,14 @@ export function getRedirectUrlForSession(session: any): string {
   // 3. Absolute fallback: No permissions found
   return "/admin/unauthorized";
 }
+
+/**
+ * Validates action and subject permission for server-side logic and components.
+ */
+export function hasPermission(session: any, action: string, subject: string): boolean {
+  if (!session) return false;
+  if (session.roleName === "SUPERADMIN") return true;
+  return session.permissions?.some(
+    (p: any) => p.action === action && p.subject === subject
+  ) || false;
+}

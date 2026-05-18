@@ -7,7 +7,21 @@ import { AdminPagination } from "@/components/AdminPagination";
 import { BrandForm } from "./BrandForm";
 import { useRouter } from "next/navigation";
 
-export default function BrandsClient({ brands, currentPage, totalPages }: { brands: any[], currentPage: number, totalPages: number }) {
+export default function BrandsClient({ 
+  brands, 
+  currentPage, 
+  totalPages,
+  canCreate,
+  canEdit,
+  canDelete
+}: { 
+  brands: any[], 
+  currentPage: number, 
+  totalPages: number,
+  canCreate: boolean,
+  canEdit: boolean,
+  canDelete: boolean
+}) {
   const [showForm, setShowForm] = useState(false);
   const [editingBrand, setEditingBrand] = useState<any>(null);
   const router = useRouter();
@@ -31,16 +45,18 @@ export default function BrandsClient({ brands, currentPage, totalPages }: { bran
           <h1 className="text-xl font-bold text-slate-900">Brands</h1>
           <p className="text-sm text-slate-500 mt-1">Manage your product catalog brands.</p>
         </div>
-        <button
-          onClick={() => {
-            setEditingBrand(null);
-            setShowForm(true);
-          }}
-          className="h-10 px-4 bg-slate-900 text-white text-sm font-bold uppercase tracking-wider rounded-none flex items-center justify-center gap-2 hover:bg-slate-800 transition-colors"
-        >
-          <Plus className="w-4 h-4" />
-          Add Brand
-        </button>
+        {canCreate && (
+          <button
+            onClick={() => {
+              setEditingBrand(null);
+              setShowForm(true);
+            }}
+            className="h-10 px-4 bg-slate-900 text-white text-sm font-bold uppercase tracking-wider rounded-none flex items-center justify-center gap-2 hover:bg-slate-800 transition-colors"
+          >
+            <Plus className="w-4 h-4" />
+            Add Brand
+          </button>
+        )}
       </div>
 
       <div className="bg-white border border-slate-200 rounded-none overflow-hidden">
@@ -49,7 +65,9 @@ export default function BrandsClient({ brands, currentPage, totalPages }: { bran
             <tr className="bg-slate-50 border-b border-slate-200">
               <th className="px-6 py-3 text-xs font-bold text-slate-500 uppercase tracking-wider w-2/3">Brand Name</th>
               <th className="px-6 py-3 text-xs font-bold text-slate-500 uppercase tracking-wider w-1/3 text-center">Status</th>
-              <th className="px-6 py-3 text-xs font-bold text-slate-500 uppercase tracking-wider w-24 text-center">Actions</th>
+              {(canEdit || canDelete) && (
+                <th className="px-6 py-3 text-xs font-bold text-slate-500 uppercase tracking-wider w-24 text-center">Actions</th>
+              )}
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
@@ -66,28 +84,34 @@ export default function BrandsClient({ brands, currentPage, totalPages }: { bran
                       {brand.active ? "Active" : "Inactive"}
                     </span>
                   </td>
-                  <td className="px-6 py-4 text-center">
-                    <div className="flex items-center justify-center gap-2">
-                      <button
-                        onClick={() => {
-                          setEditingBrand(brand);
-                          setShowForm(true);
-                        }}
-                        className="text-slate-400 hover:text-indigo-600 transition-colors p-1"
-                        title="Edit Brand"
-                      >
-                        <Edit2 className="w-4 h-4" />
-                      </button>
-                      <button
-                        onClick={() => handleDelete(brand.id)}
-                        disabled={isPending}
-                        className="text-slate-400 hover:text-red-600 transition-colors p-1 disabled:opacity-50"
-                        title="Delete Brand"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </td>
+                  {(canEdit || canDelete) && (
+                    <td className="px-6 py-4 text-center">
+                      <div className="flex items-center justify-center gap-2">
+                        {canEdit && (
+                          <button
+                            onClick={() => {
+                              setEditingBrand(brand);
+                              setShowForm(true);
+                            }}
+                            className="text-slate-400 hover:text-indigo-600 transition-colors p-1"
+                            title="Edit Brand"
+                          >
+                            <Edit2 className="w-4 h-4" />
+                          </button>
+                        )}
+                        {canDelete && (
+                          <button
+                            onClick={() => handleDelete(brand.id)}
+                            disabled={isPending}
+                            className="text-slate-400 hover:text-red-600 transition-colors p-1 disabled:opacity-50"
+                            title="Delete Brand"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  )}
                 </tr>
               ))
             )}
