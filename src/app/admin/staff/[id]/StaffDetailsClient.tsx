@@ -1,13 +1,103 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, TrendingUp, ShoppingBag, Coins, CheckCircle2, User, Mail, Shield, ChevronRight, Activity, Calendar } from "lucide-react";
 import { formatBDT } from "@/utils/formatPrice";
 import { formatDate } from "@/utils/formatDate";
 
 export default function StaffDetailsClient({ staff }: { staff: any }) {
+  const [chartMode, setChartMode] = useState<"daily" | "cumulative">("daily");
+  const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
+  const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
+
   const orders = staff.orders || [];
   const totalOrders = orders.length;
+
+  // Group sales by date
+  const salesByDate: Record<string, number> = {};
+  const ordersCountByDate: Record<string, number> = {};
+
+  // Last 30 days
+  const datesList: string[] = [];
+  for (let i = 29; i >= 0; i--) {
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+    const dateStr = d.toISOString().split("T")[0];
+    datesList.push(dateStr);
+    salesByDate[dateStr] = 0;
+    ordersCountByDate[dateStr] = 0;
+  }
+
+  orders.forEach((o: any) => {
+    const dateStr = new Date(o.createdAt).toISOString().split("T")[0];
+    if (salesByDate[dateStr] !== undefined) {
+      salesByDate[dateStr] += o.totalAmount;
+      ordersCountByDate[dateStr] += 1;
+    }
+  });
+
+  let cumulative = 0;
+  const chartData = datesList.map((dateStr) => {
+    const dailyAmount = salesByDate[dateStr];
+    cumulative += dailyAmount;
+
+    const d = new Date(dateStr);
+    const label = d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+
+    return {
+      date: dateStr,
+      label,
+      daily: dailyAmount,
+      cumulative,
+      count: ordersCountByDate[dateStr],
+    };
+  });
+
+  const activeValues = chartData.map(d => chartMode === "daily" ? d.daily : d.cumulative);
+  const maxVal = Math.max(...activeValues, 1000);
+
+  // Chart dimensions
+  const width = 1000;
+  const height = 240;
+  const paddingX = 60;
+  const paddingY = 30;
+
+  // Coordinate mapping
+  const points = chartData.map((d, index) => {
+    const val = chartMode === "daily" ? d.daily : d.cumulative;
+    const x = paddingX + (index / (chartData.length - 1)) * (width - 2 * paddingX);
+    const y = height - paddingY - (val / maxVal) * (height - 2 * paddingY);
+    return { x, y, data: d };
+  });
+
+  // SVG Line path
+  const linePath = points.map((p, i) => `${i === 0 ? "M" : "L"} ${p.x} ${p.y}`).join(" ");
+
+  // SVG Area path under the line
+  const areaPath = points.length > 0
+    ? `${linePath} L ${points[points.length - 1].x} ${height - paddingY} L ${points[0].x} ${height - paddingY} Z`
+    : "";
+
+  // Mouse move handler to find nearest data point
+  const handleMouseMove = (e: React.MouseEvent<SVGSVGElement, MouseEvent>) => {
+    const svg = e.currentTarget;
+    const rect = svg.getBoundingClientRect();
+    const mouseX = ((e.clientX - rect.left) / rect.width) * width;
+
+    let nearestIndex = 0;
+    let minDistance = Infinity;
+    points.forEach((p, index) => {
+      const distance = Math.abs(p.x - mouseX);
+      if (distance < minDistance) {
+        minDistance = distance;
+        nearestIndex = index;
+      }
+    });
+
+    setHoveredIndex(nearestIndex);
+    setMousePos({ x: points[nearestIndex].x, y: points[nearestIndex].y });
+  };
 
   // Calculate statistics
   const totalSales = orders.reduce((sum: number, o: any) => sum + o.totalAmount, 0);
@@ -144,6 +234,220 @@ export default function StaffDetailsClient({ staff }: { staff: any }) {
             }`}>
             Delivered vs. Cancelled/Returned
           </span>
+        </div>
+      </div>
+
+      {/* Trading Style Performance Chart */}
+      <div className="bg-white border border-slate-200 p-6 shadow-sm relative overflow-hidden text-slate-900">
+        {/* Neon Trading Grid Background details */}
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(16,185,129,0.03),rgba(255,255,255,0))]" />
+
+        <div className="relative flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+          <div>
+
+            <h2 className="text-lg font-bold uppercase tracking-wider text-slate-800 flex items-center gap-2">
+              <Activity className="w-5 h-5 text-emerald-500" />
+              Sales Executive Performance Report
+            </h2>
+          </div>
+
+          {/* Chart Controls */}
+          <div className="flex bg-slate-100 border border-slate-250 p-0.5 rounded-lg shrink-0">
+            <button
+              onClick={() => setChartMode("daily")}
+              className={`px-3 py-1.5 text-xs font-bold uppercase tracking-wider rounded-md transition-all ${chartMode === "daily"
+                  ? "bg-emerald-500 text-white shadow-sm font-extrabold"
+                  : "text-slate-500 hover:text-slate-800"
+                }`}
+            >
+              Daily Revenue
+            </button>
+            <button
+              onClick={() => setChartMode("cumulative")}
+              className={`px-3 py-1.5 text-xs font-bold uppercase tracking-wider rounded-md transition-all ${chartMode === "cumulative"
+                  ? "bg-emerald-500 text-white shadow-sm font-extrabold"
+                  : "text-slate-500 hover:text-slate-800"
+                }`}
+            >
+              Cumulative Growth
+            </button>
+          </div>
+        </div>
+
+        {/* Chart Viewport */}
+        <div className="relative w-full h-[240px]">
+          {/* SVG Chart */}
+          <svg
+            className="w-full h-full cursor-crosshair overflow-visible select-none"
+            viewBox={`0 0 ${width} ${height}`}
+            preserveAspectRatio="none"
+            onMouseMove={handleMouseMove}
+            onMouseLeave={() => setHoveredIndex(null)}
+          >
+            <defs>
+              {/* Neon Green Fill Gradient */}
+              <linearGradient id="glow-area" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#10b981" stopOpacity="0.15" />
+                <stop offset="100%" stopColor="#10b981" stopOpacity="0.0" />
+              </linearGradient>
+            </defs>
+
+            {/* Horizontal Gridlines */}
+            {[0, 0.25, 0.5, 0.75, 1].map((ratio, index) => {
+              const y = paddingY + ratio * (height - 2 * paddingY);
+              const gridVal = maxVal - ratio * maxVal;
+              return (
+                <g key={index}>
+                  <line
+                    x1={paddingX}
+                    y1={y}
+                    x2={width - paddingX}
+                    y2={y}
+                    stroke="#e2e8f0"
+                    strokeWidth="1"
+                    strokeDasharray="4 6"
+                  />
+                  {/* Y Axis Labels */}
+                  <text
+                    x={paddingX - 10}
+                    y={y + 4}
+                    textAnchor="end"
+                    fill="#94a3b8"
+                    className="text-[9px] font-mono font-bold"
+                  >
+                    {formatBDT(gridVal).replace("৳", "৳ ")}
+                  </text>
+                </g>
+              );
+            })}
+
+            {/* Empty State Overlay */}
+            {totalOrders === 0 && (
+              <text
+                x={width / 2}
+                y={height / 2}
+                textAnchor="middle"
+                fill="#94a3b8"
+                className="text-xs font-bold uppercase tracking-widest italic"
+              >
+                No sales records plotted // Awaiting first order
+              </text>
+            )}
+
+            {/* Glowing Trading Area Under Line */}
+            {totalOrders > 0 && areaPath && (
+              <path d={areaPath} fill="url(#glow-area)" />
+            )}
+
+            {/* Main Trading Line Path */}
+            {totalOrders > 0 && linePath && (
+              <path
+                d={linePath}
+                fill="none"
+                stroke="#10b981"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="drop-shadow-[0_2px_4px_rgba(16,185,129,0.2)]"
+              />
+            )}
+
+            {/* Interactive Crosshairs when Hovered */}
+            {hoveredIndex !== null && (
+              <g>
+                {/* Vertical line */}
+                <line
+                  x1={mousePos.x}
+                  y1={paddingY}
+                  x2={mousePos.x}
+                  y2={height - paddingY}
+                  stroke="#cbd5e1"
+                  strokeWidth="1"
+                  strokeDasharray="3 3"
+                />
+                {/* Horizontal line */}
+                <line
+                  x1={paddingX}
+                  y1={mousePos.y}
+                  x2={width - paddingX}
+                  y2={mousePos.y}
+                  stroke="#cbd5e1"
+                  strokeWidth="1"
+                  strokeDasharray="3 3"
+                />
+                {/* Intersection glow point */}
+                <circle
+                  cx={mousePos.x}
+                  cy={mousePos.y}
+                  r="6"
+                  fill="#10b981"
+                  className="animate-ping opacity-75"
+                />
+                <circle
+                  cx={mousePos.x}
+                  cy={mousePos.y}
+                  r="4"
+                  fill="#10b981"
+                  stroke="#ffffff"
+                  strokeWidth="1.5"
+                />
+              </g>
+            )}
+
+            {/* X-Axis Date Labels */}
+            {chartData.map((d, index) => {
+              // Render label every 5 days to avoid crowding
+              if (index % 5 !== 0 && index !== chartData.length - 1) return null;
+              const x = paddingX + (index / (chartData.length - 1)) * (width - 2 * paddingX);
+              return (
+                <text
+                  key={index}
+                  x={x}
+                  y={height - 10}
+                  textAnchor="middle"
+                  fill="#94a3b8"
+                  className="text-[9px] font-mono font-bold uppercase tracking-wider"
+                >
+                  {d.label}
+                </text>
+              );
+            })}
+          </svg>
+
+          {/* Interactive Trading Floating Tooltip */}
+          {hoveredIndex !== null && (
+            <div
+              className="absolute pointer-events-none bg-white/95 border border-slate-200 p-3 shadow-xl rounded-lg backdrop-blur-sm flex flex-col gap-1 z-20 min-w-[140px]"
+              style={{
+                left: `${(mousePos.x / width) * 100}%`,
+                top: `${(mousePos.y / height) * 100 - 95}%`,
+                transform: "translateX(-50%)",
+              }}
+            >
+              <span className="text-[9px] font-black uppercase text-slate-400 tracking-wider">
+                {chartData[hoveredIndex].date}
+              </span>
+              <div className="h-px bg-slate-100 my-1" />
+              <div className="flex justify-between items-center gap-4 text-xs font-semibold">
+                <span className="text-slate-400">Revenue:</span>
+                <span className="text-emerald-600 font-mono">
+                  {formatBDT(chartData[hoveredIndex].daily)}
+                </span>
+              </div>
+              <div className="flex justify-between items-center gap-4 text-xs font-semibold">
+                <span className="text-slate-400">Total:</span>
+                <span className="text-indigo-600 font-mono">
+                  {formatBDT(chartData[hoveredIndex].cumulative)}
+                </span>
+              </div>
+              <div className="flex justify-between items-center gap-4 text-xs font-semibold">
+                <span className="text-slate-400">Orders:</span>
+                <span className="text-slate-800 font-mono">
+                  {chartData[hoveredIndex].count}
+                </span>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
