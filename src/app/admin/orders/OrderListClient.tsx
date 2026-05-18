@@ -6,6 +6,7 @@ import type { OrderStatus } from "@/generated/prisma/client";
 import { bulkUpdateOrderStatus, bulkDeleteOrders } from "../actions";
 import { Filter, Plus, Printer, Trash2, Search as SearchIcon, X, Truck } from "lucide-react";
 import InvoicePrintView from "./InvoicePrintView";
+import ThermalPrintView from "./ThermalPrintView";
 import PathaoReviewModal from "./PathaoReviewModal";
 
 import { useRouter } from "next/navigation";
@@ -18,12 +19,16 @@ export default function OrderListClient({
   totalPages = 1,
   currentFilter = "ALL",
   currentSearch = "",
+  storePhone = "01920240230",
+  storeAddress = "H# 68, R# 12, Sector 10, Uttara, Dhaka - 1230, Bangladesh",
 }: {
   initialOrders: any[];
   currentPage?: number;
   totalPages?: number;
   currentFilter?: string;
   currentSearch?: string;
+  storePhone?: string;
+  storeAddress?: string;
 }) {
   const router = useRouter();
   const [searchValue, setSearchValue] = useState(currentSearch);
@@ -31,12 +36,23 @@ export default function OrderListClient({
   const [bulkStatus, setBulkStatus] = useState<OrderStatus>("PENDING");
   const [loading, setLoading] = useState(false);
   const [optimisticOrders, setOptimisticOrders] = useState(initialOrders);
+  const [printType, setPrintType] = useState<"A4" | "80MM" | null>(null);
   const [alert, setAlert] = useState<{ isOpen: boolean; title: string; message: string; type: "error" | "warning" }>({
     isOpen: false,
     title: "",
     message: "",
     type: "error"
   });
+
+  useEffect(() => {
+    if (printType !== null) {
+      const timer = setTimeout(() => {
+        window.print();
+        setPrintType(null);
+      }, 150);
+      return () => clearTimeout(timer);
+    }
+  }, [printType]);
 
   const [showPathaoModal, setShowPathaoModal] = useState(false);
 
@@ -130,14 +146,26 @@ export default function OrderListClient({
 
   const handlePrintSelected = () => {
     if (selectedIds.size === 0) return;
-    window.print();
+    setPrintType("A4");
+  };
+
+  const handlePrint80mmSelected = () => {
+    if (selectedIds.size === 0) return;
+    setPrintType("80MM");
   };
 
   const selectedOrdersToPrint = filteredOrders.filter((o) => selectedIds.has(o.id));
   return (
     <div className="flex flex-col gap-6">
       {/* Invoice print view — only this is visible during printing */}
-      <InvoicePrintView orders={selectedOrdersToPrint} />
+      {printType === "A4" && <InvoicePrintView orders={selectedOrdersToPrint} />}
+      {printType === "80MM" && (
+        <ThermalPrintView 
+          orders={selectedOrdersToPrint} 
+          storePhone={storePhone} 
+          storeAddress={storeAddress} 
+        />
+      )}
 
       {/* no-print: everything below is hidden by @media print in globals.css */}
       <div className="no-print flex flex-col gap-6">
@@ -255,6 +283,13 @@ export default function OrderListClient({
                     >
                       <Printer className="w-3.5 h-3.5" />
                       Print
+                    </button>
+                    <button
+                      onClick={handlePrint80mmSelected}
+                      className="flex items-center gap-1.5 text-xs font-semibold text-slate-700 bg-white border border-slate-200 px-3 py-1.5 rounded-md hover:bg-slate-50 transition shadow-sm"
+                    >
+                      <Printer className="w-3.5 h-3.5" />
+                      80mm Print
                     </button>
                     <button
                       onClick={() => setShowPathaoModal(true)}
