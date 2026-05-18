@@ -6,15 +6,19 @@ export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
 export const revalidate = 0;
 
-export default async function AdminOrdersPage({ searchParams }: { searchParams: { page?: string, filter?: string, search?: string } }) {
+export default async function AdminOrdersPage({ searchParams }: { searchParams: { page?: string, filter?: string, search?: string, source?: string } }) {
   const page = Number(searchParams?.page) || 1;
   const filter = searchParams?.filter || "ALL";
+  const source = searchParams?.source || "ALL";
   const search = searchParams?.search || "";
   const PER_PAGE = 10;
 
   const whereClause: any = {};
   if (filter !== "ALL") {
     whereClause.status = filter as any;
+  }
+  if (source !== "ALL") {
+    whereClause.orderSource = source as any;
   }
   if (search) {
     whereClause.OR = [
@@ -70,6 +74,7 @@ export default async function AdminOrdersPage({ searchParams }: { searchParams: 
       currentPage={page} 
       totalPages={totalPages} 
       currentFilter={filter}
+      currentSource={source}
       currentSearch={search}
       storePhone={storePhone}
       storeAddress={storeAddress}

@@ -152,6 +152,7 @@ model Order {
   address             String
   totalAmount         Float
   status              OrderStatus   @default(PENDING)
+  orderSource         OrderSource   @default(Salesman)
   createdAt           DateTime      @default(now())
   updatedAt           DateTime      @updatedAt
   advancePaid         Float         @default(0)
@@ -369,6 +370,11 @@ enum OrderStatus {
   CANCELLED
   RETURNED
   PRINTING
+}
+
+enum OrderSource {
+  eCommerce
+  Salesman
 }
 
 enum AdminRole {

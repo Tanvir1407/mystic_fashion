@@ -18,6 +18,7 @@ export default function OrderListClient({
   currentPage = 1,
   totalPages = 1,
   currentFilter = "ALL",
+  currentSource = "ALL",
   currentSearch = "",
   storePhone = "01920240230",
   storeAddress = "H# 68, R# 12, Sector 10, Uttara, Dhaka - 1230, Bangladesh",
@@ -26,6 +27,7 @@ export default function OrderListClient({
   currentPage?: number;
   totalPages?: number;
   currentFilter?: string;
+  currentSource?: string;
   currentSearch?: string;
   storePhone?: string;
   storeAddress?: string;
@@ -340,6 +342,31 @@ export default function OrderListClient({
                       { value: "DELIVERED", label: "Delivered" },
                       { value: "CANCELLED", label: "Cancelled" },
                       { value: "RETURNED", label: "Returned" },
+                    ].map((opt) => (
+                      <option key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="flex flex-col">
+                  <select
+                    value={currentSource}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      const params = new URLSearchParams(window.location.search);
+                      params.set("source", val);
+                      params.set("page", "1");
+                      setSelectedIds(new Set());
+                      router.push(`/admin/orders?${params.toString()}`);
+                    }}
+                    className="w-40 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm font-semibold focus:ring-4 focus:ring-slate-500/10 focus:border-slate-300 outline-none transition-all cursor-pointer text-slate-700"
+                  >
+                    {[
+                      { value: "ALL", label: "All Channels" },
+                      { value: "eCommerce", label: "eCommerce" },
+                      { value: "Salesman", label: "Salesman" },
                     ].map((opt) => (
                       <option key={opt.value} value={opt.value}>
                         {opt.label}

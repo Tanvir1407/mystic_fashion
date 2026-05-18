@@ -959,6 +959,7 @@ export async function createAdminOrder(data: {
           pathaoZoneId: data.pathaoZoneId,
           pathaoAreaId: data.pathaoAreaId,
           status: orderStatus,
+          orderSource: "Salesman",
           items: {
             create: data.items.flatMap((item) => {
               if (item.requiresPrint && item.printDetails && item.printDetails.length > 0) {
