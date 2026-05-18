@@ -11,12 +11,18 @@ export default function SubcategoriesClient({
   subcategories,
   categories,
   currentPage,
-  totalPages
+  totalPages,
+  canCreate,
+  canEdit,
+  canDelete
 }: {
   subcategories: any[],
   categories: any[],
   currentPage: number,
-  totalPages: number
+  totalPages: number,
+  canCreate: boolean,
+  canEdit: boolean,
+  canDelete: boolean
 }) {
   const [showForm, setShowForm] = useState(false);
   const [editingSubcategory, setEditingSubcategory] = useState<any>(null);
@@ -41,16 +47,18 @@ export default function SubcategoriesClient({
           <h1 className="text-xl font-bold text-slate-900">Subcategories</h1>
           <p className="text-sm text-slate-500 mt-1">Manage your product catalog subcategories.</p>
         </div>
-        <button
-          onClick={() => {
-            setEditingSubcategory(null);
-            setShowForm(true);
-          }}
-          className="h-10 px-4 bg-slate-900 text-white text-sm font-bold uppercase tracking-wider rounded-none flex items-center justify-center gap-2 hover:bg-slate-800 transition-colors"
-        >
-          <Plus className="w-4 h-4" />
-          Add Subcategory
-        </button>
+        {canCreate && (
+          <button
+            onClick={() => {
+              setEditingSubcategory(null);
+              setShowForm(true);
+            }}
+            className="h-10 px-4 bg-slate-900 text-white text-sm font-bold uppercase tracking-wider rounded-none flex items-center justify-center gap-2 hover:bg-slate-800 transition-colors"
+          >
+            <Plus className="w-4 h-4" />
+            Add Subcategory
+          </button>
+        )}
       </div>
 
       <div className="bg-white border border-slate-200 rounded-none overflow-hidden">
@@ -60,7 +68,9 @@ export default function SubcategoriesClient({
               <th className="px-6 py-3 text-xs font-bold text-slate-500 uppercase tracking-wider w-2/5">Subcategory Name</th>
               <th className="px-6 py-3 text-xs font-bold text-slate-500 uppercase tracking-wider w-2/5">Parent Category</th>
               <th className="px-6 py-3 text-xs font-bold text-slate-500 uppercase tracking-wider w-1/5 text-center">Status</th>
-              <th className="px-6 py-3 text-xs font-bold text-slate-500 uppercase tracking-wider w-24 text-center">Actions</th>
+              {(canEdit || canDelete) && (
+                <th className="px-6 py-3 text-xs font-bold text-slate-500 uppercase tracking-wider w-24 text-center">Actions</th>
+              )}
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
@@ -78,28 +88,34 @@ export default function SubcategoriesClient({
                       {sc.active ? "Active" : "Inactive"}
                     </span>
                   </td>
-                  <td className="px-6 py-4 text-center">
-                    <div className="flex items-center justify-center gap-2">
-                      <button
-                        onClick={() => {
-                          setEditingSubcategory(sc);
-                          setShowForm(true);
-                        }}
-                        className="text-slate-400 hover:text-indigo-600 transition-colors p-1"
-                        title="Edit Subcategory"
-                      >
-                        <Edit2 className="w-4 h-4" />
-                      </button>
-                      <button
-                        onClick={() => handleDelete(sc.id)}
-                        disabled={isPending}
-                        className="text-slate-400 hover:text-red-600 transition-colors p-1 disabled:opacity-50"
-                        title="Delete Subcategory"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </td>
+                  {(canEdit || canDelete) && (
+                    <td className="px-6 py-4 text-center">
+                      <div className="flex items-center justify-center gap-2">
+                        {canEdit && (
+                          <button
+                            onClick={() => {
+                              setEditingSubcategory(sc);
+                              setShowForm(true);
+                            }}
+                            className="text-slate-400 hover:text-indigo-600 transition-colors p-1"
+                            title="Edit Subcategory"
+                          >
+                            <Edit2 className="w-4 h-4" />
+                          </button>
+                        )}
+                        {canDelete && (
+                          <button
+                            onClick={() => handleDelete(sc.id)}
+                            disabled={isPending}
+                            className="text-slate-400 hover:text-red-600 transition-colors p-1 disabled:opacity-50"
+                            title="Delete Subcategory"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  )}
                 </tr>
               ))
             )}
