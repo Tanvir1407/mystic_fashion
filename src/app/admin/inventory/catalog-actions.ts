@@ -3,10 +3,13 @@
 import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 
-export async function createBrand(data: { name: string }) {
+export async function createBrand(data: { name: string; active?: boolean }) {
   try {
     const brand = await prisma.brand.create({
-      data: { name: data.name.trim() }
+      data: { 
+        name: data.name.trim(),
+        active: data.active !== undefined ? data.active : true
+      }
     });
     revalidatePath("/admin/inventory/brands");
     revalidatePath("/admin/products/new");
@@ -17,11 +20,14 @@ export async function createBrand(data: { name: string }) {
   }
 }
 
-export async function updateBrand(id: string, data: { name: string }) {
+export async function updateBrand(id: string, data: { name: string; active?: boolean }) {
   try {
     const brand = await prisma.brand.update({
       where: { id },
-      data: { name: data.name.trim() }
+      data: { 
+        name: data.name.trim(),
+        active: data.active !== undefined ? data.active : true
+      }
     });
     revalidatePath("/admin/inventory/brands");
     revalidatePath("/admin/products/new");
@@ -42,10 +48,13 @@ export async function deleteBrand(id: string) {
   }
 }
 
-export async function createCategory(data: { name: string }) {
+export async function createCategory(data: { name: string; active?: boolean }) {
   try {
     const category = await prisma.category.create({
-      data: { name: data.name.trim() }
+      data: { 
+        name: data.name.trim(),
+        active: data.active !== undefined ? data.active : true
+      }
     });
     revalidatePath("/admin/inventory/categories");
     revalidatePath("/admin/products/new");
@@ -56,11 +65,14 @@ export async function createCategory(data: { name: string }) {
   }
 }
 
-export async function updateCategory(id: string, data: { name: string }) {
+export async function updateCategory(id: string, data: { name: string; active?: boolean }) {
   try {
     const category = await prisma.category.update({
       where: { id },
-      data: { name: data.name.trim() }
+      data: { 
+        name: data.name.trim(),
+        active: data.active !== undefined ? data.active : true
+      }
     });
     revalidatePath("/admin/inventory/categories");
     revalidatePath("/admin/products/new");
@@ -81,12 +93,13 @@ export async function deleteCategory(id: string) {
   }
 }
 
-export async function createSubcategory(data: { name: string; categoryId: string }) {
+export async function createSubcategory(data: { name: string; categoryId: string; active?: boolean }) {
   try {
     const subcategory = await prisma.subcategory.create({
       data: { 
         name: data.name.trim(),
-        categoryId: data.categoryId
+        categoryId: data.categoryId,
+        active: data.active !== undefined ? data.active : true
       }
     });
     revalidatePath("/admin/inventory/subcategories");
@@ -97,13 +110,14 @@ export async function createSubcategory(data: { name: string; categoryId: string
   }
 }
 
-export async function updateSubcategory(id: string, data: { name: string; categoryId: string }) {
+export async function updateSubcategory(id: string, data: { name: string; categoryId: string; active?: boolean }) {
   try {
     const subcategory = await prisma.subcategory.update({
       where: { id },
       data: { 
         name: data.name.trim(),
-        categoryId: data.categoryId
+        categoryId: data.categoryId,
+        active: data.active !== undefined ? data.active : true
       }
     });
     revalidatePath("/admin/inventory/subcategories");

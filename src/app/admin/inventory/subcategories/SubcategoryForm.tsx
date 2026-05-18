@@ -16,6 +16,7 @@ export function SubcategoryForm({ subcategory, categories, onClose, onSuccess }:
   const [error, setError] = useState("");
   const [name, setName] = useState(subcategory?.name || "");
   const [categoryId, setCategoryId] = useState(subcategory?.categoryId || "");
+  const [active, setActive] = useState(subcategory ? subcategory.active : true);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -27,9 +28,9 @@ export function SubcategoryForm({ subcategory, categories, onClose, onSuccess }:
     try {
       let res;
       if (subcategory) {
-        res = await updateSubcategory(subcategory.id, { name, categoryId });
+        res = await updateSubcategory(subcategory.id, { name, categoryId, active });
       } else {
-        res = await createSubcategory({ name, categoryId });
+        res = await createSubcategory({ name, categoryId, active });
       }
 
       if (res.success) {
@@ -92,6 +93,26 @@ export function SubcategoryForm({ subcategory, categories, onClose, onSuccess }:
                 placeholder="E.g. Football Jerseys"
                 className="w-full px-4 py-3 bg-white border border-slate-300 rounded-none text-sm focus:outline-none focus:border-slate-900 transition-colors"
               />
+            </div>
+
+            <div className="flex items-center gap-3 py-1">
+              <button
+                type="button"
+                onClick={() => setActive(!active)}
+                className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                  active ? "bg-slate-900" : "bg-slate-200"
+                }`}
+              >
+                <span
+                  className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-sm ring-0 transition duration-200 ease-in-out ${
+                    active ? "translate-x-5" : "translate-x-0"
+                  }`}
+                />
+              </button>
+              <div className="flex flex-col">
+                <span className="text-xs font-bold text-slate-700">Active Status</span>
+                <span className="text-[10px] text-slate-500 font-medium">Inactive subcategories will be hidden from storefront navigation and filters.</span>
+              </div>
             </div>
           </div>
 

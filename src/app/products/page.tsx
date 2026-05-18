@@ -29,13 +29,20 @@ export default async function ProductsPage({
       return [];
     }),
     prisma.category.findMany({
-      include: { subcategories: true },
+      where: { active: true },
+      include: {
+        subcategories: {
+          where: { active: true },
+          orderBy: { name: "asc" },
+        },
+      },
       orderBy: { name: "asc" },
     }).catch((e) => {
       console.error("Failed to fetch categories:", e);
       return [];
     }),
     prisma.brand.findMany({
+      where: { active: true },
       orderBy: { name: "asc" },
     }).catch((e) => {
       console.error("Failed to fetch brands:", e);
