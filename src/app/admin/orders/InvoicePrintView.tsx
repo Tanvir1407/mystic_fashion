@@ -34,6 +34,7 @@ interface Order {
   advancePaid: number;
   createdAt: string | Date;
   items: OrderItem[];
+  remarks?: string | null;
 }
 
 export default function InvoicePrintView({ orders }: { orders: Order[] }) {
@@ -200,15 +201,13 @@ export default function InvoicePrintView({ orders }: { orders: Order[] }) {
 
                 {/* Bottom Section: Wash Care & Summary */}
                 <div className="flex justify-between text-xs mt-2 text-black flex-1">
-                  {/* Wash Care Instructions */}
+                  {/* Note */}
                   <div className="w-3/5 pr-8 pt-2">
-                    <h3 className="font-bold text-xs mb-2">WASH CARE INSTRUCTIONS</h3>
-                    <ul className="space-y-1 text-[11px] leading-snug">
-                      <li><strong>Hand Wash Only:</strong> Do not machine wash.</li>
-                      <li><strong>Do Not Bleach:</strong> Use only non-chlorine detergents.</li>
-                      <li><strong>Do Not Iron:</strong> Avoid heat to preserve fabric integrity.</li>
-                      <li><strong>Gentle Care:</strong> Avoid vigorous scrubbing or heavy agitation.</li>
-                    </ul>
+                    {order.remarks && order.remarks.trim() !== "" && (
+                      <div className="text-slate-800 text-left">
+                        <p className="text-xs leading-relaxed whitespace-pre-wrap font-medium">Note: <span className="italic font-normal">{order.remarks}</span></p>
+                      </div>
+                    )}
                   </div>
 
                   {/* Pricing Summary */}
@@ -235,7 +234,7 @@ export default function InvoicePrintView({ orders }: { orders: Order[] }) {
                       <span>Advance Paid</span>
                       <span>{formatBDT(order.advancePaid)}</span>
                     </div>
-                    <div className="w-full flex justify-between py-1 px-2 mt-1 font-bold text-sm uppercase">
+                    <div className="w-full flex justify-between py-1 px-2 mt-1 font-bold text-sm uppercase border-t border-slate-200">
                       <span>Balance Due</span>
                       <span>{formatBDT(order.totalAmount - order.advancePaid)}</span>
                     </div>

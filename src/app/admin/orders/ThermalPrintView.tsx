@@ -31,6 +31,7 @@ interface Order {
   advancePaid: number;
   createdAt: string | Date;
   items: OrderItem[];
+  remarks?: string | null;
 }
 
 interface ThermalPrintViewProps {
@@ -274,6 +275,14 @@ export default function ThermalPrintView({ orders, storePhone, storeAddress }: T
               <span className="text-[14px] font-medium">{formatBDT(collectableAmount)}</span>
             </div>
             <div className="double-line-divider mt-2" />
+
+            {/* Remarks Section */}
+            {order.remarks && order.remarks.trim() !== "" && (
+              <div className="mt-2 mb-3 text-left text-[8px] font-sans leading-snug border-b border-dashed border-black pb-2">
+                <span>Note: </span>
+                <span className="italic font-medium whitespace-pre-wrap">{order.remarks}</span>
+              </div>
+            )}
 
             {/* Footer */}
             <div className="w-full text-center mt-2.5">
