@@ -90,12 +90,23 @@ export default function OrderRowClient({
       </td>
       <td className="px-2 py-4">
 
-        <div className="flex flex-col">
+        <div className="flex flex-col gap-1">
           <span className="font-medium text-sm text-slate-900">
             {order.id}
 
           </span>
-          <span className="text-xs text-slate-500 mt-0.5">{formatDate(order.createdAt)}</span>
+          <div className="flex flex-col items-start gap-1">
+            <span className="text-xs text-slate-500">{formatDate(order.createdAt)}</span>
+            {order.orderSource === "eCommerce" ? (
+              <span className="inline-flex items-center gap-1 bg-emerald-50 text-emerald-700 text-[10px] font-bold px-1.5 py-0.5 rounded border border-emerald-100 uppercase tracking-wider">
+                🌐 eCommerce
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1 bg-violet-50 text-violet-700 text-[10px] font-bold px-1.5 py-0.5 rounded border border-violet-100 uppercase tracking-wider">
+                👤 Salesman
+              </span>
+            )}
+          </div>
         </div>
 
       </td>

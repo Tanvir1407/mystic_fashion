@@ -1,19 +1,24 @@
 import prisma from "@/lib/prisma";
 import OrderListClient from "./OrderListClient";
+import { getFooterData } from "@/lib/footer";
 
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
 export const revalidate = 0;
 
-export default async function AdminOrdersPage({ searchParams }: { searchParams: { page?: string, filter?: string, search?: string } }) {
+export default async function AdminOrdersPage({ searchParams }: { searchParams: { page?: string, filter?: string, search?: string, source?: string } }) {
   const page = Number(searchParams?.page) || 1;
   const filter = searchParams?.filter || "ALL";
+  const source = searchParams?.source || "ALL";
   const search = searchParams?.search || "";
   const PER_PAGE = 10;
 
   const whereClause: any = {};
   if (filter !== "ALL") {
     whereClause.status = filter as any;
+  }
+  if (source !== "ALL") {
+    whereClause.orderSource = source as any;
   }
   if (search) {
     whereClause.OR = [
@@ -25,8 +30,11 @@ export default async function AdminOrdersPage({ searchParams }: { searchParams: 
 
   let orders: any[] = [];
   let totalCount = 0;
+  let storePhone = "01920240230";
+  let storeAddress = "H# 68, R# 12, Sector 10, Uttara, Dhaka - 1230, Bangladesh";
+
   try {
-    const [fetchedOrders, fetchedCount] = await Promise.all([
+    const [fetchedOrders, fetchedCount, footerConfig] = await Promise.all([
       prisma.order.findMany({
         where: whereClause,
         skip: (page - 1) * PER_PAGE,
@@ -40,10 +48,20 @@ export default async function AdminOrdersPage({ searchParams }: { searchParams: 
           },
         },
       }),
-      prisma.order.count({ where: whereClause })
+      prisma.order.count({ where: whereClause }),
+      getFooterData()
     ]);
     orders = fetchedOrders;
     totalCount = fetchedCount;
+
+    if (footerConfig) {
+      if (footerConfig.contactPhone && footerConfig.contactPhone !== "01700-MYSTIC" && footerConfig.contactPhone.trim() !== "") {
+        storePhone = footerConfig.contactPhone;
+      }
+      if (footerConfig.contactAddress && footerConfig.contactAddress !== "Dhaka, Bangladesh" && footerConfig.contactAddress.trim() !== "") {
+        storeAddress = footerConfig.contactAddress;
+      }
+    }
   } catch (error) {
     console.error("Error fetching orders:", error);
   }
@@ -56,7 +74,10 @@ export default async function AdminOrdersPage({ searchParams }: { searchParams: 
       currentPage={page} 
       totalPages={totalPages} 
       currentFilter={filter}
+      currentSource={source}
       currentSearch={search}
+      storePhone={storePhone}
+      storeAddress={storeAddress}
     />
   );
 }

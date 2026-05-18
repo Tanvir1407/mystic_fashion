@@ -47,19 +47,25 @@ export default function CategoriesClient({ categories, currentPage, totalPages }
         <table className="w-full text-left border-collapse">
           <thead>
             <tr className="bg-slate-50 border-b border-slate-200">
-              <th className="px-6 py-3 text-xs font-bold text-slate-500 uppercase tracking-wider w-full">Category Name</th>
+              <th className="px-6 py-3 text-xs font-bold text-slate-500 uppercase tracking-wider w-2/3">Category Name</th>
+              <th className="px-6 py-3 text-xs font-bold text-slate-500 uppercase tracking-wider w-1/3 text-center">Status</th>
               <th className="px-6 py-3 text-xs font-bold text-slate-500 uppercase tracking-wider w-24 text-center">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
             {categories.length === 0 ? (
               <tr>
-                <td colSpan={2} className="px-6 py-8 text-center text-sm text-slate-500">No categories found.</td>
+                <td colSpan={3} className="px-6 py-8 text-center text-sm text-slate-500">No categories found.</td>
               </tr>
             ) : (
               categories.map((category) => (
                 <tr key={category.id} className="hover:bg-slate-50 transition-colors">
                   <td className="px-6 py-4 text-sm font-medium text-slate-900">{category.name}</td>
+                  <td className="px-6 py-4 text-center">
+                    <span className={`inline-flex items-center px-2.5 py-0.5 text-xs font-bold ${category.active ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-slate-50 text-slate-500 border border-slate-200'}`}>
+                      {category.active ? "Active" : "Inactive"}
+                    </span>
+                  </td>
                   <td className="px-6 py-4 text-center">
                     <div className="flex items-center justify-center gap-2">
                       <button

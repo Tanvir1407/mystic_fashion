@@ -68,6 +68,7 @@ export async function placeOrderAction(payload: {
           pathaoCityId: payload.pathaoCityId,
           pathaoZoneId: payload.pathaoZoneId,
           pathaoAreaId: payload.pathaoAreaId,
+          orderSource: "eCommerce",
           items: {
             create: payload.items.flatMap((item) => {
               if (item.requiresPrint && item.printDetails && item.printDetails.length > 0) {

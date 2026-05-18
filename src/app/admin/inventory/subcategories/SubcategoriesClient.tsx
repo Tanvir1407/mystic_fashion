@@ -57,21 +57,27 @@ export default function SubcategoriesClient({
         <table className="w-full text-left border-collapse">
           <thead>
             <tr className="bg-slate-50 border-b border-slate-200">
-              <th className="px-6 py-3 text-xs font-bold text-slate-500 uppercase tracking-wider w-1/2">Subcategory Name</th>
-              <th className="px-6 py-3 text-xs font-bold text-slate-500 uppercase tracking-wider w-1/2">Parent Category</th>
+              <th className="px-6 py-3 text-xs font-bold text-slate-500 uppercase tracking-wider w-2/5">Subcategory Name</th>
+              <th className="px-6 py-3 text-xs font-bold text-slate-500 uppercase tracking-wider w-2/5">Parent Category</th>
+              <th className="px-6 py-3 text-xs font-bold text-slate-500 uppercase tracking-wider w-1/5 text-center">Status</th>
               <th className="px-6 py-3 text-xs font-bold text-slate-500 uppercase tracking-wider w-24 text-center">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
             {subcategories.length === 0 ? (
               <tr>
-                <td colSpan={3} className="px-6 py-8 text-center text-sm text-slate-500">No subcategories found.</td>
+                <td colSpan={4} className="px-6 py-8 text-center text-sm text-slate-500">No subcategories found.</td>
               </tr>
             ) : (
               subcategories.map((sc) => (
                 <tr key={sc.id} className="hover:bg-slate-50 transition-colors">
                   <td className="px-6 py-4 text-sm font-medium text-slate-900">{sc.name}</td>
                   <td className="px-6 py-4 text-sm text-slate-600">{sc.category?.name || "Unknown"}</td>
+                  <td className="px-6 py-4 text-center">
+                    <span className={`inline-flex items-center px-2.5 py-0.5 text-xs font-bold ${sc.active ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-slate-50 text-slate-500 border border-slate-200'}`}>
+                      {sc.active ? "Active" : "Inactive"}
+                    </span>
+                  </td>
                   <td className="px-6 py-4 text-center">
                     <div className="flex items-center justify-center gap-2">
                       <button

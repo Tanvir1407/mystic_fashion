@@ -6,6 +6,7 @@ import type { OrderStatus } from "@/generated/prisma/client";
 import { bulkUpdateOrderStatus, bulkDeleteOrders } from "../actions";
 import { Filter, Plus, Printer, Trash2, Search as SearchIcon, X, Truck } from "lucide-react";
 import InvoicePrintView from "./InvoicePrintView";
+import ThermalPrintView from "./ThermalPrintView";
 import PathaoReviewModal from "./PathaoReviewModal";
 
 import { useRouter } from "next/navigation";
@@ -17,13 +18,19 @@ export default function OrderListClient({
   currentPage = 1,
   totalPages = 1,
   currentFilter = "ALL",
+  currentSource = "ALL",
   currentSearch = "",
+  storePhone = "01920240230",
+  storeAddress = "H# 68, R# 12, Sector 10, Uttara, Dhaka - 1230, Bangladesh",
 }: {
   initialOrders: any[];
   currentPage?: number;
   totalPages?: number;
   currentFilter?: string;
+  currentSource?: string;
   currentSearch?: string;
+  storePhone?: string;
+  storeAddress?: string;
 }) {
   const router = useRouter();
   const [searchValue, setSearchValue] = useState(currentSearch);
@@ -31,12 +38,23 @@ export default function OrderListClient({
   const [bulkStatus, setBulkStatus] = useState<OrderStatus>("PENDING");
   const [loading, setLoading] = useState(false);
   const [optimisticOrders, setOptimisticOrders] = useState(initialOrders);
+  const [printType, setPrintType] = useState<"A4" | "80MM" | null>(null);
   const [alert, setAlert] = useState<{ isOpen: boolean; title: string; message: string; type: "error" | "warning" }>({
     isOpen: false,
     title: "",
     message: "",
     type: "error"
   });
+
+  useEffect(() => {
+    if (printType !== null) {
+      const timer = setTimeout(() => {
+        window.print();
+        setPrintType(null);
+      }, 150);
+      return () => clearTimeout(timer);
+    }
+  }, [printType]);
 
   const [showPathaoModal, setShowPathaoModal] = useState(false);
 
@@ -130,14 +148,26 @@ export default function OrderListClient({
 
   const handlePrintSelected = () => {
     if (selectedIds.size === 0) return;
-    window.print();
+    setPrintType("A4");
+  };
+
+  const handlePrint80mmSelected = () => {
+    if (selectedIds.size === 0) return;
+    setPrintType("80MM");
   };
 
   const selectedOrdersToPrint = filteredOrders.filter((o) => selectedIds.has(o.id));
   return (
     <div className="flex flex-col gap-6">
       {/* Invoice print view — only this is visible during printing */}
-      <InvoicePrintView orders={selectedOrdersToPrint} />
+      {printType === "A4" && <InvoicePrintView orders={selectedOrdersToPrint} />}
+      {printType === "80MM" && (
+        <ThermalPrintView 
+          orders={selectedOrdersToPrint} 
+          storePhone={storePhone} 
+          storeAddress={storeAddress} 
+        />
+      )}
 
       {/* no-print: everything below is hidden by @media print in globals.css */}
       <div className="no-print flex flex-col gap-6">
@@ -257,6 +287,13 @@ export default function OrderListClient({
                       Print
                     </button>
                     <button
+                      onClick={handlePrint80mmSelected}
+                      className="flex items-center gap-1.5 text-xs font-semibold text-slate-700 bg-white border border-slate-200 px-3 py-1.5 rounded-md hover:bg-slate-50 transition shadow-sm"
+                    >
+                      <Printer className="w-3.5 h-3.5" />
+                      POS Print
+                    </button>
+                    <button
                       onClick={() => setShowPathaoModal(true)}
                       disabled={loading}
                       className="flex items-center gap-1.5 text-xs font-semibold text-[#ee2e24] bg-white border border-slate-200 px-3 py-1.5 rounded-md hover:bg-slate-50 transition disabled:opacity-50 shadow-sm"
@@ -305,6 +342,31 @@ export default function OrderListClient({
                       { value: "DELIVERED", label: "Delivered" },
                       { value: "CANCELLED", label: "Cancelled" },
                       { value: "RETURNED", label: "Returned" },
+                    ].map((opt) => (
+                      <option key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="flex flex-col">
+                  <select
+                    value={currentSource}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      const params = new URLSearchParams(window.location.search);
+                      params.set("source", val);
+                      params.set("page", "1");
+                      setSelectedIds(new Set());
+                      router.push(`/admin/orders?${params.toString()}`);
+                    }}
+                    className="w-40 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm font-semibold focus:ring-4 focus:ring-slate-500/10 focus:border-slate-300 outline-none transition-all cursor-pointer text-slate-700"
+                  >
+                    {[
+                      { value: "ALL", label: "All Channels" },
+                      { value: "eCommerce", label: "eCommerce" },
+                      { value: "Salesman", label: "Salesman" },
                     ].map((opt) => (
                       <option key={opt.value} value={opt.value}>
                         {opt.label}

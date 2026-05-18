@@ -3,9 +3,10 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { Search, Menu, X, Phone, Truck, User } from "lucide-react";
+import { Search, Menu, X, Phone, Truck, User, ChevronDown } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useCartStore } from "../store/cartStore";
+import { getHeaderCategories } from "@/app/actions/categories";
 
 import Image from "next/image";
 
@@ -18,8 +19,16 @@ export default function Header() {
   const { getTotalItems, toggleCart } = useCartStore();
   const pathname = usePathname();
 
+  const [categories, setCategories] = useState<any[]>([
+  ]);
+
   useEffect(() => {
     setMounted(true);
+    getHeaderCategories().then((res) => {
+      if (res.success && res.categories && res.categories.length > 0) {
+        setCategories(res.categories);
+      }
+    });
   }, []);
 
   const handleSearch = (e: React.FormEvent) => {
@@ -59,6 +68,7 @@ export default function Header() {
                 />
                 <button
                   type="submit"
+                  className="bg-primary text-white px-4 h-full flex items-center justify-center hover:bg-opacity-90 transition-colors rounded-none"
                 >
                   <Search className="w-5 h-5" />
                 </button>
@@ -96,7 +106,7 @@ export default function Header() {
           </div>
 
           {/* Center/Left: Logo (Desktop: static left, Mobile: absolute center) */}
-          <div className="absolute md:static left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 md:translate-x-0 md:translate-y-0 flex items-center justify-center md:justify-start flex-shrink-0">
+          <div className="absolute md:static left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 md:translate-x-0 md:translate-y-0 flex items-center justify-center md:justify-start flex-shrink-0 md:flex-1">
             <Link href="/" className="relative h-8 w-32 mm:h-10 mm:w-40 md:h-14 md:w-60">
               <Image
                 src="/images/logo.png"
@@ -126,10 +136,10 @@ export default function Header() {
           </form>
 
           {/* Right: Utilities */}
-          <div className="flex items-center gap-2.5 md:gap-4 lg:gap-6 flex-shrink-0">
+          <div className="flex items-center gap-2.5 md:gap-4 lg:gap-6 flex-shrink-0 md:flex-1 justify-end">
 
             {/* Account (Desktop only) */}
-            <Link href="/admin" className="hidden md:flex items-center gap-2.5 group">
+            {/* <Link href="/admin" className="hidden md:flex items-center gap-2.5 group">
               <div className="w-10 h-10 rounded-full border border-slate-200 flex items-center justify-center text-slate-600 group-hover:border-primary group-hover:text-primary transition-colors">
                 <User className="w-5 h-5" />
               </div>
@@ -137,7 +147,7 @@ export default function Header() {
                 <span className="text-[11px] text-slate-500 leading-none">Sign In</span>
                 <span className="text-xs font-bold text-slate-900 mt-0.5 leading-tight group-hover:text-primary transition-colors">Your Account</span>
               </div>
-            </Link>
+            </Link> */}
 
             {/* Cart (Desktop and Mobile) */}
             <button
@@ -156,9 +166,9 @@ export default function Header() {
             </button>
 
             {/* Account (Mobile only) */}
-            <Link href="/admin" className="md:hidden p-1 text-foreground hover:text-primary transition-colors flex items-center justify-center">
+            {/* <Link href="/admin" className="md:hidden p-1 text-foreground hover:text-primary transition-colors flex items-center justify-center">
               <User className="w-6 h-6" />
-            </Link>
+            </Link> */}
           </div>
         </div>
       </div>
@@ -167,12 +177,52 @@ export default function Header() {
       <div className="hidden md:block w-full border-t border-slate-200 bg-white dark:bg-zinc-950">
         <div className="container mx-auto py-1.5 flex items-center justify-between px-4">
           {/* Left side categories */}
-          <div className="flex items-center gap-6">
-            <Link href="/products?category=shoes" className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-zinc-300 hover:text-primary transition-colors">Shoes</Link>
-            <Link href="/products?category=jersey" className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-zinc-300 hover:text-primary transition-colors">Jersey</Link>
-            <Link href="/products?category=polo" className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-zinc-300 hover:text-primary transition-colors">Polo</Link>
-            <Link href="/products?category=jeans" className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-zinc-300 hover:text-primary transition-colors">Jeans</Link>
-          </div>
+          {categories.length > 0 ? <div className="flex items-center gap-6">
+            {categories.map((category) => {
+              const hasSubcategories = category.subcategories && category.subcategories.length > 0;
+
+              if (hasSubcategories) {
+                return (
+                  <div key={category.id} className="relative group py-2">
+                    <Link
+                      href={`/products?category=${encodeURIComponent(category.name.toLowerCase())}`}
+                      className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-zinc-300 hover:text-primary transition-colors flex items-center gap-1"
+                    >
+                      {category.name}
+                      <ChevronDown className="w-3 h-3 transition-transform duration-200 group-hover:rotate-180" />
+                    </Link>
+
+                    {/* Dropdown Menu */}
+                    <div className="absolute left-0 top-full mt-0 w-48 bg-white dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 shadow-xl rounded-none py-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 transform translate-y-2 group-hover:translate-y-0 z-50">
+                      {category.subcategories.map((sub: any) => (
+                        <Link
+                          key={sub.id}
+                          href={`/products?category=${encodeURIComponent(category.name.toLowerCase())}&subcategory=${encodeURIComponent(sub.name.toLowerCase())}`}
+                          className="block px-4 py-2 text-xs font-medium text-slate-700 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-zinc-900 hover:text-primary transition-colors"
+                        >
+                          {sub.name}
+                        </Link>
+                      ))}
+                    </div>
+                  </div>
+                );
+              }
+
+              return (
+                <Link
+                  key={category.id}
+                  href={`/products?category=${encodeURIComponent(category.name.toLowerCase())}`}
+                  className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-zinc-300 hover:text-primary transition-colors py-2"
+                >
+                  {category.name}
+                </Link>
+              );
+            })}
+          </div> : <div className="flex justify-center ">
+            <div className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-zinc-300 hover:text-primary transition-colors py-2">
+              Loading categories...
+            </div>
+          </div>}
           {/* Right side track your order */}
           <div>
             <Link href="/track" className="text-sm font-medium text-slate-700 dark:text-zinc-300 hover:text-primary transition-colors flex items-center gap-1.5">
@@ -194,24 +244,37 @@ export default function Header() {
           >
             <div className="py-6 px-4 space-y-4">
               <div className="space-y-1">
-                {[
-                  { label: "Shoes", href: "/products?category=shoes" },
-                  { label: "Jersey", href: "/products?category=jersey" },
-                  { label: "Polo", href: "/products?category=polo" },
-                  { label: "Jeans", href: "/products?category=jeans" },
-                ].map((link) => (
-                  <Link
-                    key={link.href}
-                    href={link.href}
-                    onClick={() => setIsMobileMenuOpen(false)}
-                    className={`block px-4 py-2 rounded-none text-base font-medium transition-colors ${pathname === link.href
-                      ? "bg-primary/5 text-primary"
-                      : "text-slate-800 dark:text-zinc-200 hover:bg-slate-50 dark:hover:bg-zinc-900"
-                      }`}
-                  >
-                    {link.label}
-                  </Link>
-                ))}
+                {categories.map((category) => {
+                  const hasSubcategories = category.subcategories && category.subcategories.length > 0;
+                  return (
+                    <div key={category.id} className="space-y-1">
+                      <Link
+                        href={`/products?category=${encodeURIComponent(category.name.toLowerCase())}`}
+                        onClick={() => setIsMobileMenuOpen(false)}
+                        className={`block px-4 py-2 rounded-none text-base font-medium transition-colors ${pathname.includes(`/products?category=${category.name.toLowerCase()}`)
+                          ? "bg-primary/5 text-primary"
+                          : "text-slate-800 dark:text-zinc-200 hover:bg-slate-50 dark:hover:bg-zinc-900"
+                          }`}
+                      >
+                        {category.name}
+                      </Link>
+                      {hasSubcategories && (
+                        <div className="pl-6 space-y-1 border-l border-slate-100 dark:border-zinc-800 ml-6">
+                          {category.subcategories.map((sub: any) => (
+                            <Link
+                              key={sub.id}
+                              href={`/products?category=${encodeURIComponent(category.name.toLowerCase())}&subcategory=${encodeURIComponent(sub.name.toLowerCase())}`}
+                              onClick={() => setIsMobileMenuOpen(false)}
+                              className="block px-3 py-1.5 text-sm font-normal text-slate-500 dark:text-zinc-400 hover:text-primary transition-colors"
+                            >
+                              {sub.name}
+                            </Link>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
               <div className="pt-2 border-t border-slate-100 dark:border-zinc-800">
                 <Link
