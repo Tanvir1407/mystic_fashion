@@ -22,6 +22,9 @@ export default function OrderListClient({
   currentSearch = "",
   storePhone = "01920240230",
   storeAddress = "H# 68, R# 12, Sector 10, Uttara, Dhaka - 1230, Bangladesh",
+  canCreate,
+  canEdit,
+  canDelete
 }: {
   initialOrders: any[];
   currentPage?: number;
@@ -31,6 +34,9 @@ export default function OrderListClient({
   currentSearch?: string;
   storePhone?: string;
   storeAddress?: string;
+  canCreate: boolean;
+  canEdit: boolean;
+  canDelete: boolean;
 }) {
   const router = useRouter();
   const [searchValue, setSearchValue] = useState(currentSearch);
@@ -178,13 +184,15 @@ export default function OrderListClient({
             <h1 className="text-2xl font-semibold tracking-tight text-slate-900">Orders</h1>
             <p className="text-sm text-slate-500 mt-1">Manage customer orders and fulfillments.</p>
           </div>
-          <button
-            onClick={() => router.push("/admin/orders/create")}
-            className="flex items-center gap-2 px-4 py-2.5 bg-slate-900 text-white text-sm font-semibold rounded-lg hover:bg-slate-800 transition-colors shadow-sm whitespace-nowrap"
-          >
-            <Plus className="w-4 h-4" />
-            Create Order
-          </button>
+          {canCreate && (
+            <button
+              onClick={() => router.push("/admin/orders/create")}
+              className="flex items-center gap-2 px-4 py-2.5 bg-slate-900 text-white text-sm font-semibold rounded-lg hover:bg-slate-800 transition-colors shadow-sm whitespace-nowrap"
+            >
+              <Plus className="w-4 h-4" />
+              Create Order
+            </button>
+          )}
         </div>
 
         {/* Toolbar, Search & Bulk Actions */}
@@ -325,38 +333,42 @@ export default function OrderListClient({
               </div>
 
               <div className="flex flex-wrap items-center gap-2">
-                <div className="flex items-center gap-1.5 bg-white border border-slate-200 rounded-lg p-1 shadow-sm">
-                  <select
-                    value={bulkStatus}
-                    onChange={(e) => setBulkStatus(e.target.value as OrderStatus)}
-                    className="bg-transparent border-0 rounded px-2 py-1 text-xs font-semibold text-slate-700 outline-none cursor-pointer focus:ring-0 focus:border-0"
-                  >
-                    {[
-                      { value: "PENDING", label: "Set Pending" },
-                      { value: "CONFIRMED", label: "Set Confirmed" },
-                      { value: "PRINTING", label: "Set Printing" },
-                      { value: "PACKAGING", label: "Set Packaging" },
-                      { value: "SHIPPED", label: "Set Shipped" },
-                      { value: "DELIVERED", label: "Set Delivered" },
-                      { value: "CANCELLED", label: "Set Cancelled" },
-                      { value: "RETURNED", label: "Set Returned" },
-                    ].map((opt) => (
-                      <option key={opt.value} value={opt.value}>
-                        {opt.label}
-                      </option>
-                    ))}
-                  </select>
+                {canEdit && (
+                  <>
+                    <div className="flex items-center gap-1.5 bg-white border border-slate-200 rounded-lg p-1 shadow-sm">
+                      <select
+                        value={bulkStatus}
+                        onChange={(e) => setBulkStatus(e.target.value as OrderStatus)}
+                        className="bg-transparent border-0 rounded px-2 py-1 text-xs font-semibold text-slate-700 outline-none cursor-pointer focus:ring-0 focus:border-0"
+                      >
+                        {[
+                          { value: "PENDING", label: "Set Pending" },
+                          { value: "CONFIRMED", label: "Set Confirmed" },
+                          { value: "PRINTING", label: "Set Printing" },
+                          { value: "PACKAGING", label: "Set Packaging" },
+                          { value: "SHIPPED", label: "Set Shipped" },
+                          { value: "DELIVERED", label: "Set Delivered" },
+                          { value: "CANCELLED", label: "Set Cancelled" },
+                          { value: "RETURNED", label: "Set Returned" },
+                        ].map((opt) => (
+                          <option key={opt.value} value={opt.value}>
+                            {opt.label}
+                          </option>
+                        ))}
+                      </select>
 
-                  <button
-                    onClick={handleBulkUpdate}
-                    disabled={loading}
-                    className="text-xs font-semibold text-white bg-indigo-600 px-3 py-1 rounded-md hover:bg-indigo-700 transition disabled:opacity-50 shadow-sm"
-                  >
-                    {loading ? "Updating..." : "Update"}
-                  </button>
-                </div>
+                      <button
+                        onClick={handleBulkUpdate}
+                        disabled={loading}
+                        className="text-xs font-semibold text-white bg-indigo-600 px-3 py-1 rounded-md hover:bg-indigo-700 transition disabled:opacity-50 shadow-sm"
+                      >
+                        {loading ? "Updating..." : "Update"}
+                      </button>
+                    </div>
 
-                <div className="w-px h-5 bg-slate-200 mx-1 hidden lg:block" />
+                    <div className="w-px h-5 bg-slate-200 mx-1 hidden lg:block" />
+                  </>
+                )}
 
                 <button
                   onClick={handlePrintSelected}
@@ -372,22 +384,26 @@ export default function OrderListClient({
                   <Printer className="w-3.5 h-3.5" />
                   POS Print
                 </button>
-                <button
-                  onClick={() => setShowPathaoModal(true)}
-                  disabled={loading}
-                  className="flex items-center gap-1.5 text-xs font-semibold text-slate-700 bg-white border border-slate-200 px-3 py-1.5 rounded-lg hover:bg-slate-50 transition disabled:opacity-50 shadow-sm"
-                >
-                  <Truck className="w-3.5 h-3.5 text-[#ee2e24]" />
-                  Send to Pathao
-                </button>
-                <button
-                  onClick={handleBulkDelete}
-                  disabled={loading}
-                  className="flex items-center gap-1.5 text-xs font-semibold text-red-600 bg-red-50 border border-red-100 px-3 py-1.5 rounded-lg hover:bg-red-100 hover:border-red-200 transition disabled:opacity-50 shadow-sm"
-                >
-                  <Trash2 className="w-3.5 h-3.5" />
-                  Delete
-                </button>
+                {canEdit && (
+                  <button
+                    onClick={() => setShowPathaoModal(true)}
+                    disabled={loading}
+                    className="flex items-center gap-1.5 text-xs font-semibold text-slate-700 bg-white border border-slate-200 px-3 py-1.5 rounded-lg hover:bg-slate-50 transition disabled:opacity-50 shadow-sm"
+                  >
+                    <Truck className="w-3.5 h-3.5 text-[#ee2e24]" />
+                    Send to Pathao
+                  </button>
+                )}
+                {canDelete && (
+                  <button
+                    onClick={handleBulkDelete}
+                    disabled={loading}
+                    className="flex items-center gap-1.5 text-xs font-semibold text-red-600 bg-red-50 border border-red-100 px-3 py-1.5 rounded-lg hover:bg-red-100 hover:border-red-200 transition disabled:opacity-50 shadow-sm"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    Delete
+                  </button>
+                )}
               </div>
             </div>
           )}
@@ -429,6 +445,8 @@ export default function OrderListClient({
                     items={order.items}
                     isSelected={selectedIds.has(order.id)}
                     onSelect={() => handleSelect(order.id)}
+                    canEdit={canEdit}
+                    canDelete={canDelete}
                   />
                 ))}
 
