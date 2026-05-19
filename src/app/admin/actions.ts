@@ -4,6 +4,8 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import prisma from "@/lib/prisma";
 import { OrderStatus, AdjustmentType, ReturnStatus } from "@/generated/prisma/client";
+import { withAuditLog, logActivity } from "@/lib/audit";
+import { getAuditContext } from "@/lib/audit";
 import { revalidatePath } from "next/cache";
 import { writeFile, mkdir } from "fs/promises";
 import { join, dirname } from "path";
@@ -65,7 +67,7 @@ export async function adminLogout() {
   redirect("/admin/login");
 }
 
-export async function createProduct(data: {
+async function _createProduct(data: {
   name: string;
   description: string;
   price: number;
@@ -126,7 +128,16 @@ export async function createProduct(data: {
   }
 }
 
-export async function updateProduct(id: string, data: {
+export const createProduct = withAuditLog(_createProduct, {
+  entityType: "Product",
+  action: "CREATE",
+  getEntityId: () => null,
+  getEntityIdFromResult: (r: any) => r?.data?.id ?? null,
+  fetchAfter: (id) => prisma.product.findUnique({ where: { id } }),
+  describe: (args) => `Created product "${args[0].name}"`,
+});
+
+async function _updateProduct(id: string, data: {
   name: string;
   description: string;
   price: number;
@@ -198,7 +209,16 @@ export async function updateProduct(id: string, data: {
   }
 }
 
-export async function deleteProduct(id: string) {
+export const updateProduct = withAuditLog(_updateProduct, {
+  entityType: "Product",
+  action: "UPDATE",
+  getEntityId: (args) => args[0],
+  fetchBefore: (id) => prisma.product.findUnique({ where: { id } }),
+  fetchAfter: (id) => prisma.product.findUnique({ where: { id } }),
+  describe: (args) => `Updated product ${args[0]}`,
+});
+
+async function _deleteProduct(id: string) {
   try {
     const product = await prisma.product.delete({
       where: { id },
@@ -211,7 +231,15 @@ export async function deleteProduct(id: string) {
   }
 }
 
-export async function updateOrderStatus(orderId: string, status: OrderStatus) {
+export const deleteProduct = withAuditLog(_deleteProduct, {
+  entityType: "Product",
+  action: "DELETE",
+  getEntityId: (args) => args[0],
+  fetchBefore: (id) => prisma.product.findUnique({ where: { id } }),
+  describe: (args) => `Deleted product ${args[0]}`,
+});
+
+async function _updateOrderStatus(orderId: string, status: OrderStatus) {
   try {
     await prisma.$transaction(async (tx) => {
       const order = await tx.order.findUnique({
@@ -299,6 +327,15 @@ export async function updateOrderStatus(orderId: string, status: OrderStatus) {
   }
 }
 
+export const updateOrderStatus = withAuditLog(_updateOrderStatus, {
+  entityType: "Order",
+  action: "UPDATE",
+  getEntityId: (args) => args[0],
+  fetchBefore: (id) => prisma.order.findUnique({ where: { id } }),
+  fetchAfter: (id) => prisma.order.findUnique({ where: { id } }),
+  describe: (args) => `Updated order ${args[0]} status to ${args[1]}`,
+});
+
 export async function bulkUpdateOrderStatus(orderIds: string[], status: OrderStatus) {
   const results = [];
   for (const id of orderIds) {
@@ -308,7 +345,7 @@ export async function bulkUpdateOrderStatus(orderIds: string[], status: OrderSta
   return results;
 }
 
-export async function deleteOrder(id: string) {
+async function _deleteOrder(id: string) {
   try {
     await prisma.$transaction(async (tx) => {
       await tx.orderItem.deleteMany({
@@ -326,8 +363,23 @@ export async function deleteOrder(id: string) {
   }
 }
 
+export const deleteOrder = withAuditLog(_deleteOrder, {
+  entityType: "Order",
+  action: "DELETE",
+  getEntityId: (args) => args[0],
+  fetchBefore: (id) => prisma.order.findUnique({ where: { id }, include: { items: true } }),
+  describe: (args) => `Deleted order ${args[0]}`,
+});
+
 export async function bulkDeleteOrders(orderIds: string[]) {
   try {
+    // 1. Fetch before states for all orders
+    const orders = await prisma.order.findMany({
+      where: { id: { in: orderIds } },
+      include: { items: true },
+    });
+
+    // 2. Perform the deletions
     await prisma.$transaction(async (tx) => {
       await tx.orderItem.deleteMany({
         where: { orderId: { in: orderIds } },
@@ -336,6 +388,26 @@ export async function bulkDeleteOrders(orderIds: string[]) {
         where: { id: { in: orderIds } },
       });
     });
+
+    // 3. Log each deletion individually
+    const auditContext = await getAuditContext();
+    if (auditContext) {
+      for (const order of orders) {
+        logActivity({
+          userId: auditContext.userId,
+          userEmail: auditContext.userEmail,
+          userRole: auditContext.userRole,
+          action: "DELETE",
+          entityType: "Order",
+          entityId: order.id,
+          description: `Deleted order ${order.id} (Bulk Delete)`,
+          dataBefore: order as any,
+          ipAddress: auditContext.ipAddress,
+          userAgent: auditContext.userAgent,
+        });
+      }
+    }
+
     revalidatePath("/admin/orders");
     return { success: true };
   } catch (error: any) {
@@ -344,7 +416,7 @@ export async function bulkDeleteOrders(orderIds: string[]) {
   }
 }
 
-export async function updateOrderDetails(id: string, data: {
+async function _updateOrderDetails(id: string, data: {
   customerName: string;
   phone: string;
   district: string;
@@ -492,7 +564,16 @@ export async function updateOrderDetails(id: string, data: {
   }
 }
 
-export async function updateOrderRemark(orderId: string, remarks: string) {
+export const updateOrderDetails = withAuditLog(_updateOrderDetails, {
+  entityType: "Order",
+  action: "UPDATE",
+  getEntityId: (args) => args[0],
+  fetchBefore: (id) => prisma.order.findUnique({ where: { id }, include: { items: true } }),
+  fetchAfter: (id) => prisma.order.findUnique({ where: { id }, include: { items: true } }),
+  describe: (args) => `Updated order details for ${args[0]}`,
+});
+
+async function _updateOrderRemark(orderId: string, remarks: string) {
   try {
     await prisma.order.update({
       where: { id: orderId },
@@ -507,7 +588,16 @@ export async function updateOrderRemark(orderId: string, remarks: string) {
   }
 }
 
-export async function saveSizeChart(category: string, data: any) {
+export const updateOrderRemark = withAuditLog(_updateOrderRemark, {
+  entityType: "Order",
+  action: "UPDATE",
+  getEntityId: (args) => args[0],
+  fetchBefore: (id) => prisma.order.findUnique({ where: { id }, select: { id: true, remarks: true } }),
+  fetchAfter: (id) => prisma.order.findUnique({ where: { id }, select: { id: true, remarks: true } }),
+  describe: (args) => `Updated order remark for ${args[0]}`,
+});
+
+async function _saveSizeChart(category: string, data: any) {
   try {
     const chart = await prisma.sizeChart.upsert({
       where: { category },
@@ -526,7 +616,16 @@ export async function saveSizeChart(category: string, data: any) {
   }
 }
 
-export async function deleteSizeChart(id: string) {
+export const saveSizeChart = withAuditLog(_saveSizeChart, {
+  entityType: "SizeChart",
+  action: "UPDATE",
+  getEntityId: () => null,
+  getEntityIdFromResult: (r: any) => r?.data?.id ?? null,
+  fetchAfter: (id) => prisma.sizeChart.findUnique({ where: { id } }),
+  describe: (args) => `Saved size chart for category "${args[0]}"`,
+});
+
+async function _deleteSizeChart(id: string) {
   try {
     const chart = await prisma.sizeChart.delete({
       where: { id },
@@ -539,7 +638,15 @@ export async function deleteSizeChart(id: string) {
   }
 }
 
-export async function createPurchase(
+export const deleteSizeChart = withAuditLog(_deleteSizeChart, {
+  entityType: "SizeChart",
+  action: "DELETE",
+  getEntityId: (args) => args[0],
+  fetchBefore: (id) => prisma.sizeChart.findUnique({ where: { id } }),
+  describe: (args) => `Deleted size chart ${args[0]}`,
+});
+
+async function _createPurchase(
   supplierName: string,
   invoiceNumber: string,
   totalAmount: number,
@@ -625,7 +732,16 @@ export async function createPurchase(
   }
 }
 
-export async function updatePurchase(
+export const createPurchase = withAuditLog(_createPurchase, {
+  entityType: "Purchase",
+  action: "CREATE",
+  getEntityId: () => null,
+  getEntityIdFromResult: (r: any) => r?.data?.id ?? null,
+  fetchAfter: (id) => prisma.purchase.findUnique({ where: { id }, include: { items: true } }),
+  describe: (args) => `Created purchase from "${args[0]}" (৳${args[2]})`,
+});
+
+async function _updatePurchase(
   purchaseId: string,
   supplierName: string,
   invoiceNumber: string,
@@ -745,7 +861,16 @@ export async function updatePurchase(
   redirect("/admin/purchases");
 }
 
-export async function deletePurchase(id: string) {
+export const updatePurchase = withAuditLog(_updatePurchase, {
+  entityType: "Purchase",
+  action: "UPDATE",
+  getEntityId: (args) => args[0],
+  fetchBefore: (id) => prisma.purchase.findUnique({ where: { id }, include: { items: true } }),
+  fetchAfter: (id) => prisma.purchase.findUnique({ where: { id }, include: { items: true } }),
+  describe: (args) => `Updated purchase ${args[0]}`,
+});
+
+async function _deletePurchase(id: string) {
   try {
     const purchase = await prisma.purchase.delete({ where: { id } });
     revalidatePath("/admin/purchases");
@@ -756,7 +881,15 @@ export async function deletePurchase(id: string) {
   }
 }
 
-export async function updatePurchaseStatus(id: string, status: string) {
+export const deletePurchase = withAuditLog(_deletePurchase, {
+  entityType: "Purchase",
+  action: "DELETE",
+  getEntityId: (args) => args[0],
+  fetchBefore: (id) => prisma.purchase.findUnique({ where: { id }, include: { items: true } }),
+  describe: (args) => `Deleted purchase ${args[0]}`,
+});
+
+async function _updatePurchaseStatus(id: string, status: string) {
   try {
     const purchase = await prisma.purchase.update({
       where: { id },
@@ -769,6 +902,15 @@ export async function updatePurchaseStatus(id: string, status: string) {
     return { success: false, error: error instanceof Error ? error.message : "An unexpected error occurred." };
   }
 }
+
+export const updatePurchaseStatus = withAuditLog(_updatePurchaseStatus, {
+  entityType: "Purchase",
+  action: "UPDATE",
+  getEntityId: (args) => args[0],
+  fetchBefore: (id) => prisma.purchase.findUnique({ where: { id } }),
+  fetchAfter: (id) => prisma.purchase.findUnique({ where: { id } }),
+  describe: (args) => `Updated purchase ${args[0]} status to "${args[1]}"`,
+});
 
 export async function uploadImage(formData: FormData) {
   const file = formData.get("file") as File;
@@ -797,7 +939,7 @@ export async function getDeliverySettings() {
   });
 }
 
-export async function updateDeliverySettings(insideDhaka: number, outsideDhaka: number) {
+async function _updateDeliverySettings(insideDhaka: number, outsideDhaka: number) {
   try {
     const settings = await prisma.deliverySetting.upsert({
       where: { id: "default" },
@@ -815,6 +957,15 @@ export async function updateDeliverySettings(insideDhaka: number, outsideDhaka: 
   }
 }
 
+export const updateDeliverySettings = withAuditLog(_updateDeliverySettings, {
+  entityType: "DeliverySetting",
+  action: "UPDATE",
+  getEntityId: () => "default",
+  fetchBefore: (id) => prisma.deliverySetting.findUnique({ where: { id } }),
+  fetchAfter: (id) => prisma.deliverySetting.findUnique({ where: { id } }),
+  describe: (args) => `Updated delivery settings (Inside: ৳${args[0]}, Outside: ৳${args[1]})`,
+});
+
 export async function getInventorySettings() {
   return await prisma.inventorySetting.upsert({
     where: { id: "default" },
@@ -823,7 +974,7 @@ export async function getInventorySettings() {
   });
 }
 
-export async function updateInventorySettings(lowStockThreshold: number) {
+async function _updateInventorySettings(lowStockThreshold: number) {
   try {
     const settings = await prisma.inventorySetting.upsert({
       where: { id: "default" },
@@ -838,6 +989,15 @@ export async function updateInventorySettings(lowStockThreshold: number) {
   }
 }
 
+export const updateInventorySettings = withAuditLog(_updateInventorySettings, {
+  entityType: "InventorySetting",
+  action: "UPDATE",
+  getEntityId: () => "default",
+  fetchBefore: (id) => prisma.inventorySetting.findUnique({ where: { id } }),
+  fetchAfter: (id) => prisma.inventorySetting.findUnique({ where: { id } }),
+  describe: (args) => `Updated inventory low stock threshold to ${args[0]}`,
+});
+
 export async function getDTFPrintSetting() {
   return await prisma.dTFPrintSetting.upsert({
     where: { id: "default" },
@@ -846,7 +1006,7 @@ export async function getDTFPrintSetting() {
   });
 }
 
-export async function updateDTFPrintSetting(printCost: number) {
+async function _updateDTFPrintSetting(printCost: number) {
   try {
     const setting = await prisma.dTFPrintSetting.upsert({
       where: { id: "default" },
@@ -861,6 +1021,15 @@ export async function updateDTFPrintSetting(printCost: number) {
     return { success: false, error: error instanceof Error ? error.message : "An unexpected error occurred." };
   }
 }
+
+export const updateDTFPrintSetting = withAuditLog(_updateDTFPrintSetting, {
+  entityType: "DTFPrintSetting",
+  action: "UPDATE",
+  getEntityId: () => "default",
+  fetchBefore: (id) => prisma.dTFPrintSetting.findUnique({ where: { id } }),
+  fetchAfter: (id) => prisma.dTFPrintSetting.findUnique({ where: { id } }),
+  describe: (args) => `Updated DTF print cost to ৳${args[0]}`,
+});
 
 export async function getLowStockProducts() {
   const setting = await getInventorySettings();
@@ -916,7 +1085,7 @@ async function generateOrderIdInternal(tx: any) {
   return `${datePrefix}${nextNum.toString().padStart(2, '0')}`;
 }
 
-export async function createAdminOrder(data: {
+async function _createAdminOrder(data: {
   customerName: string;
   phone: string;
   district: string;
@@ -1062,6 +1231,15 @@ export async function createAdminOrder(data: {
   }
 }
 
+export const createAdminOrder = withAuditLog(_createAdminOrder, {
+  entityType: "Order",
+  action: "CREATE",
+  getEntityId: () => null,
+  getEntityIdFromResult: (r: any) => r?.orderId ?? null,
+  fetchAfter: (id) => prisma.order.findUnique({ where: { id }, include: { items: true } }),
+  describe: (args) => `Created admin order for "${args[0].customerName}" (৳${args[0].totalAmount})`,
+});
+
 export async function getPageBySlug(slug: string) {
   try {
     const page = await prisma.page.findUnique({
@@ -1074,31 +1252,30 @@ export async function getPageBySlug(slug: string) {
   }
 }
 
-export async function updatePage(slug: string, data: { title: string; content: string }) {
+async function _updatePage(slug: string, data: { title: string; content: string }) {
   try {
     const page = await prisma.page.upsert({
       where: { slug },
-      update: {
-        title: data.title,
-        content: data.content,
-      },
-      create: {
-        slug,
-        title: data.title,
-        content: data.content,
-      },
+      update: { title: data.title, content: data.content },
+      create: { slug, title: data.title, content: data.content },
     });
-
-    revalidatePath(`/${slug}`);
-    revalidatePath(`/admin/pages/${slug}`);
-    revalidatePath("/admin/pages");
-
+    revalidatePath("/");
+    revalidatePath(`/pages/${slug}`);
     return { success: true, data: page };
   } catch (error: any) {
     console.error("Error in updatePage:", error);
     return { success: false, error: error instanceof Error ? error.message : "An unexpected error occurred." };
   }
 }
+
+export const updatePage = withAuditLog(_updatePage, {
+  entityType: "Page",
+  action: "UPDATE",
+  getEntityId: (args) => args[0],
+  fetchBefore: (id) => prisma.page.findUnique({ where: { slug: id } }),
+  fetchAfter: (id) => prisma.page.findUnique({ where: { slug: id } }),
+  describe: (args) => `Updated page "${args[0]}" (${args[1].title})`,
+});
 
 export async function bulkSendToPathaoAction(orderIds: string[]) {
   try {
@@ -1167,13 +1344,39 @@ export async function bulkSendToPathaoAction(orderIds: string[]) {
 
         if (res.consignment_id) {
           // 2. Simultaneous Database Update (ID + Status)
-          await prisma.order.update({
+          const orderBefore = await prisma.order.findUnique({
+            where: { id: order.id },
+            include: { items: true },
+          });
+
+          const updatedOrder = await prisma.order.update({
             where: { id: order.id },
             data: {
               pathaoConsignmentId: res.consignment_id,
               status: "SHIPPED",
-            }
+            },
+            include: { items: true },
           });
+
+          // Log the update action individually
+          const auditContext = await getAuditContext();
+          if (auditContext) {
+            logActivity({
+              userId: auditContext.userId,
+              userEmail: auditContext.userEmail,
+              userRole: auditContext.userRole,
+              action: "UPDATE",
+              entityType: "Order",
+              entityId: order.id,
+              description: `Shipped order ${order.id} via Pathao (Consignment: ${res.consignment_id})`,
+              dataBefore: orderBefore as any,
+              dataAfter: updatedOrder as any,
+              changedFields: ["pathaoConsignmentId", "status"],
+              ipAddress: auditContext.ipAddress,
+              userAgent: auditContext.userAgent,
+            });
+          }
+
           successCount++;
         }
       } catch (err: any) {
@@ -1198,7 +1401,7 @@ export async function bulkSendToPathaoAction(orderIds: string[]) {
   }
 }
 
-export async function adjustStock(data: {
+async function _adjustStock(data: {
   variantId: string;
   adjustmentType: AdjustmentType;
   quantity: number;
@@ -1263,6 +1466,15 @@ export async function adjustStock(data: {
   }
 }
 
+export const adjustStock = withAuditLog(_adjustStock, {
+  entityType: "StockAdjustment",
+  action: "CREATE",
+  getEntityId: () => null,
+  getEntityIdFromResult: (r: any) => r?.data?.id ?? null,
+  fetchAfter: (id) => prisma.stockAdjustment.findUnique({ where: { id } }),
+  describe: (args) => `Adjusted stock for variant ${args[0].variantId} (${args[0].adjustmentType}: ${args[0].quantity})`,
+});
+
 export async function bulkAdjustStock(adjustments: {
   variantId: string;
   adjustmentType: AdjustmentType;
@@ -1319,6 +1531,25 @@ export async function bulkAdjustStock(adjustments: {
       return createdAdjustments;
     });
 
+    // Log each adjustment individually
+    const auditContext = await getAuditContext();
+    if (auditContext && results && Array.isArray(results)) {
+      for (const adj of results) {
+        logActivity({
+          userId: auditContext.userId,
+          userEmail: auditContext.userEmail,
+          userRole: auditContext.userRole,
+          action: "CREATE",
+          entityType: "StockAdjustment",
+          entityId: adj.id,
+          description: `Adjusted stock for variant ${adj.variantId} (${adj.adjustmentType}: ${adj.quantity}) (Bulk Adjust)`,
+          dataAfter: adj as any,
+          ipAddress: auditContext.ipAddress,
+          userAgent: auditContext.userAgent,
+        });
+      }
+    }
+
     revalidatePath("/admin/inventory");
     revalidatePath("/admin/inventory/adjustments");
     return { success: true, data: results };
@@ -1344,7 +1575,7 @@ export async function getRecentAdjustments() {
   });
 }
 
-export async function processSalesReturn(data: {
+async function _processSalesReturn(data: {
   orderId: string;
   orderItemId: string;
   returnReason: string;
@@ -1480,6 +1711,15 @@ export async function processSalesReturn(data: {
     return { success: false, error: error.message || "Failed to process sales return" };
   }
 }
+
+export const processSalesReturn = withAuditLog(_processSalesReturn, {
+  entityType: "SalesReturn",
+  action: "CREATE",
+  getEntityId: () => null,
+  getEntityIdFromResult: (r: any) => r?.data?.id ?? null,
+  fetchAfter: (id) => prisma.salesReturn.findUnique({ where: { id }, include: { order: true, orderItem: true } }),
+  describe: (args) => `Processed sales return for item ${args[0].orderItemId} (Order: ${args[0].orderId}, Action: ${args[0].returnActionType})`,
+});
 
 export async function getRecentSalesReturns() {
   try {

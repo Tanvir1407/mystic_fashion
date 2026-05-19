@@ -2,8 +2,13 @@
 
 import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
+import { withAuditLog } from "@/lib/audit";
 
-export async function createBrand(data: { name: string; active?: boolean }) {
+// ═══════════════════════════════════════════════════════════════════════════
+// BRANDS
+// ═══════════════════════════════════════════════════════════════════════════
+
+async function _createBrand(data: { name: string; active?: boolean }) {
   try {
     const brand = await prisma.brand.create({
       data: { 
@@ -20,7 +25,16 @@ export async function createBrand(data: { name: string; active?: boolean }) {
   }
 }
 
-export async function updateBrand(id: string, data: { name: string; active?: boolean }) {
+export const createBrand = withAuditLog(_createBrand, {
+  entityType: "Brand",
+  action: "CREATE",
+  getEntityId: () => null,
+  getEntityIdFromResult: (r: any) => r?.brand?.id ?? null,
+  fetchAfter: (id) => prisma.brand.findUnique({ where: { id } }),
+  describe: (args) => `Created brand "${args[0].name.trim()}"`,
+});
+
+async function _updateBrand(id: string, data: { name: string; active?: boolean }) {
   try {
     const brand = await prisma.brand.update({
       where: { id },
@@ -38,7 +52,16 @@ export async function updateBrand(id: string, data: { name: string; active?: boo
   }
 }
 
-export async function deleteBrand(id: string) {
+export const updateBrand = withAuditLog(_updateBrand, {
+  entityType: "Brand",
+  action: "UPDATE",
+  getEntityId: (args) => args[0],
+  fetchBefore: (id) => prisma.brand.findUnique({ where: { id } }),
+  fetchAfter: (id) => prisma.brand.findUnique({ where: { id } }),
+  describe: (args) => `Updated brand ${args[0]}`,
+});
+
+async function _deleteBrand(id: string) {
   try {
     await prisma.brand.delete({ where: { id } });
     revalidatePath("/admin/inventory/brands");
@@ -48,7 +71,19 @@ export async function deleteBrand(id: string) {
   }
 }
 
-export async function createCategory(data: { name: string; active?: boolean }) {
+export const deleteBrand = withAuditLog(_deleteBrand, {
+  entityType: "Brand",
+  action: "DELETE",
+  getEntityId: (args) => args[0],
+  fetchBefore: (id) => prisma.brand.findUnique({ where: { id } }),
+  describe: (args) => `Deleted brand ${args[0]}`,
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// CATEGORIES
+// ═══════════════════════════════════════════════════════════════════════════
+
+async function _createCategory(data: { name: string; active?: boolean }) {
   try {
     const category = await prisma.category.create({
       data: { 
@@ -65,7 +100,16 @@ export async function createCategory(data: { name: string; active?: boolean }) {
   }
 }
 
-export async function updateCategory(id: string, data: { name: string; active?: boolean }) {
+export const createCategory = withAuditLog(_createCategory, {
+  entityType: "Category",
+  action: "CREATE",
+  getEntityId: () => null,
+  getEntityIdFromResult: (r: any) => r?.category?.id ?? null,
+  fetchAfter: (id) => prisma.category.findUnique({ where: { id } }),
+  describe: (args) => `Created category "${args[0].name.trim()}"`,
+});
+
+async function _updateCategory(id: string, data: { name: string; active?: boolean }) {
   try {
     const category = await prisma.category.update({
       where: { id },
@@ -83,7 +127,16 @@ export async function updateCategory(id: string, data: { name: string; active?: 
   }
 }
 
-export async function deleteCategory(id: string) {
+export const updateCategory = withAuditLog(_updateCategory, {
+  entityType: "Category",
+  action: "UPDATE",
+  getEntityId: (args) => args[0],
+  fetchBefore: (id) => prisma.category.findUnique({ where: { id } }),
+  fetchAfter: (id) => prisma.category.findUnique({ where: { id } }),
+  describe: (args) => `Updated category ${args[0]}`,
+});
+
+async function _deleteCategory(id: string) {
   try {
     await prisma.category.delete({ where: { id } });
     revalidatePath("/admin/inventory/categories");
@@ -93,7 +146,19 @@ export async function deleteCategory(id: string) {
   }
 }
 
-export async function createSubcategory(data: { name: string; categoryId: string; active?: boolean }) {
+export const deleteCategory = withAuditLog(_deleteCategory, {
+  entityType: "Category",
+  action: "DELETE",
+  getEntityId: (args) => args[0],
+  fetchBefore: (id) => prisma.category.findUnique({ where: { id } }),
+  describe: (args) => `Deleted category ${args[0]}`,
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// SUBCATEGORIES
+// ═══════════════════════════════════════════════════════════════════════════
+
+async function _createSubcategory(data: { name: string; categoryId: string; active?: boolean }) {
   try {
     const subcategory = await prisma.subcategory.create({
       data: { 
@@ -110,7 +175,16 @@ export async function createSubcategory(data: { name: string; categoryId: string
   }
 }
 
-export async function updateSubcategory(id: string, data: { name: string; categoryId: string; active?: boolean }) {
+export const createSubcategory = withAuditLog(_createSubcategory, {
+  entityType: "Subcategory",
+  action: "CREATE",
+  getEntityId: () => null,
+  getEntityIdFromResult: (r: any) => r?.subcategory?.id ?? null,
+  fetchAfter: (id) => prisma.subcategory.findUnique({ where: { id } }),
+  describe: (args) => `Created subcategory "${args[0].name.trim()}"`,
+});
+
+async function _updateSubcategory(id: string, data: { name: string; categoryId: string; active?: boolean }) {
   try {
     const subcategory = await prisma.subcategory.update({
       where: { id },
@@ -128,7 +202,16 @@ export async function updateSubcategory(id: string, data: { name: string; catego
   }
 }
 
-export async function deleteSubcategory(id: string) {
+export const updateSubcategory = withAuditLog(_updateSubcategory, {
+  entityType: "Subcategory",
+  action: "UPDATE",
+  getEntityId: (args) => args[0],
+  fetchBefore: (id) => prisma.subcategory.findUnique({ where: { id } }),
+  fetchAfter: (id) => prisma.subcategory.findUnique({ where: { id } }),
+  describe: (args) => `Updated subcategory ${args[0]}`,
+});
+
+async function _deleteSubcategory(id: string) {
   try {
     await prisma.subcategory.delete({ where: { id } });
     revalidatePath("/admin/inventory/subcategories");
@@ -137,3 +220,11 @@ export async function deleteSubcategory(id: string) {
     return { success: false, error: "Cannot delete subcategory. It may be linked to products." };
   }
 }
+
+export const deleteSubcategory = withAuditLog(_deleteSubcategory, {
+  entityType: "Subcategory",
+  action: "DELETE",
+  getEntityId: (args) => args[0],
+  fetchBefore: (id) => prisma.subcategory.findUnique({ where: { id } }),
+  describe: (args) => `Deleted subcategory ${args[0]}`,
+});

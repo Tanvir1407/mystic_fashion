@@ -2,6 +2,9 @@
 
 import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
+import { withAuditLog } from "@/lib/audit";
+
+// ─── GET ROLES ──────────────────────────────────────────────────────────────
 
 export async function getRoles() {
   try {
@@ -21,6 +24,8 @@ export async function getRoles() {
   }
 }
 
+// ─── GET PERMISSIONS ────────────────────────────────────────────────────────
+
 export async function getPermissions() {
   try {
     const permissions = await prisma.permission.findMany({
@@ -33,7 +38,9 @@ export async function getPermissions() {
   }
 }
 
-export async function createRole(data: { name: string; description: string; permissionIds: string[] }) {
+// ─── CREATE ROLE ────────────────────────────────────────────────────────────
+
+async function _createRole(data: { name: string; description: string; permissionIds: string[] }) {
   try {
     const role = await prisma.role.create({
       data: {
@@ -52,7 +59,18 @@ export async function createRole(data: { name: string; description: string; perm
   }
 }
 
-export async function updateRole(id: string, data: { name: string; description: string; permissionIds: string[] }) {
+export const createRole = withAuditLog(_createRole, {
+  entityType: "Role",
+  action: "CREATE",
+  getEntityId: () => null,
+  getEntityIdFromResult: (r: any) => r?.data?.id ?? null,
+  fetchAfter: (id) => prisma.role.findUnique({ where: { id }, include: { permissions: true } }),
+  describe: (args) => `Created role "${args[0].name.toUpperCase()}"`,
+});
+
+// ─── UPDATE ROLE ────────────────────────────────────────────────────────────
+
+async function _updateRole(id: string, data: { name: string; description: string; permissionIds: string[] }) {
   try {
     const role = await prisma.role.update({
       where: { id },
@@ -72,7 +90,18 @@ export async function updateRole(id: string, data: { name: string; description: 
   }
 }
 
-export async function deleteRole(id: string) {
+export const updateRole = withAuditLog(_updateRole, {
+  entityType: "Role",
+  action: "UPDATE",
+  getEntityId: (args) => args[0],
+  fetchBefore: (id) => prisma.role.findUnique({ where: { id }, include: { permissions: true } }),
+  fetchAfter: (id) => prisma.role.findUnique({ where: { id }, include: { permissions: true } }),
+  describe: (args) => `Updated role ${args[0]}`,
+});
+
+// ─── DELETE ROLE ────────────────────────────────────────────────────────────
+
+async function _deleteRole(id: string) {
   try {
     const role = await prisma.role.findUnique({ where: { id }, include: { _count: { select: { staff: true, admins: true } } } });
     
@@ -91,3 +120,11 @@ export async function deleteRole(id: string) {
     return { success: false, error: error instanceof Error ? error.message : "An unexpected error occurred." };
   }
 }
+
+export const deleteRole = withAuditLog(_deleteRole, {
+  entityType: "Role",
+  action: "DELETE",
+  getEntityId: (args) => args[0],
+  fetchBefore: (id) => prisma.role.findUnique({ where: { id }, include: { permissions: true } }),
+  describe: (args) => `Deleted role ${args[0]}`,
+});

@@ -2,8 +2,11 @@
 
 import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
+import { withAuditLog } from "@/lib/audit";
 
-export async function createAccount(data: {
+// ─── CREATE ACCOUNT ─────────────────────────────────────────────────────────
+
+async function _createAccount(data: {
   name: string;
   type: "INCOME" | "EXPENSE" | "ASSET" | "LIABILITY";
   status?: "ACTIVE" | "INACTIVE";
@@ -23,6 +26,17 @@ export async function createAccount(data: {
   }
 }
 
+export const createAccount = withAuditLog(_createAccount, {
+  entityType: "ChartOfAccount",
+  action: "CREATE",
+  getEntityId: () => null,
+  getEntityIdFromResult: (r: any) => r?.account?.id ?? null,
+  fetchAfter: (id) => prisma.chartOfAccount.findUnique({ where: { id } }),
+  describe: (args) => `Created account "${args[0].name}" (${args[0].type})`,
+});
+
+// ─── GET ACCOUNTS ───────────────────────────────────────────────────────────
+
 export async function getAccounts(type?: "INCOME" | "EXPENSE" | "ASSET" | "LIABILITY") {
   return await prisma.chartOfAccount.findMany({
     where: type ? { type } : undefined,
@@ -30,7 +44,9 @@ export async function getAccounts(type?: "INCOME" | "EXPENSE" | "ASSET" | "LIABI
   });
 }
 
-export async function storeTransaction(data: {
+// ─── STORE TRANSACTION ──────────────────────────────────────────────────────
+
+async function _storeTransaction(data: {
   accountId: string;
   amount: number;
   date: string | Date;
@@ -79,6 +95,17 @@ export async function storeTransaction(data: {
   }
 }
 
+export const storeTransaction = withAuditLog(_storeTransaction, {
+  entityType: "Transaction",
+  action: "CREATE",
+  getEntityId: () => null,
+  getEntityIdFromResult: (r: any) => r?.transaction?.id ?? null,
+  fetchAfter: (id) => prisma.transaction.findUnique({ where: { id }, include: { account: true } }),
+  describe: (args) => `Created transaction: ${args[0].description} (৳${args[0].amount})`,
+});
+
+// ─── GET LEDGER ─────────────────────────────────────────────────────────────
+
 export async function getLedger(accountId?: string, filters?: { startDate?: string; endDate?: string }, page: number = 1, limit: number = 20) {
   const where: any = {};
   if (accountId) where.accountId = accountId;
@@ -111,6 +138,8 @@ export async function getLedger(accountId?: string, filters?: { startDate?: stri
 
   return { transactions, total };
 }
+
+// ─── GET FINANCIAL SUMMARY ─────────────────────────────────────────────────
 
 export async function getFinancialSummary(filters?: { startDate?: string; endDate?: string }) {
   const dateFilter: any = {};
@@ -155,7 +184,9 @@ export async function getFinancialSummary(filters?: { startDate?: string; endDat
   };
 }
 
-export async function deleteAccount(accountId: string) {
+// ─── DELETE ACCOUNT ─────────────────────────────────────────────────────────
+
+async function _deleteAccount(accountId: string) {
   try {
     // Rule 3: Prevent deleting an account if it has existing transactions
     const transactionCount = await prisma.transaction.count({
@@ -177,7 +208,17 @@ export async function deleteAccount(accountId: string) {
   }
 }
 
-export async function deleteTransaction(transactionId: string) {
+export const deleteAccount = withAuditLog(_deleteAccount, {
+  entityType: "ChartOfAccount",
+  action: "DELETE",
+  getEntityId: (args) => args[0],
+  fetchBefore: (id) => prisma.chartOfAccount.findUnique({ where: { id } }),
+  describe: (args) => `Deleted chart of account ${args[0]}`,
+});
+
+// ─── DELETE TRANSACTION ─────────────────────────────────────────────────────
+
+async function _deleteTransaction(transactionId: string) {
   try {
     await prisma.transaction.delete({
       where: { id: transactionId },
@@ -188,3 +229,11 @@ export async function deleteTransaction(transactionId: string) {
     return { success: false, error: error.message };
   }
 }
+
+export const deleteTransaction = withAuditLog(_deleteTransaction, {
+  entityType: "Transaction",
+  action: "DELETE",
+  getEntityId: (args) => args[0],
+  fetchBefore: (id) => prisma.transaction.findUnique({ where: { id }, include: { account: true } }),
+  describe: (args) => `Deleted transaction ${args[0]}`,
+});

@@ -413,3 +413,48 @@ enum ReturnStatus {
   RESTOCKED
   WASTAGE
 }
+
+// ─── AUDIT TRAIL ──────────────────────────────────────────────────────────────
+
+model ActivityLog {
+  id            String      @id @default(uuid())
+
+  // ─── WHO ─────────────────────────────────────────────────
+  userId        String                    // Staff/Admin UUID
+  userEmail     String?                   // Denormalized for quick display
+  userRole      String?                   // e.g. "SUPERADMIN", "MANAGER"
+
+  // ─── WHAT ────────────────────────────────────────────────
+  action        AuditAction               // CREATE, UPDATE, DELETE
+  entityType    String                    // e.g. "Product", "Order", "Transaction"
+  entityId      String                    // The UUID/ID of the affected record
+  description   String?                   // Human-readable summary
+  dataBefore    Json?                     // JSONB snapshot BEFORE mutation (null for CREATE)
+  dataAfter     Json?                     // JSONB snapshot AFTER mutation (null for DELETE)
+  changedFields String[]                  // Array of field names that changed (for UPDATE)
+
+  // ─── WHEN ────────────────────────────────────────────────
+  timestamp     DateTime    @default(now())
+
+  // ─── WHERE ───────────────────────────────────────────────
+  ipAddress     String?                   // Extracted from request headers
+  userAgent     String?                   // Browser/device info
+
+  // ─── INDEXING ────────────────────────────────────────────
+  @@index([userId])
+  @@index([entityType, entityId])
+  @@index([timestamp])
+  @@index([action])
+}
+
+model AuditLogSetting {
+  id                String   @id @default("default")
+  retentionDays     Int?                  // null = keep indefinitely (default)
+  updatedAt         DateTime @updatedAt
+}
+
+enum AuditAction {
+  CREATE
+  UPDATE
+  DELETE
+}
