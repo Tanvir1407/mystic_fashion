@@ -64,10 +64,11 @@ export interface AuditLogConfig<TArgs extends unknown[], TResult> {
    */
   fetchAfter?: (entityId: string) => Promise<Record<string, unknown> | null>;
 
-  /**
-   * Generates a human-readable description of the action.
-   */
-  describe?: (args: TArgs) => string;
+  describe?: (
+    args: TArgs,
+    dataBefore?: Record<string, unknown> | null,
+    dataAfter?: Record<string, unknown> | null
+  ) => string | Promise<string> | any;
 }
 
 // ─── Sensitive Field Constants ──────────────────────────────────────────────
