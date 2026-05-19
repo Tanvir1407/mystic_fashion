@@ -259,13 +259,19 @@ export default function ProductFormClient({
 
     try {
       if (initialData?.id) {
-        await updateProduct(initialData.id, productPayload);
+        const res = await updateProduct(initialData.id, productPayload);
+        if (res && !res.success) {
+          alert(`Failed to save product: ${res.error || "Unknown error"}`);
+          setLoading(false);
+        } else {
+          router.refresh();
+          alert("Product updated successfully!");
+          setLoading(false);
+        }
       } else {
         await createProduct(productPayload);
+        router.push("/admin/products");
       }
-      // Success hole page redirect korbe ba reset hobe, apni apnar moto manage korte paren
-      router.push("/admin/products");
-      // Loading off korar proyojon nai jodi page change hoye jay
     } catch (error) {
       console.error("Failed to save product:", error);
       alert("Failed to save product. Check the server logs.");

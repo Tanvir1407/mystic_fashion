@@ -2,6 +2,9 @@
 
 import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
+import { withAuditLog } from "@/lib/audit";
+
+// ─── GET STAFF ──────────────────────────────────────────────────────────────
 
 export async function getStaff() {
   try {
@@ -21,6 +24,8 @@ export async function getStaff() {
   }
 }
 
+// ─── GET AVAILABLE ROLES ────────────────────────────────────────────────────
+
 export async function getAvailableRoles() {
   try {
     const roles = await prisma.role.findMany({
@@ -33,7 +38,9 @@ export async function getAvailableRoles() {
   }
 }
 
-export async function createStaff(data: { username: string; email: string; password: string; roleId?: string }) {
+// ─── CREATE STAFF ───────────────────────────────────────────────────────────
+
+async function _createStaff(data: { username: string; email: string; password: string; roleId?: string }) {
   try {
     const staff = await prisma.staff.create({
       data: {
@@ -52,7 +59,18 @@ export async function createStaff(data: { username: string; email: string; passw
   }
 }
 
-export async function updateStaff(id: string, data: { username?: string; email?: string; password?: string; roleId?: string }) {
+export const createStaff = withAuditLog(_createStaff, {
+  entityType: "Staff",
+  action: "CREATE",
+  getEntityId: () => null,
+  getEntityIdFromResult: (r: any) => r?.data?.id ?? null,
+  fetchAfter: (id) => prisma.staff.findUnique({ where: { id }, select: { id: true, username: true, email: true, roleId: true, createdAt: true } }),
+  describe: (args) => `Created staff member "${args[0].username}" (${args[0].email})`,
+});
+
+// ─── UPDATE STAFF ───────────────────────────────────────────────────────────
+
+async function _updateStaff(id: string, data: { username?: string; email?: string; password?: string; roleId?: string }) {
   try {
     const staff = await prisma.staff.update({
       where: { id },
@@ -67,7 +85,18 @@ export async function updateStaff(id: string, data: { username?: string; email?:
   }
 }
 
-export async function deleteStaff(id: string) {
+export const updateStaff = withAuditLog(_updateStaff, {
+  entityType: "Staff",
+  action: "UPDATE",
+  getEntityId: (args) => args[0],
+  fetchBefore: (id) => prisma.staff.findUnique({ where: { id }, select: { id: true, username: true, email: true, roleId: true, updatedAt: true } }),
+  fetchAfter: (id) => prisma.staff.findUnique({ where: { id }, select: { id: true, username: true, email: true, roleId: true, updatedAt: true } }),
+  describe: (args) => `Updated staff member ${args[0]}`,
+});
+
+// ─── DELETE STAFF ───────────────────────────────────────────────────────────
+
+async function _deleteStaff(id: string) {
   try {
     const staff = await prisma.staff.findUnique({ where: { id } });
     
@@ -85,3 +114,11 @@ export async function deleteStaff(id: string) {
     return { success: false, error: error instanceof Error ? error.message : "An unexpected error occurred." };
   }
 }
+
+export const deleteStaff = withAuditLog(_deleteStaff, {
+  entityType: "Staff",
+  action: "DELETE",
+  getEntityId: (args) => args[0],
+  fetchBefore: (id) => prisma.staff.findUnique({ where: { id }, select: { id: true, username: true, email: true, roleId: true } }),
+  describe: (args) => `Deleted staff member ${args[0]}`,
+});

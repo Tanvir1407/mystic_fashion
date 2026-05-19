@@ -4,8 +4,10 @@ import { useState } from "react";
 import { saveSizeChart } from "../../actions";
 import { Plus, Trash2, Save, ArrowLeft } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 export default function SizeChartFormClient({ initialData }: { initialData?: any }) {
+  const router = useRouter();
   const [category, setCategory] = useState(initialData?.category || "");
   const [rows, setRows] = useState<{ id: string, size: string, length: string, chest: string, sleeve: string }[]>(
     initialData?.data?.map((r: any, idx: number) => ({ id: String(idx), ...r })) || [
@@ -36,8 +38,13 @@ export default function SizeChartFormClient({ initialData }: { initialData?: any
     
     setLoading(true);
     const dataPayload = rows.map(({ id, ...rest }) => rest);
-    await saveSizeChart(category.trim(), dataPayload);
-    // Redirect happens server side inside action
+    const res = await saveSizeChart(category.trim(), dataPayload);
+    if (res && res.success) {
+      router.push("/admin/size-charts");
+    } else {
+      alert(res?.error || "Failed to save size chart");
+      setLoading(false);
+    }
   };
 
   return (
