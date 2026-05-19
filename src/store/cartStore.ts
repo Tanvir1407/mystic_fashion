@@ -10,6 +10,7 @@ export interface CartItem {
   category?: string;
   size?: string;
   originalPrice?: number;
+  isCustomize?: boolean;
   // DTF Printing Fields
   requiresPrint?: boolean;
   printName?: string;

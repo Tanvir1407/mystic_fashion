@@ -118,6 +118,7 @@ model Product {
   updatedAt     DateTime         @updatedAt
   isFeatured    Boolean          @default(false)
   isPublished   Boolean          @default(true)
+  isCustomize   Boolean?         @default(false)
   orderItems    OrderItem[]
   brand         Brand?           @relation(fields: [brandId], references: [id])
   categoryRel   Category?        @relation(fields: [categoryId], references: [id])

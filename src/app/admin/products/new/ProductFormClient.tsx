@@ -29,6 +29,7 @@ export default function ProductFormClient({
   const [isUploading, setIsUploading] = useState(false);
   const [isFeatured, setIsFeatured] = useState(initialData?.isFeatured || false);
   const [isPublished, setIsPublished] = useState(initialData?.isPublished ?? true);
+  const [isCustomize, setIsCustomize] = useState(initialData?.isCustomize || false);
 
   // Dynamic state arrays to handle inline additions seamlessly
   const [localBrands, setLocalBrands] = useState<any[]>(brands);
@@ -246,6 +247,7 @@ export default function ProductFormClient({
       discountId: discountId || null,
       isFeatured,
       isPublished,
+      isCustomize,
       variants: variants.map(({ size, sku, stock }) => ({
         size: size.trim(),
         color: "Default",
@@ -416,6 +418,20 @@ export default function ProductFormClient({
                 <label htmlFor="isFeatured" className="flex flex-col cursor-pointer select-none">
                   <span className="text-sm font-bold text-amber-900">Featured Product</span>
                   <span className="text-[10px] text-amber-700 font-medium">Pin this product to the top of homepage</span>
+                </label>
+              </div>
+
+              <div className="flex items-center gap-3 p-2 rounded-none">
+                <input
+                  type="checkbox"
+                  id="isCustomize"
+                  checked={isCustomize}
+                  onChange={(e) => setIsCustomize(e.target.checked)}
+                  className="w-5 h-5 text-[#800020] border-[#800020]/30 rounded focus:ring-[#800020] cursor-pointer shrink-0"
+                />
+                <label htmlFor="isCustomize" className="flex flex-col cursor-pointer select-none">
+                  <span className="text-sm font-bold text-[#800020]">Offer Customization (DTF Print)</span>
+                  <span className="text-[10px] text-zinc-500 font-medium">Allow customers to add their custom Info on product.</span>
                 </label>
               </div>
             </div>
@@ -944,11 +960,10 @@ function CustomFormSelect({
                     setIsOpen(false);
                     setSearch("");
                   }}
-                  className={`w-full text-left px-4 py-2 text-xs transition-colors flex items-center justify-between ${
-                    value === opt.value
+                  className={`w-full text-left px-4 py-2 text-xs transition-colors flex items-center justify-between ${value === opt.value
                       ? "bg-[#800020] text-white font-bold"
                       : "hover:bg-slate-100 text-slate-700"
-                  }`}
+                    }`}
                 >
                   <span>{opt.label}</span>
                 </button>

@@ -24,7 +24,10 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
   try {
     ordersInRange = await prisma.order.findMany({
       where: { createdAt: { gte: startDate } },
-      include: { items: { include: { product: true } } }
+      include: { 
+        items: { include: { product: true } },
+        createdBy: true
+      }
     });
   } catch (error) {
     console.error("Error fetching orders:", error);
@@ -159,6 +162,26 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
     }
   }
 
+  // ── Top Performing Staff ──
+  const staffPerformanceMap = new Map<string, { username: string, email: string, orderCount: number }>();
+  ordersInRange.forEach(order => {
+    if (order.createdBy) {
+      const existing = staffPerformanceMap.get(order.createdBy.id);
+      if (existing) {
+        existing.orderCount += 1;
+      } else {
+        staffPerformanceMap.set(order.createdBy.id, {
+          username: order.createdBy.username,
+          email: order.createdBy.email,
+          orderCount: 1
+        });
+      }
+    }
+  });
+  const topStaff = Array.from(staffPerformanceMap.values())
+    .sort((a, b) => b.orderCount - a.orderCount)
+    .slice(0, 3);
+
   return (
     <DashboardClient 
       filter={filter}
@@ -175,6 +198,7 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
       topProducts={topProducts}
       recentOrders={recentOrders}
       chartData={chartData}
+      topStaff={topStaff}
     />
   );
 }

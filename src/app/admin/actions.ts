@@ -79,6 +79,7 @@ export async function createProduct(data: {
   discountId?: string | null;
   isFeatured: boolean;
   isPublished: boolean;
+  isCustomize?: boolean | null;
   variants: { size: string; color: string; colorCode?: string; sku?: string; stock: number }[];
 }) {
   try {
@@ -95,6 +96,7 @@ export async function createProduct(data: {
         subcategoryId: data.subcategoryId || null,
         isFeatured: data.isFeatured,
         isPublished: data.isPublished,
+        isCustomize: data.isCustomize ?? false,
         sizeChartId: data.sizeChartId || null,
         discountId: data.discountId || null,
         variants: {
@@ -138,6 +140,7 @@ export async function updateProduct(id: string, data: {
   discountId?: string | null;
   isFeatured: boolean;
   isPublished: boolean;
+  isCustomize?: boolean | null;
   variants: { size: string; color: string; colorCode?: string; sku?: string; stock: number }[];
 }) {
   try {
@@ -155,6 +158,7 @@ export async function updateProduct(id: string, data: {
         subcategoryId: data.subcategoryId || null,
         isFeatured: data.isFeatured,
         isPublished: data.isPublished,
+        isCustomize: data.isCustomize ?? false,
         sizeChartId: data.sizeChartId || null,
         discountId: data.discountId || null,
       },

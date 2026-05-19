@@ -25,6 +25,9 @@ export default async function ProductDetailView({ params }: { params: { id: stri
   const product = await prisma.product.findUnique({
     where: { id: params.id },
     include: {
+      brand: true,
+      categoryRel: true,
+      subcategory: true,
       variants: {
         include: {
           stockAdjustments: {
@@ -93,7 +96,7 @@ export default async function ProductDetailView({ params }: { params: { id: stri
   ].sort((a, b) => b.date.getTime() - a.date.getTime()).slice(0, 10);
 
   return (
-    <div className="p-6 max-w-[1600px] mx-auto space-y-6">
+    <div className=" max-w-[1600px] mx-auto space-y-6">
       {/* Header Section */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-200 pb-4">
         <div>
@@ -226,9 +229,36 @@ export default async function ProductDetailView({ params }: { params: { id: stri
                   <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">
                     Description
                   </h3>
-                  <p className="text-sm text-slate-700 whitespace-pre-wrap leading-relaxed">
-                    {product.description || 'No description provided.'}
-                  </p>
+                  <div
+                    className="text-sm text-slate-700 leading-relaxed prose max-w-none"
+                    dangerouslySetInnerHTML={{ __html: product.description || 'No description provided.' }}
+                  />
+                </div>
+                <div className="grid grid-cols-3 gap-4 pt-4 border-t border-slate-100">
+                  <div>
+                    <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">
+                      Brand
+                    </h3>
+                    <p className="text-sm font-bold text-slate-900">
+                      {product.brand?.name || 'N/A'}
+                    </p>
+                  </div>
+                  <div>
+                    <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">
+                      Category
+                    </h3>
+                    <p className="text-sm font-bold text-slate-900">
+                      {product.categoryRel?.name || product.category || 'N/A'}
+                    </p>
+                  </div>
+                  <div>
+                    <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">
+                      Subcategory
+                    </h3>
+                    <p className="text-sm font-bold text-slate-900">
+                      {product.subcategory?.name || 'N/A'}
+                    </p>
+                  </div>
                 </div>
                 <div className="grid grid-cols-2 gap-4 pt-4 border-t border-slate-100">
                   <div>
@@ -295,10 +325,10 @@ export default async function ProductDetailView({ params }: { params: { id: stri
                         <td className="px-4 py-3">
                           <span
                             className={`inline-flex items-center gap-1.5 px-2 py-0.5 text-xs font-medium border ${item.type === 'Order'
-                                ? 'bg-blue-50 text-blue-700 border-blue-200'
-                                : item.type === 'Return'
-                                  ? 'bg-red-50 text-red-700 border-red-200'
-                                  : 'bg-orange-50 text-orange-700 border-orange-200'
+                              ? 'bg-blue-50 text-blue-700 border-blue-200'
+                              : item.type === 'Return'
+                                ? 'bg-red-50 text-red-700 border-red-200'
+                                : 'bg-orange-50 text-orange-700 border-orange-200'
                               }`}
                           >
                             {item.type === 'Order' && <Activity className="w-3 h-3" />}
