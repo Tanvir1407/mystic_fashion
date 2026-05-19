@@ -117,7 +117,6 @@ async function _createProduct(data: {
     revalidatePath("/admin/products");
     revalidatePath("/");
     revalidatePath("/product/[id]", "page");
-    redirect("/admin/products");
     return { success: true, data: product };
   } catch (error: any) {
     if (error.message === 'NEXT_REDIRECT' || error.digest?.startsWith('NEXT_REDIRECT')) {
@@ -605,7 +604,6 @@ async function _saveSizeChart(category: string, data: any) {
       create: { category, data },
     });
     revalidatePath("/admin/size-charts");
-    redirect("/admin/size-charts");
     return { success: true, data: chart };
   } catch (error: any) {
     if (error.message === 'NEXT_REDIRECT' || error.digest?.startsWith('NEXT_REDIRECT')) {
@@ -721,7 +719,6 @@ async function _createPurchase(
 
     revalidatePath("/admin/purchases");
     revalidatePath("/admin/products");
-    redirect("/admin/purchases");
     return { success: true, data: result };
   } catch (error: any) {
     if (error.message === 'NEXT_REDIRECT' || error.digest?.startsWith('NEXT_REDIRECT')) {
@@ -853,12 +850,11 @@ async function _updatePurchase(
     revalidatePath("/admin/purchases");
     revalidatePath("/admin/products");
     revalidatePath("/admin/accounting");
+    return { success: true, data: { id: purchaseId } };
   } catch (error: any) {
     console.error("Purchase update error:", error);
     return { success: false, error: error.message };
   }
-
-  redirect("/admin/purchases");
 }
 
 export const updatePurchase = withAuditLog(_updatePurchase, {

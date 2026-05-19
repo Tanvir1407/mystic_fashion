@@ -103,7 +103,7 @@ export default function PurchaseFormClient({ products, initialData }: { products
     const cleanedItems = items.map(({ id, ...rest }) => ({ ...rest, unitPrice: Number(rest.unitPrice) || 0 }));
 
     if (isEditing) {
-      await updatePurchase(
+      const res = await updatePurchase(
         initialData.id,
         supplierName.trim(),
         invoiceNumber.trim() || "",
@@ -111,14 +111,26 @@ export default function PurchaseFormClient({ products, initialData }: { products
         parseFloat(totalDiscount || "0"),
         cleanedItems
       );
+      if (res && res.success) {
+        router.push("/admin/purchases");
+      } else {
+        alert(res?.error || "Failed to update purchase");
+        setLoading(false);
+      }
     } else {
-      await createPurchase(
+      const res = await createPurchase(
         supplierName.trim(),
         invoiceNumber.trim() || "",
         grandTotal,
         parseFloat(totalDiscount || "0"),
         cleanedItems
       );
+      if (res && res.success) {
+        router.push("/admin/purchases");
+      } else {
+        alert(res?.error || "Failed to save purchase");
+        setLoading(false);
+      }
     }
   };
 

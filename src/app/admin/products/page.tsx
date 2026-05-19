@@ -64,7 +64,7 @@ export default async function AdminProductsPage({ searchParams }: { searchParams
         where: whereClause,
         skip: (page - 1) * PER_PAGE,
         take: PER_PAGE,
-        orderBy: { team: "asc" },
+        orderBy: { createdAt: "desc" },
         include: { variants: true }
       }),
       prisma.product.count({ where: whereClause }),
