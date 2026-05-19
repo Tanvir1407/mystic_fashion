@@ -106,6 +106,54 @@ export function computeChangedFields(
   return changedFields;
 }
 
+/**
+ * Post-processes generated activity descriptions to replace/inject human-readable names.
+ * Strips raw UUIDs/IDs or appends nice parenthesized identifiers where possible.
+ */
+export function enhanceDescriptionWithHumanNames(
+  description: string,
+  entityId: string,
+  dataBefore: Record<string, unknown> | null,
+  dataAfter: Record<string, unknown> | null
+): string {
+  if (!entityId) return description;
+
+  // Extract a human-readable identifier from the before/after snapshots
+  let name = "";
+  const data = dataAfter || dataBefore;
+  if (data) {
+    if (typeof data.name === "string" && data.name.trim()) {
+      name = data.name.trim();
+    } else if (typeof data.code === "string" && data.code.trim()) {
+      name = data.code.trim();
+    } else if (typeof data.username === "string" && data.username.trim()) {
+      name = data.username.trim();
+    } else if (typeof data.category === "string" && data.category.trim()) {
+      name = data.category.trim();
+    } else if (typeof data.title === "string" && data.title.trim()) {
+      name = data.title.trim();
+    } else if (typeof data.customerName === "string" && data.customerName.trim()) {
+      name = data.customerName.trim();
+    }
+  }
+
+  if (!name) return description;
+
+  const formattedName = `"${name}"`;
+
+  // If the description contains the raw ID, replace it with the human-readable name and put the ID in parentheses.
+  // For example: "Updated product 7de57a00-..." -> "Updated product "Blue Cotton T-Shirt" (7de57a00-...)"
+  if (description.includes(entityId)) {
+    // Avoid double-wrapping if the describer already added quotes or formatted it
+    if (description.includes(`"${name}"`) || description.includes(`'${name}'`)) {
+      return description;
+    }
+    return description.replace(entityId, `${formattedName} (${entityId})`);
+  }
+
+  return description;
+}
+
 // ─── Higher-Order Function Wrapper ──────────────────────────────────────────
 
 /**
@@ -213,9 +261,16 @@ export function withAuditLog<TArgs extends unknown[], TResult>(
               : [];
 
         // Generate description
-        const description = config.describe
-          ? await config.describe(args)
+        const rawDescription = config.describe
+          ? await config.describe(args, dataBefore, dataAfter)
           : `${config.action} ${config.entityType} ${finalEntityId}`;
+
+        const description = enhanceDescriptionWithHumanNames(
+          rawDescription,
+          finalEntityId,
+          dataBefore,
+          dataAfter
+        );
 
         // Fire-and-forget: write the log entry
         logActivity({
