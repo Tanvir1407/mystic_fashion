@@ -79,7 +79,7 @@ const NAV_LINKS = [
     children: [
       { href: "/admin/settings", label: "General Settings", exact: true, action: "VIEW", subject: "GENERAL_SETTINGS" },
       { href: "/admin/settings/footer", label: "Footer Settings", action: "VIEW", subject: "FOOTER_SETTINGS" },
-      { href: "/admin/settings/audit-logs", label: "Activity Logs", action: "VIEW", subject: "AUDIT_LOGS" },
+      { href: "/admin/settings/audit-logs", label: "Activity Logs", action: "VIEW", subject: "ACTIVITY_LOGS" },
       { href: "/admin/staff", label: "Staff Members", action: "VIEW", subject: "STAFF_MEMBERS" },
       { href: "/admin/setup/roles", label: "Role Management", action: "VIEW", subject: "ROLE_MANAGEMENT" },
     ]

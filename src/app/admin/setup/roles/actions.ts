@@ -28,6 +28,22 @@ export async function getRoles() {
 
 export async function getPermissions() {
   try {
+
+    // Dynamically self-heal: Ensure ACTIVITY_LOGS permissions exist in the database (perfect for zero-downtime production updates)
+    const requiredPerms = [
+      { action: "DELETE", subject: "ACTIVITY_LOGS" },
+      { action: "EDIT", subject: "ACTIVITY_LOGS" },
+      { action: "VIEW", subject: "ACTIVITY_LOGS" },
+    ];
+
+    for (const perm of requiredPerms) {
+      await prisma.permission.upsert({
+        where: { action_subject: { action: perm.action, subject: perm.subject } },
+        update: {},
+        create: { action: perm.action, subject: perm.subject },
+      });
+    }
+
     const permissions = await prisma.permission.findMany({
       orderBy: [{ subject: "asc" }, { action: "asc" }]
     });
@@ -104,7 +120,7 @@ export const updateRole = withAuditLog(_updateRole, {
 async function _deleteRole(id: string) {
   try {
     const role = await prisma.role.findUnique({ where: { id }, include: { _count: { select: { staff: true, admins: true } } } });
-    
+
     if (role?.name === 'SUPERADMIN') {
       throw new Error("Cannot delete SUPERADMIN role.");
     }

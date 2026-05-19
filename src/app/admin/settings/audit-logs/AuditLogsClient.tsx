@@ -27,6 +27,7 @@ import {
   Globe,
   Monitor
 } from "lucide-react";
+import { useAdminAuth } from "@/app/admin/AdminAuthContext";
 
 export default function AuditLogsClient({
   initialSettings,
@@ -37,6 +38,10 @@ export default function AuditLogsClient({
   distinctUsers: any[];
   distinctEntities: string[];
 }) {
+  const { checkPermission } = useAdminAuth();
+  const canEdit = checkPermission("EDIT", "ACTIVITY_LOGS");
+  const canDelete = checkPermission("DELETE", "ACTIVITY_LOGS");
+
   // Tabs: 'logs' | 'settings'
   const [activeTab, setActiveTab] = useState<"logs" | "settings">("logs");
 
@@ -253,7 +258,7 @@ export default function AuditLogsClient({
         <div>
           <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2.5">
             <Activity className="w-6 h-6 text-maroon" />
-            ERP Security Audit Trail
+            ERP Security Activity Log
           </h1>
           <p className="text-sm text-slate-500 mt-1">
             Track administrative operations, data state transformations, and authorization metrics.
@@ -600,7 +605,8 @@ export default function AuditLogsClient({
                 <div className="border-t border-slate-100 pt-5 flex justify-end">
                   <button
                     onClick={handleSaveSettings}
-                    disabled={isSavingSettings}
+                    disabled={isSavingSettings || !canEdit}
+                    title={!canEdit ? "You do not have permission to save settings configuration." : "Save settings"}
                     className="text-xs font-bold px-5 py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-md transition-colors flex items-center gap-2 shadow-sm disabled:opacity-55"
                   >
                     {isSavingSettings ? (
@@ -654,7 +660,9 @@ export default function AuditLogsClient({
                 ) : (
                   <button
                     onClick={() => setShowPruneConfirm(true)}
-                    className="w-full text-xs font-bold py-2 border border-rose-200 hover:bg-rose-50/30 text-rose-700 rounded-md transition-colors flex items-center justify-center gap-2 cursor-pointer"
+                    disabled={!canDelete}
+                    title={!canDelete ? "You do not have permission to prune logs." : "Force prune database"}
+                    className="w-full text-xs font-bold py-2 border border-rose-200 hover:bg-rose-50/30 text-rose-700 rounded-md transition-colors flex items-center justify-center gap-2 cursor-pointer disabled:opacity-55"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
                     Force Prune Database Logs
