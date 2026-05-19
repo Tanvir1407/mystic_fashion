@@ -165,28 +165,24 @@ export default function AuditLogsClient({
       case "CREATE":
         return (
           <span className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-md bg-emerald-50 text-emerald-700 border border-emerald-100">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
             CREATE
           </span>
         );
       case "UPDATE":
         return (
           <span className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-md bg-sky-50 text-sky-700 border border-sky-100">
-            <span className="w-1.5 h-1.5 rounded-full bg-sky-500" />
             UPDATE
           </span>
         );
       case "DELETE":
         return (
           <span className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-md bg-rose-50 text-rose-700 border border-rose-100">
-            <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
             DELETE
           </span>
         );
       default:
         return (
           <span className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-md bg-slate-50 text-slate-700 border border-slate-100">
-            <span className="w-1.5 h-1.5 rounded-full bg-slate-500" />
             {action}
           </span>
         );
