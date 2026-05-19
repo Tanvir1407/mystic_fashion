@@ -316,7 +316,7 @@ export default function CheckoutClient({
         </div>
 
         {/* DTF Instruction Banner (Classic & Modern) */}
-        {items.length > 0 && (
+        {items.some(item => item.isCustomize) && (
           <div className="mb-10 overflow-hidden bg-white border border-slate-200 rounded-lg shadow-sm flex items-stretch animate-in fade-in slide-in-from-top-4 duration-500">
             <div className="w-1.5 bg-primary" />
             <div className="p-5 flex items-center gap-5">
@@ -474,68 +474,70 @@ export default function CheckoutClient({
                       </div>
 
                       {/* DTF Toggle Case */}
-                      <div className="flex flex-col gap-2 pl-2">
-                        <label className="flex items-center gap-2 cursor-pointer">
-                          <input
-                            type="checkbox"
-                            checked={item.requiresPrint}
-                            onChange={(e) => handleDTFToggle(item.id, item.size, e.target.checked)}
-                            className="w-4 h-4 rounded border-slate-300 text-primary focus:ring-primary"
-                          />
-                          <span className="text-[10px] font-bold text-slate-600 uppercase">Add DTF Print (+৳{dtfCostPerItem})</span>
-                        </label>
-                        {item.requiresPrint && item.printDetails && item.printDetails.length > 0 && (
-                          <div className="flex flex-col gap-2 mt-1">
-                            {item.printDetails.map((detail, idx) => (
-                              <div key={idx} className="flex items-center gap-3 bg-slate-50 p-2 rounded-lg border border-slate-100">
-                                <div className="flex flex-col">
-                                  <span className="text-[8px] font-bold text-slate-400 uppercase tracking-widest">Print {idx + 1}</span>
-                                  <span className="text-[10px] font-black uppercase text-slate-900">{detail.name} ({detail.number})</span>
+                      {item.isCustomize && (
+                        <div className="flex flex-col gap-2 pl-2">
+                          <label className="flex items-center gap-2 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={item.requiresPrint}
+                              onChange={(e) => handleDTFToggle(item.id, item.size, e.target.checked)}
+                              className="w-4 h-4 rounded border-slate-300 text-primary focus:ring-primary"
+                            />
+                            <span className="text-[10px] font-bold text-slate-600 uppercase">Add DTF Print (+৳{dtfCostPerItem})</span>
+                          </label>
+                          {item.requiresPrint && item.printDetails && item.printDetails.length > 0 && (
+                            <div className="flex flex-col gap-2 mt-1">
+                              {item.printDetails.map((detail, idx) => (
+                                <div key={idx} className="flex items-center gap-3 bg-slate-50 p-2 rounded-lg border border-slate-100">
+                                  <div className="flex flex-col">
+                                    <span className="text-[8px] font-bold text-slate-400 uppercase tracking-widest">Print {idx + 1}</span>
+                                    <span className="text-[10px] font-black uppercase text-slate-900">{detail.name} ({detail.number})</span>
+                                  </div>
+                                  <div className="ml-auto flex items-center gap-2">
+                                    <button
+                                      onClick={(e) => {
+                                        e.preventDefault();
+                                        setActiveItem({ id: item.id, size: item.size, editIndex: idx });
+                                        setDtfForm({ type: "custom", name: detail.name, number: detail.number });
+                                        setShowDTFModal(true);
+                                      }}
+                                      className="text-primary hover:scale-110 transition-transform p-1"
+                                    >
+                                      <Edit2 className="w-3 h-3" />
+                                    </button>
+                                    <button
+                                      onClick={(e) => {
+                                        e.preventDefault();
+                                        const newDetails = item.printDetails!.filter((_, i) => i !== idx);
+                                        updateItem(item.id, item.size, {
+                                          printDetails: newDetails,
+                                          requiresPrint: newDetails.length > 0
+                                        });
+                                      }}
+                                      className="text-red-500 hover:scale-110 transition-transform p-1"
+                                    >
+                                      <X className="w-3.5 h-3.5" />
+                                    </button>
+                                  </div>
                                 </div>
-                                <div className="ml-auto flex items-center gap-2">
-                                  <button
-                                    onClick={(e) => {
-                                      e.preventDefault();
-                                      setActiveItem({ id: item.id, size: item.size, editIndex: idx });
-                                      setDtfForm({ type: "custom", name: detail.name, number: detail.number });
-                                      setShowDTFModal(true);
-                                    }}
-                                    className="text-primary hover:scale-110 transition-transform p-1"
-                                  >
-                                    <Edit2 className="w-3 h-3" />
-                                  </button>
-                                  <button
-                                    onClick={(e) => {
-                                      e.preventDefault();
-                                      const newDetails = item.printDetails!.filter((_, i) => i !== idx);
-                                      updateItem(item.id, item.size, {
-                                        printDetails: newDetails,
-                                        requiresPrint: newDetails.length > 0
-                                      });
-                                    }}
-                                    className="text-red-500 hover:scale-110 transition-transform p-1"
-                                  >
-                                    <X className="w-3.5 h-3.5" />
-                                  </button>
-                                </div>
-                              </div>
-                            ))}
-                            {item.printDetails.length < item.quantity && (
-                              <button
-                                onClick={(e) => {
-                                  e.preventDefault();
-                                  setActiveItem({ id: item.id, size: item.size, editIndex: -1 });
-                                  setDtfForm({ type: "custom", name: "", number: "" });
-                                  setShowDTFModal(true);
-                                }}
-                                className="text-[10px] font-bold text-primary border border-primary/20 bg-primary/5 py-2 rounded-lg border-dashed hover:bg-primary/10 transition-colors w-full text-center mt-1 uppercase tracking-widest"
-                              >
-                                + Add Print For Next Item
-                              </button>
-                            )}
-                          </div>
-                        )}
-                      </div>
+                              ))}
+                              {item.printDetails.length < item.quantity && (
+                                <button
+                                  onClick={(e) => {
+                                    e.preventDefault();
+                                    setActiveItem({ id: item.id, size: item.size, editIndex: -1 });
+                                    setDtfForm({ type: "custom", name: "", number: "" });
+                                    setShowDTFModal(true);
+                                  }}
+                                  className="text-[10px] font-bold text-primary border border-primary/20 bg-primary/5 py-2 rounded-lg border-dashed hover:bg-primary/10 transition-colors w-full text-center mt-1 uppercase tracking-widest"
+                                >
+                                  + Add Print For Next Item
+                                </button>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>

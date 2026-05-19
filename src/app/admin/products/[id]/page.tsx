@@ -226,9 +226,10 @@ export default async function ProductDetailView({ params }: { params: { id: stri
                   <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">
                     Description
                   </h3>
-                  <p className="text-sm text-slate-700 whitespace-pre-wrap leading-relaxed">
-                    {product.description || 'No description provided.'}
-                  </p>
+                  <div 
+                    className="text-sm text-slate-700 leading-relaxed prose max-w-none"
+                    dangerouslySetInnerHTML={{ __html: product.description || 'No description provided.' }}
+                  />
                 </div>
                 <div className="grid grid-cols-2 gap-4 pt-4 border-t border-slate-100">
                   <div>

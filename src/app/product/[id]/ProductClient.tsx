@@ -18,6 +18,7 @@ interface Product {
   images: string[];
   team: string;
   category: string;
+  isCustomize?: boolean | null;
   variants: { size: string, stock: number }[];
   discount?: {
     active: boolean;
@@ -75,6 +76,7 @@ export default function ProductClient({ product, sizeChartData, deliveryData }: 
       originalPrice: isDiscounted ? product.price : undefined,
       image: product.images[0] || "",
       category: product.team,
+      isCustomize: product.isCustomize ?? false,
     }, selectedSize, quantity);
 
     setAddedEffect(true);
