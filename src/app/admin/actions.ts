@@ -188,7 +188,6 @@ export async function updateProduct(id: string, data: {
     revalidatePath("/");
     revalidatePath(`/product/${id}`);
     revalidatePath("/product/[id]", "page");
-    redirect("/admin/products");
     return { success: true, data: product };
   } catch (error: any) {
     if (error.message === 'NEXT_REDIRECT' || error.digest?.startsWith('NEXT_REDIRECT')) {
