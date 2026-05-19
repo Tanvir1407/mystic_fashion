@@ -37,16 +37,30 @@ export async function getAuditContext(): Promise<AuditContext | null> {
   // Next.js 14 Server Actions expose request headers via next/headers
   const headersList = headers();
 
+  // Helper to strip ports and ipv6 mapping prefixes
+  const cleanIp = (ipStr: string): string => {
+    let cleaned = ipStr.trim();
+    if (cleaned.startsWith("::ffff:")) {
+      cleaned = cleaned.substring(7);
+    }
+    // Strip port if IPv4 address contains one (e.g. 192.168.1.1:54321)
+    if (cleaned.includes(":") && !cleaned.includes("::") && cleaned.split(":").length === 2) {
+      cleaned = cleaned.split(":")[0];
+    }
+    return cleaned;
+  };
+
   // IP extraction priority:
   // 1. X-Forwarded-For (set by Nginx reverse proxy) — first IP in the chain
   // 2. X-Real-IP (alternative Nginx header)
   // 3. Fallback to "unknown"
   const forwardedFor = headersList.get("x-forwarded-for");
-  const ipAddress =
+  const rawIp =
     forwardedFor?.split(",")[0]?.trim() ||
     headersList.get("x-real-ip") ||
     "unknown";
 
+  const ipAddress = rawIp !== "unknown" ? cleanIp(rawIp) : "unknown";
   const userAgent = headersList.get("user-agent") || "unknown";
 
   return {

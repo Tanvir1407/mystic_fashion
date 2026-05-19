@@ -741,7 +741,14 @@ export default function AuditLogsClient({
                   </div>
                   <div className="space-y-1 text-xs">
                     <span className="block text-slate-500">Client IP Address:</span>
-                    <span className="block font-bold text-slate-800">{selectedLog.ipAddress || "Unknown / Localhost"}</span>
+                    <span className="block font-bold text-slate-800">
+                      {(() => {
+                        const ip = selectedLog.ipAddress;
+                        if (!ip || ip === "unknown") return "Unknown";
+                        if (ip === "::1" || ip === "127.0.0.1") return "127.0.0.1 (Localhost)";
+                        return ip;
+                      })()}
+                    </span>
                     <span className="block text-slate-500 mt-2">Operating User Agent:</span>
                     <span className="block text-slate-600 text-[11px] wrap-normal" title={selectedLog.userAgent}>
                       {selectedLog.userAgent || "No Agent Metadata"}
