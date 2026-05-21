@@ -1,3 +1,4 @@
+import './load-env';
 import prisma from '../src/lib/prisma';
 import { AccountType, TransactionType } from '../src/generated/prisma/client';
 
