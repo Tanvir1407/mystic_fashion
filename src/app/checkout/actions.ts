@@ -47,8 +47,37 @@ export async function placeOrderAction(payload: {
       }
       const customId = `${datePrefix}${nextNum.toString().padStart(2, '0')}`;
 
-      // Sanitize couponCode (Convert "" to null)
-      const sanitizedCoupon = payload.couponCode?.trim() ? payload.couponCode.trim().toUpperCase() : null;
+      // 0. Check or create customer profile by phone
+      const phone = payload.phone?.trim();
+      let customerId: string | null = null;
+      if (phone) {
+        let customer = await tx.customer.findUnique({
+          where: { phone },
+        });
+
+        if (!customer) {
+          customer = await tx.customer.create({
+            data: {
+              phone,
+              name: payload.fullName?.trim() || `Customer ${phone}`,
+              address: payload.address?.trim() || null,
+            },
+          });
+        } else {
+          const nameToUse = payload.fullName?.trim();
+          const addressToUse = payload.address?.trim();
+          if ((nameToUse && nameToUse !== customer.name) || (addressToUse && addressToUse !== customer.address)) {
+            customer = await tx.customer.update({
+              where: { phone },
+              data: {
+                name: nameToUse || customer.name,
+                address: addressToUse || customer.address,
+              },
+            });
+          }
+        }
+        customerId = customer.id;
+      }
 
       // 1. Create the order & items
       const order = await tx.order.create({
@@ -69,6 +98,7 @@ export async function placeOrderAction(payload: {
           pathaoZoneId: payload.pathaoZoneId,
           pathaoAreaId: payload.pathaoAreaId,
           orderSource: "eCommerce",
+          customerId: customerId,
           items: {
             create: payload.items.flatMap((item) => {
               if (item.requiresPrint && item.printDetails && item.printDetails.length > 0) {

@@ -7,14 +7,36 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { CustomSelect } from "@/components/CustomSelect";
 
-export default function PurchaseFormClient({ products, initialData }: { products: any[], initialData?: any }) {
+export default function PurchaseFormClient({
+  products,
+  suppliers = [],
+  initialData
+}: {
+  products: any[],
+  suppliers?: any[],
+  initialData?: any
+}) {
   const router = useRouter();
   const isEditing = !!initialData;
+
+  const initialSupplier = suppliers.find(s => s.id === initialData?.supplierId || s.name === initialData?.supplierName);
+  const [isNewSupplier, setIsNewSupplier] = useState(suppliers.length === 0 || (isEditing ? !initialSupplier : false));
+  const [selectedSupplierId, setSelectedSupplierId] = useState(initialSupplier?.id || "");
   const [supplierName, setSupplierName] = useState(initialData?.supplierName || "");
   const [invoiceNumber, setInvoiceNumber] = useState(initialData?.invoiceNumber || "");
   const [totalDiscount, setTotalDiscount] = useState((initialData?.discountAmount || 0).toString());
   const [loading, setLoading] = useState(false);
   const [isAutoSizeEnabled, setIsAutoSizeEnabled] = useState(true);
+
+  const handleToggleMode = (mode: boolean) => {
+    setIsNewSupplier(mode);
+    if (!mode) {
+      const s = suppliers.find(sup => sup.id === selectedSupplierId);
+      setSupplierName(s ? s.name : "");
+    } else {
+      setSupplierName("");
+    }
+  };
 
   // Initialize items or default to one blank item
   const defaultItems = initialData?.items?.length > 0
@@ -149,15 +171,58 @@ export default function PurchaseFormClient({ products, initialData }: { products
       <div className="bg-white border border-slate-200 rounded-lg p-6 shadow-sm">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
           <div>
-            <label className="block text-sm font-semibold text-slate-900 mb-2">Supplier Name *</label>
-            <input
-              type="text"
-              value={supplierName}
-              onChange={(e) => setSupplierName(e.target.value)}
-              placeholder="e.g. Mystic Vendor Co."
-              className="w-full px-4 py-2 border border-slate-300 rounded-md focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 text-sm"
-              required
-            />
+            <div className="flex justify-between items-center mb-2">
+              <label className="block text-sm font-semibold text-slate-900">Supplier Name *</label>
+              <div className="flex gap-1 p-0.5 bg-slate-100 rounded-md">
+                <button
+                  type="button"
+                  onClick={() => handleToggleMode(false)}
+                  className={`px-2 py-0.5 text-[10px] font-bold rounded-sm transition-all ${
+                    !isNewSupplier
+                      ? "bg-white text-slate-800 shadow-sm"
+                      : "text-slate-500 hover:text-slate-800"
+                  }`}
+                >
+                  Select Existing
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleToggleMode(true)}
+                  className={`px-2 py-0.5 text-[10px] font-bold rounded-sm transition-all ${
+                    isNewSupplier
+                      ? "bg-white text-slate-800 shadow-sm"
+                      : "text-slate-500 hover:text-slate-800"
+                  }`}
+                >
+                  + Add New
+                </button>
+              </div>
+            </div>
+
+            {!isNewSupplier ? (
+              <CustomSelect
+                options={suppliers.map(s => ({ value: s.id, label: s.name }))}
+                value={selectedSupplierId}
+                onChange={(val) => {
+                  setSelectedSupplierId(val);
+                  const s = suppliers.find(sup => sup.id === val);
+                  if (s) setSupplierName(s.name);
+                }}
+                placeholder="-- Select Existing Supplier --"
+                searchable={true}
+                heightClass="h-9"
+                textClass="text-sm"
+              />
+            ) : (
+              <input
+                type="text"
+                value={supplierName}
+                onChange={(e) => setSupplierName(e.target.value)}
+                placeholder="e.g. Mystic Vendor Co."
+                className="w-full px-4 py-2 border border-slate-300 rounded-md focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 text-sm"
+                required
+              />
+            )}
           </div>
           <div>
             <label className="block text-sm font-semibold text-slate-900 mb-2">Invoice / Reference #</label>

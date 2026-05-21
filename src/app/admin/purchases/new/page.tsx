@@ -4,8 +4,14 @@ import PurchaseFormClient from "./PurchaseFormClient";
 export const dynamic = "force-dynamic";
 
 export default async function NewPurchasePage() {
-  const products = await prisma.product.findMany({
-    include: { variants: true }
-  });
-  return <PurchaseFormClient products={products} />;
+  const [products, suppliers] = await Promise.all([
+    prisma.product.findMany({
+      include: { variants: true }
+    }),
+    prisma.supplier.findMany({
+      where: { active: true },
+      orderBy: { name: "asc" }
+    })
+  ]);
+  return <PurchaseFormClient products={products} suppliers={suppliers} />;
 }

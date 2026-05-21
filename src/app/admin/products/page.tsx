@@ -59,7 +59,7 @@ export default async function AdminProductsPage({ searchParams }: { searchParams
   let totalCount = 0;
   let fetchedCategories: any[] = [];
   try {
-    const [fetchedProducts, fetchedCount, distinctCategories] = await Promise.all([
+    const [fetchedProducts, fetchedCount, activeCategories] = await Promise.all([
       prisma.product.findMany({
         where: whereClause,
         skip: (page - 1) * PER_PAGE,
@@ -68,20 +68,21 @@ export default async function AdminProductsPage({ searchParams }: { searchParams
         include: { variants: true }
       }),
       prisma.product.count({ where: whereClause }),
-      prisma.product.findMany({
-        select: { category: true },
-        distinct: ['category'],
+      prisma.category.findMany({
+        select: { name: true },
+        where: { active: true },
+        orderBy: { name: "asc" }
       }),
     ]);
     products = fetchedProducts;
     totalCount = fetchedCount;
-    fetchedCategories = distinctCategories;
+    fetchedCategories = activeCategories;
   } catch (error) {
     console.error("Error fetching products:", error);
   }
 
   const totalPages = Math.ceil(totalCount / PER_PAGE);
-  const categories = fetchedCategories.map((c) => c.category);
+  const categories = fetchedCategories.map((c) => c.name);
 
   return (
     <div className="flex flex-col gap-6">

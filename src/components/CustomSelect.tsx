@@ -126,7 +126,7 @@ export function CustomSelect({
         className={`w-full ${heightClass} flex items-center justify-between px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg ${textClass} transition-all focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none ${disabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer"
           } ${selectedOption?.colorClass || "text-slate-900"}`}
       >
-        <span className="truncate font-semibold text-slate-400">
+        <span className={`truncate font-semibold ${selectedOption ? "text-slate-800" : "text-slate-400"}`}>
           {selectedOption ? selectedOption.label : placeholder}
         </span>
         <ChevronDown

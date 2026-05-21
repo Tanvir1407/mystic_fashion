@@ -3,7 +3,7 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import prisma from "@/lib/prisma";
-import { OrderStatus, AdjustmentType, ReturnStatus } from "@/generated/prisma/client";
+import { OrderStatus, AdjustmentType, ReturnStatus, TransactionType } from "@/generated/prisma/client";
 import { withAuditLog, logActivity } from "@/lib/audit";
 import { getAuditContext } from "@/lib/audit";
 import { revalidatePath } from "next/cache";
@@ -19,6 +19,71 @@ async function getOrCreateSystemAccount(tx: any, name: string, type: "INCOME" | 
     });
   }
   return account;
+}
+
+async function createDoubleEntryJournal(
+  tx: any,
+  data: {
+    accountId: string;
+    amount: number;
+    date: Date;
+    type: TransactionType;
+    description: string;
+    referenceId?: string;
+    referenceType?: string;
+  }
+) {
+  // 1. Write the legacy transaction record first to maintain 100% backward-compatibility
+  await tx.transaction.create({
+    data: {
+      accountId: data.accountId,
+      amount: data.amount,
+      date: data.date,
+      type: data.type,
+      description: data.description,
+      referenceId: data.referenceId || null,
+      referenceType: data.referenceType || null,
+    },
+  });
+
+  // 2. Find or create the counter-party Cash & Bank account
+  let cashAccount = await tx.chartOfAccount.findUnique({
+    where: { name: "Cash & Bank" },
+  });
+  if (!cashAccount) {
+    cashAccount = await tx.chartOfAccount.create({
+      data: {
+        name: "Cash & Bank",
+        type: "ASSET",
+        status: "ACTIVE",
+      },
+    });
+  }
+
+  // 3. Create the balanced double-entry JournalEntry and lines
+  const oppositeType = data.type === "DEBIT" ? "CREDIT" : "DEBIT";
+  await tx.journalEntry.create({
+    data: {
+      date: data.date,
+      description: data.description,
+      referenceId: data.referenceId || null,
+      referenceType: data.referenceType || null,
+      lines: {
+        create: [
+          {
+            accountId: data.accountId,
+            amount: data.amount,
+            type: data.type,
+          },
+          {
+            accountId: cashAccount.id,
+            amount: data.amount,
+            type: oppositeType,
+          },
+        ],
+      },
+    },
+  });
 }
 
 import { createSession, destroySession, getSession } from "@/lib/auth";
@@ -288,31 +353,27 @@ async function _updateOrderStatus(orderId: string, status: OrderStatus) {
       // --- AUTO ACCOUNTING LOGIC ---
       if (oldStatus === "PENDING" && newStatus === "CONFIRMED") {
         const account = await getOrCreateSystemAccount(tx, "Sales Revenue", "INCOME");
-        await tx.transaction.create({
-          data: {
-            accountId: account.id,
-            amount: order.totalAmount,
-            date: new Date(),
-            type: "CREDIT",
-            description: `Order confirmation sale for ${order.id}`,
-            referenceId: order.id,
-            referenceType: "ORDER",
-          }
+        await createDoubleEntryJournal(tx, {
+          accountId: account.id,
+          amount: order.totalAmount,
+          date: new Date(),
+          type: "CREDIT",
+          description: `Order confirmation sale for ${order.id}`,
+          referenceId: order.id,
+          referenceType: "ORDER",
         });
       }
 
       if (isActive(oldStatus) && newStatus === "CANCELLED") {
         const account = await getOrCreateSystemAccount(tx, "Sales Refunds", "EXPENSE");
-        await tx.transaction.create({
-          data: {
-            accountId: account.id,
-            amount: order.totalAmount,
-            date: new Date(),
-            type: "DEBIT",
-            description: `Order cancellation refund for ${order.id}`,
-            referenceId: order.id,
-            referenceType: "ORDER",
-          }
+        await createDoubleEntryJournal(tx, {
+          accountId: account.id,
+          amount: order.totalAmount,
+          date: new Date(),
+          type: "DEBIT",
+          description: `Order cancellation refund for ${order.id}`,
+          referenceId: order.id,
+          referenceType: "ORDER",
         });
       }
     });
@@ -653,9 +714,29 @@ async function _createPurchase(
 ) {
   try {
     const result = await prisma.$transaction(async (tx) => {
+      // Find or create Supplier by name
+      let supplierId: string | null = null;
+      const sName = supplierName?.trim();
+      if (sName) {
+        let supplier = await tx.supplier.findUnique({
+          where: { name: sName },
+        });
+
+        if (!supplier) {
+          supplier = await tx.supplier.create({
+            data: {
+              name: sName,
+              active: true,
+            },
+          });
+        }
+        supplierId = supplier.id;
+      }
+
       const purchase = await tx.purchase.create({
         data: {
           supplierName,
+          supplierId,
           invoiceNumber,
           totalAmount,
           discountAmount,
@@ -702,16 +783,14 @@ async function _createPurchase(
       }
 
       const account = await getOrCreateSystemAccount(tx, "Inventory Purchases", "EXPENSE");
-      await tx.transaction.create({
-        data: {
-          accountId: account.id,
-          amount: totalAmount,
-          date: new Date(),
-          type: "DEBIT",
-          description: `Inventory purchase from ${supplierName}`,
-          referenceId: purchase.id,
-          referenceType: "PURCHASE",
-        }
+      await createDoubleEntryJournal(tx, {
+        accountId: account.id,
+        amount: totalAmount,
+        date: new Date(),
+        type: "DEBIT",
+        description: `Inventory purchase from ${supplierName}`,
+        referenceId: purchase.id,
+        referenceType: "PURCHASE",
       });
       revalidatePath("/admin/accounting");
       return purchase;
@@ -769,11 +848,31 @@ async function _updatePurchase(
         where: { purchaseId },
       });
 
+      // Find or create Supplier by name
+      let supplierId: string | null = null;
+      const sName = supplierName?.trim();
+      if (sName) {
+        let supplier = await tx.supplier.findUnique({
+          where: { name: sName },
+        });
+
+        if (!supplier) {
+          supplier = await tx.supplier.create({
+            data: {
+              name: sName,
+              active: true,
+            },
+          });
+        }
+        supplierId = supplier.id;
+      }
+
       // 4. Update the Purchase record and recreate items
       await tx.purchase.update({
         where: { id: purchaseId },
         data: {
           supplierName,
+          supplierId,
           invoiceNumber,
           totalAmount,
           discountAmount,
@@ -831,18 +930,36 @@ async function _updatePurchase(
             description: `Inventory purchase from ${supplierName} (Updated)`,
           }
         });
+
+        const journalEntry = await tx.journalEntry.findFirst({
+          where: { referenceId: purchaseId, referenceType: "PURCHASE" }
+        });
+        if (journalEntry) {
+          await tx.journalEntry.update({
+            where: { id: journalEntry.id },
+            data: {
+              description: `Inventory purchase from ${supplierName} (Updated)`,
+              lines: {
+                updateMany: {
+                  where: { journalEntryId: journalEntry.id },
+                  data: {
+                    amount: totalAmount,
+                  }
+                }
+              }
+            }
+          });
+        }
       } else {
         const account = await getOrCreateSystemAccount(tx, "Inventory Purchases", "EXPENSE");
-        await tx.transaction.create({
-          data: {
-            accountId: account.id,
-            amount: totalAmount,
-            date: new Date(),
-            type: "DEBIT",
-            description: `Inventory purchase from ${supplierName} (Created via Update)`,
-            referenceId: purchaseId,
-            referenceType: "PURCHASE",
-          }
+        await createDoubleEntryJournal(tx, {
+          accountId: account.id,
+          amount: totalAmount,
+          date: new Date(),
+          type: "DEBIT",
+          description: `Inventory purchase from ${supplierName} (Created via Update)`,
+          referenceId: purchaseId,
+          referenceType: "PURCHASE",
         });
       }
     });
@@ -1113,6 +1230,38 @@ async function _createAdminOrder(data: {
     const order = await prisma.$transaction(async (tx) => {
       const customId = await generateOrderIdInternal(tx);
 
+      // Check or create customer profile by phone
+      const phone = data.phone?.trim();
+      let customerId: string | null = null;
+      if (phone) {
+        let customer = await tx.customer.findUnique({
+          where: { phone },
+        });
+
+        if (!customer) {
+          customer = await tx.customer.create({
+            data: {
+              phone,
+              name: data.customerName?.trim() || `Customer ${phone}`,
+              address: data.address?.trim() || null,
+            },
+          });
+        } else {
+          const nameToUse = data.customerName?.trim();
+          const addressToUse = data.address?.trim();
+          if ((nameToUse && nameToUse !== customer.name) || (addressToUse && addressToUse !== customer.address)) {
+            customer = await tx.customer.update({
+              where: { phone },
+              data: {
+                name: nameToUse || customer.name,
+                address: addressToUse || customer.address,
+              },
+            });
+          }
+        }
+        customerId = customer.id;
+      }
+
       // 1. Determine order status
       // If any item is a backorder (out-of-stock), the order stays PENDING
       // until stock is replenished via a Purchase and admin manually confirms.
@@ -1136,6 +1285,7 @@ async function _createAdminOrder(data: {
           status: orderStatus,
           orderSource: "Salesman",
           createdById: createdById,
+          customerId: customerId,
           items: {
             create: data.items.flatMap((item) => {
               if (item.requiresPrint && item.printDetails && item.printDetails.length > 0) {
@@ -1202,16 +1352,14 @@ async function _createAdminOrder(data: {
       // PENDING (backorder) orders get the accounting entry when they are later confirmed.
       if (orderStatus === "CONFIRMED") {
         const account = await getOrCreateSystemAccount(tx, "Sales Revenue", "INCOME");
-        await tx.transaction.create({
-          data: {
-            accountId: account.id,
-            amount: data.totalAmount,
-            date: new Date(),
-            type: "CREDIT",
-            description: `Order confirmation sale for ${newOrder.id}`,
-            referenceId: newOrder.id,
-            referenceType: "ORDER",
-          }
+        await createDoubleEntryJournal(tx, {
+          accountId: account.id,
+          amount: data.totalAmount,
+          date: new Date(),
+          type: "CREDIT",
+          description: `Order confirmation sale for ${newOrder.id}`,
+          referenceId: newOrder.id,
+          referenceType: "ORDER",
         });
       }
 
@@ -1651,16 +1799,14 @@ async function _processSalesReturn(data: {
       // 6. Accounting Entry
       if (totalLoss > 0) {
         const account = await getOrCreateSystemAccount(tx, "Returns & Wastage Loss", "EXPENSE");
-        await tx.transaction.create({
-          data: {
-            accountId: account.id,
-            amount: totalLoss,
-            date: new Date(),
-            type: "DEBIT",
-            description: `Loss on return for Order Item ${orderItemId} (Order: ${orderId}). Status: ${status}.`,
-            referenceId: orderId,
-            referenceType: "ORDER",
-          },
+        await createDoubleEntryJournal(tx, {
+          accountId: account.id,
+          amount: totalLoss,
+          date: new Date(),
+          type: "DEBIT",
+          description: `Loss on return for Order Item ${orderItemId} (Order: ${orderId}). Status: ${status}.`,
+          referenceId: orderId,
+          referenceType: "ORDER",
         });
       }
 
@@ -1763,3 +1909,229 @@ export async function getOrderById(id: string) {
     return { success: false, error: error.message || "Failed to fetch order." };
   }
 }
+
+export async function getCustomers(search?: string, page: number = 1, pageSize: number = 20) {
+  try {
+    const whereClause = search ? {
+      OR: [
+        { name: { contains: search, mode: "insensitive" as any } },
+        { phone: { contains: search, mode: "insensitive" as any } },
+      ]
+    } : {};
+
+    const [total, customers] = await Promise.all([
+      prisma.customer.count({ where: whereClause }),
+      prisma.customer.findMany({
+        where: whereClause,
+        include: {
+          orders: {
+            select: {
+              totalAmount: true
+            }
+          }
+        },
+        orderBy: { createdAt: "desc" },
+        skip: (page - 1) * pageSize,
+        take: pageSize,
+      })
+    ]);
+
+    const formattedCustomers = customers.map(customer => {
+      const orderCount = customer.orders.length;
+      const totalSpent = customer.orders.reduce((sum, o) => sum + o.totalAmount, 0);
+      return {
+        id: customer.id,
+        name: customer.name,
+        phone: customer.phone,
+        address: customer.address,
+        createdAt: customer.createdAt,
+        orderCount,
+        totalSpent,
+      };
+    });
+
+    return { success: true, data: formattedCustomers, total, page, pageSize };
+  } catch (error: any) {
+    console.error("Get customers error:", error);
+    return { success: false, error: error.message || "Failed to fetch customers." };
+  }
+}
+
+export async function getCustomerDetails(id: string) {
+  try {
+    const customer = await prisma.customer.findUnique({
+      where: { id },
+      include: {
+        orders: {
+          orderBy: { createdAt: "desc" },
+          select: {
+            id: true,
+            totalAmount: true,
+            status: true,
+            createdAt: true,
+          }
+        }
+      }
+    });
+
+    if (!customer) {
+      return { success: false, error: "Customer not found." };
+    }
+
+    const orderCount = customer.orders.length;
+    const totalSpent = customer.orders.reduce((sum, o) => sum + o.totalAmount, 0);
+
+    return {
+      success: true,
+      data: {
+        ...customer,
+        orderCount,
+        totalSpent
+      }
+    };
+  } catch (error: any) {
+    console.error("Get customer details error:", error);
+    return { success: false, error: error.message || "Failed to fetch customer details." };
+  }
+}
+
+export async function getSuppliers(search?: string, page: number = 1, pageSize: number = 20) {
+  try {
+    const whereClause = search ? {
+      OR: [
+        { name: { contains: search, mode: "insensitive" as any } },
+        { phone: { contains: search, mode: "insensitive" as any } },
+      ]
+    } : {};
+
+    const [total, suppliers] = await Promise.all([
+      prisma.supplier.count({ where: whereClause }),
+      prisma.supplier.findMany({
+        where: whereClause,
+        include: {
+          purchases: {
+            select: {
+              totalAmount: true
+            }
+          }
+        },
+        orderBy: { createdAt: "desc" },
+        skip: (page - 1) * pageSize,
+        take: pageSize,
+      })
+    ]);
+
+    const formattedSuppliers = suppliers.map(supplier => {
+      const purchaseCount = supplier.purchases.length;
+      const totalSpent = supplier.purchases.reduce((sum, p) => sum + p.totalAmount, 0);
+      return {
+        id: supplier.id,
+        name: supplier.name,
+        phone: supplier.phone,
+        address: supplier.address,
+        active: supplier.active,
+        createdAt: supplier.createdAt,
+        purchaseCount,
+        totalSpent,
+      };
+    });
+
+    return { success: true, data: formattedSuppliers, total, page, pageSize };
+  } catch (error: any) {
+    console.error("Get suppliers error:", error);
+    return { success: false, error: error.message || "Failed to fetch suppliers." };
+  }
+}
+
+export async function getSupplierDetails(id: string) {
+  try {
+    const supplier = await prisma.supplier.findUnique({
+      where: { id },
+      include: {
+        purchases: {
+          orderBy: { createdAt: "desc" },
+          select: {
+            id: true,
+            totalAmount: true,
+            status: true,
+            createdAt: true,
+          }
+        }
+      }
+    });
+
+    if (!supplier) {
+      return { success: false, error: "Supplier not found." };
+    }
+
+    const purchaseCount = supplier.purchases.length;
+    const totalSpent = supplier.purchases.reduce((sum, p) => sum + p.totalAmount, 0);
+
+    return {
+      success: true,
+      data: {
+        ...supplier,
+        purchaseCount,
+        totalSpent
+      }
+    };
+  } catch (error: any) {
+    console.error("Get supplier details error:", error);
+    return { success: false, error: error.message || "Failed to fetch supplier details." };
+  }
+}
+
+async function _createSupplier(data: { name: string; phone?: string; address?: string; active?: boolean }) {
+  try {
+    const supplier = await prisma.supplier.create({
+      data: {
+        name: data.name.trim(),
+        phone: data.phone?.trim() || null,
+        address: data.address?.trim() || null,
+        active: data.active ?? true,
+      },
+    });
+    revalidatePath("/admin/suppliers");
+    return { success: true, data: supplier };
+  } catch (error: any) {
+    console.error("Create supplier error:", error);
+    return { success: false, error: error.message || "Failed to create supplier." };
+  }
+}
+
+export const createSupplier = withAuditLog(_createSupplier, {
+  entityType: "Supplier",
+  action: "CREATE",
+  getEntityId: () => null,
+  getEntityIdFromResult: (r: any) => r?.data?.id ?? null,
+  fetchAfter: (id) => prisma.supplier.findUnique({ where: { id } }),
+  describe: (args) => `Created supplier "${args[0].name}"`,
+});
+
+async function _updateSupplier(id: string, data: { name?: string; phone?: string; address?: string; active?: boolean }) {
+  try {
+    const supplier = await prisma.supplier.update({
+      where: { id },
+      data: {
+        name: data.name ? data.name.trim() : undefined,
+        phone: data.phone !== undefined ? (data.phone?.trim() || null) : undefined,
+        address: data.address !== undefined ? (data.address?.trim() || null) : undefined,
+        active: data.active !== undefined ? data.active : undefined,
+      },
+    });
+    revalidatePath("/admin/suppliers");
+    return { success: true, data: supplier };
+  } catch (error: any) {
+    console.error("Update supplier error:", error);
+    return { success: false, error: error.message || "Failed to update supplier." };
+  }
+}
+
+export const updateSupplier = withAuditLog(_updateSupplier, {
+  entityType: "Supplier",
+  action: "UPDATE",
+  getEntityId: (args) => args[0],
+  getEntityIdFromResult: () => null,
+  fetchAfter: (id) => prisma.supplier.findUnique({ where: { id } }),
+  describe: (args) => `Updated supplier with ID ${args[0]}`,
+});

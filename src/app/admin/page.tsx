@@ -19,90 +19,188 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
     startDate = new Date(now.getFullYear() - 1, now.getMonth(), now.getDate());
   }
 
-  // Fetch all data concurrently
-  let ordersInRange: any[] = [];
-  try {
-    ordersInRange = await prisma.order.findMany({
+  // Fetch all data concurrently using native Prisma aggregates and selective fields
+  const [
+    stockSum,
+    pendingQtySum,
+    deliveredQtySum,
+    cancelledQtySum,
+    purchasesAggregate,
+    deliveredOrders,
+    cancelledOrders,
+    chartPurchases,
+    staffPerformance,
+    recentOrders
+  ] = await Promise.all([
+    prisma.productVariant.aggregate({
+      _sum: { stock: true }
+    }),
+    prisma.orderItem.aggregate({
+      where: {
+        order: {
+          status: "PENDING",
+          createdAt: { gte: startDate }
+        }
+      },
+      _sum: { quantity: true }
+    }),
+    prisma.orderItem.aggregate({
+      where: {
+        order: {
+          status: "DELIVERED",
+          createdAt: { gte: startDate }
+        }
+      },
+      _sum: { quantity: true }
+    }),
+    prisma.orderItem.aggregate({
+      where: {
+        order: {
+          status: "CANCELLED",
+          createdAt: { gte: startDate }
+        }
+      },
+      _sum: { quantity: true }
+    }),
+    prisma.purchase.aggregate({
       where: { createdAt: { gte: startDate } },
-      include: { 
+      _sum: { totalAmount: true }
+    }),
+    prisma.order.findMany({
+      where: {
+        status: "DELIVERED",
+        createdAt: { gte: startDate }
+      },
+      select: {
+        createdAt: true,
+        items: {
+          select: {
+            productId: true,
+            price: true,
+            quantity: true,
+            product: {
+              select: {
+                name: true,
+                purchasePrice: true,
+                images: true
+              }
+            }
+          }
+        }
+      }
+    }),
+    prisma.order.findMany({
+      where: {
+        status: "CANCELLED",
+        createdAt: { gte: startDate }
+      },
+      select: {
+        items: {
+          select: {
+            price: true,
+            quantity: true
+          }
+        }
+      }
+    }),
+    prisma.purchase.findMany({
+      where: { createdAt: { gte: startDate } },
+      select: {
+        createdAt: true,
+        totalAmount: true
+      }
+    }),
+    prisma.order.groupBy({
+      by: ["createdById"],
+      where: {
+        createdById: { not: null },
+        createdAt: { gte: startDate }
+      },
+      _count: {
+        id: true
+      },
+      orderBy: {
+        _count: {
+          id: "desc"
+        }
+      },
+      take: 3
+    }),
+    prisma.order.findMany({
+      where: { createdAt: { gte: startDate } },
+      orderBy: { createdAt: "desc" },
+      take: 5,
+      include: {
         items: { include: { product: true } },
         createdBy: true
       }
-    });
-  } catch (error) {
-    console.error("Error fetching orders:", error);
-  }
+    })
+  ]);
 
-  let allProducts: any[] = [];
-  try {
-    allProducts = await prisma.product.findMany({ include: { variants: true } });
-  } catch (error) {
-    console.error("Error fetching products:", error);
-  }
+  // Extract Quantity-based metrics
+  const currentStockCount = stockSum._sum.stock || 0;
+  const pendingOrderQty = pendingQtySum._sum.quantity || 0;
+  const deliveredProductQty = deliveredQtySum._sum.quantity || 0;
+  const cancelProductQty = cancelledQtySum._sum.quantity || 0;
 
-  let allPurchases: any[] = [];
-  try {
-    allPurchases = await prisma.purchase.findMany({ where: { createdAt: { gte: startDate } } });
-  } catch (error) {
-    console.error("Error fetching purchases:", error);
-  }
-
-  // ── Row 1: Quantity-based metrics ──
-  // Current stock count (absolute state, not time-filtered)
-  let currentStockCount = 0;
-  allProducts.forEach(p => p.variants.forEach(v => { currentStockCount += v.stock; }));
-
-  // Pending order product qty (PENDING, CONFIRMED, PACKAGING — everything before SHIPPED)
-  const pendingStatuses = ["PENDING"];
-  const pendingOrders = ordersInRange.filter(o => pendingStatuses.includes(o.status));
-  const pendingOrderQty = pendingOrders.reduce((acc, o) => acc + o.items.reduce((s, i) => s + i.quantity, 0), 0);
-
-  // Delivered product qty
-  const deliveredOrders = ordersInRange.filter(o => o.status === "DELIVERED");
-  const deliveredProductQty = deliveredOrders.reduce((acc, o) => acc + o.items.reduce((s, i) => s + i.quantity, 0), 0);
-
-  // Cancelled order product qty
-  const cancelledOrders = ordersInRange.filter(o => o.status === "CANCELLED");
-  const cancelProductQty = cancelledOrders.reduce((acc, o) => acc + o.items.reduce((s, i) => s + i.quantity, 0), 0);
-
-  // ── Row 2: Financial metrics ──
-  // ── Row 2: Financial metrics (Product Sales ONLY, excluding delivery fees) ──
-  // ── Row 2: Financial metrics (Product Sales ONLY, excluding delivery fees) ──
-  const totalProfit = deliveredOrders.reduce((acc, o) => acc + o.items.reduce((sum, item) => sum + ((item.price - (item.product.purchasePrice || 0)) * item.quantity), 0), 0);
-  const totalSaleAmount = deliveredOrders.reduce((acc, o) => acc + o.items.reduce((sum, item) => sum + (item.price * item.quantity), 0), 0);
-  const totalPurchaseAmount = allPurchases.reduce((acc, p) => acc + p.totalAmount, 0);
-  const totalCancelAmount = cancelledOrders.reduce((acc, o) => acc + o.items.reduce((sum, item) => sum + (item.price * item.quantity), 0), 0);
-
-  // ── Top 5 Best Selling Products (Calculated from DELIVERED orders only) ──
+  // Financial and best-seller calculations from selective datasets
+  let totalSaleAmount = 0;
+  let totalProfit = 0;
   const productSalesMap = new Map<string, {name: string, sold: number, revenue: number, image: string}>();
-  deliveredOrders.forEach(order => {
-    order.items.forEach(item => {
+
+  deliveredOrders.forEach((order) => {
+    order.items.forEach((item) => {
+      const sale = item.price * item.quantity;
+      const cost = (item.product?.purchasePrice || 0) * item.quantity;
+      totalSaleAmount += sale;
+      totalProfit += (sale - cost);
+
       const existing = productSalesMap.get(item.productId);
       if (existing) {
         existing.sold += item.quantity;
-        existing.revenue += (item.price * item.quantity);
+        existing.revenue += sale;
       } else {
         productSalesMap.set(item.productId, {
-          name: item.product.name,
+          name: item.product?.name || "Unknown Product",
           sold: item.quantity,
-          revenue: (item.price * item.quantity),
-          image: item.product.images[0] || ""
+          revenue: sale,
+          image: item.product?.images?.[0] || ""
         });
       }
     });
   });
-  const topProducts = Array.from(productSalesMap.values()).sort((a, b) => b.sold - a.sold).slice(0, 5);
 
-  // ── Recent Orders ──
-  const recentOrders = ordersInRange
-    .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
+  const topProducts = Array.from(productSalesMap.values())
+    .sort((a, b) => b.sold - a.sold)
     .slice(0, 5);
 
-  // ── Chart Data ──
+  const totalPurchaseAmount = purchasesAggregate._sum.totalAmount || 0;
+
+  const totalCancelAmount = cancelledOrders.reduce(
+    (acc, o) => acc + o.items.reduce((sum, item) => sum + item.price * item.quantity, 0),
+    0
+  );
+
+  // Fetch top performing staff profiles concurrently
+  const topStaffIds = staffPerformance.map(sp => sp.createdById).filter(Boolean) as string[];
+  const staffMembers = await prisma.staff.findMany({
+    where: { id: { in: topStaffIds } },
+    select: { id: true, username: true, email: true }
+  });
+
+  const topStaff = staffPerformance.map(sp => {
+    const member = staffMembers.find(m => m.id === sp.createdById);
+    return {
+      username: member?.username || "Unknown Staff",
+      email: member?.email || "",
+      orderCount: sp._count.id
+    };
+  });
+
+  // ── Chart Data Buckets ──
   const chartData: { name: string, revenue: number, sales: number }[] = [];
 
   if (filter === "weekly" || filter === "monthly") {
-    // Bucketing for Orders (Delivered Revenue) and Purchases (Outflow)
     const buckets = new Map<string, { revenue: number, purchases: number }>();
     let curr = new Date(startDate);
     while (curr <= now) {
@@ -110,25 +208,23 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
       curr.setDate(curr.getDate() + 1);
     }
     
-    ordersInRange.forEach(o => {
-      if (o.status === "DELIVERED") {
-        const key = o.createdAt.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-        const b = buckets.get(key) || { revenue: 0, purchases: 0 };
-        const itemsTotal = o.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-        const itemsCost = o.items.reduce((sum, item) => sum + ((item.product.purchasePrice || 0) * item.quantity), 0);
-        b.revenue += (itemsTotal - itemsCost);
-        buckets.set(key, b);
-      }
+    deliveredOrders.forEach(o => {
+      const key = o.createdAt.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      const b = buckets.get(key) || { revenue: 0, purchases: 0 };
+      const itemsTotal = o.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+      const itemsCost = o.items.reduce((sum, item) => sum + ((item.product?.purchasePrice || 0) * item.quantity), 0);
+      b.revenue += (itemsTotal - itemsCost);
+      buckets.set(key, b);
     });
 
-    allPurchases.forEach(p => {
+    chartPurchases.forEach(p => {
       const key = p.createdAt.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
       const b = buckets.get(key) || { revenue: 0, purchases: 0 };
       b.purchases += p.totalAmount;
       buckets.set(key, b);
     });
 
-    buckets.forEach((v, k) => chartData.push({ name: k, revenue: v.revenue, sales: v.purchases })); // Reusing "sales" key for purchases in chart
+    buckets.forEach((v, k) => chartData.push({ name: k, revenue: v.revenue, sales: v.purchases }));
   } else {
     const buckets = new Map<string, { revenue: number, purchases: number }>();
     if (filter === "yearly") {
@@ -138,18 +234,16 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
       }
     }
     
-    ordersInRange.forEach(o => {
-      if (o.status === "DELIVERED") {
-        const key = o.createdAt.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
-        const b = buckets.get(key) || { revenue: 0, purchases: 0 };
-        const itemsTotal = o.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-        const itemsCost = o.items.reduce((sum, item) => sum + ((item.product.purchasePrice || 0) * item.quantity), 0);
-        b.revenue += (itemsTotal - itemsCost);
-        buckets.set(key, b);
-      }
+    deliveredOrders.forEach(o => {
+      const key = o.createdAt.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
+      const b = buckets.get(key) || { revenue: 0, purchases: 0 };
+      const itemsTotal = o.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+      const itemsCost = o.items.reduce((sum, item) => sum + ((item.product?.purchasePrice || 0) * item.quantity), 0);
+      b.revenue += (itemsTotal - itemsCost);
+      buckets.set(key, b);
     });
 
-    allPurchases.forEach(p => {
+    chartPurchases.forEach(p => {
       const key = p.createdAt.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
       const b = buckets.get(key) || { revenue: 0, purchases: 0 };
       b.purchases += p.totalAmount;
@@ -161,26 +255,6 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
       chartData.sort((a, b) => new Date("01 " + a.name).getTime() - new Date("01 " + b.name).getTime());
     }
   }
-
-  // ── Top Performing Staff ──
-  const staffPerformanceMap = new Map<string, { username: string, email: string, orderCount: number }>();
-  ordersInRange.forEach(order => {
-    if (order.createdBy) {
-      const existing = staffPerformanceMap.get(order.createdBy.id);
-      if (existing) {
-        existing.orderCount += 1;
-      } else {
-        staffPerformanceMap.set(order.createdBy.id, {
-          username: order.createdBy.username,
-          email: order.createdBy.email,
-          orderCount: 1
-        });
-      }
-    }
-  });
-  const topStaff = Array.from(staffPerformanceMap.values())
-    .sort((a, b) => b.orderCount - a.orderCount)
-    .slice(0, 3);
 
   return (
     <DashboardClient 
