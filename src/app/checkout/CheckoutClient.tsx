@@ -208,11 +208,11 @@ export default function CheckoutClient({
       });
 
       if (result.success) {
-        setConfirmedOrderId(result.orderId || "");
+        setConfirmedOrderId((result as any).orderId || "");
         setIsSubmitted(true);
         clearCart();
       } else {
-        setErrorMsg(result.error || "Failed to finalize order. Please try again or contact support.");
+        setErrorMsg((result as any).error || "Failed to finalize order. Please try again or contact support.");
       }
     });
   };
