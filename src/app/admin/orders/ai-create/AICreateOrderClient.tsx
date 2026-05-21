@@ -114,7 +114,7 @@ export default function AICreateOrderClient({
         return;
       }
 
-      setParsedOrders(data.orders);
+      setParsedOrders(autoSelectParsedOrders(data.orders));
       // Expand all cards by default
       setExpandedCards(new Set(data.orders.map((o: ParsedOrder) => o.id)));
     } catch (err: any) {
@@ -141,11 +141,11 @@ export default function AICreateOrderClient({
         prev.map((o) =>
           o.id === orderId
             ? {
-                ...o,
-                items: o.items.map((item) =>
-                  item.id === itemId ? { ...item, [field]: value } : item
-                ),
-              }
+              ...o,
+              items: o.items.map((item) =>
+                item.id === itemId ? { ...item, [field]: value } : item
+              ),
+            }
             : o
         )
       );
@@ -156,26 +156,49 @@ export default function AICreateOrderClient({
   // ─── Select Product for Item ────────────────────────────────
   const selectProductForItem = useCallback(
     (orderId: string, itemId: string, productId: string) => {
+      if (!productId) {
+        setParsedOrders((prev) =>
+          prev.map((o) =>
+            o.id === orderId
+              ? {
+                ...o,
+                items: o.items.map((item) =>
+                  item.id === itemId
+                    ? {
+                      ...item,
+                      selectedProductId: "",
+                      selectedVariantSize: "",
+                    }
+                    : item
+                ),
+              }
+              : o
+          )
+        );
+        setProductSearches((prev) => ({ ...prev, [`${orderId}-${itemId}`]: "" }));
+        return;
+      }
+
       const product = products.find((p: any) => p.id === productId);
       if (!product) return;
-
-      const discountedPrice = getDiscountedPrice(product);
 
       setParsedOrders((prev) =>
         prev.map((o) =>
           o.id === orderId
             ? {
-                ...o,
-                items: o.items.map((item) =>
-                  item.id === itemId
-                    ? {
-                        ...item,
-                        selectedProductId: productId,
-                        unitPrice: discountedPrice,
-                      }
-                    : item
-                ),
-              }
+              ...o,
+              items: o.items.map((item) =>
+                item.id === itemId
+                  ? {
+                    ...item,
+                    selectedProductId: productId,
+                    selectedVariantSize:
+                      item.selectedVariantSize ||
+                      getMatchingVariantSize(product, item.size),
+                  }
+                  : item
+              ),
+            }
             : o
         )
       );
@@ -218,6 +241,102 @@ export default function AICreateOrderClient({
       return roundPrice(product.price - (product.price * product.discount.value) / 100);
     }
     return roundPrice(product.price - product.discount.value);
+  };
+
+  const normalizeProductText = (value: string) =>
+    value
+      .toLowerCase()
+      .replace(/[^a-z0-9\u0980-\u09ff]+/gi, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+
+  const levenshteinDistance = (left: string, right: string) => {
+    if (left === right) return 0;
+    if (!left.length) return right.length;
+    if (!right.length) return left.length;
+
+    let previousRow = Array.from({ length: right.length + 1 }, (_, index) => index);
+
+    for (let leftIndex = 0; leftIndex < left.length; leftIndex += 1) {
+      const currentRow = [leftIndex + 1];
+
+      for (let rightIndex = 0; rightIndex < right.length; rightIndex += 1) {
+        const insertionCost = currentRow[rightIndex] + 1;
+        const deletionCost = previousRow[rightIndex + 1] + 1;
+        const substitutionCost = previousRow[rightIndex] + (left[leftIndex] === right[rightIndex] ? 0 : 1);
+        currentRow.push(Math.min(insertionCost, deletionCost, substitutionCost));
+      }
+
+      previousRow = currentRow;
+    }
+
+    return previousRow[previousRow.length - 1];
+  };
+
+  const getProductMatchScore = (query: string, product: Product) => {
+    const normalizedQuery = normalizeProductText(query);
+    if (!normalizedQuery) return 0;
+
+    const productTexts = [product.name, product.team || "", product.category || ""]
+      .map(normalizeProductText)
+      .filter(Boolean);
+
+    if (productTexts.some((text) => text === normalizedQuery)) return 1;
+    if (productTexts.some((text) => text.includes(normalizedQuery) || normalizedQuery.includes(text))) return 0.95;
+
+    const combinedProductText = productTexts.join(" ");
+    const queryTokens = normalizedQuery.split(" ").filter(Boolean);
+    const productTokens = combinedProductText.split(" ").filter(Boolean);
+    const tokenHits = queryTokens.filter((token) =>
+      productTokens.some((productToken) => productToken.includes(token) || token.includes(productToken))
+    ).length;
+    const tokenScore = queryTokens.length > 0 ? tokenHits / queryTokens.length : 0;
+
+    const distance = levenshteinDistance(normalizedQuery, combinedProductText);
+    const similarity = 1 - distance / Math.max(normalizedQuery.length, combinedProductText.length, 1);
+
+    return Math.max(tokenScore, similarity);
+  };
+
+  const getBestMatchingProduct = (query: string) => {
+    let bestProduct: Product | null = null;
+    let bestScore = 0;
+
+    for (const product of products as Product[]) {
+      const score = getProductMatchScore(query, product);
+      if (score > bestScore) {
+        bestScore = score;
+        bestProduct = product;
+      }
+    }
+
+    return bestScore >= 0.72 ? bestProduct : null;
+  };
+
+  const getMatchingVariantSize = (product: Product, size: string) => {
+    const normalizedSize = normalizeProductText(size).toUpperCase();
+    const exactMatch = product.variants?.find(
+      (variant) => normalizeProductText(variant.size).toUpperCase() === normalizedSize
+    );
+    return exactMatch?.size || "";
+  };
+
+  const autoSelectParsedOrders = (orders: ParsedOrder[]) => {
+    return orders.map((order) => ({
+      ...order,
+      items: order.items.map((item) => {
+        if (item.selectedProductId) return item;
+
+        const matchedProduct = getBestMatchingProduct(item.teamName);
+        if (!matchedProduct) return item;
+
+        return {
+          ...item,
+          selectedProductId: matchedProduct.id,
+          selectedVariantSize: item.selectedVariantSize || getMatchingVariantSize(matchedProduct, item.size),
+        };
+      }),
+    }));
   };
 
   // ─── Check if order is ready to create ──────────────────────
@@ -349,7 +468,7 @@ export default function AICreateOrderClient({
   return (
     <div className="space-y-4 lg:min-h-[calc(100vh-6rem)]">
       {isParsing && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-white/90 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
           <div className="flex flex-col items-center gap-4 rounded-2xl border border-slate-200 bg-white px-8 py-10 text-center">
             <div className="flex h-16 w-16 items-center justify-center rounded-full border border-slate-200 bg-slate-50">
               <Loader2 className="h-8 w-8 animate-spin text-slate-500" />
@@ -383,15 +502,15 @@ export default function AICreateOrderClient({
             </p>
           </div>
 
-          
+
         </div>
         <Link
-              href="/admin/orders"
-              className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-slate-200 px-4 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-50 hover:text-slate-900"
-            >
-              <ArrowLeft className="w-4 h-4" />
-              Back to orders
-            </Link>
+          href="/admin/orders"
+          className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-slate-200 px-4 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-50 hover:text-slate-900"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          Back to orders
+        </Link>
       </div>
 
       <div className="bg-white border border-slate-200 rounded-2xl px-4 py-4">
@@ -439,24 +558,24 @@ export default function AICreateOrderClient({
               Create all ready ({stats.ready})
             </button>
 
-            
+
           </div>
         </div>
       </div>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(360px,0.85fr)_minmax(0,1.15fr)] lg:items-stretch">
         {/* ═══ LEFT COLUMN ═══ */}
-        <div className="space-y-4 h-full">
-         
+        <div className="space-y-4 h-full min-h-0 lg:max-h-[calc(100vh-15rem)] lg:overflow-y-auto lg:pr-2">
+
           {/* ─── Text Input Card ─── */}
           <div className="h-full rounded-2xl border border-slate-200 bg-white overflow-hidden flex flex-col">
-            
-            <div className="p-4 space-y-4 flex-1 flex flex-col">
+
+            <div className="p-4 space-y-4 flex-1 flex flex-col min-h-0">
               <div className="flex-1 min-h-[320px]">
                 <textarea
                   value={rawText}
                   onChange={(e) => setRawText(e.target.value)}
-                  placeholder="Paste your WhatsApp order messages here...&#10;&#10;Example:&#10;Order Confirmed ✅&#10;• Team & Size: Brazil Home; Size: XL&#10;• Full Name: Fahim&#10;• Phone Number: 01743704140&#10;• Delivery Address: কিশোরগঞ্জ হোসেন পুর..."
+                  placeholder="Get customer order messages and paste them here..."
                   rows={12}
                   className="h-full min-h-[320px] w-full resize-none rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 font-mono text-sm leading-relaxed text-slate-700 transition-colors focus:border-slate-400 focus:bg-white focus:outline-none"
                 />
@@ -507,11 +626,11 @@ export default function AICreateOrderClient({
         </div>
 
         {/* ═══ RIGHT COLUMN ═══ */}
-        <div className="space-y-4 h-full">
+        <div className="space-y-4 h-full min-h-0 lg:max-h-[calc(100vh-15rem)] lg:overflow-y-auto lg:pr-2">
           {/* ─── Parsed Order Cards ─── */}
           {parsedOrders.length > 0 && !isParsing && (
-            <div className="space-y-4">
-              
+            <div className="space-y-4 pb-4">
+
 
               {parsedOrders.map((order, orderIdx) => (
                 <OrderCard
@@ -598,35 +717,35 @@ function OrderCard({
     parsed: {
       bg: "bg-white",
       border: "border-slate-200",
-      badge: "bg-slate-100 text-slate-700",
+      badge: "border-slate-200 bg-slate-50 text-slate-600",
       label: "Needs Review",
       icon: <Edit3 className="w-3 h-3" />,
     },
     ready: {
-      bg: "bg-white",
+      bg: "bg-slate-50",
       border: "border-slate-200",
-      badge: "bg-slate-100 text-slate-700",
+      badge: "border-emerald-200 bg-emerald-50 text-emerald-700",
       label: "Ready",
       icon: <Check className="w-3 h-3" />,
     },
     creating: {
       bg: "bg-white",
       border: "border-slate-200",
-      badge: "bg-slate-100 text-slate-700",
+      badge: "border-slate-200 bg-slate-50 text-slate-600",
       label: "Creating...",
       icon: <Loader2 className="w-3 h-3 animate-spin" />,
     },
     created: {
       bg: "bg-white",
       border: "border-slate-200",
-      badge: "bg-slate-200 text-slate-700",
+      badge: "border-slate-200 bg-slate-100 text-slate-700",
       label: "Created ✓",
       icon: <CheckCircle className="w-3 h-3" />,
     },
     error: {
       bg: "bg-white",
       border: "border-slate-200",
-      badge: "bg-slate-100 text-slate-700",
+      badge: "border-rose-200 bg-rose-50 text-rose-700",
       label: "Error",
       icon: <AlertTriangle className="w-3 h-3" />,
     },
@@ -642,9 +761,8 @@ function OrderCard({
 
   return (
     <div
-      className={`rounded-2xl border ${config.border} ${config.bg} overflow-hidden transition-colors duration-200 ${
-        order.status === "created" ? "opacity-70" : ""
-      }`}
+      className={`rounded-2xl border ${config.border} ${config.bg} overflow-hidden transition-colors duration-200 ${order.status === "created" ? "opacity-70" : ""
+        }`}
     >
       {/* Card Header */}
       <div
@@ -659,7 +777,7 @@ function OrderCard({
             <p className="text-sm font-semibold text-slate-900 flex items-center gap-2">
               {order.customerName || "Unknown Customer"}
               <span
-                className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wide ${config.badge}`}
+                className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[9px] font-medium uppercase tracking-[0.16em] ${config.badge}`}
               >
                 {config.icon}
                 {config.label}
@@ -797,7 +915,7 @@ function OrderCard({
                         <span className="text-xs font-mono font-bold text-slate-800">
                           {formatBDT(item.unitPrice * item.quantity)}
                         </span>
-                        {order.status !== "created" && (
+                        {order.status !== "created" && order.items.length > 1 && (
                           <button
                             onClick={() => onDeleteItem(order.id, item.id)}
                             className="p-1 text-slate-300 hover:text-slate-700 transition-colors"
@@ -913,13 +1031,12 @@ function OrderCard({
                                         v.size
                                       )
                                     }
-                                    className={`px-2 py-1 rounded text-[10px] font-black border transition-all ${
-                                      isSelected
-                                        ? "bg-slate-900 border-slate-900 text-white"
-                                        : v.stock <= 0
+                                    className={`px-2 py-1 rounded text-[10px] font-black border transition-all ${isSelected
+                                      ? "bg-slate-900 border-slate-900 text-white"
+                                      : v.stock <= 0
                                         ? "bg-slate-100 border-slate-200 text-slate-400"
                                         : "bg-white border-slate-200 text-slate-600 hover:border-slate-400"
-                                    }`}
+                                      }`}
                                   >
                                     {v.size}
                                     <span className="ml-0.5 opacity-60">({v.stock})</span>

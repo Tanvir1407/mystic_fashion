@@ -2,6 +2,7 @@ import { GoogleGenAI } from "@google/genai";
 import { NextRequest, NextResponse } from "next/server";
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-2.5-flash";
 
 const SYSTEM_PROMPT = `You are an expert order parser for a Bangladeshi jersey/sportswear e-commerce store called "Mystic Fashion". 
 
@@ -23,6 +24,12 @@ RULES:
 13. "Payable" / "Total Payable" = amount customer needs to pay on delivery (COD)
 14. If a customer orders multiple pieces of the same item, capture quantity correctly
 15. If multiple different teams/jerseys are in one order, create separate items for each
+16. Keep the customer's quoted/chat price as the final sell price in unitPrice, even if it differs from the catalog or system price
+17. Normalize teamName to a clean canonical product name for matching, but do not inflate the price above the chat value
+18. If the message includes a higher catalog/system price and a lower final chat price, preserve the lower final price in unitPrice and mention the difference in remarks when useful
+19. If the jersey edition is not explicitly mentioned, do not default to fan edition; use the quoted/chat price to infer the most likely edition
+20. When a base team name is generic (for example, "Argentina away kit") and the quoted price is closer to player edition pricing than fan edition pricing, normalize teamName as the player edition variant for matching
+21. If the quoted price is much closer to fan pricing, only then use fan edition; otherwise prefer player edition when the message is ambiguous
 
 For each order, extract:
 - customerName: Full name of the customer
@@ -72,7 +79,7 @@ export async function POST(request: NextRequest) {
     const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
 
     const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
+      model: GEMINI_MODEL,
       contents: [
         {
           role: "user",
@@ -85,7 +92,7 @@ export async function POST(request: NextRequest) {
       ],
       config: {
         temperature: 0.1,
-        maxOutputTokens: 8192,
+        maxOutputTokens: 16384,
       },
     });
 
@@ -126,18 +133,18 @@ export async function POST(request: NextRequest) {
       address: String(order.address || "").trim(),
       items: Array.isArray(order.items)
         ? order.items.map((item: any, itemIdx: number) => ({
-            id: `ai-item-${Date.now()}-${index}-${itemIdx}`,
-            teamName: String(item.teamName || "").trim(),
-            size: String(item.size || "M").trim().toUpperCase(),
-            quantity: Math.max(1, parseInt(item.quantity) || 1),
-            unitPrice: Math.max(0, parseFloat(item.unitPrice) || 0),
-            hasPrint: Boolean(item.hasPrint),
-            printName: String(item.printName || "").trim(),
-            printNumber: String(item.printNumber || "").trim(),
-            hasBadge: Boolean(item.hasBadge),
-            selectedProductId: "",
-            selectedVariantSize: "",
-          }))
+          id: `ai-item-${Date.now()}-${index}-${itemIdx}`,
+          teamName: String(item.teamName || "").trim(),
+          size: String(item.size || "M").trim().toUpperCase(),
+          quantity: Math.max(1, parseInt(item.quantity) || 1),
+          unitPrice: Math.max(0, parseFloat(item.unitPrice) || 0),
+          hasPrint: Boolean(item.hasPrint),
+          printName: String(item.printName || "").trim(),
+          printNumber: String(item.printNumber || "").trim(),
+          hasBadge: Boolean(item.hasBadge),
+          selectedProductId: "",
+          selectedVariantSize: "",
+        }))
         : [],
       deliveryCharge: Math.max(0, parseFloat(order.deliveryCharge) || 0),
       printCost: Math.max(0, parseFloat(order.printCost) || 0),

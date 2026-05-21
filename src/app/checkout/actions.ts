@@ -79,6 +79,8 @@ export async function placeOrderAction(payload: {
         customerId = customer.id;
       }
 
+      const sanitizedCoupon = payload.couponCode?.trim().toUpperCase() || null;
+
       // 1. Create the order & items
       const order = await tx.order.create({
         data: {
