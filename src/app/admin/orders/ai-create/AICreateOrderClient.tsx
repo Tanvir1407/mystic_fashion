@@ -408,7 +408,7 @@ export default function AICreateOrderClient({
         totalAmount,
         advancePaid: order.advance,
         discountAmount: 0,
-        remarks: order.remarks || `AI-parsed order | ${order.deliveryType}`,
+        remarks: order.remarks,
         items,
         hasBackorderItems: false,
       });
