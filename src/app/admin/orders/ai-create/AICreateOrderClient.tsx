@@ -298,12 +298,25 @@ export default function AICreateOrderClient({
     return Math.max(tokenScore, similarity);
   };
 
-  const getBestMatchingProduct = (query: string) => {
+  const getPriceMatchScore = (quotedPrice: number, catalogPrice: number) => {
+    if (quotedPrice <= 0 || catalogPrice <= 0) return 0.5;
+    const diff = Math.abs(catalogPrice - quotedPrice);
+    const baseline = Math.max(quotedPrice, catalogPrice, 1);
+    return Math.max(0, 1 - diff / baseline);
+  };
+
+  const getBestMatchingProduct = (query: string, quotedPrice: number) => {
     let bestProduct: Product | null = null;
     let bestScore = 0;
 
     for (const product of products as Product[]) {
-      const score = getProductMatchScore(query, product);
+      const textScore = getProductMatchScore(query, product);
+      if (textScore < 0.55) continue;
+
+      const catalogPrice = getDiscountedPrice(product);
+      const priceScore = getPriceMatchScore(quotedPrice, catalogPrice);
+      const score = textScore * 0.7 + priceScore * 0.3;
+
       if (score > bestScore) {
         bestScore = score;
         bestProduct = product;
@@ -327,7 +340,7 @@ export default function AICreateOrderClient({
       items: order.items.map((item) => {
         if (item.selectedProductId) return item;
 
-        const matchedProduct = getBestMatchingProduct(item.teamName);
+        const matchedProduct = getBestMatchingProduct(item.teamName, item.unitPrice);
         if (!matchedProduct) return item;
 
         return {
