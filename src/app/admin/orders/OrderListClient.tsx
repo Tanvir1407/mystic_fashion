@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import OrderRowClient from "./OrderRowClient";
 import type { OrderStatus } from "@/generated/prisma/client";
 import { bulkUpdateOrderStatus, bulkDeleteOrders } from "../actions";
-import { Filter, Plus, Printer, Trash2, Search as SearchIcon, X, Truck } from "lucide-react";
+import { Filter, Plus, Printer, Trash2, Search as SearchIcon, X, Truck, Sparkles } from "lucide-react";
 import InvoicePrintView from "./InvoicePrintView";
 import ThermalPrintView from "./ThermalPrintView";
 import PathaoReviewModal from "./PathaoReviewModal";
@@ -185,13 +185,22 @@ export default function OrderListClient({
             <p className="text-sm text-slate-500 mt-1">Manage customer orders and fulfillments.</p>
           </div>
           {canCreate && (
-            <button
-              onClick={() => router.push("/admin/orders/create")}
-              className="flex items-center gap-2 px-4 py-2.5 bg-slate-900 text-white text-sm font-semibold rounded-lg hover:bg-slate-800 transition-colors shadow-sm whitespace-nowrap"
-            >
-              <Plus className="w-4 h-4" />
-              Create Order
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => router.push("/admin/orders/ai-create")}
+                className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-violet-600 to-indigo-600 text-white text-sm font-semibold rounded-lg hover:from-violet-700 hover:to-indigo-700 transition-all shadow-sm shadow-violet-200 whitespace-nowrap"
+              >
+                <Sparkles className="w-4 h-4" />
+                AI Create
+              </button>
+              <button
+                onClick={() => router.push("/admin/orders/create")}
+                className="flex items-center gap-2 px-4 py-2.5 bg-slate-900 text-white text-sm font-semibold rounded-lg hover:bg-slate-800 transition-colors shadow-sm whitespace-nowrap"
+              >
+                <Plus className="w-4 h-4" />
+                Create Order
+              </button>
+            </div>
           )}
         </div>
 
