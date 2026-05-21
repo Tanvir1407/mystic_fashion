@@ -22,6 +22,7 @@ import {
   Zap,
   Check,
   Copy,
+  ChartArea,
 } from "lucide-react";
 import Link from "next/link";
 import { createAdminOrder } from "../../actions";
@@ -346,70 +347,130 @@ export default function AICreateOrderClient({
 
   // ─── RENDER ─────────────────────────────────────────────────
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 lg:min-h-[calc(100vh-6rem)]">
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
+        <div className="flex justify-between items-center gap-3">
           <Link
             href="/admin/orders"
-            className="p-2 rounded-lg bg-white border border-slate-200 hover:bg-slate-50 transition-colors"
+            className="p-2 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 transition-colors"
           >
             <ArrowLeft className="w-4 h-4 text-slate-600" />
           </Link>
           <div>
             <h1 className="text-2xl font-bold text-slate-900 tracking-tight flex items-center gap-2">
-              <Sparkles className="w-6 h-6 text-violet-500" />
+              <Sparkles className="w-6 h-6 text-slate-500" />
               AI Order Creator
             </h1>
             <p className="text-slate-500 text-sm mt-0.5">
               Paste WhatsApp order messages • AI parses them into orders
             </p>
           </div>
+
+          
+        </div>
+        <Link
+              href="/admin/orders"
+              className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-slate-200 px-4 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-50 hover:text-slate-900"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              Back to orders
+            </Link>
+      </div>
+
+      <div className="bg-white border border-slate-200 rounded-2xl px-4 py-4">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <Package className="w-4 h-4 text-slate-500" />
+              <h2 className="text-sm font-semibold text-slate-900">AI Summary</h2>
+            </div>
+            <p className="text-xs text-slate-500">
+              Compact order status, ready count, and creation controls.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:flex lg:flex-1 lg:justify-center">
+            <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-center min-w-[84px]">
+              <p className="text-lg font-semibold text-slate-900">{stats.total}</p>
+              <p className="text-[10px] uppercase tracking-wider text-slate-500">Orders</p>
+            </div>
+            <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-center min-w-[84px]">
+              <p className="text-lg font-semibold text-slate-900">{stats.totalItems}</p>
+              <p className="text-[10px] uppercase tracking-wider text-slate-500">Items</p>
+            </div>
+            <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-center min-w-[84px]">
+              <p className="text-lg font-semibold text-slate-900">{stats.ready}</p>
+              <p className="text-[10px] uppercase tracking-wider text-slate-500">Ready</p>
+            </div>
+            <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-center min-w-[84px]">
+              <p className="text-lg font-semibold text-slate-900">{formatBDT(stats.totalRevenue)}</p>
+              <p className="text-[10px] uppercase tracking-wider text-slate-500">Revenue</p>
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-2 sm:flex-row lg:flex-col xl:flex-row">
+            <button
+              onClick={handleCreateAll}
+              disabled={stats.ready === 0 || isPending}
+              className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400"
+            >
+              {isPending ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <CheckCircle className="w-4 h-4" />
+              )}
+              Create all ready ({stats.ready})
+            </button>
+
+            
+          </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(360px,0.85fr)_minmax(0,1.15fr)] lg:items-stretch">
         {/* ═══ LEFT COLUMN ═══ */}
-        <div className="lg:col-span-2 space-y-6">
+        <div className="space-y-4 h-full">
+          <h2 className="flex items-center gap-2 text-sm font-semibold text-slate-900">
+            <ChartArea className="w-4 h-4 text-slate-500" />
+            Paste Order Messages
+          </h2>
           {/* ─── Text Input Card ─── */}
-          <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-            <div className="px-6 py-4 border-b border-slate-100 bg-gradient-to-r from-violet-50 to-indigo-50 flex items-center gap-2">
-              <Sparkles className="w-4 h-4 text-violet-500" />
-              <h2 className="text-sm font-bold text-slate-800 uppercase tracking-wider">
-                Paste Order Messages
-              </h2>
-            </div>
-            <div className="p-6 space-y-4">
-              <textarea
-                value={rawText}
-                onChange={(e) => setRawText(e.target.value)}
-                placeholder="Paste your WhatsApp order messages here...&#10;&#10;Example:&#10;Order Confirmed ✅&#10;• Team & Size: Brazil Home; Size: XL&#10;• Full Name: Fahim&#10;• Phone Number: 01743704140&#10;• Delivery Address: কিশোরগঞ্জ হোসেন পুর..."
-                rows={10}
-                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm leading-relaxed focus:bg-white focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500 transition-all resize-y font-mono"
-              />
+          <div className="h-full rounded-2xl border border-slate-200 bg-white overflow-hidden flex flex-col">
+            
+            <div className="p-4 space-y-4 flex-1 flex flex-col">
+              <div className="flex-1 min-h-[320px]">
+                <textarea
+                  value={rawText}
+                  onChange={(e) => setRawText(e.target.value)}
+                  placeholder="Paste your WhatsApp order messages here...&#10;&#10;Example:&#10;Order Confirmed ✅&#10;• Team & Size: Brazil Home; Size: XL&#10;• Full Name: Fahim&#10;• Phone Number: 01743704140&#10;• Delivery Address: কিশোরগঞ্জ হোসেন পুর..."
+                  rows={12}
+                  className="h-full min-h-[320px] w-full resize-none rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 font-mono text-sm leading-relaxed text-slate-700 transition-colors focus:border-slate-400 focus:bg-white focus:outline-none"
+                />
+              </div>
 
               {parseError && (
-                <div className="flex items-start gap-2 p-3 bg-red-50 border border-red-100 rounded-lg">
-                  <AlertTriangle className="w-4 h-4 text-red-500 mt-0.5 flex-shrink-0" />
-                  <p className="text-sm text-red-700">{parseError}</p>
+                <div className="flex items-start gap-2 rounded-xl border border-slate-200 bg-slate-50 p-3">
+                  <AlertTriangle className="w-4 h-4 text-slate-500 mt-0.5 flex-shrink-0" />
+                  <p className="text-sm text-slate-700">{parseError}</p>
                 </div>
               )}
 
-              <div className="flex items-center gap-3">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
                 <button
                   onClick={handleParse}
                   disabled={isParsing || !rawText.trim()}
-                  className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-violet-600 to-indigo-600 text-white text-sm font-bold rounded-xl hover:from-violet-700 hover:to-indigo-700 disabled:from-slate-300 disabled:to-slate-300 disabled:cursor-not-allowed transition-all shadow-lg shadow-violet-200 active:scale-[0.98]"
+                  className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-slate-900 px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400"
                 >
                   {isParsing ? (
                     <>
                       <Loader2 className="w-4 h-4 animate-spin" />
-                      AI is parsing...
+                      Parsing...
                     </>
                   ) : (
                     <>
                       <Sparkles className="w-4 h-4" />
-                      Parse with AI
+                      Parse messages
                     </>
                   )}
                 </button>
@@ -420,10 +481,10 @@ export default function AICreateOrderClient({
                       setParsedOrders([]);
                       setParseError("");
                     }}
-                    className="flex items-center gap-1.5 px-4 py-3 text-slate-500 hover:text-slate-700 text-sm font-medium transition-colors"
+                    className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-slate-200 px-4 py-3 text-sm font-medium text-slate-500 transition-colors hover:bg-slate-50 hover:text-slate-900"
                   >
                     <RotateCcw className="w-3.5 h-3.5" />
-                    Clear Results
+                    Clear results
                   </button>
                 )}
               </div>
@@ -432,28 +493,28 @@ export default function AICreateOrderClient({
 
           {/* ─── Parsing Animation ─── */}
           {isParsing && (
-            <div className="flex flex-col items-center justify-center py-12 space-y-4">
-              <div className="relative">
-                <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center shadow-xl shadow-violet-200 animate-pulse">
-                  <Sparkles className="w-8 h-8 text-white" />
-                </div>
-                <div className="absolute -inset-1 bg-gradient-to-br from-violet-500/20 to-indigo-600/20 rounded-2xl blur-xl animate-pulse" />
+            <div className="flex flex-col items-center justify-center rounded-2xl border border-slate-200 bg-white py-10 space-y-3">
+              <div className="w-12 h-12 rounded-xl border border-slate-200 bg-slate-50 flex items-center justify-center animate-pulse">
+                <Sparkles className="w-6 h-6 text-slate-500" />
               </div>
               <div className="text-center">
-                <p className="text-sm font-bold text-slate-800">AI is analyzing your messages...</p>
+                <p className="text-sm font-semibold text-slate-900">AI is analyzing your messages...</p>
                 <p className="text-xs text-slate-500 mt-1">
                   Extracting customer info, products, sizes, and pricing
                 </p>
               </div>
             </div>
           )}
+        </div>
 
+        {/* ═══ RIGHT COLUMN ═══ */}
+        <div className="space-y-4 h-full">
           {/* ─── Parsed Order Cards ─── */}
           {parsedOrders.length > 0 && !isParsing && (
             <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider flex items-center gap-2">
-                  <Package className="w-4 h-4 text-violet-500" />
+                <h3 className="flex items-center gap-2 text-sm font-semibold text-slate-900 uppercase tracking-wider">
+                  <Package className="w-4 h-4 text-slate-500" />
                   Parsed Orders ({parsedOrders.length})
                 </h3>
               </div>
@@ -482,98 +543,17 @@ export default function AICreateOrderClient({
               ))}
             </div>
           )}
-        </div>
 
-        {/* ═══ RIGHT COLUMN ═══ */}
-        <div className="lg:col-span-1">
-          <div className="sticky top-6 space-y-4">
-            {/* Summary Card */}
-            <div className="bg-white rounded-xl border border-slate-200 shadow-md overflow-hidden">
-              <div className="px-6 py-4 border-b border-slate-100 bg-slate-900 text-white flex items-center justify-between">
-                <h2 className="text-sm font-black uppercase tracking-widest">AI Summary</h2>
-                <Zap className="w-4 h-4 text-yellow-400" />
-              </div>
-
-              <div className="p-6 space-y-4">
-                {parsedOrders.length === 0 ? (
-                  <div className="text-center py-6">
-                    <Sparkles className="w-10 h-10 text-slate-200 mx-auto mb-3" />
-                    <p className="text-sm text-slate-400 font-medium">
-                      Paste messages & click "Parse with AI"
-                    </p>
-                  </div>
-                ) : (
-                  <>
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="bg-slate-50 rounded-lg p-3 text-center">
-                        <p className="text-2xl font-black text-slate-900">{stats.total}</p>
-                        <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-                          Orders
-                        </p>
-                      </div>
-                      <div className="bg-slate-50 rounded-lg p-3 text-center">
-                        <p className="text-2xl font-black text-slate-900">{stats.totalItems}</p>
-                        <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-                          Items
-                        </p>
-                      </div>
-                      <div className="bg-emerald-50 rounded-lg p-3 text-center">
-                        <p className="text-2xl font-black text-emerald-600">{stats.created}</p>
-                        <p className="text-[10px] font-bold text-emerald-500 uppercase tracking-wider">
-                          Created
-                        </p>
-                      </div>
-                      <div className="bg-amber-50 rounded-lg p-3 text-center">
-                        <p className="text-2xl font-black text-amber-600">{stats.ready}</p>
-                        <p className="text-[10px] font-bold text-amber-500 uppercase tracking-wider">
-                          Ready
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="pt-3 border-t border-slate-100 space-y-2">
-                      <div className="flex justify-between items-center">
-                        <span className="text-xs text-slate-500 font-medium">Total Revenue</span>
-                        <span className="text-lg font-black text-slate-900 font-mono">
-                          {formatBDT(stats.totalRevenue)}
-                        </span>
-                      </div>
-                    </div>
-
-                    <div className="pt-4 space-y-3">
-                      <button
-                        onClick={handleCreateAll}
-                        disabled={stats.ready === 0 || isPending}
-                        className="w-full flex items-center justify-center gap-2 px-4 py-3.5 bg-gradient-to-r from-emerald-600 to-green-600 text-white text-sm font-black rounded-xl shadow-lg shadow-emerald-200 hover:from-emerald-700 hover:to-green-700 disabled:from-slate-300 disabled:to-slate-300 disabled:shadow-none disabled:cursor-not-allowed transition-all active:scale-[0.98]"
-                      >
-                        {isPending ? (
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                        ) : (
-                          <CheckCircle className="w-4 h-4" />
-                        )}
-                        CREATE ALL READY ({stats.ready})
-                      </button>
-
-                      <Link
-                        href="/admin/orders"
-                        className="w-full h-12 flex items-center justify-center gap-2 text-slate-500 hover:text-slate-800 text-xs font-bold transition-colors"
-                      >
-                        <ArrowLeft className="w-4 h-4" />
-                        Back to Orders
-                      </Link>
-                    </div>
-                  </>
-                )}
-              </div>
-
-              <div className="px-6 py-4 bg-slate-50 border-t border-slate-100">
-                <div className="flex items-center gap-3 text-[10px] text-slate-400">
-                  <div className="w-2 h-2 rounded-full bg-violet-500 animate-pulse" />
-                  <span>AI ENGINE POWERED BY GEMINI</span>
-                </div>
+          {parsedOrders.length === 0 && !isParsing && (
+            <div className="flex h-full min-h-[320px] items-center justify-center rounded-2xl border border-dashed border-slate-200 bg-white px-6 py-12 text-center">
+              <div className="space-y-2 max-w-sm">
+                <p className="text-sm font-medium text-slate-900">No parsed orders yet</p>
+                <p className="text-xs text-slate-500">
+                  Paste messages on the left to see orders appear here.
+                </p>
               </div>
             </div>
-          </div>
+          )}
         </div>
       </div>
     </div>
@@ -622,37 +602,37 @@ function OrderCard({
 }) {
   const statusConfig = {
     parsed: {
-      bg: "bg-amber-50",
-      border: "border-amber-200",
-      badge: "bg-amber-100 text-amber-700",
+      bg: "bg-white",
+      border: "border-slate-200",
+      badge: "bg-slate-100 text-slate-700",
       label: "Needs Review",
       icon: <Edit3 className="w-3 h-3" />,
     },
     ready: {
-      bg: "bg-emerald-50",
-      border: "border-emerald-200",
-      badge: "bg-emerald-100 text-emerald-700",
+      bg: "bg-white",
+      border: "border-slate-200",
+      badge: "bg-slate-100 text-slate-700",
       label: "Ready",
       icon: <Check className="w-3 h-3" />,
     },
     creating: {
-      bg: "bg-blue-50",
-      border: "border-blue-200",
-      badge: "bg-blue-100 text-blue-700",
+      bg: "bg-white",
+      border: "border-slate-200",
+      badge: "bg-slate-100 text-slate-700",
       label: "Creating...",
       icon: <Loader2 className="w-3 h-3 animate-spin" />,
     },
     created: {
-      bg: "bg-emerald-50",
-      border: "border-emerald-300",
-      badge: "bg-emerald-500 text-white",
+      bg: "bg-white",
+      border: "border-slate-200",
+      badge: "bg-slate-200 text-slate-700",
       label: "Created ✓",
       icon: <CheckCircle className="w-3 h-3" />,
     },
     error: {
-      bg: "bg-red-50",
-      border: "border-red-200",
-      badge: "bg-red-100 text-red-700",
+      bg: "bg-white",
+      border: "border-slate-200",
+      badge: "bg-slate-100 text-slate-700",
       label: "Error",
       icon: <AlertTriangle className="w-3 h-3" />,
     },
@@ -668,21 +648,21 @@ function OrderCard({
 
   return (
     <div
-      className={`rounded-xl border-2 ${config.border} ${config.bg} overflow-hidden transition-all duration-200 ${
+      className={`rounded-2xl border ${config.border} ${config.bg} overflow-hidden transition-colors duration-200 ${
         order.status === "created" ? "opacity-70" : ""
       }`}
     >
       {/* Card Header */}
       <div
-        className="px-5 py-3.5 flex items-center justify-between cursor-pointer hover:bg-white/50 transition-colors"
+        className="px-4 py-3 flex items-center justify-between cursor-pointer hover:bg-slate-50 transition-colors"
         onClick={onToggle}
       >
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-white border border-slate-200 flex items-center justify-center text-sm font-black text-slate-600 shadow-sm">
+          <div className="w-8 h-8 rounded-lg border border-slate-200 bg-slate-50 flex items-center justify-center text-sm font-semibold text-slate-700">
             {orderIdx + 1}
           </div>
           <div>
-            <p className="text-sm font-bold text-slate-900 flex items-center gap-2">
+            <p className="text-sm font-semibold text-slate-900 flex items-center gap-2">
               {order.customerName || "Unknown Customer"}
               <span
                 className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wide ${config.badge}`}
@@ -696,7 +676,7 @@ function OrderCard({
         </div>
 
         <div className="flex items-center gap-2">
-          <span className="text-sm font-black text-slate-900 font-mono">
+          <span className="text-sm font-semibold text-slate-900 font-mono">
             {formatBDT(order.totalPayable)}
           </span>
           {order.status !== "created" && (
@@ -705,7 +685,7 @@ function OrderCard({
                 e.stopPropagation();
                 onDelete();
               }}
-              className="p-1.5 text-slate-300 hover:text-red-500 transition-colors"
+              className="p-1.5 text-slate-300 hover:text-slate-700 transition-colors"
             >
               <Trash2 className="w-3.5 h-3.5" />
             </button>
@@ -720,12 +700,12 @@ function OrderCard({
 
       {/* Card Body */}
       {isExpanded && (
-        <div className="border-t border-slate-200/60 bg-white">
-          <div className="p-5 space-y-5">
+        <div className="border-t border-slate-200 bg-white">
+          <div className="p-4 space-y-4">
             {/* ─── Customer Info ─── */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <div className="space-y-1">
-                <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">
+                <label className="text-[9px] font-semibold text-slate-400 uppercase tracking-widest">
                   Customer Name
                 </label>
                 <div className="relative">
@@ -737,12 +717,12 @@ function OrderCard({
                       onUpdateOrder(order.id, "customerName", e.target.value)
                     }
                     disabled={order.status === "created"}
-                    className="w-full pl-8 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm font-medium focus:bg-white focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500 transition-all disabled:opacity-50"
+                    className="w-full rounded-lg border border-slate-200 bg-white pl-8 pr-3 py-2 text-sm font-medium text-slate-700 transition-colors focus:border-slate-400 focus:outline-none disabled:opacity-50"
                   />
                 </div>
               </div>
               <div className="space-y-1">
-                <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">
+                <label className="text-[9px] font-semibold text-slate-400 uppercase tracking-widest">
                   Phone
                 </label>
                 <div className="relative">
@@ -754,12 +734,12 @@ function OrderCard({
                       onUpdateOrder(order.id, "phone", e.target.value)
                     }
                     disabled={order.status === "created"}
-                    className="w-full pl-8 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm font-mono font-medium focus:bg-white focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500 transition-all disabled:opacity-50"
+                    className="w-full rounded-lg border border-slate-200 bg-white pl-8 pr-3 py-2 text-sm font-mono font-medium text-slate-700 transition-colors focus:border-slate-400 focus:outline-none disabled:opacity-50"
                   />
                 </div>
               </div>
               <div className="space-y-1 md:col-span-2">
-                <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">
+                <label className="text-[9px] font-semibold text-slate-400 uppercase tracking-widest">
                   Delivery Address
                 </label>
                 <div className="relative">
@@ -771,7 +751,7 @@ function OrderCard({
                       onUpdateOrder(order.id, "address", e.target.value)
                     }
                     disabled={order.status === "created"}
-                    className="w-full pl-8 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm font-medium focus:bg-white focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500 transition-all disabled:opacity-50"
+                    className="w-full rounded-lg border border-slate-200 bg-white pl-8 pr-3 py-2 text-sm font-medium text-slate-700 transition-colors focus:border-slate-400 focus:outline-none disabled:opacity-50"
                   />
                 </div>
               </div>
@@ -779,7 +759,7 @@ function OrderCard({
 
             {/* ─── Items ─── */}
             <div className="space-y-3">
-              <h4 className="text-[9px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
+              <h4 className="text-[9px] font-semibold text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
                 <ShoppingBag className="w-3 h-3" />
                 Items ({order.items.length})
               </h4>
@@ -794,7 +774,7 @@ function OrderCard({
                 return (
                   <div
                     key={item.id}
-                    className="bg-slate-50 rounded-lg border border-slate-100 p-3 space-y-3"
+                    className="rounded-xl border border-slate-200 bg-slate-50 p-3 space-y-3"
                   >
                     {/* Item Header: AI parsed info */}
                     <div className="flex items-start justify-between gap-2">
@@ -809,12 +789,12 @@ function OrderCard({
                           </span>
                         </p>
                         {item.hasPrint && (
-                          <p className="text-[10px] text-indigo-600 font-bold mt-0.5">
+                          <p className="text-[10px] text-slate-600 font-medium mt-0.5">
                             🖨️ Print: {item.printName} {item.printNumber}
                           </p>
                         )}
                         {item.hasBadge && (
-                          <p className="text-[10px] text-amber-600 font-bold mt-0.5">
+                          <p className="text-[10px] text-slate-600 font-medium mt-0.5">
                             🏅 Badge
                           </p>
                         )}
@@ -826,7 +806,7 @@ function OrderCard({
                         {order.status !== "created" && (
                           <button
                             onClick={() => onDeleteItem(order.id, item.id)}
-                            className="p-1 text-slate-300 hover:text-red-500 transition-colors"
+                            className="p-1 text-slate-300 hover:text-slate-700 transition-colors"
                           >
                             <X className="w-3 h-3" />
                           </button>
@@ -838,13 +818,13 @@ function OrderCard({
                     {order.status !== "created" && (
                       <div className="relative">
                         {selectedProduct ? (
-                          <div className="flex items-center gap-2 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2">
-                            <Check className="w-3.5 h-3.5 text-emerald-500 flex-shrink-0" />
+                          <div className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2">
+                            <Check className="w-3.5 h-3.5 text-slate-500 flex-shrink-0" />
                             <div className="flex-1 min-w-0">
-                              <p className="text-xs font-bold text-emerald-800 truncate">
+                              <p className="text-xs font-semibold text-slate-800 truncate">
                                 {selectedProduct.name}
                               </p>
-                              <p className="text-[10px] text-emerald-600">
+                              <p className="text-[10px] text-slate-500">
                                 {formatBDT(getDiscountedPrice(selectedProduct))} •{" "}
                                 {item.selectedVariantSize || item.size}
                               </p>
@@ -853,7 +833,7 @@ function OrderCard({
                               onClick={() =>
                                 onSelectProduct(order.id, item.id, "")
                               }
-                              className="p-1 text-emerald-400 hover:text-red-500 transition-colors"
+                              className="p-1 text-slate-300 hover:text-slate-700 transition-colors"
                             >
                               <X className="w-3 h-3" />
                             </button>
@@ -872,13 +852,13 @@ function OrderCard({
                                   }))
                                 }
                                 placeholder={`Search product for "${item.teamName}"...`}
-                                className="w-full pl-8 pr-3 py-2 bg-white border-2 border-dashed border-amber-300 rounded-lg text-xs font-medium focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 transition-all placeholder:text-amber-400"
+                                className="w-full rounded-lg border border-dashed border-slate-300 bg-white pl-8 pr-3 py-2 text-xs font-medium text-slate-700 transition-colors focus:border-slate-400 focus:outline-none placeholder:text-slate-400"
                               />
                             </div>
 
                             {/* Search Results */}
                             {filteredProds.length > 0 && (
-                              <div className="mt-1 bg-white border border-slate-200 rounded-lg shadow-lg overflow-hidden z-10 relative">
+                              <div className="relative z-10 mt-1 overflow-hidden rounded-lg border border-slate-200 bg-white">
                                 <div className="max-h-[140px] overflow-y-auto">
                                   {filteredProds.map((p: any) => (
                                     <button
@@ -887,7 +867,7 @@ function OrderCard({
                                       onClick={() =>
                                         onSelectProduct(order.id, item.id, p.id)
                                       }
-                                      className="w-full text-left px-3 py-2 flex items-center gap-2 hover:bg-violet-50 transition-colors border-b border-slate-50 last:border-0"
+                                      className="w-full border-b border-slate-100 px-3 py-2 text-left transition-colors hover:bg-slate-50 last:border-0 flex items-center gap-2"
                                     >
                                       <div className="w-7 h-7 rounded bg-slate-100 flex-shrink-0 overflow-hidden border border-slate-200">
                                         {p.images?.[0] ? (
@@ -903,10 +883,10 @@ function OrderCard({
                                         )}
                                       </div>
                                       <div className="flex-1 min-w-0">
-                                        <p className="text-xs font-bold text-slate-800 truncate">
+                                        <p className="text-xs font-semibold text-slate-800 truncate">
                                           {p.name}
                                         </p>
-                                        <p className="text-[10px] text-slate-400">
+                                        <p className="text-[10px] text-slate-500">
                                           {p.team || p.category} •{" "}
                                           {formatBDT(getDiscountedPrice(p))}
                                         </p>
@@ -941,10 +921,10 @@ function OrderCard({
                                     }
                                     className={`px-2 py-1 rounded text-[10px] font-black border transition-all ${
                                       isSelected
-                                        ? "bg-violet-600 border-violet-600 text-white"
+                                        ? "bg-slate-900 border-slate-900 text-white"
                                         : v.stock <= 0
-                                        ? "bg-orange-50 border-orange-200 text-orange-600"
-                                        : "bg-white border-slate-200 text-slate-600 hover:border-violet-400"
+                                        ? "bg-slate-100 border-slate-200 text-slate-400"
+                                        : "bg-white border-slate-200 text-slate-600 hover:border-slate-400"
                                     }`}
                                   >
                                     {v.size}
@@ -961,7 +941,7 @@ function OrderCard({
                     {order.status !== "created" && (
                       <div className="grid grid-cols-2 gap-2">
                         <div className="space-y-0.5">
-                          <label className="text-[8px] font-black text-slate-400 uppercase">
+                          <label className="text-[8px] font-semibold text-slate-400 uppercase">
                             Qty
                           </label>
                           <input
@@ -976,11 +956,11 @@ function OrderCard({
                                 parseInt(e.target.value) || 1
                               )
                             }
-                            className="w-full px-2 py-1.5 bg-white border border-slate-200 rounded text-xs font-bold text-center focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500"
+                            className="w-full rounded border border-slate-200 bg-white px-2 py-1.5 text-center text-xs font-semibold text-slate-700 focus:border-slate-400 focus:outline-none"
                           />
                         </div>
                         <div className="space-y-0.5">
-                          <label className="text-[8px] font-black text-slate-400 uppercase">
+                          <label className="text-[8px] font-semibold text-slate-400 uppercase">
                             Unit ৳
                           </label>
                           <input
@@ -995,7 +975,7 @@ function OrderCard({
                                 parseFloat(e.target.value) || 0
                               )
                             }
-                            className="w-full px-2 py-1.5 bg-white border border-slate-200 rounded text-xs font-bold font-mono text-center focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500"
+                            className="w-full rounded border border-slate-200 bg-white px-2 py-1.5 text-center text-xs font-semibold font-mono text-slate-700 focus:border-slate-400 focus:outline-none"
                           />
                         </div>
                       </div>
@@ -1006,8 +986,8 @@ function OrderCard({
             </div>
 
             {/* ─── Bill Breakdown ─── */}
-            <div className="bg-slate-50 rounded-lg border border-slate-100 p-3 space-y-2">
-              <h4 className="text-[9px] font-black text-slate-400 uppercase tracking-widest">
+            <div className="rounded-xl border border-slate-200 bg-white p-3 space-y-2">
+              <h4 className="text-[9px] font-semibold text-slate-400 uppercase tracking-widest">
                 Bill Summary
               </h4>
               <div className="space-y-1 text-xs">
@@ -1024,7 +1004,7 @@ function OrderCard({
                       )
                     }
                     disabled={order.status === "created"}
-                    className="w-24 px-2 py-0.5 bg-white border border-slate-200 rounded text-right font-mono font-bold focus:ring-2 focus:ring-violet-500/20 text-xs disabled:opacity-50"
+                    className="w-24 rounded border border-slate-200 bg-white px-2 py-0.5 text-right font-mono text-xs font-semibold text-slate-700 focus:border-slate-400 focus:outline-none disabled:opacity-50"
                   />
                 </div>
                 <div className="flex justify-between">
@@ -1040,18 +1020,18 @@ function OrderCard({
                       )
                     }
                     disabled={order.status === "created"}
-                    className="w-24 px-2 py-0.5 bg-white border border-slate-200 rounded text-right font-mono font-bold focus:ring-2 focus:ring-violet-500/20 text-xs disabled:opacity-50"
+                    className="w-24 rounded border border-slate-200 bg-white px-2 py-0.5 text-right font-mono text-xs font-semibold text-slate-700 focus:border-slate-400 focus:outline-none disabled:opacity-50"
                   />
                 </div>
                 {order.printCost > 0 && (
                   <div className="flex justify-between">
-                    <span className="text-indigo-600 font-medium">Print Cost</span>
-                    <span className="font-mono font-bold text-indigo-600">
+                    <span className="text-slate-500 font-medium">Print Cost</span>
+                    <span className="font-mono font-semibold text-slate-700">
                       {formatBDT(order.printCost)}
                     </span>
                   </div>
                 )}
-                <div className="flex justify-between text-red-600">
+                <div className="flex justify-between text-slate-600">
                   <span className="font-medium">Advance</span>
                   <input
                     type="number"
@@ -1064,11 +1044,11 @@ function OrderCard({
                       )
                     }
                     disabled={order.status === "created"}
-                    className="w-24 px-2 py-0.5 bg-red-50 border border-red-200 rounded text-right font-mono font-bold focus:ring-2 focus:ring-red-500/20 text-xs text-red-600 disabled:opacity-50"
+                    className="w-24 rounded border border-slate-200 bg-white px-2 py-0.5 text-right font-mono text-xs font-semibold text-slate-700 focus:border-slate-400 focus:outline-none disabled:opacity-50"
                   />
                 </div>
                 <div className="flex justify-between pt-1 border-t border-slate-200">
-                  <span className="font-black text-slate-800 uppercase text-[10px] tracking-wider">
+                  <span className="font-semibold text-slate-800 uppercase text-[10px] tracking-wider">
                     Payable
                   </span>
                   <input
@@ -1082,7 +1062,7 @@ function OrderCard({
                       )
                     }
                     disabled={order.status === "created"}
-                    className="w-24 px-2 py-0.5 bg-white border-2 border-slate-300 rounded text-right font-mono font-black focus:ring-2 focus:ring-violet-500/20 text-sm disabled:opacity-50"
+                    className="w-24 rounded border border-slate-300 bg-white px-2 py-0.5 text-right font-mono text-sm font-semibold text-slate-700 focus:border-slate-400 focus:outline-none disabled:opacity-50"
                   />
                 </div>
               </div>
@@ -1090,21 +1070,21 @@ function OrderCard({
 
             {/* ─── Error Message ─── */}
             {order.status === "error" && order.errorMessage && (
-              <div className="flex items-start gap-2 p-3 bg-red-50 border border-red-200 rounded-lg">
-                <AlertTriangle className="w-3.5 h-3.5 text-red-500 mt-0.5 flex-shrink-0" />
-                <p className="text-xs text-red-700">{order.errorMessage}</p>
+              <div className="flex items-start gap-2 rounded-lg border border-slate-200 bg-slate-50 p-3">
+                <AlertTriangle className="w-3.5 h-3.5 text-slate-500 mt-0.5 flex-shrink-0" />
+                <p className="text-xs text-slate-700">{order.errorMessage}</p>
               </div>
             )}
 
             {/* ─── Created Success ─── */}
             {order.status === "created" && order.createdOrderId && (
-              <div className="flex items-center gap-2 p-3 bg-emerald-50 border border-emerald-200 rounded-lg">
-                <CheckCircle className="w-4 h-4 text-emerald-500 flex-shrink-0" />
+              <div className="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 p-3">
+                <CheckCircle className="w-4 h-4 text-slate-500 flex-shrink-0" />
                 <div>
-                  <p className="text-xs font-bold text-emerald-800">
+                  <p className="text-xs font-semibold text-slate-800">
                     Order Created Successfully!
                   </p>
-                  <p className="text-[10px] text-emerald-600 font-mono">
+                  <p className="text-[10px] text-slate-500 font-mono">
                     ID: {order.createdOrderId}
                   </p>
                 </div>
@@ -1115,7 +1095,7 @@ function OrderCard({
             {order.status !== "created" && (
               <div className="flex gap-2">
                 {!allProductsSelected && (
-                  <p className="flex-1 text-[10px] text-amber-600 font-bold flex items-center gap-1">
+                  <p className="flex-1 text-[10px] text-slate-500 font-medium flex items-center gap-1">
                     <AlertTriangle className="w-3 h-3" />
                     Select products for all items to enable creation
                   </p>
@@ -1123,7 +1103,7 @@ function OrderCard({
                 <button
                   onClick={onCreateOrder}
                   disabled={!isReady || order.status === "creating"}
-                  className="flex items-center gap-2 px-4 py-2.5 bg-slate-900 text-white text-xs font-black rounded-lg hover:bg-slate-700 disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed transition-all shadow-sm ml-auto"
+                  className="ml-auto flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-900 px-4 py-2.5 text-xs font-semibold text-white transition-colors hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400"
                 >
                   {order.status === "creating" ? (
                     <Loader2 className="w-3.5 h-3.5 animate-spin" />
