@@ -14,9 +14,15 @@ export default async function EditPurchasePage({ params }: { params: { id: strin
     notFound();
   }
 
-  const products = await prisma.product.findMany({
-    include: { variants: true }
-  });
+  const [products, suppliers] = await Promise.all([
+    prisma.product.findMany({
+      include: { variants: true }
+    }),
+    prisma.supplier.findMany({
+      where: { active: true },
+      orderBy: { name: "asc" }
+    })
+  ]);
 
-  return <PurchaseFormClient products={products} initialData={purchase} />;
+  return <PurchaseFormClient products={products} suppliers={suppliers} initialData={purchase} />;
 }

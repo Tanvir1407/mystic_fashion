@@ -168,7 +168,9 @@ model Order {
   pathaoConsignmentId String?
   pathaoZoneId        Int?
   createdById         String?
+  customerId          String?
   createdBy           Staff?        @relation(fields: [createdById], references: [id], onDelete: SetNull)
+  customer            Customer?     @relation(fields: [customerId], references: [id], onDelete: SetNull)
   coupon              Coupon?       @relation(fields: [couponCode], references: [code])
   items               OrderItem[]
   salesReturns        SalesReturn[]
@@ -236,6 +238,7 @@ model HeroSlide {
 model Purchase {
   id             String         @id @default(uuid())
   supplierName   String
+  supplierId     String?
   invoiceNumber  String?
   totalAmount    Float
   status         String         @default("PENDING")
@@ -243,6 +246,18 @@ model Purchase {
   updatedAt      DateTime       @updatedAt
   discountAmount Float          @default(0)
   items          PurchaseItem[]
+  supplier       Supplier?      @relation(fields: [supplierId], references: [id], onDelete: SetNull)
+}
+
+model Supplier {
+  id         String     @id @default(uuid())
+  name       String     @unique
+  phone      String?
+  address    String?
+  active     Boolean    @default(true)
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+  purchases  Purchase[]
 }
 
 model PurchaseItem {
@@ -287,6 +302,7 @@ model ChartOfAccount {
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
   transactions Transaction[]
+  journalLines JournalLine[]
 }
 
 model Transaction {
@@ -301,6 +317,29 @@ model Transaction {
   createdAt     DateTime        @default(now())
   updatedAt     DateTime        @updatedAt
   account       ChartOfAccount  @relation(fields: [accountId], references: [id])
+}
+
+model JournalEntry {
+  id            String        @id @default(uuid())
+  date          DateTime
+  description   String
+  referenceId   String?
+  referenceType String?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  lines         JournalLine[]
+}
+
+model JournalLine {
+  id             String          @id @default(uuid())
+  journalEntryId String
+  accountId      String
+  amount         Float
+  type           TransactionType
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  journalEntry   JournalEntry    @relation(fields: [journalEntryId], references: [id], onDelete: Cascade)
+  account        ChartOfAccount  @relation(fields: [accountId], references: [id])
 }
 
 model ApiToken {
@@ -457,4 +496,14 @@ enum AuditAction {
   CREATE
   UPDATE
   DELETE
+}
+
+model Customer {
+  id           String   @id @default(uuid())
+  name         String
+  phone        String   @unique
+  address      String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  orders       Order[]
 }

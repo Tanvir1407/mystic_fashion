@@ -3,7 +3,7 @@
 import { useState, useMemo, useEffect } from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { ChevronDown, ChevronUp, SlidersHorizontal, X, Check, Grid, List } from "lucide-react";
+import { ChevronDown, ChevronUp, SlidersHorizontal, X, Check } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import ProductCard from "@/components/ProductCard";
 
@@ -59,6 +59,14 @@ interface ProductsClientProps {
   initialCategory?: string;
   initialBrand?: string;
   initialSubcategory?: string;
+  totalCount: number;
+  currentPage: number;
+  totalPages: number;
+  globalMinPrice: number;
+  globalMaxPrice: number;
+  initialMinPrice?: string;
+  initialMaxPrice?: string;
+  initialSort?: string;
 }
 
 // Helper to calculate product final price after active discount
@@ -81,20 +89,18 @@ export default function ProductsClient({
   initialCategory,
   initialBrand,
   initialSubcategory,
+  totalCount,
+  currentPage,
+  totalPages,
+  globalMinPrice,
+  globalMaxPrice,
+  initialMinPrice = "",
+  initialMaxPrice = "",
+  initialSort = "newest",
 }: ProductsClientProps) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-
-  // Calculate the global min and max prices from published products
-  const { globalMinPrice, globalMaxPrice } = useMemo(() => {
-    if (products.length === 0) return { globalMinPrice: 0, globalMaxPrice: 10000 };
-    const prices = products.map(getFinalPrice);
-    return {
-      globalMinPrice: Math.min(...prices),
-      globalMaxPrice: Math.max(...prices),
-    };
-  }, [products]);
 
   // State initialized directly with initial props for perfect server-client sync!
   const [selectedCategory, setSelectedCategory] = useState<string | null>(() => {
@@ -110,24 +116,38 @@ export default function ProductsClient({
   });
 
   const [selectedSubcategory, setSelectedSubcategory] = useState<string | null>(() => {
-    return initialSubcategory || null;
+    if (initialSubcategory) {
+      // Find subcategory ID if name was provided
+      const foundSub = categories
+        .flatMap((c) => c.subcategories)
+        .find(
+          (s) =>
+            s.id === initialSubcategory ||
+            s.name.toLowerCase() === initialSubcategory.toLowerCase()
+        );
+      return foundSub ? foundSub.id : initialSubcategory;
+    }
+    return null;
   });
 
   const [selectedBrands, setSelectedBrands] = useState<string[]>(() => {
     if (initialBrand) {
-      const foundBrand = brands.find(
-        (b) =>
-          b.id === initialBrand ||
-          b.name.toLowerCase() === initialBrand.toLowerCase()
-      );
-      return foundBrand ? [foundBrand.id] : [initialBrand];
+      const brandsList = initialBrand.split(",");
+      return brandsList.map((bParam) => {
+        const foundBrand = brands.find(
+          (b) =>
+            b.id === bParam ||
+            b.name.toLowerCase() === bParam.toLowerCase()
+        );
+        return foundBrand ? foundBrand.id : bParam;
+      });
     }
     return [];
   });
 
-  const [minPriceInput, setMinPriceInput] = useState<string>(globalMinPrice.toString());
-  const [maxPriceInput, setMaxPriceInput] = useState<string>(globalMaxPrice.toString());
-  const [sortBy, setSortBy] = useState<string>("newest");
+  const [minPriceInput, setMinPriceInput] = useState<string>(initialMinPrice);
+  const [maxPriceInput, setMaxPriceInput] = useState<string>(initialMaxPrice);
+  const [sortBy, setSortBy] = useState<string>(initialSort);
   const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
   
   // Expand category by default if selected category is active
@@ -162,34 +182,84 @@ export default function ProductsClient({
     }
 
     if (initialSubcategory) {
-      setSelectedSubcategory(initialSubcategory);
+      const foundSub = categories
+        .flatMap((c) => c.subcategories)
+        .find(
+          (s) =>
+            s.id === initialSubcategory ||
+            s.name.toLowerCase() === initialSubcategory.toLowerCase()
+        );
+      setSelectedSubcategory(foundSub ? foundSub.id : initialSubcategory);
     } else {
       setSelectedSubcategory(null);
     }
 
     if (initialBrand) {
-      const foundBrand = brands.find(
-        (b) =>
-          b.id === initialBrand ||
-          b.name.toLowerCase() === initialBrand.toLowerCase()
-      );
-      setSelectedBrands(foundBrand ? [foundBrand.id] : [initialBrand]);
+      const brandsList = initialBrand.split(",");
+      const brandIds = brandsList.map((bParam) => {
+        const foundBrand = brands.find(
+          (b) =>
+            b.id === bParam ||
+            b.name.toLowerCase() === bParam.toLowerCase()
+        );
+        return foundBrand ? foundBrand.id : bParam;
+      });
+      setSelectedBrands(brandIds);
     } else {
       setSelectedBrands([]);
     }
-  }, [initialCategory, initialBrand, initialSubcategory, categories, brands]);
 
-  // Set default min/max inputs when global prices are loaded or changed
-  useEffect(() => {
-    setMinPriceInput(globalMinPrice.toString());
-    setMaxPriceInput(globalMaxPrice.toString());
-  }, [globalMinPrice, globalMaxPrice]);
+    setMinPriceInput(initialMinPrice);
+    setMaxPriceInput(initialMaxPrice);
+    setSortBy(initialSort);
+  }, [initialCategory, initialBrand, initialSubcategory, initialMinPrice, initialMaxPrice, initialSort, categories, brands]);
+
+  // Helper to update URL query params seamlessly
+  const updateQueryParams = (updates: Record<string, string | undefined>) => {
+    const params = new URLSearchParams(searchParams.toString());
+    Object.entries(updates).forEach(([key, val]) => {
+      if (val === undefined) {
+        params.delete(key);
+      } else {
+        params.set(key, val);
+      }
+    });
+    router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+  };
+
+  // Commit price filter selection to the URL query parameters
+  const handlePriceSubmit = () => {
+    updateQueryParams({
+      minPrice: minPriceInput || undefined,
+      maxPrice: maxPriceInput || undefined,
+      page: undefined,
+    });
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      handlePriceSubmit();
+    }
+  };
 
   // Toggle brand selection
   const handleToggleBrand = (brandId: string) => {
-    setSelectedBrands((prev) =>
-      prev.includes(brandId) ? prev.filter((id) => id !== brandId) : [...prev, brandId]
-    );
+    const updatedBrands = selectedBrands.includes(brandId)
+      ? selectedBrands.filter((id) => id !== brandId)
+      : [...selectedBrands, brandId];
+    
+    setSelectedBrands(updatedBrands);
+
+    // Map brand IDs back to names for neat URL query readability
+    const brandParams = updatedBrands.map((bId) => {
+      const bObj = brands.find((b) => b.id === bId);
+      return bObj ? bObj.name.toLowerCase() : bId;
+    });
+
+    updateQueryParams({
+      brand: brandParams.length > 0 ? brandParams.join(",") : undefined,
+      page: undefined,
+    });
   };
 
   // Toggle Category Expand
@@ -205,7 +275,7 @@ export default function ProductsClient({
     if (selectedCategory === categoryId) {
       setSelectedCategory(null);
       setSelectedSubcategory(null);
-      updateQueryParams({ category: undefined, subcategory: undefined });
+      updateQueryParams({ category: undefined, subcategory: undefined, page: undefined });
     } else {
       setSelectedCategory(categoryId);
       setSelectedSubcategory(null);
@@ -213,6 +283,7 @@ export default function ProductsClient({
       updateQueryParams({
         category: catObj ? catObj.name.toLowerCase() : undefined,
         subcategory: undefined,
+        page: undefined,
       });
       if (categoryId) {
         setExpandedCategories((prev) => ({ ...prev, [categoryId]: true }));
@@ -225,27 +296,14 @@ export default function ProductsClient({
     e.stopPropagation(); // Prevent category selection trigger
     if (selectedSubcategory === subcategoryId) {
       setSelectedSubcategory(null);
-      updateQueryParams({ subcategory: undefined });
+      updateQueryParams({ subcategory: undefined, page: undefined });
     } else {
       setSelectedSubcategory(subcategoryId);
       const subObj = categories
         .flatMap((c) => c.subcategories)
         .find((s) => s.id === subcategoryId);
-      updateQueryParams({ subcategory: subObj ? subObj.name.toLowerCase() : undefined });
+      updateQueryParams({ subcategory: subObj ? subObj.name.toLowerCase() : undefined, page: undefined });
     }
-  };
-
-  // Helper to update URL query params seamlessly
-  const updateQueryParams = (updates: Record<string, string | undefined>) => {
-    const params = new URLSearchParams(searchParams.toString());
-    Object.entries(updates).forEach(([key, val]) => {
-      if (val === undefined) {
-        params.delete(key);
-      } else {
-        params.set(key, val);
-      }
-    });
-    router.replace(`${pathname}?${params.toString()}`, { scroll: false });
   };
 
   // Clear all filters
@@ -253,8 +311,8 @@ export default function ProductsClient({
     setSelectedCategory(null);
     setSelectedSubcategory(null);
     setSelectedBrands([]);
-    setMinPriceInput(globalMinPrice.toString());
-    setMaxPriceInput(globalMaxPrice.toString());
+    setMinPriceInput("");
+    setMaxPriceInput("");
     setSortBy("newest");
     router.replace(pathname, { scroll: false });
   };
@@ -264,68 +322,14 @@ export default function ProductsClient({
       selectedCategory !== null ||
       selectedSubcategory !== null ||
       selectedBrands.length > 0 ||
-      Number(minPriceInput) !== globalMinPrice ||
-      Number(maxPriceInput) !== globalMaxPrice ||
-      sortBy !== "newest"
+      initialMinPrice !== "" ||
+      initialMaxPrice !== "" ||
+      initialSort !== "newest"
     );
-  }, [selectedCategory, selectedSubcategory, selectedBrands, minPriceInput, maxPriceInput, sortBy, globalMinPrice, globalMaxPrice]);
+  }, [selectedCategory, selectedSubcategory, selectedBrands, initialMinPrice, initialMaxPrice, initialSort]);
 
-  // Compute final filtered products
-  const filteredProducts = useMemo(() => {
-    let result = [...products];
-
-    // 1. Filter by category
-    if (selectedCategory) {
-      result = result.filter((p) => {
-        const catName = categories.find((c) => c.id === selectedCategory)?.name.toLowerCase();
-        return (
-          p.categoryId === selectedCategory ||
-          (p.categoryRel && p.categoryRel.id === selectedCategory) ||
-          p.category.toLowerCase() === selectedCategory.toLowerCase() ||
-          (catName && p.category.toLowerCase() === catName)
-        );
-      });
-    }
-
-    // 2. Filter by subcategory
-    if (selectedSubcategory) {
-      result = result.filter((p) => {
-        const subName = categories
-          .flatMap((c) => c.subcategories)
-          .find((s) => s.id === selectedSubcategory)?.name.toLowerCase();
-        return (
-          p.subcategoryId === selectedSubcategory ||
-          (p.subcategory && p.subcategory.id === selectedSubcategory) ||
-          (subName && p.subcategory && p.subcategory.name.toLowerCase() === subName)
-        );
-      });
-    }
-
-    // 3. Filter by brand
-    if (selectedBrands.length > 0) {
-      result = result.filter((p) => p.brandId && selectedBrands.includes(p.brandId));
-    }
-
-    // 4. Filter by price range
-    const minP = Number(minPriceInput) || 0;
-    const maxP = Number(maxPriceInput) || Infinity;
-    result = result.filter((p) => {
-      const price = getFinalPrice(p);
-      return price >= minP && price <= maxP;
-    });
-
-    // 5. Sort products
-    if (sortBy === "price-asc") {
-      result.sort((a, b) => getFinalPrice(a) - getFinalPrice(b));
-    } else if (sortBy === "price-desc") {
-      result.sort((a, b) => getFinalPrice(b) - getFinalPrice(a));
-    } else {
-      // Default: newest
-      result.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-    }
-
-    return result;
-  }, [products, selectedCategory, selectedSubcategory, selectedBrands, minPriceInput, maxPriceInput, sortBy, categories]);
+  // Products are already fully filtered, sorted and sliced on the server component!
+  const filteredProducts = products;
 
   // Active Category/Subcategory text for heading
   const activeHeadingText = useMemo(() => {
@@ -339,6 +343,29 @@ export default function ProductsClient({
     }
     return "All Products";
   }, [selectedCategory, selectedSubcategory, categories]);
+
+  // Calculate pages list for pagination component
+  const getPageNumbers = () => {
+    const pages = [];
+    const maxVisible = 5;
+    if (totalPages <= maxVisible) {
+      for (let i = 1; i <= totalPages; i++) pages.push(i);
+    } else {
+      let start = Math.max(1, currentPage - 2);
+      let end = Math.min(totalPages, currentPage + 2);
+      
+      if (start === 1) {
+        end = maxVisible;
+      } else if (end === totalPages) {
+        start = totalPages - maxVisible + 1;
+      }
+      
+      for (let i = start; i <= end; i++) {
+        pages.push(i);
+      }
+    }
+    return pages;
+  };
 
   return (
     <div className="w-full bg-slate-50 dark:bg-zinc-950 py-6 border-t border-slate-200 dark:border-zinc-800">
@@ -356,7 +383,7 @@ export default function ProductsClient({
           <div className="flex items-center gap-3 self-start md:self-auto w-full md:w-auto">
             <button
               onClick={() => setIsMobileFilterOpen(true)}
-              className="md:hidden flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 text-sm font-bold   text-slate-800 dark:text-zinc-200 hover:bg-slate-50 rounded-none transition-colors"
+              className="md:hidden flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 text-sm font-bold text-slate-800 dark:text-zinc-200 hover:bg-slate-50 rounded-none transition-colors"
             >
               <SlidersHorizontal className="w-4 h-4 text-primary" />
               Filters
@@ -367,8 +394,12 @@ export default function ProductsClient({
               <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider">Sort:</span>
               <select
                 value={sortBy}
-                onChange={(e) => setSortBy(e.target.value)}
-                className="flex-1 bg-transparent border-none text-xs font-bold   text-slate-800 dark:text-zinc-200 outline-none cursor-pointer"
+                onChange={(e) => {
+                  const newSort = e.target.value;
+                  setSortBy(newSort);
+                  updateQueryParams({ sort: newSort, page: undefined });
+                }}
+                className="flex-1 bg-transparent border-none text-xs font-bold text-slate-800 dark:text-zinc-200 outline-none cursor-pointer"
               >
                 <option value="newest">Newest Arrival</option>
                 <option value="price-asc">Price: Low to High</option>
@@ -385,14 +416,14 @@ export default function ProductsClient({
 
             {/* Header / Clear All */}
             <div className="flex items-center justify-between pb-4 border-b border-slate-100 dark:border-zinc-800">
-              <h3 className="text-sm font-black   text-slate-900 dark:text-zinc-50 flex items-center gap-2">
+              <h3 className="text-sm font-black text-slate-900 dark:text-zinc-50 flex items-center gap-2">
                 <SlidersHorizontal className="w-4 h-4 text-primary" />
                 Filters by
               </h3>
               {isAnyFilterActive && (
                 <button
                   onClick={handleClearFilters}
-                  className="text-[10px] font-black   text-primary hover:underline transition-all"
+                  className="text-[10px] font-black text-primary hover:underline transition-all"
                 >
                   Clear All
                 </button>
@@ -401,7 +432,7 @@ export default function ProductsClient({
 
             {/* Categories & Subcategories Filter */}
             <div className="space-y-3">
-              <h4 className="text-sm  font-bold text-slate-900 dark:text-zinc-50 ">Categories</h4>
+              <h4 className="text-sm font-bold text-slate-900 dark:text-zinc-50">Categories</h4>
               <div className="space-y-1">
                 {categories.map((cat) => {
                   const isCatSelected = selectedCategory === cat.id;
@@ -410,10 +441,11 @@ export default function ProductsClient({
                     <div key={cat.id} className="space-y-1">
                       <div
                         onClick={() => handleSelectCategory(cat.id)}
-                        className={`flex items-center justify-between px-3 py-2 text-xs font-semibold cursor-pointer hover:bg-slate-50 dark:hover:bg-zinc-800 transition-colors ${isCatSelected
-                          ? "bg-primary/5 text-primary border-l-2 border-primary"
-                          : "text-slate-700 dark:text-zinc-300"
-                          }`}
+                        className={`flex items-center justify-between px-3 py-2 text-xs font-semibold cursor-pointer hover:bg-slate-50 dark:hover:bg-zinc-800 transition-colors ${
+                          isCatSelected
+                            ? "bg-primary/5 text-primary border-l-2 border-primary"
+                            : "text-slate-700 dark:text-zinc-300"
+                        }`}
                       >
                         <span>{cat.name}</span>
                         {cat.subcategories.length > 0 && (
@@ -438,10 +470,11 @@ export default function ProductsClient({
                               <button
                                 key={sub.id}
                                 onClick={(e) => handleSelectSubcategory(sub.id, e)}
-                                className={`w-full text-left px-3 py-1.5 text-[11px] font-bold   transition-colors hover:text-primary ${isSubSelected
-                                  ? "text-primary bg-primary/5 border-r border-primary"
-                                  : "text-slate-500 dark:text-zinc-400"
-                                  }`}
+                                className={`w-full text-left px-3 py-1.5 text-[11px] font-bold transition-colors hover:text-primary ${
+                                  isSubSelected
+                                    ? "text-primary bg-primary/5 border-r border-primary"
+                                    : "text-slate-500 dark:text-zinc-400"
+                                }`}
                               >
                                 {sub.name}
                               </button>
@@ -457,7 +490,7 @@ export default function ProductsClient({
 
             {/* Price Filter */}
             <div className="space-y-3 pt-4 border-t border-slate-100 dark:border-zinc-800">
-              <h4 className="text-sm  font-bold text-slate-900 dark:text-zinc-50 ">Price Range (৳)</h4>
+              <h4 className="text-sm font-bold text-slate-900 dark:text-zinc-50">Price Range (৳)</h4>
               <div className="flex items-center gap-2">
                 <div className="flex-1 flex items-center bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 px-2 py-1.5 h-9 rounded-none">
                   <span className="text-[10px] font-bold text-slate-400 mr-1.5">Min:</span>
@@ -465,6 +498,8 @@ export default function ProductsClient({
                     type="number"
                     value={minPriceInput}
                     onChange={(e) => setMinPriceInput(e.target.value)}
+                    onKeyDown={handleKeyDown}
+                    onBlur={handlePriceSubmit}
                     className="w-full bg-transparent border-none text-xs font-bold text-slate-800 dark:text-zinc-100 outline-none"
                     placeholder={globalMinPrice.toString()}
                   />
@@ -476,6 +511,8 @@ export default function ProductsClient({
                     type="number"
                     value={maxPriceInput}
                     onChange={(e) => setMaxPriceInput(e.target.value)}
+                    onKeyDown={handleKeyDown}
+                    onBlur={handlePriceSubmit}
                     className="w-full bg-transparent border-none text-xs font-bold text-slate-800 dark:text-zinc-100 outline-none"
                     placeholder={globalMaxPrice.toString()}
                   />
@@ -486,7 +523,7 @@ export default function ProductsClient({
             {/* Brands Filter */}
             {brands.length > 0 && (
               <div className="space-y-3 pt-4 border-t border-slate-100 dark:border-zinc-800">
-                <h4 className="text-sm  font-bold text-slate-900 dark:text-zinc-50 ">Brands</h4>
+                <h4 className="text-sm font-bold text-slate-900 dark:text-zinc-50">Brands</h4>
 
                 <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
                   {brands.map((brand) => {
@@ -494,18 +531,19 @@ export default function ProductsClient({
                     return (
                       <label
                         key={brand.id}
+                        onClick={() => handleToggleBrand(brand.id)}
                         className="flex items-center gap-2.5 px-1 py-1 cursor-pointer group text-slate-700 dark:text-zinc-300 hover:text-slate-900 dark:hover:text-zinc-100"
                       >
                         <div
-                          onClick={() => handleToggleBrand(brand.id)}
-                          className={`w-4.5 h-4.5 border flex items-center justify-center transition-colors rounded-none ${isBrandChecked
-                            ? "bg-primary border-primary text-white"
-                            : "border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 group-hover:border-slate-400"
-                            }`}
+                          className={`w-4.5 h-4.5 border flex items-center justify-center transition-colors rounded-none ${
+                            isBrandChecked
+                              ? "bg-primary border-primary text-white"
+                              : "border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 group-hover:border-slate-400"
+                          }`}
                         >
                           {isBrandChecked && <Check className="w-3.5 h-3.5 stroke-[3]" />}
                         </div>
-                        <span className="text-xs font-bold   select-none">
+                        <span className="text-xs font-bold select-none">
                           {brand.name}
                         </span>
                       </label>
@@ -519,10 +557,45 @@ export default function ProductsClient({
           {/* RIGHT SIDE: PRODUCT GRID */}
           <section className="flex-1 w-full">
             {filteredProducts.length > 0 ? (
-              <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2 md:gap-4">
-                {filteredProducts.map((product) => (
-                  <ProductCard key={product.id} product={product as any} />
-                ))}
+              <div>
+                <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2 md:gap-4">
+                  {filteredProducts.map((product) => (
+                    <ProductCard key={product.id} product={product as any} />
+                  ))}
+                </div>
+
+                {/* Premium Pagination Component */}
+                {totalPages > 1 && (
+                  <div className="mt-12 flex items-center justify-center gap-1.5 border-t border-slate-200 dark:border-zinc-900 pt-8">
+                    <button
+                      disabled={currentPage === 1}
+                      onClick={() => updateQueryParams({ page: (currentPage - 1).toString() })}
+                      className="px-3.5 py-2 border border-slate-200 dark:border-zinc-800 text-xs font-bold text-slate-800 dark:text-zinc-200 bg-white dark:bg-zinc-900 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-50 dark:hover:bg-zinc-800 transition-colors rounded-none"
+                    >
+                      Prev
+                    </button>
+                    {getPageNumbers().map((p) => (
+                      <button
+                        key={p}
+                        onClick={() => updateQueryParams({ page: p.toString() })}
+                        className={`px-3.5 py-2 text-xs font-bold transition-all border rounded-none ${
+                          currentPage === p
+                            ? "bg-primary border-primary text-white"
+                            : "border-slate-200 dark:border-zinc-800 text-slate-800 dark:text-zinc-200 bg-white dark:bg-zinc-900 hover:bg-slate-50 dark:hover:bg-zinc-800"
+                        }`}
+                      >
+                        {p}
+                      </button>
+                    ))}
+                    <button
+                      disabled={currentPage === totalPages}
+                      onClick={() => updateQueryParams({ page: (currentPage + 1).toString() })}
+                      className="px-3.5 py-2 border border-slate-200 dark:border-zinc-800 text-xs font-bold text-slate-800 dark:text-zinc-200 bg-white dark:bg-zinc-900 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-50 dark:hover:bg-zinc-800 transition-colors rounded-none"
+                    >
+                      Next
+                    </button>
+                  </div>
+                )}
               </div>
             ) : (
               <div className="py-24 text-center bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 flex flex-col items-center justify-center p-6 rounded-none">
@@ -538,7 +611,7 @@ export default function ProductsClient({
                 {isAnyFilterActive && (
                   <button
                     onClick={handleClearFilters}
-                    className="mt-6 px-6 py-2.5 bg-primary text-white font-bold  text-xs rounded-none hover:bg-opacity-90 transition-colors"
+                    className="mt-6 px-6 py-2.5 bg-primary text-white font-bold text-xs rounded-none hover:bg-opacity-90 transition-colors"
                   >
                     Reset Filters
                   </button>
@@ -580,7 +653,7 @@ export default function ProductsClient({
                   {isAnyFilterActive && (
                     <button
                       onClick={handleClearFilters}
-                      className="text-[10px] font-black   text-primary hover:underline"
+                      className="text-[10px] font-black text-primary hover:underline"
                     >
                       Clear
                     </button>
@@ -608,10 +681,11 @@ export default function ProductsClient({
                         <div key={cat.id} className="space-y-1">
                           <div
                             onClick={() => handleSelectCategory(cat.id)}
-                            className={`flex items-center justify-between px-3 py-2 text-xs font-bold   cursor-pointer hover:bg-slate-50 dark:hover:bg-zinc-800 transition-colors ${isCatSelected
-                              ? "bg-primary/5 text-primary border-l-2 border-primary"
-                              : "text-slate-700 dark:text-zinc-300"
-                              }`}
+                            className={`flex items-center justify-between px-3 py-2 text-xs font-bold cursor-pointer hover:bg-slate-50 dark:hover:bg-zinc-800 transition-colors ${
+                              isCatSelected
+                                ? "bg-primary/5 text-primary border-l-2 border-primary"
+                                : "text-slate-700 dark:text-zinc-300"
+                            }`}
                           >
                             <span>{cat.name}</span>
                             {cat.subcategories.length > 0 && (
@@ -638,10 +712,11 @@ export default function ProductsClient({
                                       handleSelectSubcategory(sub.id, e);
                                       setIsMobileFilterOpen(false); // Auto close mobile modal to display filtered results instantly
                                     }}
-                                    className={`w-full text-left px-3 py-1.5 text-[11px] font-bold   transition-colors hover:text-primary ${isSubSelected
-                                      ? "text-primary bg-primary/5 border-r border-primary"
-                                      : "text-slate-500 dark:text-zinc-400"
-                                      }`}
+                                    className={`w-full text-left px-3 py-1.5 text-[11px] font-bold transition-colors hover:text-primary ${
+                                      isSubSelected
+                                        ? "text-primary bg-primary/5 border-r border-primary"
+                                        : "text-slate-500 dark:text-zinc-400"
+                                    }`}
                                   >
                                     {sub.name}
                                   </button>
@@ -665,6 +740,8 @@ export default function ProductsClient({
                         type="number"
                         value={minPriceInput}
                         onChange={(e) => setMinPriceInput(e.target.value)}
+                        onKeyDown={handleKeyDown}
+                        onBlur={handlePriceSubmit}
                         className="w-full bg-transparent border-none text-xs font-bold text-slate-800 dark:text-zinc-100 outline-none"
                         placeholder={globalMinPrice.toString()}
                       />
@@ -676,6 +753,8 @@ export default function ProductsClient({
                         type="number"
                         value={maxPriceInput}
                         onChange={(e) => setMaxPriceInput(e.target.value)}
+                        onKeyDown={handleKeyDown}
+                        onBlur={handlePriceSubmit}
                         className="w-full bg-transparent border-none text-xs font-bold text-slate-800 dark:text-zinc-100 outline-none"
                         placeholder={globalMaxPrice.toString()}
                       />
@@ -693,18 +772,19 @@ export default function ProductsClient({
                         return (
                           <label
                             key={brand.id}
+                            onClick={() => handleToggleBrand(brand.id)}
                             className="flex items-center gap-2.5 px-1 py-1 cursor-pointer group text-slate-700 dark:text-zinc-300"
                           >
                             <div
-                              onClick={() => handleToggleBrand(brand.id)}
-                              className={`w-4.5 h-4.5 border flex items-center justify-center transition-colors rounded-none ${isBrandChecked
-                                ? "bg-primary border-primary text-white"
-                                : "border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-900"
-                                }`}
+                              className={`w-4.5 h-4.5 border flex items-center justify-center transition-colors rounded-none ${
+                                isBrandChecked
+                                  ? "bg-primary border-primary text-white"
+                                  : "border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-900"
+                              }`}
                             >
                               {isBrandChecked && <Check className="w-3.5 h-3.5 stroke-[3]" />}
                             </div>
-                            <span className="text-xs font-bold   select-none">
+                            <span className="text-xs font-bold select-none">
                               {brand.name}
                             </span>
                           </label>
@@ -719,9 +799,9 @@ export default function ProductsClient({
               <div className="p-4 border-t border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-950">
                 <button
                   onClick={() => setIsMobileFilterOpen(false)}
-                  className="w-full py-3 bg-primary text-white font-bold   text-xs rounded-none hover:bg-opacity-90 transition-colors"
+                  className="w-full py-3 bg-primary text-white font-bold text-xs rounded-none hover:bg-opacity-90 transition-colors"
                 >
-                  Apply Filters ({filteredProducts.length})
+                  Apply Filters ({totalCount})
                 </button>
               </div>
 

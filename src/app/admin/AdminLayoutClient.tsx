@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { adminLogout } from "./actions";
 import { useState, useEffect, useMemo } from "react";
 import {
@@ -52,8 +52,12 @@ const NAV_LINKS = [
     children: [
       { href: "/admin/orders", label: "Orders", action: "VIEW", subject: "ORDERS" },
       { href: "/admin/orders/returns", label: "Sales Returns", action: "VIEW", subject: "SALES_RETURNS" },
+      { href: "/admin/customers", label: "Customers", action: "VIEW", subject: "ORDERS" },
       { href: "/admin/purchases", label: "Purchases", action: "VIEW", subject: "PURCHASES" },
-      { href: "/admin/accounting", label: "Accounting", action: "VIEW", subject: "ACCOUNTING" },
+      { href: "/admin/suppliers", label: "Suppliers", action: "VIEW", subject: "PURCHASES" },
+      { href: "/admin/accounting", label: "Accounting Dashboard", action: "VIEW", subject: "ACCOUNTING" },
+      { href: "/admin/accounting?tab=sales", label: "Sales Journal", action: "VIEW", subject: "ACCOUNTING" },
+      { href: "/admin/accounting?tab=ledger", label: "General Ledger", action: "VIEW", subject: "ACCOUNTING" },
     ]
   },
   {
@@ -92,6 +96,7 @@ import { isRouteAllowed, getRedirectUrlForSession } from "@/lib/permissions";
 export default function AdminLayoutClient({ children, session }: { children: React.ReactNode; session: any }) {
   const pathname = usePathname();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -131,7 +136,7 @@ export default function AdminLayoutClient({ children, session }: { children: Rea
   // Automatically open groups that contain the active link
   useEffect(() => {
     const activeGroup = authorizedNavLinks.find(group =>
-      group.children?.some(child => pathname.includes(child.href))
+      group.children?.some(child => pathname.includes(child.href.split("?")[0]))
     );
     if (activeGroup && !openGroups.includes(activeGroup.label)) {
       setOpenGroups(prev => [...prev, activeGroup.label]);
@@ -239,9 +244,18 @@ export default function AdminLayoutClient({ children, session }: { children: Rea
 
               // Render Group
               const isGroupOpen = openGroups.includes(item.label);
-              const isAnyChildActive = item.children?.some(child =>
-                child.exact ? pathname === child.href : pathname.includes(child.href)
-              );
+              const isAnyChildActive = item.children?.some(child => {
+                const childPath = child.href.split("?")[0];
+                const childTab = child.href.includes("?tab=") ? child.href.split("?tab=")[1].split("&")[0] : null;
+                const currentTab = searchParams?.get("tab");
+                if (childTab) {
+                  return pathname === childPath && currentTab === childTab;
+                }
+                if (childPath === "/admin/accounting") {
+                  return pathname === childPath && (!currentTab || currentTab === "overview");
+                }
+                return child.exact ? pathname === child.href : pathname.includes(child.href);
+              });
 
               return (
                 <div key={item.label} className="space-y-1">
@@ -264,7 +278,17 @@ export default function AdminLayoutClient({ children, session }: { children: Rea
                   {isGroupOpen && !isCollapsed && (
                     <div className="ml-9 space-y-1 border-l border-slate-800">
                       {item.children?.map((child) => {
-                        const isChildActive = child.exact ? pathname === child.href : pathname.includes(child.href);
+                        const childPath = child.href.split("?")[0];
+                        const childTab = child.href.includes("?tab=") ? child.href.split("?tab=")[1].split("&")[0] : null;
+                        const currentTab = searchParams?.get("tab");
+                        let isChildActive = false;
+                        if (childTab) {
+                          isChildActive = pathname === childPath && currentTab === childTab;
+                        } else if (childPath === "/admin/accounting") {
+                          isChildActive = pathname === childPath && (!currentTab || currentTab === "overview");
+                        } else {
+                          isChildActive = child.exact ? pathname === child.href : pathname.includes(child.href);
+                        }
                         return (
                           <Link
                             key={child.href}

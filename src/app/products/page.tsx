@@ -8,20 +8,116 @@ import ProductsClient from "./ProductsClient";
 
 export const dynamic = "force-dynamic";
 
+// Helper to calculate product final price after active discount on server
+const getFinalPrice = (product: any): number => {
+  let finalPrice = product.price;
+  if (product.discount && product.discount.active) {
+    if (product.discount.discountType === "PERCENTAGE") {
+      finalPrice = product.price - (product.price * (product.discount.value / 100));
+    } else {
+      finalPrice = Math.max(0, product.price - product.discount.value);
+    }
+  }
+  return Math.round(finalPrice);
+};
+
 export default async function ProductsPage({
   searchParams,
 }: {
-  searchParams: { category?: string; brand?: string; subcategory?: string };
+  searchParams: { 
+    category?: string; 
+    brand?: string; 
+    subcategory?: string;
+    minPrice?: string;
+    maxPrice?: string;
+    sort?: string;
+    page?: string;
+  };
 }) {
+  const categoryParam = searchParams.category || "";
+  const subcategoryParam = searchParams.subcategory || "";
+  const brandParam = searchParams.brand || "";
+  const minPriceParam = searchParams.minPrice || "";
+  const maxPriceParam = searchParams.maxPrice || "";
+  const sortParam = searchParams.sort || "newest";
+  const pageParam = Number(searchParams.page) || 1;
+  const limit = 12; // 12 products per page
+
+  // Build the database query clauses dynamically
+  const whereClause: any = { isPublished: true };
+
+  // Category filter (match name case-insensitively or match direct categoryRel ID)
+  if (categoryParam) {
+    const isUuid = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(categoryParam);
+    if (isUuid) {
+      whereClause.categoryId = categoryParam;
+    } else {
+      whereClause.categoryRel = {
+        name: { equals: categoryParam, mode: "insensitive" }
+      };
+    }
+  }
+
+  // Subcategory filter (match name case-insensitively or match direct subcategory ID)
+  if (subcategoryParam) {
+    const isUuid = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(subcategoryParam);
+    if (isUuid) {
+      whereClause.subcategoryId = subcategoryParam;
+    } else {
+      whereClause.subcategory = {
+        name: { equals: subcategoryParam, mode: "insensitive" }
+      };
+    }
+  }
+
+  // Brand filter (supports comma-separated list of IDs or a brand name)
+  if (brandParam) {
+    const brandsList = brandParam.split(",");
+    const isUuid = (str: string) => /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(str);
+    
+    if (brandsList.every(isUuid)) {
+      whereClause.brandId = { in: brandsList };
+    } else {
+      whereClause.brand = {
+        name: { in: brandsList, mode: "insensitive" }
+      };
+    }
+  }
+
+  // Fetch all filtered products, categories (active), brands (active), and footerData in concurrent queries
   const [productsRes, categoriesRes, brandsRes, footerData] = await Promise.all([
     prisma.product.findMany({
-      where: { isPublished: true },
-      include: {
+      where: whereClause,
+      select: {
+        id: true,
+        name: true,
+        description: true,
+        price: true,
+        purchasePrice: true,
+        images: true,
+        team: true,
+        category: true,
+        brandId: true,
+        categoryId: true,
+        subcategoryId: true,
+        createdAt: true,
+        isFeatured: true,
+        isPublished: true,
         brand: true,
         categoryRel: true,
         subcategory: true,
         discount: true,
-        variants: true,
+        variants: {
+          select: {
+            id: true,
+            size: true,
+            color: true,
+            colorCode: true,
+            sku: true,
+            stock: true,
+            order: true,
+          }
+        }
       },
       orderBy: { createdAt: "desc" },
     }).catch((e) => {
@@ -54,13 +150,44 @@ export default async function ProductsPage({
     }),
   ]);
 
-  // Sort variants by order field
-  const products = productsRes || [];
-  products.forEach((product) => {
+  // Sort product variants by the order field in place
+  const rawProducts = productsRes || [];
+  rawProducts.forEach((product) => {
     if (product.variants) {
       product.variants.sort((a, b) => (a.order || 0) - (b.order || 0));
     }
   });
+
+  // Apply Price Range filtering in-memory on the server side (to fully support active dynamic discounts in Prisma without RAW SQL)
+  const minPrice = Number(minPriceParam) || 0;
+  const maxPrice = Number(maxPriceParam) || Infinity;
+
+  const priceFilteredProducts = rawProducts.filter((product) => {
+    const finalPrice = getFinalPrice(product);
+    return finalPrice >= minPrice && finalPrice <= maxPrice;
+  });
+
+  // Calculate the global min/max price range strictly for the filtered set (used to set the bounds of the sidebar price range UI)
+  const allFinalPrices = priceFilteredProducts.map(getFinalPrice);
+  const globalMinPrice = allFinalPrices.length > 0 ? Math.min(...allFinalPrices) : 0;
+  const globalMaxPrice = allFinalPrices.length > 0 ? Math.max(...allFinalPrices) : 10000;
+
+  // Apply selected Sorting options
+  const sortedProducts = [...priceFilteredProducts];
+  if (sortParam === "price-asc") {
+    sortedProducts.sort((a, b) => getFinalPrice(a) - getFinalPrice(b));
+  } else if (sortParam === "price-desc") {
+    sortedProducts.sort((a, b) => getFinalPrice(b) - getFinalPrice(a));
+  } else {
+    // default: newest
+    sortedProducts.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }
+
+  // Paginate products
+  const totalCount = sortedProducts.length;
+  const totalPages = Math.ceil(totalCount / limit);
+  const currentPage = Math.min(Math.max(1, pageParam), totalPages || 1);
+  const paginatedProducts = sortedProducts.slice((currentPage - 1) * limit, currentPage * limit);
 
   return (
     <main className="min-h-screen bg-white dark:bg-zinc-950">
@@ -71,9 +198,7 @@ export default async function ProductsPage({
           <div className="container mx-auto px-4 md:px-0">
             <div className="h-7 bg-slate-200 dark:bg-zinc-800 w-48 mb-10" />
             <div className="flex gap-2 relative items-start">
-              {/* Left filter sidebar loading skeleton */}
               <div className="hidden md:block w-72 h-[500px] bg-slate-200 dark:bg-zinc-800 rounded-none flex-shrink-0" />
-              {/* Right grid loading skeleton */}
               <div className="flex-1 grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2 md:gap-4">
                 {[...Array(8)].map((_, idx) => (
                   <div key={idx} className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 h-96 rounded-none p-4 space-y-4">
@@ -88,12 +213,20 @@ export default async function ProductsPage({
         </div>
       }>
         <ProductsClient
-          products={products}
+          products={paginatedProducts as any}
           categories={categoriesRes || []}
           brands={brandsRes || []}
-          initialCategory={searchParams.category}
-          initialBrand={searchParams.brand}
-          initialSubcategory={searchParams.subcategory}
+          initialCategory={categoryParam}
+          initialBrand={brandParam}
+          initialSubcategory={subcategoryParam}
+          totalCount={totalCount}
+          currentPage={currentPage}
+          totalPages={totalPages}
+          globalMinPrice={globalMinPrice}
+          globalMaxPrice={globalMaxPrice}
+          initialMinPrice={minPriceParam}
+          initialMaxPrice={maxPriceParam}
+          initialSort={sortParam}
         />
       </Suspense>
 
