@@ -348,6 +348,22 @@ export default function AICreateOrderClient({
   // ─── RENDER ─────────────────────────────────────────────────
   return (
     <div className="space-y-4 lg:min-h-[calc(100vh-6rem)]">
+      {isParsing && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-white/90 backdrop-blur-sm">
+          <div className="flex flex-col items-center gap-4 rounded-2xl border border-slate-200 bg-white px-8 py-10 text-center">
+            <div className="flex h-16 w-16 items-center justify-center rounded-full border border-slate-200 bg-slate-50">
+              <Loader2 className="h-8 w-8 animate-spin text-slate-500" />
+            </div>
+            <div className="space-y-1">
+              <p className="text-sm font-semibold text-slate-900">AI is parsing your message</p>
+              <p className="text-xs text-slate-500">
+                Please wait while we extract the order details.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="flex justify-between items-center gap-3">
@@ -363,7 +379,7 @@ export default function AICreateOrderClient({
               AI Order Creator
             </h1>
             <p className="text-slate-500 text-sm mt-0.5">
-              Paste WhatsApp order messages • AI parses them into orders
+              Paste order messages • AI parses them into orders
             </p>
           </div>
 
@@ -431,10 +447,7 @@ export default function AICreateOrderClient({
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(360px,0.85fr)_minmax(0,1.15fr)] lg:items-stretch">
         {/* ═══ LEFT COLUMN ═══ */}
         <div className="space-y-4 h-full">
-          <h2 className="flex items-center gap-2 text-sm font-semibold text-slate-900">
-            <ChartArea className="w-4 h-4 text-slate-500" />
-            Paste Order Messages
-          </h2>
+         
           {/* ─── Text Input Card ─── */}
           <div className="h-full rounded-2xl border border-slate-200 bg-white overflow-hidden flex flex-col">
             
@@ -491,20 +504,6 @@ export default function AICreateOrderClient({
             </div>
           </div>
 
-          {/* ─── Parsing Animation ─── */}
-          {isParsing && (
-            <div className="flex flex-col items-center justify-center rounded-2xl border border-slate-200 bg-white py-10 space-y-3">
-              <div className="w-12 h-12 rounded-xl border border-slate-200 bg-slate-50 flex items-center justify-center animate-pulse">
-                <Sparkles className="w-6 h-6 text-slate-500" />
-              </div>
-              <div className="text-center">
-                <p className="text-sm font-semibold text-slate-900">AI is analyzing your messages...</p>
-                <p className="text-xs text-slate-500 mt-1">
-                  Extracting customer info, products, sizes, and pricing
-                </p>
-              </div>
-            </div>
-          )}
         </div>
 
         {/* ═══ RIGHT COLUMN ═══ */}
@@ -512,12 +511,7 @@ export default function AICreateOrderClient({
           {/* ─── Parsed Order Cards ─── */}
           {parsedOrders.length > 0 && !isParsing && (
             <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <h3 className="flex items-center gap-2 text-sm font-semibold text-slate-900 uppercase tracking-wider">
-                  <Package className="w-4 h-4 text-slate-500" />
-                  Parsed Orders ({parsedOrders.length})
-                </h3>
-              </div>
+              
 
               {parsedOrders.map((order, orderIdx) => (
                 <OrderCard
