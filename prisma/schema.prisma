@@ -103,6 +103,7 @@ model Subcategory {
 model Product {
   id            String           @id @default(uuid())
   name          String
+  slug          String?          @unique
   description   String
   price         Float
   purchasePrice Float?

@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import { createProduct, updateProduct, uploadImage } from "../../actions";
 import { createBrand, createSubcategory, createCategory } from "../../inventory/catalog-actions";
+import { slugify } from "@/utils/slugify";
 import { Plus, Trash2, Save, ArrowLeft, GripVertical, Bold, Italic, Underline, List, ListOrdered, Undo, Redo, Eraser, X, Loader2, ChevronDown } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -30,6 +31,16 @@ export default function ProductFormClient({
   const [isFeatured, setIsFeatured] = useState(initialData?.isFeatured || false);
   const [isPublished, setIsPublished] = useState(initialData?.isPublished ?? true);
   const [isCustomize, setIsCustomize] = useState(initialData?.isCustomize || false);
+  const [slug, setSlug] = useState(initialData?.slug || "");
+  const [isSlugEdited, setIsSlugEdited] = useState(!!initialData?.slug);
+
+  const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    setName(val);
+    if (!isSlugEdited) {
+      setSlug(slugify(val));
+    }
+  };
 
   // Dynamic state arrays to handle inline additions seamlessly
   const [localBrands, setLocalBrands] = useState<any[]>(brands);
@@ -236,6 +247,7 @@ export default function ProductFormClient({
 
     const productPayload = {
       name: name.trim(),
+      slug: slug.trim(),
       description: description.trim(),
       price: parseFloat(price),
       images: validImages, // Send the cleaned array
@@ -269,8 +281,13 @@ export default function ProductFormClient({
           setLoading(false);
         }
       } else {
-        await createProduct(productPayload);
-        router.push("/admin/products");
+        const res = await createProduct(productPayload);
+        if (res && !res.success) {
+          alert(`Failed to save product: ${res.error || "Unknown error"}`);
+          setLoading(false);
+        } else {
+          router.push("/admin/products");
+        }
       }
     } catch (error) {
       console.error("Failed to save product:", error);
@@ -325,11 +342,27 @@ export default function ProductFormClient({
                 <input
                   type="text"
                   value={name}
-                  onChange={(e) => setName(e.target.value)}
+                  onChange={handleNameChange}
                   placeholder="e.g. Mystic Classic Jersey"
                   className="w-full px-4 py-2.5 border border-slate-300 rounded-none focus:outline-none focus:border-slate-900 focus:ring-0 focus:border-slate-900 text-sm"
                   required
                 />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-slate-900 mb-2">Product Slug *</label>
+                <input
+                  type="text"
+                  value={slug}
+                  onChange={(e) => {
+                    setSlug(slugify(e.target.value));
+                    setIsSlugEdited(true);
+                  }}
+                  placeholder="e.g. mystic-classic-jersey"
+                  className="w-full px-4 py-2.5 border border-slate-300 rounded-none focus:outline-none focus:border-slate-900 focus:ring-0 focus:border-slate-900 text-sm"
+                  required
+                />
+                <p className="text-[11px] text-slate-500 mt-1">Used in URL: /product/{slug || 'slug'}</p>
               </div>
 
               <div>
