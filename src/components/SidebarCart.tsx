@@ -60,7 +60,7 @@ export default function SidebarCart() {
             <div className="p-6 border-b border-slate-100 dark:border-zinc-900 flex justify-between items-center">
               <div className="flex items-center gap-3">
                 <ShoppingBag className="w-6 h-6 text-primary" />
-                <h2 className="text-xl font-black uppercase tracking-tight">Shopping Cart</h2>
+                <h2 className="text-xl font-semibold uppercase tracking-tight">Shopping Cart</h2>
               </div>
               <button
                 onClick={toggleCart}
@@ -106,8 +106,8 @@ export default function SidebarCart() {
                 </div>
               ) : (
                 items.map((item) => (
-                  <div key={`${item.id}-${item.size}`} className="flex gap-4 group">
-                    <div className="relative w-24 h-32 bg-slate-100 dark:bg-zinc-900 rounded-lg overflow-hidden flex-shrink-0">
+                  <div key={`${item.id}-${item.size}`} className="flex gap-4 group ">
+                    <div className="relative w-24 h-28 bg-slate-100 dark:bg-zinc-900 rounded-lg overflow-hidden flex-shrink-0">
                       {item.image ? (
                         <Image
                           src={item.image}
@@ -124,7 +124,7 @@ export default function SidebarCart() {
                     <div className="flex-1 flex flex-col justify-between py-1">
                       <div>
                         <div className="flex justify-between items-start">
-                          <h3 className="font-bold text-sm uppercase leading-tight group-hover:text-primary transition-colors line-clamp-2">
+                          <h3 className="font-medium text-sm leading-tight group-hover:text-primary transition-colors line-clamp-2">
                             {item.name}
                           </h3>
                           <button
@@ -134,33 +134,43 @@ export default function SidebarCart() {
                             <Trash2 className="w-4 h-4" />
                           </button>
                         </div>
+
+
+                      </div>
+                      <div>
                         {item.size && (
-                          <span className="text-[10px] font-black uppercase bg-slate-100 dark:bg-zinc-900 px-2 py-0.5 rounded text-slate-600 dark:text-slate-400">
+                          <span className="text-[14px] font-semibold bg-slate-100 dark:bg-zinc-900 px-2 py-1 text-slate-600 dark:text-slate-400">
                             Size: {item.size}
                           </span>
                         )}
-                        <p className="text-primary font-black mt-1">
-                          {formatBDT(item.price)}
-                        </p>
                       </div>
+                      <div>
 
-                      <div className="flex items-center gap-3">
-                        <div className="flex items-center border border-slate-200 dark:border-zinc-800 rounded-lg">
-                          <button
-                            onClick={() => updateQuantity(item.id, item.quantity - 1, item.size)}
-                            className="p-1 px-2 hover:bg-slate-50 dark:hover:bg-zinc-900 transition-colors"
-                          >
-                            <Minus className="w-3 h-3" />
-                          </button>
-                          <span className="w-8 text-center text-xs font-bold">{item.quantity}</span>
-                          <button
-                            onClick={() => updateQuantity(item.id, item.quantity + 1, item.size)}
-                            className="p-1 px-2 hover:bg-slate-50 dark:hover:bg-zinc-900 transition-colors"
-                          >
-                            <Plus className="w-3 h-3" />
-                          </button>
+
+                        <div className="flex items-center justify-between gap-3">
+                          <div>
+                            <p className="text-xl text-primary font-semibold mt-1">
+                              {formatBDT(item.price)}
+                            </p>
+                          </div>
+                          <div className="flex items-center border border-slate-200 dark:border-zinc-800 ">
+                            <button
+                              onClick={() => updateQuantity(item.id, item.quantity - 1, item.size)}
+                              className="p-2 px-3 hover:bg-slate-50 border-r dark:hover:bg-zinc-900 transition-colors"
+                            >
+                              <Minus className="w-4 h-4" />
+                            </button>
+                            <span className="w-10 text-center text-xs font-bold">{item.quantity}</span>
+                            <button
+                              onClick={() => updateQuantity(item.id, item.quantity + 1, item.size)}
+                              className="p-2 px-3 border-l hover:bg-slate-50 dark:hover:bg-zinc-900 transition-colors"
+                            >
+                              <Plus className="w-4 h-4" />
+                            </button>
+                          </div>
                         </div>
                       </div>
+
                     </div>
                   </div>
                 ))
