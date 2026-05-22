@@ -6,6 +6,7 @@ import { formatBDT, roundPrice } from "@/utils/formatPrice";
 interface ProductCardProps {
   product: {
     id: string;
+    slug?: string | null;
     name: string;
     price: number;
     images: string[];
@@ -35,7 +36,7 @@ export default function ProductCard({ product }: ProductCardProps) {
   }
 
   return (
-    <Link href={`/product/${product.id}`} className="group">
+    <Link href={`/product/${product.slug || product.id}`} className="group">
       <div className="flex flex-col bg-white overflow-hidden transition-all duration-300 shadow-sm border border-transparent h-full relative">
 
         {/* Discount Badge */}

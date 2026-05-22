@@ -10,6 +10,7 @@ import { revalidatePath } from "next/cache";
 import { writeFile, mkdir } from "fs/promises";
 import { join, dirname } from "path";
 import { pathaoClient } from "@/lib/pathao/PathaoClient";
+import { slugify } from "@/utils/slugify";
 
 async function getOrCreateSystemAccount(tx: any, name: string, type: "INCOME" | "EXPENSE") {
   let account = await tx.chartOfAccount.findUnique({ where: { name } });
@@ -134,6 +135,7 @@ export async function adminLogout() {
 
 async function _createProduct(data: {
   name: string;
+  slug?: string | null;
   description: string;
   price: number;
   images: string[];
@@ -150,9 +152,24 @@ async function _createProduct(data: {
   variants: { size: string; color: string; colorCode?: string; sku?: string; stock: number }[];
 }) {
   try {
+    const rawSlug = data.slug ? data.slug.trim() : slugify(data.name);
+    const finalSlug = slugify(rawSlug);
+
+    if (!finalSlug) {
+      return { success: false, error: "A valid unique slug is required." };
+    }
+
+    const existing = await prisma.product.findUnique({
+      where: { slug: finalSlug }
+    });
+    if (existing) {
+      return { success: false, error: "Product slug already exists. Please choose a unique slug." };
+    }
+
     const product = await prisma.product.create({
       data: {
         name: data.name,
+        slug: finalSlug,
         description: data.description,
         price: data.price,
         images: data.images,
@@ -181,7 +198,7 @@ async function _createProduct(data: {
 
     revalidatePath("/admin/products");
     revalidatePath("/");
-    revalidatePath("/product/[id]", "page");
+    revalidatePath("/product/[slug]", "page");
     return { success: true, data: product };
   } catch (error: any) {
     if (error.message === 'NEXT_REDIRECT' || error.digest?.startsWith('NEXT_REDIRECT')) {
@@ -203,6 +220,7 @@ export const createProduct = withAuditLog(_createProduct, {
 
 async function _updateProduct(id: string, data: {
   name: string;
+  slug?: string | null;
   description: string;
   price: number;
   images: string[];
@@ -219,10 +237,28 @@ async function _updateProduct(id: string, data: {
   variants: { size: string; color: string; colorCode?: string; sku?: string; stock: number }[];
 }) {
   try {
+    const rawSlug = data.slug ? data.slug.trim() : slugify(data.name);
+    const finalSlug = slugify(rawSlug);
+
+    if (!finalSlug) {
+      return { success: false, error: "A valid unique slug is required." };
+    }
+
+    const existing = await prisma.product.findFirst({
+      where: {
+        slug: finalSlug,
+        id: { not: id }
+      }
+    });
+    if (existing) {
+      return { success: false, error: "Product slug already exists. Please choose a unique slug." };
+    }
+
     const product = await prisma.product.update({
       where: { id },
       data: {
         name: data.name,
+        slug: finalSlug,
         description: data.description,
         price: data.price,
         images: data.images,
@@ -261,8 +297,8 @@ async function _updateProduct(id: string, data: {
     revalidatePath("/admin/products");
     revalidatePath(`/admin/products/${id}`);
     revalidatePath("/");
-    revalidatePath(`/product/${id}`);
-    revalidatePath("/product/[id]", "page");
+    revalidatePath(`/product/${finalSlug}`);
+    revalidatePath("/product/[slug]", "page");
     return { success: true, data: product };
   } catch (error: any) {
     if (error.message === 'NEXT_REDIRECT' || error.digest?.startsWith('NEXT_REDIRECT')) {
@@ -1062,7 +1098,7 @@ async function _updateDeliverySettings(insideDhaka: number, outsideDhaka: number
     revalidatePath("/admin/settings");
     revalidatePath("/");
     revalidatePath("/checkout");
-    revalidatePath("/product/[id]", "page");
+    revalidatePath("/product/[slug]", "page");
     return { success: true, data: settings };
   } catch (error: any) {
     console.error("Error in updateDeliverySettings:", error);

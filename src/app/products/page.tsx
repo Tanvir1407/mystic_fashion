@@ -90,6 +90,7 @@ export default async function ProductsPage({
       where: whereClause,
       select: {
         id: true,
+        slug: true,
         name: true,
         description: true,
         price: true,
