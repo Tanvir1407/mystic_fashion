@@ -644,7 +644,7 @@ export default function CreateOrderClient({
                                   updated[idx].name = e.target.value;
                                   setPendingPrintDetails(updated);
                                 }}
-                                className="w-full px-2 py-1 text-xs border uppercase border-slate-200 rounded font-bold focus:outline-indigo-500"
+                                className="w-full px-2 py-1 text-xs border border-slate-200 rounded font-bold focus:outline-indigo-500"
                               />
                             </div>
                             <div className="col-span-4">

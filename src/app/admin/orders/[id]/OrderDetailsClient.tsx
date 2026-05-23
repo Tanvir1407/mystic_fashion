@@ -557,7 +557,7 @@ export default function OrderDetailsClient({ order, deliverySettings, products =
                       <div className="flex flex-col gap-1 p-2 bg-indigo-50/50 rounded-lg border border-indigo-100/50">
                         <span className="text-[8px] font-black text-indigo-400 uppercase tracking-widest leading-none">Jersey Customization</span>
                         <div className="flex items-center justify-between">
-                          <span className="text-[10px] font-black text-indigo-700 uppercase">{item.printName} <span className="text-indigo-400">#{item.printNumber}</span></span>
+                          <span className="text-[10px] font-black text-indigo-700">{item.printName} <span className="text-indigo-400">#{item.printNumber}</span></span>
                           <span className="text-[10px] font-bold text-indigo-600">+{formatBDT(item.printCost * item.quantity)}</span>
                         </div>
                       </div>

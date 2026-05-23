@@ -44,7 +44,7 @@ export function CustomSelect({
   const [isOpen, setIsOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [activeIndex, setActiveIndex] = useState(0);
-  
+
   const containerRef = useRef<HTMLDivElement>(null);
   const optionsListRef = useRef<HTMLDivElement>(null);
 
@@ -108,8 +108,8 @@ export function CustomSelect({
   };
 
   return (
-    <div 
-      className={`relative ${className}`} 
+    <div
+      className={`relative ${className}`}
       ref={containerRef}
       onKeyDown={handleKeyDown}
     >
@@ -123,7 +123,7 @@ export function CustomSelect({
         type="button"
         disabled={disabled}
         onClick={() => !disabled && setIsOpen(!isOpen)}
-        className={`w-full ${heightClass} flex items-center justify-between px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg ${textClass} transition-all focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none ${disabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer"
+        className={`w-full ${heightClass} flex items-center justify-between px-4 py-2 bg-slate-50 border border-slate-200 ${textClass} transition-all focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none ${disabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer"
           } ${selectedOption?.colorClass || "text-slate-900"}`}
       >
         <span className={`truncate font-semibold ${selectedOption ? "text-slate-800" : "text-slate-400"}`}>
@@ -142,9 +142,8 @@ export function CustomSelect({
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: openUpwards ? 10 : -10 }}
             transition={{ duration: 0.2, ease: "easeOut" }}
-            className={`absolute z-50 w-full bg-white border border-slate-200 rounded-xl shadow-xl overflow-hidden ring-1 ring-black/5 ${
-              openUpwards ? "bottom-full mb-2" : "top-full mt-2"
-            }`}
+            className={`absolute z-50 w-full bg-white border border-slate-200  shadow-xl overflow-hidden ring-1 ring-black/5 ${openUpwards ? "bottom-full mb-2" : "top-full mt-2"
+              }`}
           >
             {searchable && (
               <div className="p-2 border-b border-slate-100 bg-slate-50/50">
@@ -159,14 +158,14 @@ export function CustomSelect({
                       onSearchValueChange?.(val);
                     }}
                     placeholder="Search..."
-                    className="w-full pl-9 pr-4 py-2 text-xs bg-white border border-slate-200 rounded-md focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all font-medium"
+                    className="w-full pl-9 pr-4 py-2 text-xs bg-white border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all font-medium"
                     autoFocus
                   />
                 </div>
               </div>
             )}
 
-            <div 
+            <div
               ref={optionsListRef}
               className="max-h-60 overflow-y-auto custom-scrollbar"
             >
@@ -186,10 +185,9 @@ export function CustomSelect({
                       setSearch("");
                     }}
                     onMouseEnter={() => setActiveIndex(index)}
-                    className={`w-full text-left px-4 py-2.5 text-sm transition-colors flex items-center justify-between group ${
-                      value === opt.value
-                        ? "bg-primary/5 text-primary font-bold"
-                        : activeIndex === index
+                    className={`w-full text-left px-4 py-2.5 text-sm transition-colors flex items-center justify-between group ${value === opt.value
+                      ? "bg-primary/5 text-primary font-bold"
+                      : activeIndex === index
                         ? "bg-slate-100 text-slate-900"
                         : "hover:bg-slate-50 text-slate-700"
                       } ${opt.colorClass || ""}`}
