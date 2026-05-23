@@ -87,7 +87,7 @@ export default function PathaoReviewModal({ isOpen, onClose, selectedOrders, onS
             <div className="mb-4 p-4 bg-amber-50 border border-amber-100 rounded-xl flex items-start gap-3 text-amber-700">
               <Info className="w-5 h-5 shrink-0 mt-0.5" />
               <p className="text-sm font-medium">
-                Note: {excludedCount} selected order(s) were excluded because they are not in the PACKAGING status.
+                Note: {excludedCount} selected order(s) were excluded because they are not in the PACKAGED status.
               </p>
             </div>
           )}
