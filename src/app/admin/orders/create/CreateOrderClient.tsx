@@ -367,9 +367,42 @@ export default function CreateOrderClient({
 
         {/* Customer Details Card */}
         <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-          <div className="px-6 py-4 border-b border-slate-100 bg-slate-50 flex items-center gap-2">
-            <User className="w-4 h-4 text-indigo-500" />
-            <h2 className="text-sm font-bold text-slate-800 uppercase tracking-wider">Customer Information</h2>
+          <div className="px-6 py-4 border-b border-slate-100 bg-slate-50 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-2">
+              <User className="w-4 h-4 text-indigo-500" />
+              <h2 className="text-sm font-bold text-slate-800 uppercase tracking-wider">Customer Information</h2>
+            </div>
+            {/* Toggles on the right */}
+            <div className="flex items-center gap-6">
+              {/* Store Pickup Toggle */}
+              <label className="flex items-center gap-2 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={isStorePickup}
+                  onChange={(e) => {
+                    setIsStorePickup(e.target.checked);
+                    if (e.target.checked) {
+                      setDistrict("Self Pickup");
+                    } else {
+                      setDistrict("Dhaka");
+                    }
+                  }}
+                  className="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                />
+                <span className="text-xs font-bold text-slate-700 uppercase tracking-wide">Store Pickup</span>
+              </label>
+
+              {/* Exchange Order Toggle */}
+              <label className="flex items-center gap-2 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={isExchange}
+                  onChange={(e) => setIsExchange(e.target.checked)}
+                  className="w-4 h-4 rounded text-orange-600 focus:ring-orange-500 cursor-pointer"
+                />
+                <span className="text-xs font-bold text-orange-700 uppercase tracking-wide">Exchange Order</span>
+              </label>
+            </div>
           </div>
           <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-5">
             <div className="space-y-1.5">
@@ -398,97 +431,47 @@ export default function CreateOrderClient({
                 />
               </div>
             </div>
-            {/* Store Pickup Toggle */}
-            <div className="md:col-span-2 p-4 bg-slate-50 rounded-xl border border-slate-200/60 flex flex-col md:flex-row md:items-center justify-between gap-4">
-              <div className="space-y-0.5">
-                <span className="text-xs font-bold text-slate-800 uppercase tracking-wide block">Store Pickup</span>
-                <span className="text-[11px] text-slate-400 font-medium">
-                  Customer will pick up from office. No courier needed.
-                </span>
-              </div>
-              <div className="flex items-center gap-4">
-                <label className="relative inline-flex items-center cursor-pointer">
+            {isStorePickup && (
+              <div className="space-y-1.5 animate-in fade-in duration-200">
+                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Pickup Delivery Charge</label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-bold text-slate-400">৳</span>
                   <input
-                    type="checkbox"
-                    checked={isStorePickup}
-                    onChange={(e) => {
-                      setIsStorePickup(e.target.checked);
-                      if (e.target.checked) {
-                        setDistrict("Self Pickup");
-                      } else {
-                        setDistrict("Dhaka");
-                      }
-                    }}
-                    className="sr-only peer"
+                    type="number"
+                    min="0"
+                    value={deliveryCharge}
+                    onChange={(e) => setDeliveryCharge(parseFloat(e.target.value) || 0)}
+                    className="w-full pl-8 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm font-bold text-slate-800 focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all outline-none"
+                    placeholder="0"
                   />
-                  <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
-                </label>
-                
-                {isStorePickup && (
-                  <div className="flex items-center gap-2 animate-in fade-in zoom-in-95 duration-200">
-                    <span className="text-xs font-bold text-slate-500 uppercase tracking-wider text-slate-700">Charge:</span>
-                    <div className="relative w-24">
-                      <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">৳</span>
-                      <input
-                        type="number"
-                        min="0"
-                        value={deliveryCharge}
-                        onChange={(e) => setDeliveryCharge(parseFloat(e.target.value) || 0)}
-                        className="w-full pl-6 pr-2 py-1 bg-white border border-slate-200 rounded-lg text-xs font-bold text-slate-800 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none"
-                        placeholder="0"
-                      />
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Exchange Order Toggle */}
-            <div className="md:col-span-2 border border-orange-100 bg-orange-50/30 p-4 rounded-md animate-in fade-in duration-200">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-bold text-slate-800">Exchange Order</p>
-                  <p className="text-xs text-slate-500 mt-0.5">
-                    Link this order to an original order as an exchange.
-                  </p>
                 </div>
-                <input
-                  type="checkbox"
-                  checked={isExchange}
-                  onChange={(e) => setIsExchange(e.target.checked)}
-                  className="w-4 h-4 cursor-pointer"
-                />
               </div>
+            )}
 
-              {isExchange && (
-                <div className="mt-4 space-y-3 animate-in fade-in slide-in-from-top-1 duration-200">
-                  <div>
-                    <label className="text-xs font-semibold text-slate-700 block mb-1">
-                      Original Order ID *
-                    </label>
-                    <input
-                      type="text"
-                      value={exchangeRefOrderId}
-                      onChange={(e) => setExchangeRefOrderId(e.target.value.toUpperCase())}
-                      placeholder="e.g. MJEPE-26052301"
-                      className="w-full px-3 py-2 border border-slate-300 rounded-md text-sm font-mono focus:outline-none focus:border-orange-400"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-xs font-semibold text-slate-700 block mb-1">
-                      Exchange Note *
-                    </label>
-                    <input
-                      type="text"
-                      value={exchangeItemNote}
-                      onChange={(e) => setExchangeItemNote(e.target.value)}
-                      placeholder="e.g. XL → XXL, Argentina Jersey"
-                      className="w-full px-3 py-2 border border-slate-300 rounded-md text-sm focus:outline-none focus:border-orange-400"
-                    />
-                  </div>
+            {isExchange && (
+              <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4 p-4 border border-orange-100 bg-orange-50/30 rounded-xl animate-in fade-in duration-200">
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-orange-700 uppercase tracking-wider font-bold">Original Order ID *</label>
+                  <input
+                    type="text"
+                    value={exchangeRefOrderId}
+                    onChange={(e) => setExchangeRefOrderId(e.target.value.toUpperCase())}
+                    placeholder="e.g. MJEPE-26052301"
+                    className="w-full px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm font-mono focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 outline-none transition-all"
+                  />
                 </div>
-              )}
-            </div>
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-orange-700 uppercase tracking-wider font-bold">Exchange Note *</label>
+                  <input
+                    type="text"
+                    value={exchangeItemNote}
+                    onChange={(e) => setExchangeItemNote(e.target.value)}
+                    placeholder="e.g. XL → XXL, Argentina Jersey"
+                    className="w-full px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 outline-none transition-all"
+                  />
+                </div>
+              </div>
+            )}
 
             {!isStorePickup && (
               <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-3 gap-4 animate-in fade-in duration-200">
