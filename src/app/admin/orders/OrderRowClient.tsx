@@ -155,83 +155,85 @@ export default function OrderRowClient({
         {formatBDT(order.totalAmount)}
       </td>
       <td className="px-2 py-4 text-right">
-        {canEdit ? (
-          <select
-            value={status}
-            onChange={handleStatusChange}
-            disabled={loading || status === "CANCELLED" || status === "RETURNED"}
-            className={`w-32 text-[11px] font-black uppercase tracking-wider px-2 py-1.5 rounded-md border transition-all cursor-pointer outline-none focus:ring-2 focus:ring-opacity-50 ${status === "PENDING" ? "bg-amber-50 text-amber-700 border-amber-200 focus:ring-amber-500" :
-              status === "CONFIRMED" ? "bg-blue-50 text-blue-700 border-blue-200 focus:ring-blue-500" :
-                status === "PRINTING" ? "bg-cyan-50 text-cyan-700 border-cyan-200 focus:ring-cyan-500" :
-                  status === "PACKAGING" ? "bg-purple-50 text-purple-700 border-purple-200 focus:ring-purple-500" :
-                    status === "SHIPPED" ? "bg-indigo-50 text-indigo-700 border-indigo-200 focus:ring-indigo-500" :
-                      status === "DELIVERED" ? "bg-green-50 text-green-700 border-green-200 focus:ring-green-500" :
-                        status === "RETURNED" ? "bg-rose-50 text-rose-700 border-rose-200 focus:ring-rose-500" :
-                          "bg-red-50 text-red-700 border-red-200 focus:ring-red-500"
-              }`}
-          >
-            <option value="PENDING" disabled={status !== "PENDING" && status !== "CONFIRMED"}>Placed</option>
-            <option value="CONFIRMED" disabled={status === "SHIPPED" || status === "DELIVERED" || status === "CANCELLED" || status === "RETURNED"}>Confirmed</option>
-            <option value="PRINTING" disabled={status === "SHIPPED" || status === "DELIVERED" || status === "CANCELLED" || status === "RETURNED"}>Printing</option>
-            <option value="PACKAGING" disabled={status === "SHIPPED" || status === "DELIVERED" || status === "CANCELLED" || status === "RETURNED"}>Packaged</option>
-            <option value="SHIPPED" disabled={status === "DELIVERED" || status === "CANCELLED" || status === "RETURNED"}>Shipped</option>
-            <option value="DELIVERED" disabled={status === "PENDING" || status === "CONFIRMED" || status === "PACKAGING" || status === "CANCELLED" || status === "RETURNED"}>Delivered</option>
-            <option value="RETURNED" disabled={status === "PENDING" || status === "CONFIRMED" || status === "PACKAGING" || status === "CANCELLED"}>Returned</option>
-            <option value="CANCELLED" disabled={status === "SHIPPED" || status === "DELIVERED" || status === "RETURNED"}>Cancelled</option>
-          </select>
-        ) : (
-          <span className={`inline-flex w-32 justify-center text-[11px] font-black uppercase tracking-wider px-2 py-1.5 rounded-md border ${status === "PENDING" ? "bg-amber-50 text-amber-700 border-amber-200" :
-            status === "CONFIRMED" ? "bg-blue-50 text-blue-700 border-blue-200" :
-              status === "PRINTING" ? "bg-cyan-50 text-cyan-700 border-cyan-200" :
-                status === "PACKAGING" ? "bg-purple-50 text-purple-700 border-purple-200" :
-                  status === "SHIPPED" ? "bg-indigo-50 text-indigo-700 border-indigo-200" :
-                    status === "DELIVERED" ? "bg-green-50 text-green-700 border-green-200" :
-                      status === "RETURNED" ? "bg-rose-50 text-rose-700 border-rose-200" :
-                        "bg-red-50 text-red-700 border-red-200"
-            }`}>
-            {STATUS_LABELS[status] || status}
-          </span>
-        )}
-
-        {/* Pickup Action Buttons */}
-        {status === "PACKAGING" && order.pathaoConsignmentId && (
-          <div className="flex flex-col items-end gap-1 mt-1.5">
-            <span className="inline-flex text-[9px] font-black text-blue-600 bg-blue-50 px-2 py-0.5 rounded border border-blue-100 uppercase tracking-wider">
-              Pickup Requested
+        <div className="inline-flex flex-col items-end relative">
+          {canEdit ? (
+            <select
+              value={status}
+              onChange={handleStatusChange}
+              disabled={loading || status === "CANCELLED" || status === "RETURNED"}
+              className={`w-32 text-[11px] font-black uppercase tracking-wider px-2 py-1.5 rounded-md border transition-all cursor-pointer outline-none focus:ring-2 focus:ring-opacity-50 ${status === "PENDING" ? "bg-amber-50 text-amber-700 border-amber-200 focus:ring-amber-500" :
+                status === "CONFIRMED" ? "bg-blue-50 text-blue-700 border-blue-200 focus:ring-blue-500" :
+                  status === "PRINTING" ? "bg-cyan-50 text-cyan-700 border-cyan-200 focus:ring-cyan-500" :
+                    status === "PACKAGING" ? "bg-purple-50 text-purple-700 border-purple-200 focus:ring-purple-500" :
+                      status === "SHIPPED" ? "bg-indigo-50 text-indigo-700 border-indigo-200 focus:ring-indigo-500" :
+                        status === "DELIVERED" ? "bg-green-50 text-green-700 border-green-200 focus:ring-green-500" :
+                          status === "RETURNED" ? "bg-rose-50 text-rose-700 border-rose-200 focus:ring-rose-500" :
+                            "bg-red-50 text-red-700 border-red-200 focus:ring-red-500"
+                }`}
+            >
+              <option value="PENDING" disabled={status !== "PENDING" && status !== "CONFIRMED"}>Placed</option>
+              <option value="CONFIRMED" disabled={status === "SHIPPED" || status === "DELIVERED" || status === "CANCELLED" || status === "RETURNED"}>Confirmed</option>
+              <option value="PRINTING" disabled={status === "SHIPPED" || status === "DELIVERED" || status === "CANCELLED" || status === "RETURNED"}>Printing</option>
+              <option value="PACKAGING" disabled={status === "SHIPPED" || status === "DELIVERED" || status === "CANCELLED" || status === "RETURNED"}>Packaged</option>
+              <option value="SHIPPED" disabled={status === "DELIVERED" || status === "CANCELLED" || status === "RETURNED"}>Shipped</option>
+              <option value="DELIVERED" disabled={status === "PENDING" || status === "CONFIRMED" || status === "PACKAGING" || status === "CANCELLED" || status === "RETURNED"}>Delivered</option>
+              <option value="RETURNED" disabled={status === "PENDING" || status === "CONFIRMED" || status === "PACKAGING" || status === "CANCELLED"}>Returned</option>
+              <option value="CANCELLED" disabled={status === "SHIPPED" || status === "DELIVERED" || status === "RETURNED"}>Cancelled</option>
+            </select>
+          ) : (
+            <span className={`inline-flex w-32 justify-center text-[11px] font-black uppercase tracking-wider px-2 py-1.5 rounded-md border ${status === "PENDING" ? "bg-amber-50 text-amber-700 border-amber-200" :
+              status === "CONFIRMED" ? "bg-blue-50 text-blue-700 border-blue-200" :
+                status === "PRINTING" ? "bg-cyan-50 text-cyan-700 border-cyan-200" :
+                  status === "PACKAGING" ? "bg-purple-50 text-purple-700 border-purple-200" :
+                    status === "SHIPPED" ? "bg-indigo-50 text-indigo-700 border-indigo-200" :
+                      status === "DELIVERED" ? "bg-green-50 text-green-700 border-green-200" :
+                        status === "RETURNED" ? "bg-rose-50 text-rose-700 border-rose-200" :
+                          "bg-red-50 text-red-700 border-red-200"
+              }`}>
+              {STATUS_LABELS[status] || status}
             </span>
-            <button
-              onClick={async () => {
-                const res = await cancelPathaoPickupAction(order.id);
-                if (!res.success) {
-                  window.alert(`Error: ${res.error}`);
-                } else {
-                  window.alert("⚠️ Pickup cancelled in system.\n\nPlease also cancel this order manually from Pathao Merchant Panel.");
-                }
-              }}
-              className="text-[10px] text-red-600 hover:underline font-bold"
-            >
-              Cancel Pickup
-            </button>
-          </div>
-        )}
+          )}
 
-        {status === "PACKAGING" && order.isStorePickup && !order.pathaoConsignmentId && (
-          <div className="flex flex-col items-end mt-1.5">
-            <button
-              onClick={async () => {
-                const res = await sendPathaoPickupManually(order.id);
-                if (!res.success) {
-                  window.alert(res.error);
-                } else {
-                  window.alert("✅ Pickup requested manually in system.");
-                }
-              }}
-              className="text-[10px] text-indigo-600 hover:underline font-bold"
-            >
-              Send to Pathao
-            </button>
-          </div>
-        )}
+          {/* Pickup Action Buttons */}
+          {status === "PACKAGING" && order.pathaoConsignmentId && (
+            <div className="absolute top-full right-0 flex flex-col items-end gap-1 mt-1 z-10">
+              <span className="inline-flex text-[9px] font-black text-blue-600 bg-blue-50 px-2 py-0.5 rounded border border-blue-100 uppercase tracking-wider whitespace-nowrap">
+                Pickup Requested
+              </span>
+              <button
+                onClick={async () => {
+                  const res = await cancelPathaoPickupAction(order.id);
+                  if (!res.success) {
+                    window.alert(`Error: ${res.error}`);
+                  } else {
+                    window.alert("⚠️ Pickup cancelled in system.\n\nPlease also cancel this order manually from Pathao Merchant Panel.");
+                  }
+                }}
+                className="text-[10px] text-red-600 hover:underline font-bold whitespace-nowrap"
+              >
+                Cancel Pickup
+              </button>
+            </div>
+          )}
+
+          {status === "PACKAGING" && !order.isStorePickup && !order.pathaoConsignmentId && (
+            <div className="absolute top-full right-0 flex flex-col items-end mt-1 z-10">
+              <button
+                onClick={async () => {
+                  const res = await sendPathaoPickupManually(order.id);
+                  if (!res.success) {
+                    window.alert(res.error);
+                  } else {
+                    window.alert("✅ Pickup requested manually in system.");
+                  }
+                }}
+                className="text-[10px] text-indigo-600 hover:underline font-bold whitespace-nowrap"
+              >
+                Send to Pathao
+              </button>
+            </div>
+          )}
+        </div>
       </td>
       <td className="px-2 py-4 text-right">
         <div className="flex items-center justify-end gap-2">
