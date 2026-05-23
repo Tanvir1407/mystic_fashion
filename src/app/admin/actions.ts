@@ -349,6 +349,11 @@ export const deleteProduct = withAuditLog(_deleteProduct, {
 
 async function _updateOrderStatus(orderId: string, status: OrderStatus) {
   try {
+    const orderWithItems = await prisma.order.findUnique({
+      where: { id: orderId },
+      include: { items: { include: { product: true } } },
+    });
+
     await prisma.$transaction(async (tx) => {
       const order = await tx.order.findUnique({
         where: { id: orderId },
@@ -367,9 +372,9 @@ async function _updateOrderStatus(orderId: string, status: OrderStatus) {
       const activeStatuses: OrderStatus[] = ["CONFIRMED", "PACKAGING", "SHIPPED", "DELIVERED"];
       const isActive = (s: OrderStatus) => activeStatuses.includes(s);
 
-      // Rule 2: Once an order status has moved away from 'Pending', it should be impossible to set it back to 'Pending'
-      if (oldStatus !== "PENDING" && newStatus === "PENDING") {
-        throw new Error("Cannot revert order status back to Pending once it has been processed.");
+      // Rule 2: Can only revert to Pending from Confirmed status
+      if (newStatus === "PENDING" && oldStatus !== "CONFIRMED") {
+        throw new Error("Can only revert to Pending from Confirmed status.");
       }
 
       // Execute Stock Action: Stock is deducted ONLY when the order transitions to SHIPPED for the first time
@@ -408,6 +413,20 @@ async function _updateOrderStatus(orderId: string, status: OrderStatus) {
         });
       }
 
+      // CONFIRMED → PENDING: reverse the earlier revenue entry
+      if (oldStatus === "CONFIRMED" && newStatus === "PENDING") {
+        const account = await getOrCreateSystemAccount(tx, "Sales Revenue", "INCOME");
+        await createDoubleEntryJournal(tx, {
+          accountId: account.id,
+          amount: order.totalAmount,
+          date: new Date(),
+          type: "DEBIT",
+          description: `Order reverted to pending - reversing sale for ${order.id}`,
+          referenceId: order.id,
+          referenceType: "ORDER",
+        });
+      }
+
       if (isActive(oldStatus) && newStatus === "CANCELLED") {
         const account = await getOrCreateSystemAccount(tx, "Sales Refunds", "EXPENSE");
         await createDoubleEntryJournal(tx, {
@@ -421,6 +440,57 @@ async function _updateOrderStatus(orderId: string, status: OrderStatus) {
         });
       }
     });
+
+    // Auto-trigger Pathao pickup for non-store-pickup orders going to PACKAGING
+    if (
+      status === "PACKAGING" &&
+      orderWithItems &&
+      !orderWithItems.isStorePickup &&
+      !orderWithItems.pathaoConsignmentId
+    ) {
+      try {
+        const stores = await pathaoClient.getStores();
+        if (stores.length > 0) {
+          const storeId = stores[0].store_id;
+          const sanitizePhone = (phone: string): string => {
+            let p = phone.trim();
+            if (p.startsWith("+88")) p = p.slice(3);
+            else if (p.startsWith("88") && p.length > 11) p = p.slice(2);
+            return p;
+          };
+          const totalQuantity = orderWithItems.items.reduce((sum: number, i: any) => sum + i.quantity, 0);
+          const collectionAmount = Math.max(0, orderWithItems.totalAmount - (orderWithItems.advancePaid || 0));
+          const payload = {
+            store_id: storeId,
+            merchant_order_id: orderWithItems.id,
+            recipient_name: orderWithItems.customerName,
+            recipient_phone: sanitizePhone(orderWithItems.phone),
+            recipient_address: orderWithItems.address,
+            recipient_city: orderWithItems.pathaoCityId || undefined,
+            recipient_zone: orderWithItems.pathaoZoneId || undefined,
+            recipient_area: orderWithItems.pathaoAreaId || undefined,
+            delivery_type: 48,
+            item_type: 2,
+            item_quantity: totalQuantity,
+            item_weight: 0.5,
+            amount_to_collect: collectionAmount,
+            item_description: orderWithItems.items.map((i: any) =>
+              `${i.product?.name || 'Item'} (Size: ${i.size}, Qty: ${i.quantity})`
+            ).join(", "),
+          };
+          const res = await pathaoClient.createOrder(payload);
+          if (res.consignment_id) {
+            await prisma.order.update({
+              where: { id: orderId },
+              data: { pathaoConsignmentId: res.consignment_id },
+            });
+          }
+        }
+      } catch (pathaoErr: any) {
+        // Non-blocking: log but do not fail the status update
+        console.error(`Auto Pathao pickup failed for order ${orderId}:`, pathaoErr.message);
+      }
+    }
 
     revalidatePath("/admin/orders");
     revalidatePath("/admin/products");
@@ -1266,6 +1336,8 @@ async function _createAdminOrder(data: {
   pathaoZoneId?: number;
   pathaoAreaId?: number;
   hasBackorderItems?: boolean;
+  isStorePickup?: boolean;
+  deliveryCharge?: number;
 }) {
   try {
     const session = await getSession();
@@ -1306,10 +1378,8 @@ async function _createAdminOrder(data: {
         customerId = customer.id;
       }
 
-      // 1. Determine order status
-      // If any item is a backorder (out-of-stock), the order stays PENDING
-      // until stock is replenished via a Purchase and admin manually confirms.
-      const orderStatus = data.hasBackorderItems ? "PENDING" : "CONFIRMED";
+      // 1. Determine order status - always start as PENDING
+      const orderStatus = "PENDING";
 
       // 2. Create the order
       const newOrder = await tx.order.create({
@@ -1326,6 +1396,8 @@ async function _createAdminOrder(data: {
           pathaoCityId: data.pathaoCityId,
           pathaoZoneId: data.pathaoZoneId,
           pathaoAreaId: data.pathaoAreaId,
+          isStorePickup: data.isStorePickup ?? false,
+          deliveryCharge: data.deliveryCharge ?? 0,
           status: orderStatus,
           orderSource: "Salesman",
           createdById: createdById,
@@ -1389,21 +1461,6 @@ async function _createAdminOrder(data: {
               decrement: item.quantity,
             },
           },
-        });
-      }
-
-      // 4. Accounting Automation — only for CONFIRMED orders
-      // PENDING (backorder) orders get the accounting entry when they are later confirmed.
-      if (orderStatus === "CONFIRMED") {
-        const account = await getOrCreateSystemAccount(tx, "Sales Revenue", "INCOME");
-        await createDoubleEntryJournal(tx, {
-          accountId: account.id,
-          amount: data.totalAmount,
-          date: new Date(),
-          type: "CREDIT",
-          description: `Order confirmation sale for ${newOrder.id}`,
-          referenceId: newOrder.id,
-          referenceType: "ORDER",
         });
       }
 
@@ -1541,7 +1598,6 @@ export async function bulkSendToPathaoAction(orderIds: string[]) {
             where: { id: order.id },
             data: {
               pathaoConsignmentId: res.consignment_id,
-              status: "SHIPPED",
             },
             include: { items: true },
           });
@@ -1556,10 +1612,10 @@ export async function bulkSendToPathaoAction(orderIds: string[]) {
               action: "UPDATE",
               entityType: "Order",
               entityId: order.id,
-              description: `Shipped order ${order.id} via Pathao (Consignment: ${res.consignment_id})`,
+              description: `Pathao pickup requested for order ${order.id} (Consignment: ${res.consignment_id})`,
               dataBefore: orderBefore as any,
               dataAfter: updatedOrder as any,
-              changedFields: ["pathaoConsignmentId", "status"],
+              changedFields: ["pathaoConsignmentId"],
               ipAddress: auditContext.ipAddress,
               userAgent: auditContext.userAgent,
             });
@@ -1586,6 +1642,86 @@ export async function bulkSendToPathaoAction(orderIds: string[]) {
   } catch (error: any) {
     console.error("Bulk Pathao action error:", error);
     return { success: false, error: error.message || "Failed to process bulk Pathao request." };
+  }
+}
+
+export async function cancelPathaoPickupAction(orderId: string) {
+  try {
+    const order = await prisma.order.findUnique({ where: { id: orderId } });
+    if (!order) return { success: false, error: "Order not found" };
+    if (!order.pathaoConsignmentId) return { success: false, error: "No Pathao pickup to cancel" };
+
+    await prisma.order.update({
+      where: { id: orderId },
+      data: { pathaoConsignmentId: null },
+    });
+
+    revalidatePath("/admin/orders");
+    return {
+      success: true,
+      warning: "Consignment ID cleared from system. Please also cancel this order manually from Pathao Merchant Panel."
+    };
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+}
+
+export async function sendPathaoPickupManually(orderId: string) {
+  try {
+    const order = await prisma.order.findUnique({
+      where: { id: orderId },
+      include: { items: { include: { product: true } } },
+    });
+    if (!order) return { success: false, error: "Order not found" };
+    if (order.pathaoConsignmentId) return { success: false, error: "Pickup already requested" };
+    if (order.status !== "PACKAGING") return { success: false, error: "Order must be in Packaged status" };
+
+    const stores = await pathaoClient.getStores();
+    if (stores.length === 0) return { success: false, error: "No Pathao stores found" };
+    const storeId = stores[0].store_id;
+
+    const sanitizePhone = (phone: string): string => {
+      let p = phone.trim();
+      if (p.startsWith("+88")) p = p.slice(3);
+      else if (p.startsWith("88") && p.length > 11) p = p.slice(2);
+      return p;
+    };
+
+    const totalQuantity = order.items.reduce((sum, i) => sum + i.quantity, 0);
+    const collectionAmount = Math.max(0, order.totalAmount - (order.advancePaid || 0));
+
+    const payload = {
+      store_id: storeId,
+      merchant_order_id: order.id,
+      recipient_name: order.customerName,
+      recipient_phone: sanitizePhone(order.phone),
+      recipient_address: order.address,
+      recipient_city: order.pathaoCityId || undefined,
+      recipient_zone: order.pathaoZoneId || undefined,
+      recipient_area: order.pathaoAreaId || undefined,
+      delivery_type: 48,
+      item_type: 2,
+      item_quantity: totalQuantity,
+      item_weight: 0.5,
+      amount_to_collect: collectionAmount,
+      item_description: order.items.map(i =>
+        `${i.product?.name || 'Item'} (Size: ${i.size}, Qty: ${i.quantity})`
+      ).join(", "),
+    };
+
+    const res = await pathaoClient.createOrder(payload);
+    if (!res.consignment_id) return { success: false, error: "Pathao did not return a consignment ID" };
+
+    await prisma.order.update({
+      where: { id: orderId },
+      data: { pathaoConsignmentId: res.consignment_id },
+    });
+
+    revalidatePath("/admin/orders");
+    return { success: true, consignmentId: res.consignment_id };
+  } catch (error: any) {
+    console.error("Manual Pathao send error:", error);
+    return { success: false, error: error.message };
   }
 }
 
@@ -1672,10 +1808,10 @@ export async function bulkAdjustStock(adjustments: {
   try {
     const results = await prisma.$transaction(async (tx) => {
       const createdAdjustments = [];
-      
+
       for (const adj of adjustments) {
         const { variantId, adjustmentType, quantity, reason } = adj;
-        
+
         const variant = await tx.productVariant.findUnique({
           where: { id: variantId },
           select: { stock: true, id: true },
@@ -1713,7 +1849,7 @@ export async function bulkAdjustStock(adjustments: {
             reason,
           },
         });
-        
+
         createdAdjustments.push(adjustment);
       }
       return createdAdjustments;
