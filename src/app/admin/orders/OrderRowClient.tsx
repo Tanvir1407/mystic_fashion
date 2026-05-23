@@ -92,6 +92,40 @@ export default function OrderRowClient({
     }
   };
 
+  const getPostShipmentTag = () => {
+    const postShippedStatuses: OrderStatus[] = ["SHIPPED", "DELIVERED", "RETURNED"];
+    if (!postShippedStatuses.includes(status)) return null;
+
+    // Exchange: either this IS an exchange order, or this order HAS exchange orders
+    if (order.isExchange || (order.exchangeOrders && order.exchangeOrders.length > 0)) {
+      return "EXCHANGE";
+    }
+
+    // Return check
+    if (order.salesReturns && order.salesReturns.length > 0) {
+      const totalQty = (order.items || items || []).reduce(
+        (sum: number, i: any) => sum + i.quantity, 0
+      );
+      const returnedQty = order.salesReturns.reduce(
+        (sum: number, r: any) => sum + r.quantity, 0
+      );
+      if (returnedQty >= totalQty) return "FULL_RETURN";
+      return "PARTIAL_RETURN";
+    }
+
+    if (status === "DELIVERED") return "DELIVERED";
+    return null;
+  };
+
+  const postShipmentTag = getPostShipmentTag();
+
+  const TAG_CONFIG = {
+    EXCHANGE: { label: "Exchange", className: "bg-orange-50 text-orange-700 border-orange-200" },
+    FULL_RETURN: { label: "Full Return", className: "bg-rose-50 text-rose-700 border-rose-200" },
+    PARTIAL_RETURN: { label: "Partial Return", className: "bg-yellow-50 text-yellow-700 border-yellow-200" },
+    DELIVERED: { label: "Delivered", className: "bg-green-50 text-green-700 border-green-200" },
+  };
+
   return (
     <tr className="hover:bg-slate-50/50 transition-colors group">
       <td className="px-6 py-4">
@@ -133,7 +167,13 @@ export default function OrderRowClient({
       <td className="px-2 py-4">
         <div className="flex flex-col items-start gap-1">
           <span className="text-sm text-slate-600 max-w-[250px] truncate" title={order.address}>{order.address}</span>
-          <span className="bg-slate-100 text-slate-600 px-2 py-0.5 rounded text-[10px] uppercase font-bold tracking-wider">{order.district}</span>
+          <div className="flex items-center gap-2">
+            <span className="bg-slate-100 text-slate-600 px-2 py-0.5 rounded text-[10px] uppercase font-bold tracking-wider">{order.district}</span>          {postShipmentTag && TAG_CONFIG[postShipmentTag] && (
+              <span className={`inline-flex text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded border whitespace-nowrap ${TAG_CONFIG[postShipmentTag].className}`}>
+                {TAG_CONFIG[postShipmentTag].label}
+              </span>
+            )}
+          </div>
         </div>
       </td>
       <td className="px-2 py-4">
@@ -236,24 +276,27 @@ export default function OrderRowClient({
         </div>
       </td>
       <td className="px-2 py-4 text-right">
-        <div className="flex items-center justify-end gap-2">
-          <Link
-            href={`/admin/orders/${order.id}`}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-indigo-600 bg-indigo-50 border border-indigo-200 rounded-md hover:bg-indigo-100 hover:border-indigo-300 transition-colors"
-          >
-            <Eye className="w-4 h-4" />
-            View
-          </Link>
-          {canDelete && (
-            <button
-              onClick={handleDelete}
-              disabled={loading}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-red-600 bg-red-50 border border-red-200 rounded-md hover:bg-red-100 hover:border-red-300 transition-colors disabled:opacity-50"
+        <div className="flex flex-col items-end gap-2">
+
+          <div className="flex items-center justify-end gap-2">
+            <Link
+              href={`/admin/orders/${order.id}`}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-indigo-600 bg-indigo-50 border border-indigo-200 rounded-md hover:bg-indigo-100 hover:border-indigo-300 transition-colors"
             >
-              <Trash2 className="w-4 h-4" />
-              Delete
-            </button>
-          )}
+              <Eye className="w-4 h-4" />
+              View
+            </Link>
+            {canDelete && (
+              <button
+                onClick={handleDelete}
+                disabled={loading}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-red-600 bg-red-50 border border-red-200 rounded-md hover:bg-red-100 hover:border-red-300 transition-colors disabled:opacity-50"
+              >
+                <Trash2 className="w-4 h-4" />
+                Delete
+              </button>
+            )}
+          </div>
         </div>
       </td>
       <StatusAlertModal

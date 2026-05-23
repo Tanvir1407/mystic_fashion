@@ -3,7 +3,7 @@
 import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { withAuditLog } from "@/lib/audit";
-import { TransactionType, AccountType } from "@/src/generated/prisma/client";
+import { TransactionType, AccountType } from "@/generated/prisma";
 
 // ─── UTILITIES & HELPERS ───────────────────────────────────────────────────
 

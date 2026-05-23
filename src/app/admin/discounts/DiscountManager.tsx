@@ -184,7 +184,7 @@ export default function DiscountManager({
                             <DeleteWarningModal
                               title={`Delete discount "${d.name}"?`}
                               description="This will remove the discount from all associated products immediately."
-                              impacts={["Pricing will revert to base price"]}
+                              impacts={[{ label: "Pricing will revert to base price" }]}
                               onConfirm={async () => {
                                 startTransition(async () => {
                                   await deleteDiscount(d.id);

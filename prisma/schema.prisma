@@ -170,6 +170,9 @@ model Order {
   pathaoZoneId        Int?
   isStorePickup   Boolean @default(false)
   deliveryCharge  Float   @default(0)
+  isExchange         Boolean @default(false)
+  exchangeRefOrderId String?
+  exchangeItemNote   String?
   createdById         String?
   customerId          String?
   createdBy           Staff?        @relation(fields: [createdById], references: [id], onDelete: SetNull)
@@ -177,6 +180,8 @@ model Order {
   coupon              Coupon?       @relation(fields: [couponCode], references: [code])
   items               OrderItem[]
   salesReturns        SalesReturn[]
+  exchangeRefOrder   Order?  @relation("ExchangeOrders", fields: [exchangeRefOrderId], references: [id], onDelete: SetNull)
+  exchangeOrders     Order[] @relation("ExchangeOrders")
 }
 
 model Coupon {
@@ -377,6 +382,8 @@ model SalesReturn {
   deliveryLoss Float          @default(0)
   productLoss  Float          @default(0)
   printingLoss Float          @default(0)
+  returnCost     Float   @default(0)
+  returnCostPaid Boolean @default(false)
   processedBy  String?
   createdAt    DateTime       @default(now())
   order        Order          @relation(fields: [orderId], references: [id])

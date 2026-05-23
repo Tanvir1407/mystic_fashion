@@ -54,6 +54,8 @@ interface SalesReturn {
   deliveryLoss: number;
   productLoss: number;
   printingLoss: number;
+  returnCost: number;
+  returnCostPaid: boolean;
   createdAt: Date;
   order: {
     customerName: string;
@@ -92,6 +94,8 @@ export default function ReturnsClient({
   const [selectedOrderItemId, setSelectedOrderItemId] = useState("");
   const [returnAction, setReturnAction] = useState<ReturnStatus>("RESTOCKED");
   const [deliveryLossAmount, setDeliveryLossAmount] = useState<number | "">(0);
+  const [returnCost, setReturnCost] = useState<number | "">(0);
+  const [returnCostPaid, setReturnCostPaid] = useState(false);
   const [returnReason, setReturnReason] = useState("");
 
   const searchParams = useSearchParams();
@@ -209,6 +213,8 @@ export default function ReturnsClient({
         returnReason: returnReason.trim(),
         deliveryLossAmount: Number(deliveryLossAmount ?? 0),
         returnActionType: returnAction,
+        returnCost: Number(returnCost ?? 0),
+        returnCostPaid: returnCostPaid,
       });
 
       if (res.success) {
@@ -237,6 +243,8 @@ export default function ReturnsClient({
         setSelectedOrderItemId("");
         setReturnAction("RESTOCKED");
         setDeliveryLossAmount(0);
+        setReturnCost(0);
+        setReturnCostPaid(false);
         setReturnReason("");
 
         setSuccessMessage("Return processed successfully!");
@@ -409,6 +417,34 @@ export default function ReturnsClient({
                 </div>
 
                 <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-slate-900">
+                    Return Pickup Cost (BDT)
+                  </label>
+                  <input
+                    type="text"
+                    value={returnCost}
+                    onChange={(e) => setReturnCost(e.target.value === "" ? "" : Number(e.target.value))}
+                    placeholder="Cost to collect this return (e.g. 80)"
+                    className="w-full px-4 py-2 border border-slate-300 rounded-md focus:outline-none focus:border-slate-500 focus:ring-1 focus:ring-slate-500 text-sm font-mono"
+                  />
+                </div>
+
+                <div className="flex items-center justify-between py-2 px-3 bg-slate-50 border border-slate-200 rounded-md animate-fade-in">
+                  <span className="text-xs font-semibold text-slate-700">Return Cost Paid?</span>
+                  <div className="flex items-center gap-2">
+                    <span className={`text-xs font-bold ${returnCostPaid ? "text-emerald-600" : "text-slate-400"}`}>
+                      {returnCostPaid ? "Paid" : "Unpaid"}
+                    </span>
+                    <input
+                      type="checkbox"
+                      checked={returnCostPaid}
+                      onChange={(e) => setReturnCostPaid(e.target.checked)}
+                      className="w-4 h-4 cursor-pointer"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-1.5">
                   <label className="text-xs font-semibold text-slate-900">Return Reason *</label>
                   <textarea
                     value={returnReason}
@@ -457,13 +493,14 @@ export default function ReturnsClient({
                   <th className="px-4 py-3 font-semibold text-[10px] text-slate-500 uppercase tracking-wider">Product Info</th>
                   <th className="px-4 py-3 font-semibold text-[10px] text-slate-500 uppercase tracking-wider text-center">Status</th>
                   <th className="px-4 py-3 font-semibold text-[10px] text-slate-500 uppercase tracking-wider text-right">Total Loss</th>
+                  <th className="px-4 py-3 font-semibold text-[10px] text-slate-500 uppercase tracking-wider">Return Cost</th>
                   <th className="px-4 py-3 font-semibold text-[10px] text-slate-500 uppercase tracking-wider">Reason</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200">
                 {returns.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="px-4 py-12 text-center text-sm text-slate-400">
+                    <td colSpan={7} className="px-4 py-12 text-center text-sm text-slate-400">
                       No returned records found.
                     </td>
                   </tr>
@@ -500,8 +537,8 @@ export default function ReturnsClient({
                         <td className="px-4 py-4 text-center whitespace-nowrap">
                           <span
                             className={`px-2 py-0.5 rounded text-[9px] font-bold tracking-wider uppercase ${ret.status === "RESTOCKED"
-                                ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
-                                : "bg-red-50 text-red-700 border border-red-200"
+                              ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                              : "bg-red-50 text-red-700 border border-red-200"
                               }`}
                           >
                             {ret.status}
@@ -509,6 +546,12 @@ export default function ReturnsClient({
                         </td>
                         <td className="px-4 py-4 text-right font-mono text-xs font-bold text-slate-900 whitespace-nowrap">
                           {formatBDT(returnLoss)}
+                        </td>
+                        <td className="px-4 py-4 text-xs font-mono font-medium text-slate-900 whitespace-nowrap">
+                          {formatBDT(ret.returnCost)}
+                          <span className={ret.returnCostPaid ? "text-emerald-600" : "text-rose-600"}>
+                            {ret.returnCostPaid ? " (Paid)" : " (Unpaid)"}
+                          </span>
                         </td>
                         <td className="px-4 py-4">
                           <p className="text-xs text-slate-500 max-w-[140px] truncate" title={ret.returnReason}>

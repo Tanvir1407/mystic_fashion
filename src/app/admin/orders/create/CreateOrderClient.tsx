@@ -3,7 +3,7 @@
 import { useState, useMemo, useTransition, useEffect } from "react";
 import { Search, Plus, Trash2, User, Phone, MapPin, ShoppingBag, CheckCircle, ArrowLeft, Loader2 } from "lucide-react";
 import Link from "next/link";
-import { createAdminOrder } from "../../actions";
+import { createAdminOrder, createExchangeOrder } from "../../actions";
 import { useRouter } from "next/navigation";
 import { getPathaoCities, getPathaoZones, getPathaoAreas } from "@/app/actions/pathao";
 import { CustomSelect } from "@/components/CustomSelect";
@@ -52,6 +52,11 @@ export default function CreateOrderClient({
   const [manualDiscountType, setManualDiscountType] = useState<"FLAT" | "PERCENTAGE">("FLAT");
   const [isStorePickup, setIsStorePickup] = useState(false);
   const [deliveryCharge, setDeliveryCharge] = useState(0);
+
+  // Exchange states
+  const [isExchange, setIsExchange] = useState(false);
+  const [exchangeRefOrderId, setExchangeRefOrderId] = useState("");
+  const [exchangeItemNote, setExchangeItemNote] = useState("");
 
   // Pathao Location States
   const [cities, setCities] = useState<{ value: string, label: string }[]>([]);
@@ -267,6 +272,11 @@ export default function CreateOrderClient({
       return alert("Please fill in all customer details and add at least one item.");
     }
 
+    if (isExchange) {
+      if (!exchangeRefOrderId.trim() || !exchangeItemNote.trim()) {
+        return alert("Please fill in the Original Order ID and Exchange Note.");
+      }
+    }
 
     const cityName = cities.find(c => c.value === selectedCityId?.toString())?.label || "";
     const zoneName = zones.find(z => z.value === selectedZoneId?.toString())?.label || "";
@@ -285,31 +295,58 @@ export default function CreateOrderClient({
 
     startTransition(async () => {
       try {
-        const res = await createAdminOrder({
-          customerName,
-          phone,
-          district,
-          address: fullDeliveryAddress,
-          totalAmount,
-          advancePaid,
-          discountAmount: calculatedDiscount,
-          remarks,
-          pathaoCityId: selectedCityId || undefined,
-          pathaoZoneId: selectedZoneId || undefined,
-          pathaoAreaId: selectedAreaId || undefined,
-          isStorePickup: isStorePickup,
-          deliveryCharge: isStorePickup ? deliveryCharge : finalDeliveryCharge,
-          items: orderItems.map(item => ({
-            productId: item.productId,
-            size: item.size,
-            quantity: item.quantity,
-            price: item.price,
-            requiresPrint: item.requiresPrint,
-            printCost: item.printCost,
-            printDetails: item.printDetails
-          })),
-          hasBackorderItems,
-        });
+        const res = isExchange
+          ? await createExchangeOrder({
+              customerName,
+              phone,
+              district,
+              address: fullDeliveryAddress,
+              totalAmount,
+              advancePaid,
+              discountAmount: calculatedDiscount,
+              remarks,
+              pathaoCityId: selectedCityId || undefined,
+              pathaoZoneId: selectedZoneId || undefined,
+              pathaoAreaId: selectedAreaId || undefined,
+              isStorePickup,
+              deliveryCharge: isStorePickup ? deliveryCharge : finalDeliveryCharge,
+              items: orderItems.map(item => ({
+                productId: item.productId,
+                size: item.size,
+                quantity: item.quantity,
+                price: item.price,
+                requiresPrint: item.requiresPrint,
+                printCost: item.printCost,
+                printDetails: item.printDetails
+              })),
+              exchangeRefOrderId: exchangeRefOrderId.trim(),
+              exchangeItemNote: exchangeItemNote.trim(),
+            })
+          : await createAdminOrder({
+              customerName,
+              phone,
+              district,
+              address: fullDeliveryAddress,
+              totalAmount,
+              advancePaid,
+              discountAmount: calculatedDiscount,
+              remarks,
+              pathaoCityId: selectedCityId || undefined,
+              pathaoZoneId: selectedZoneId || undefined,
+              pathaoAreaId: selectedAreaId || undefined,
+              isStorePickup,
+              deliveryCharge: isStorePickup ? deliveryCharge : finalDeliveryCharge,
+              items: orderItems.map(item => ({
+                productId: item.productId,
+                size: item.size,
+                quantity: item.quantity,
+                price: item.price,
+                requiresPrint: item.requiresPrint,
+                printCost: item.printCost,
+                printDetails: item.printDetails
+              })),
+              hasBackorderItems,
+            });
 
         if (res.success) {
           router.push(`/admin/orders`);
@@ -404,6 +441,53 @@ export default function CreateOrderClient({
                   </div>
                 )}
               </div>
+            </div>
+
+            {/* Exchange Order Toggle */}
+            <div className="md:col-span-2 border border-orange-100 bg-orange-50/30 p-4 rounded-md animate-in fade-in duration-200">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-bold text-slate-800">Exchange Order</p>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Link this order to an original order as an exchange.
+                  </p>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={isExchange}
+                  onChange={(e) => setIsExchange(e.target.checked)}
+                  className="w-4 h-4 cursor-pointer"
+                />
+              </div>
+
+              {isExchange && (
+                <div className="mt-4 space-y-3 animate-in fade-in slide-in-from-top-1 duration-200">
+                  <div>
+                    <label className="text-xs font-semibold text-slate-700 block mb-1">
+                      Original Order ID *
+                    </label>
+                    <input
+                      type="text"
+                      value={exchangeRefOrderId}
+                      onChange={(e) => setExchangeRefOrderId(e.target.value.toUpperCase())}
+                      placeholder="e.g. MJEPE-26052301"
+                      className="w-full px-3 py-2 border border-slate-300 rounded-md text-sm font-mono focus:outline-none focus:border-orange-400"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-semibold text-slate-700 block mb-1">
+                      Exchange Note *
+                    </label>
+                    <input
+                      type="text"
+                      value={exchangeItemNote}
+                      onChange={(e) => setExchangeItemNote(e.target.value)}
+                      placeholder="e.g. XL → XXL, Argentina Jersey"
+                      className="w-full px-3 py-2 border border-slate-300 rounded-md text-sm focus:outline-none focus:border-orange-400"
+                    />
+                  </div>
+                </div>
+              )}
             </div>
 
             {!isStorePickup && (

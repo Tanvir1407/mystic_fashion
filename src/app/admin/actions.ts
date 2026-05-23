@@ -1345,6 +1345,9 @@ async function _createAdminOrder(data: {
   hasBackorderItems?: boolean;
   isStorePickup?: boolean;
   deliveryCharge?: number;
+  isExchange?: boolean;
+  exchangeRefOrderId?: string;
+  exchangeItemNote?: string;
 }) {
   try {
     const session = await getSession();
@@ -1405,6 +1408,9 @@ async function _createAdminOrder(data: {
           pathaoAreaId: data.pathaoAreaId,
           isStorePickup: data.isStorePickup ?? false,
           deliveryCharge: data.deliveryCharge ?? 0,
+          isExchange: data.isExchange ?? false,
+          exchangeRefOrderId: data.exchangeRefOrderId || null,
+          exchangeItemNote: data.exchangeItemNote || null,
           status: orderStatus,
           orderSource: "Salesman",
           createdById: createdById,
@@ -1490,6 +1496,39 @@ export const createAdminOrder = withAuditLog(_createAdminOrder, {
   getEntityIdFromResult: (r: any) => r?.orderId ?? null,
   fetchAfter: (id) => prisma.order.findUnique({ where: { id }, include: { items: true } }),
   describe: (args) => `Created admin order for "${args[0].customerName}" (৳${args[0].totalAmount})`,
+});
+
+async function _createExchangeOrder(data: {
+  customerName: string;
+  phone: string;
+  district: string;
+  address: string;
+  totalAmount: number;
+  advancePaid: number;
+  discountAmount: number;
+  remarks?: string;
+  pathaoCityId?: number;
+  pathaoZoneId?: number;
+  pathaoAreaId?: number;
+  isStorePickup?: boolean;
+  deliveryCharge?: number;
+  items: any[];
+  exchangeRefOrderId: string;
+  exchangeItemNote: string;
+}) {
+  return _createAdminOrder({
+    ...data,
+    isExchange: true,
+  });
+}
+
+export const createExchangeOrder = withAuditLog(_createExchangeOrder, {
+  entityType: "Order",
+  action: "CREATE",
+  getEntityId: () => null,
+  getEntityIdFromResult: (r: any) => r?.orderId ?? null,
+  fetchAfter: (id) => prisma.order.findUnique({ where: { id }, include: { items: true } }),
+  describe: (args) => `Created exchange order for "${args[0].customerName}" (Ref: ${args[0].exchangeRefOrderId}, ৳${args[0].totalAmount})`,
 });
 
 export async function getPageBySlug(slug: string) {
@@ -1912,6 +1951,8 @@ async function _processSalesReturn(data: {
   returnReason: string;
   deliveryLossAmount?: number;
   returnActionType: ReturnStatus;
+  returnCost?: number;
+  returnCostPaid?: boolean;
 }) {
   try {
     const { orderId, orderItemId, returnReason, deliveryLossAmount, returnActionType } = data;
@@ -1997,11 +2038,27 @@ async function _processSalesReturn(data: {
         });
       }
 
-      // 7. Update Order Status to RETURNED
-      await tx.order.update({
-        where: { id: orderId },
-        data: { status: "RETURNED" },
+      // 7. Check if this is full or partial return, only set RETURNED for full returns
+      const allExistingReturns = await tx.salesReturn.findMany({
+        where: { orderId },
+        select: { quantity: true },
       });
+      // Include the current return being created (quantity from orderItem)
+      const totalReturnedQty = allExistingReturns.reduce((sum, r) => sum + r.quantity, 0) + orderItem.quantity;
+      const orderItems = await tx.orderItem.findMany({
+        where: { orderId },
+        select: { quantity: true },
+      });
+      const totalOrderQty = orderItems.reduce((sum, i) => sum + i.quantity, 0);
+
+      if (totalReturnedQty >= totalOrderQty) {
+        // Full return — set status to RETURNED
+        await tx.order.update({
+          where: { id: orderId },
+          data: { status: "RETURNED" },
+        });
+      }
+      // Partial return: do NOT change status. Tag will be derived from salesReturns data in UI.
 
       // 8. Create SalesReturn Record
       const salesReturn = await tx.salesReturn.create({
@@ -2015,6 +2072,8 @@ async function _processSalesReturn(data: {
           deliveryLoss,
           productLoss,
           printingLoss,
+          returnCost: data.returnCost ?? 0,
+          returnCostPaid: data.returnCostPaid ?? false,
         },
         include: {
           order: true,
@@ -2083,11 +2142,11 @@ export async function getOrderById(id: string) {
       include: {
         items: {
           include: {
-            product: {
-              select: { name: true, price: true, purchasePrice: true }
-            }
+            product: { select: { name: true, price: true, purchasePrice: true } }
           }
-        }
+        },
+        salesReturns: { select: { quantity: true } },
+        exchangeOrders: { select: { id: true } },
       }
     });
     return { success: true, data: order };
