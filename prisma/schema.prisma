@@ -168,6 +168,8 @@ model Order {
   pathaoCityId        Int?
   pathaoConsignmentId String?
   pathaoZoneId        Int?
+  isStorePickup   Boolean @default(false)
+  deliveryCharge  Float   @default(0)
   createdById         String?
   customerId          String?
   createdBy           Staff?        @relation(fields: [createdById], references: [id], onDelete: SetNull)
