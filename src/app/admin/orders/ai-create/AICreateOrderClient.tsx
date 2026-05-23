@@ -51,6 +51,7 @@ interface ParsedOrder {
   address: string;
   items: ParsedItem[];
   deliveryCharge: number;
+  isStorePickup?: boolean;
   printCost: number;
   badgeCost: number;
   totalBill: number;
@@ -411,6 +412,8 @@ export default function AICreateOrderClient({
         remarks: order.remarks,
         items,
         hasBackorderItems: false,
+        isStorePickup: order.isStorePickup ?? false,
+        deliveryCharge: order.deliveryCharge ?? 0,
       });
 
       if (res.success) {
