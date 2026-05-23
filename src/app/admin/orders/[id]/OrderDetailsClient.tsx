@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { User, MapPin, Phone, Edit2, Check, X, Package, Wallet, StickyNote, Save, Minus, VerifiedIcon, Trash2, Plus, Copy, Compass, CheckCircle2, Truck, PackageCheck, Printer, AlertCircle } from "lucide-react";
-import { updateOrderDetails, updateOrderRemark } from "../../actions";
+import { updateOrderDetails, updateOrderRemark, cancelPathaoPickupAction, sendPathaoPickupManually } from "../../actions";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import UploadedImage from "@/components/UploadedImage";
@@ -24,6 +24,7 @@ export default function OrderDetailsClient({ order, deliverySettings, products =
     advancePaid: order.advancePaid || 0,
     discountAmount: order.discountAmount || 0,
     items: order.items || [],
+    deliveryCharge: order.deliveryCharge || 0,
   });
   const [isAddingProduct, setIsAddingProduct] = useState(false);
   const [newProductData, setNewProductData] = useState({
@@ -53,6 +54,8 @@ export default function OrderDetailsClient({ order, deliverySettings, products =
       address: formData.address,
       advancePaid: formData.advancePaid,
       discountAmount: formData.discountAmount,
+      deliveryCharge: formData.deliveryCharge,
+      isStorePickup: order.isStorePickup,
       items: formData.items.map((i: any) => ({
         id: i.id,
         productId: i.productId,
@@ -82,11 +85,13 @@ export default function OrderDetailsClient({ order, deliverySettings, products =
   const discount = formData.discountAmount || 0;
 
   // Logic: district focus, not total focus
-  const deliveryCharge = formData.district === "Dhaka"
-    ? deliverySettings.insideDhaka
-    : formData.district === "Self Pickup"
-      ? 0
-      : deliverySettings.outsideDhaka;
+  const deliveryCharge = order.isStorePickup
+    ? (isEditing ? formData.deliveryCharge : order.deliveryCharge)
+    : (formData.district === "Dhaka"
+      ? deliverySettings.insideDhaka
+      : formData.district === "Self Pickup"
+        ? 0
+        : deliverySettings.outsideDhaka);
 
   const currentTotalAmount = (baseSubtotal + totalDTFCost + deliveryCharge) - discount;
 
@@ -210,6 +215,7 @@ export default function OrderDetailsClient({ order, deliverySettings, products =
                       advancePaid: order.advancePaid || 0,
                       discountAmount: order.discountAmount || 0,
                       items: order.items || [],
+                      deliveryCharge: order.deliveryCharge || 0,
                     });
                     setIsAddingProduct(false);
                   }}
@@ -298,20 +304,27 @@ export default function OrderDetailsClient({ order, deliverySettings, products =
           <div className="space-y-5">
             <div>
               <span className="block text-[10px] uppercase font-bold text-slate-400 mb-2 tracking-wider">District</span>
-              {isEditing ? (
-                <CustomSelect
-                  options={[
-                    "Bagerhat", "Bandarban", "Barguna", "Barisal", "Bhola", "Bogra", "Brahmanbaria", "Chandpur", "Chapainawabganj", "Chattogram", "Chuadanga", "Comilla", "Cox's Bazar", "Dhaka", "Dinajpur", "Faridpur", "Feni", "Gaibandha", "Gazipur", "Gopalganj", "Habiganj", "Jamalpur", "Jashore", "Jhalokati", "Jhenaidah", "Joypurhat", "Khagrachhari", "Khulna", "Kishoreganj", "Kurigram", "Kushtia", "Lakshmipur", "Lalmonirhat", "Madaripur", "Magura", "Manikganj", "Meherpur", "Moulvibazar", "Munshiganj", "Mymensingh", "Naogaon", "Narail", "Narayanganj", "Narsingdi", "Natore", "Netrokona", "Nilphamari", "Noakhali", "Pabna", "Panchagarh", "Patuakhali", "Pirojpur", "Rajbari", "Rajshahi", "Rangamati", "Rangpur", "Satkhira", "Shariatpur", "Sherpur", "Sirajganj", "Sunamganj", "Sylhet", "Tangail", "Thakurgaon", "Self Pickup"
-                  ].sort().map(d => ({ value: d, label: d }))}
-                  value={formData.district}
-                  onChange={(val) => setFormData({ ...formData, district: val })}
-                  searchable={true}
-                />
-              ) : (
-                <span className="inline-block bg-[#800020] text-[#FFD700] px-4 py-1.5 rounded-md text-[10px] font-black tracking-[0.2em] uppercase   border border-[#600010]">
-                  {order.district}
-                </span>
-              )}
+              <div className="flex flex-wrap items-center gap-2">
+                {isEditing ? (
+                  <CustomSelect
+                    options={[
+                      "Bagerhat", "Bandarban", "Barguna", "Barisal", "Bhola", "Bogra", "Brahmanbaria", "Chandpur", "Chapainawabganj", "Chattogram", "Chuadanga", "Comilla", "Cox's Bazar", "Dhaka", "Dinajpur", "Faridpur", "Feni", "Gaibandha", "Gazipur", "Gopalganj", "Habiganj", "Jamalpur", "Jashore", "Jhalokati", "Jhenaidah", "Joypurhat", "Khagrachhari", "Khulna", "Kishoreganj", "Kurigram", "Kushtia", "Lakshmipur", "Lalmonirhat", "Madaripur", "Magura", "Manikganj", "Meherpur", "Moulvibazar", "Munshiganj", "Mymensingh", "Naogaon", "Narail", "Narayanganj", "Narsingdi", "Natore", "Netrokona", "Nilphamari", "Noakhali", "Pabna", "Panchagarh", "Patuakhali", "Pirojpur", "Rajbari", "Rajshahi", "Rangamati", "Rangpur", "Satkhira", "Shariatpur", "Sherpur", "Sirajganj", "Sunamganj", "Sylhet", "Tangail", "Thakurgaon", "Self Pickup"
+                    ].sort().map(d => ({ value: d, label: d }))}
+                    value={formData.district}
+                    onChange={(val) => setFormData({ ...formData, district: val })}
+                    searchable={true}
+                  />
+                ) : (
+                  <span className="inline-block bg-[#800020] text-[#FFD700] px-4 py-1.5 rounded-md text-[10px] font-black tracking-[0.2em] uppercase   border border-[#600010]">
+                    {order.district}
+                  </span>
+                )}
+                {order.isStorePickup && (
+                  <span className="inline-flex items-center gap-1 bg-indigo-50 border border-indigo-200 text-indigo-700 text-[10px] font-black tracking-[0.1em] px-3 py-1.5 rounded-md uppercase">
+                    🏪 Store Pickup
+                  </span>
+                )}
+              </div>
             </div>
             <div>
               <span className="block text-[10px] uppercase font-bold text-slate-400 mb-2 tracking-wider">Address</span>
@@ -446,7 +459,19 @@ export default function OrderDetailsClient({ order, deliverySettings, products =
             )}
             <div className="flex justify-between items-center text-sm">
               <span className="text-slate-500 font-medium">Delivery Charge</span>
-              <span className="font-bold text-slate-800">{formatBDT(deliveryCharge)}</span>
+              {isEditing && order.isStorePickup ? (
+                <div className="relative w-32">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 font-bold text-slate-300 text-xs">৳</span>
+                  <input
+                    type="number"
+                    value={formData.deliveryCharge}
+                    onChange={(e) => setFormData({ ...formData, deliveryCharge: parseFloat(e.target.value) || 0 })}
+                    className="w-full bg-white border border-slate-200 rounded-lg pl-6 pr-3 py-1 text-slate-900 text-sm font-bold text-right outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+                  />
+                </div>
+              ) : (
+                <span className="font-bold text-slate-800">{formatBDT(deliveryCharge)}</span>
+              )}
             </div>
 
             <div className="pt-4 border-t-2 border-dashed border-slate-100 flex justify-between items-center">
@@ -730,6 +755,55 @@ export default function OrderDetailsClient({ order, deliverySettings, products =
                 </div>
               )}
             </div>
+
+            {/* Pickup Action Buttons */}
+            {order.status === "PACKAGING" && order.pathaoConsignmentId && (
+              <div className="mb-4 p-3 bg-blue-50 border border-blue-100 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 animate-in fade-in duration-200">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-bold text-blue-700 bg-blue-100/50 px-2.5 py-1 rounded border border-blue-200 uppercase tracking-wider">
+                    Pickup Requested
+                  </span>
+                  <span className="text-xs text-blue-600 font-medium">Pickup request has been successfully sent to Pathao.</span>
+                </div>
+                <button
+                  onClick={async () => {
+                    const res = await cancelPathaoPickupAction(order.id);
+                    if (!res.success) {
+                      alert(`Error: ${res.error}`);
+                    } else {
+                      alert("⚠️ Pickup cancelled in system.\n\nPlease also cancel this order manually from Pathao Merchant Panel.");
+                      router.refresh();
+                    }
+                  }}
+                  className="px-3 py-1.5 bg-white border border-red-200 text-red-600 hover:bg-red-50 text-xs font-bold rounded-lg transition-all shadow-sm active:scale-95 whitespace-nowrap"
+                >
+                  Cancel Pickup
+                </button>
+              </div>
+            )}
+
+            {order.status === "PACKAGING" && order.isStorePickup && !order.pathaoConsignmentId && (
+              <div className="mb-4 p-3 bg-indigo-50 border border-indigo-100 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 animate-in fade-in duration-200">
+                <div className="space-y-0.5">
+                  <span className="text-xs font-bold text-indigo-700 block uppercase tracking-wider">Store Pickup Courier Request</span>
+                  <span className="text-xs text-indigo-600 font-medium">This is a store pickup order. You can manually request a Pathao courier pickup.</span>
+                </div>
+                <button
+                  onClick={async () => {
+                    const res = await sendPathaoPickupManually(order.id);
+                    if (!res.success) {
+                      alert(res.error);
+                    } else {
+                      alert("✅ Pickup requested manually in system.");
+                      router.refresh();
+                    }
+                  }}
+                  className="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-lg transition-all shadow-sm shadow-indigo-100 active:scale-95 whitespace-nowrap"
+                >
+                  Send to Pathao
+                </button>
+              </div>
+            )}
 
             {isSpecial ? (
               <div className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold ${

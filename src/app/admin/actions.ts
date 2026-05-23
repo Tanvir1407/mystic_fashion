@@ -597,6 +597,8 @@ async function _updateOrderDetails(id: string, data: {
   address: string;
   advancePaid: number;
   discountAmount: number;
+  deliveryCharge?: number;
+  isStorePickup?: boolean;
   pathaoCityId?: number;
   pathaoZoneId?: number;
   pathaoAreaId?: number;
@@ -689,12 +691,15 @@ async function _updateOrderDetails(id: string, data: {
         return acc + itemTotal;
       }, 0);
 
-      // 3. Determine Delivery Charge base on NEW district
-      const deliveryCharge = data.district === "Dhaka"
-        ? deliverySettings.insideDhaka
-        : data.district === "Self Pickup"
-          ? 0
-          : deliverySettings.outsideDhaka;
+      // 3. Determine Delivery Charge base on NEW district/isStorePickup
+      const isStorePickup = data.isStorePickup !== undefined ? data.isStorePickup : order.isStorePickup;
+      const deliveryCharge = isStorePickup
+        ? (data.deliveryCharge !== undefined ? data.deliveryCharge : order.deliveryCharge)
+        : (data.district === "Dhaka"
+          ? deliverySettings.insideDhaka
+          : data.district === "Self Pickup"
+            ? 0
+            : deliverySettings.outsideDhaka);
 
       // 4. Calculate Final Total
       const newTotalAmount = (subtotal + deliveryCharge) - data.discountAmount;
@@ -710,6 +715,8 @@ async function _updateOrderDetails(id: string, data: {
           advancePaid: data.advancePaid,
           discountAmount: data.discountAmount,
           totalAmount: newTotalAmount, // Explicitly saved
+          deliveryCharge: deliveryCharge,
+          isStorePickup: isStorePickup,
           pathaoCityId: data.pathaoCityId,
           pathaoZoneId: data.pathaoZoneId,
           pathaoAreaId: data.pathaoAreaId,

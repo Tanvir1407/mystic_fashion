@@ -1,15 +1,25 @@
 "use client";
 
 import type { OrderStatus } from "@/generated/prisma/client";
-import { updateOrderStatus } from "../actions";
+import { updateOrderStatus, deleteOrder, cancelPathaoPickupAction, sendPathaoPickupManually } from "../actions";
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Eye, Trash2 } from "lucide-react";
-import { deleteOrder } from "../actions";
 import { useRouter } from "next/navigation";
 import { StatusAlertModal } from "@/components/StatusAlertModal";
 import { formatDate, formatDateTime } from "@/utils/formatDate";
 import { formatBDT } from "@/utils/formatPrice";
+
+const STATUS_LABELS: Record<OrderStatus, string> = {
+  PENDING: "Placed",
+  CONFIRMED: "Confirmed",
+  PRINTING: "Printing",
+  PACKAGING: "Packaged",
+  SHIPPED: "Shipped",
+  DELIVERED: "Delivered",
+  RETURNED: "Returned",
+  CANCELLED: "Cancelled",
+};
 
 export default function OrderRowClient({
   order,
@@ -160,10 +170,10 @@ export default function OrderRowClient({
                           "bg-red-50 text-red-700 border-red-200 focus:ring-red-500"
               }`}
           >
-            <option value="PENDING" disabled={status !== "PENDING"}>Pending</option>
+            <option value="PENDING" disabled={status !== "PENDING" && status !== "CONFIRMED"}>Placed</option>
             <option value="CONFIRMED" disabled={status === "SHIPPED" || status === "DELIVERED" || status === "CANCELLED" || status === "RETURNED"}>Confirmed</option>
             <option value="PRINTING" disabled={status === "SHIPPED" || status === "DELIVERED" || status === "CANCELLED" || status === "RETURNED"}>Printing</option>
-            <option value="PACKAGING" disabled={status === "SHIPPED" || status === "DELIVERED" || status === "CANCELLED" || status === "RETURNED"}>Packaging</option>
+            <option value="PACKAGING" disabled={status === "SHIPPED" || status === "DELIVERED" || status === "CANCELLED" || status === "RETURNED"}>Packaged</option>
             <option value="SHIPPED" disabled={status === "DELIVERED" || status === "CANCELLED" || status === "RETURNED"}>Shipped</option>
             <option value="DELIVERED" disabled={status === "PENDING" || status === "CONFIRMED" || status === "PACKAGING" || status === "CANCELLED" || status === "RETURNED"}>Delivered</option>
             <option value="RETURNED" disabled={status === "PENDING" || status === "CONFIRMED" || status === "PACKAGING" || status === "CANCELLED"}>Returned</option>
@@ -179,8 +189,48 @@ export default function OrderRowClient({
                       status === "RETURNED" ? "bg-rose-50 text-rose-700 border-rose-200" :
                         "bg-red-50 text-red-700 border-red-200"
             }`}>
-            {status}
+            {STATUS_LABELS[status] || status}
           </span>
+        )}
+
+        {/* Pickup Action Buttons */}
+        {status === "PACKAGING" && order.pathaoConsignmentId && (
+          <div className="flex flex-col items-end gap-1 mt-1.5">
+            <span className="inline-flex text-[9px] font-black text-blue-600 bg-blue-50 px-2 py-0.5 rounded border border-blue-100 uppercase tracking-wider">
+              Pickup Requested
+            </span>
+            <button
+              onClick={async () => {
+                const res = await cancelPathaoPickupAction(order.id);
+                if (!res.success) {
+                  window.alert(`Error: ${res.error}`);
+                } else {
+                  window.alert("⚠️ Pickup cancelled in system.\n\nPlease also cancel this order manually from Pathao Merchant Panel.");
+                }
+              }}
+              className="text-[10px] text-red-600 hover:underline font-bold"
+            >
+              Cancel Pickup
+            </button>
+          </div>
+        )}
+
+        {status === "PACKAGING" && order.isStorePickup && !order.pathaoConsignmentId && (
+          <div className="flex flex-col items-end mt-1.5">
+            <button
+              onClick={async () => {
+                const res = await sendPathaoPickupManually(order.id);
+                if (!res.success) {
+                  window.alert(res.error);
+                } else {
+                  window.alert("✅ Pickup requested manually in system.");
+                }
+              }}
+              className="text-[10px] text-indigo-600 hover:underline font-bold"
+            >
+              Send to Pathao
+            </button>
+          </div>
         )}
       </td>
       <td className="px-2 py-4 text-right">
