@@ -1,14 +1,14 @@
 "use client";
 
-import type { OrderStatus } from "@/generated/prisma/client";
-import { updateOrderStatus, deleteOrder, cancelPathaoPickupAction, sendPathaoPickupManually } from "../actions";
+import { updateOrderStatus, deleteOrder, restoreOrder } from "../actions";
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { Eye, Trash2 } from "lucide-react";
+import { Eye, Trash2, RotateCcw } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { StatusAlertModal } from "@/components/StatusAlertModal";
 import { formatDate, formatDateTime } from "@/utils/formatDate";
 import { formatBDT } from "@/utils/formatPrice";
+import type { OrderStatus } from "@/generated/prisma/client";
 
 const STATUS_LABELS: Record<OrderStatus, string> = {
   PENDING: "Placed",
@@ -75,7 +75,7 @@ export default function OrderRowClient({
   };
 
   const handleDelete = async () => {
-    if (!confirm("Are you sure you want to delete this order? This action cannot be undone.")) return;
+    if (!confirm("Are you sure you want to move this order to Trash?")) return;
 
     setLoading(true);
     const result = await deleteOrder(order.id);
@@ -86,6 +86,22 @@ export default function OrderRowClient({
         isOpen: true,
         title: "Deletion Failed",
         message: result.error || "Failed to delete order",
+        type: "error"
+      });
+      setLoading(false);
+    }
+  };
+
+  const handleRestore = async () => {
+    setLoading(true);
+    const result = await restoreOrder(order.id);
+    if (result.success) {
+      router.refresh();
+    } else {
+      setAlert({
+        isOpen: true,
+        title: "Restore Failed",
+        message: result.error || "Failed to restore order",
         type: "error"
       });
       setLoading(false);
@@ -234,67 +250,41 @@ export default function OrderRowClient({
             </span>
           )}
 
-          {/* Pickup Action Buttons */}
-          {status === "PACKAGING" && order.pathaoConsignmentId && (
-            <div className="absolute top-full right-0 flex flex-col items-end gap-1 mt-1 z-10">
-              <span className="inline-flex text-[9px] font-black text-blue-600 bg-blue-50 px-2 py-0.5 rounded border border-blue-100 uppercase tracking-wider whitespace-nowrap">
-                Pickup Requested
-              </span>
-              <button
-                onClick={async () => {
-                  const res = await cancelPathaoPickupAction(order.id);
-                  if (!res.success) {
-                    window.alert(`Error: ${res.error}`);
-                  } else {
-                    window.alert("⚠️ Pickup cancelled in system.\n\nPlease also cancel this order manually from Pathao Merchant Panel.");
-                  }
-                }}
-                className="text-[10px] text-red-600 hover:underline font-bold whitespace-nowrap"
-              >
-                Cancel Pickup
-              </button>
-            </div>
-          )}
-
-          {status === "PACKAGING" && !order.isStorePickup && !order.pathaoConsignmentId && (
-            <div className="absolute top-full right-0 flex flex-col items-end mt-1 z-10">
-              <button
-                onClick={async () => {
-                  const res = await sendPathaoPickupManually(order.id);
-                  if (!res.success) {
-                    window.alert(res.error);
-                  } else {
-                    window.alert("✅ Pickup requested manually in system.");
-                  }
-                }}
-                className="text-[10px] text-indigo-600 hover:underline font-bold whitespace-nowrap"
-              >
-                Send to Pathao
-              </button>
-            </div>
-          )}
         </div>
       </td>
       <td className="px-2 py-4 text-right">
         <div className="flex flex-col items-end gap-2">
 
           <div className="flex items-center justify-end gap-2">
-            <Link
-              href={`/admin/orders/${order.id}`}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-indigo-600 bg-indigo-50 border border-indigo-200 rounded-md hover:bg-indigo-100 hover:border-indigo-300 transition-colors"
-            >
-              <Eye className="w-4 h-4" />
-              View
-            </Link>
-            {canDelete && (
+            {order.deletedAt ? (
               <button
-                onClick={handleDelete}
+                onClick={handleRestore}
                 disabled={loading}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-red-600 bg-red-50 border border-red-200 rounded-md hover:bg-red-100 hover:border-red-300 transition-colors disabled:opacity-50"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-indigo-700 bg-indigo-50 border border-indigo-200 rounded-md hover:bg-indigo-100 hover:border-indigo-300 transition-colors disabled:opacity-50"
               >
-                <Trash2 className="w-4 h-4" />
-                Delete
+                <RotateCcw className="w-4 h-4" />
+                Restore
               </button>
+            ) : (
+              <>
+                <Link
+                  href={`/admin/orders/${order.id}`}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-indigo-600 bg-indigo-50 border border-indigo-200 rounded-md hover:bg-indigo-100 hover:border-indigo-300 transition-colors"
+                >
+                  <Eye className="w-4 h-4" />
+                  View
+                </Link>
+                {canDelete && (
+                  <button
+                    onClick={handleDelete}
+                    disabled={loading}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-red-600 bg-red-50 border border-red-200 rounded-md hover:bg-red-100 hover:border-red-300 transition-colors disabled:opacity-50"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    Delete
+                  </button>
+                )}
+              </>
             )}
           </div>
         </div>

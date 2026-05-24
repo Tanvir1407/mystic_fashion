@@ -6,7 +6,7 @@ import {
   Compass, CheckCircle2, Truck, PackageCheck, Printer,
   AlertCircle, Minus, VerifiedIcon, Loader2,
 } from "lucide-react";
-import { updateOrderDetails, updateOrderRemark, cancelPathaoPickupAction, sendPathaoPickupManually } from "../../actions";
+import { updateOrderDetails, updateOrderRemark } from "../../actions";
 import { useRouter } from "next/navigation";
 import UploadedImage from "@/components/UploadedImage";
 import { CustomSelect } from "@/components/CustomSelect";
@@ -170,12 +170,12 @@ export default function OrderDetailsClient({
 
   // Status tracker
   const STATUS_STEPS = [
-    { statusKey: "PENDING",   title: "Order Placed", icon: Package },
-    { statusKey: "CONFIRMED", title: "Confirmed",    icon: CheckCircle2 },
-    { statusKey: "PRINTING",  title: "Printing",     icon: Printer },
-    { statusKey: "PACKAGING", title: "Packaging",    icon: PackageCheck },
-    { statusKey: "SHIPPED",   title: "Shipped",      icon: Truck },
-    { statusKey: "DELIVERED", title: "Delivered",    icon: Check },
+    { statusKey: "PENDING", title: "Order Placed", icon: Package },
+    { statusKey: "CONFIRMED", title: "Confirmed", icon: CheckCircle2 },
+    { statusKey: "PRINTING", title: "Printing", icon: Printer },
+    { statusKey: "PACKAGING", title: "Packaged", icon: PackageCheck },
+    { statusKey: "SHIPPED", title: "Shipped", icon: Truck },
+    { statusKey: "DELIVERED", title: "Delivered", icon: Check },
   ];
   const STATUS_ORDER = ["PENDING", "CONFIRMED", "PRINTING", "PACKAGING", "SHIPPED", "DELIVERED"];
   const isSpecial = order.status === "CANCELLED" || order.status === "RETURNED";
@@ -186,7 +186,7 @@ export default function OrderDetailsClient({
   const pathaoStatus = pathaoInfo?.order_status || pathaoInfo?.order_status_slug || null;
   const pathaoStatusLower = (pathaoStatus || "").toLowerCase();
 
-  const DISTRICTS = ["Bagerhat","Bandarban","Barguna","Barisal","Bhola","Bogra","Brahmanbaria","Chandpur","Chapainawabganj","Chattogram","Chuadanga","Comilla","Cox's Bazar","Dhaka","Dinajpur","Faridpur","Feni","Gaibandha","Gazipur","Gopalganj","Habiganj","Jamalpur","Jashore","Jhalokati","Jhenaidah","Joypurhat","Khagrachhari","Khulna","Kishoreganj","Kurigram","Kushtia","Lakshmipur","Lalmonirhat","Madaripur","Magura","Manikganj","Meherpur","Moulvibazar","Munshiganj","Mymensingh","Naogaon","Narail","Narayanganj","Narsingdi","Natore","Netrokona","Nilphamari","Noakhali","Pabna","Panchagarh","Patuakhali","Pirojpur","Rajbari","Rajshahi","Rangamati","Rangpur","Satkhira","Shariatpur","Sherpur","Sirajganj","Sunamganj","Sylhet","Tangail","Thakurgaon","Self Pickup"].sort();
+  const DISTRICTS = ["Bagerhat", "Bandarban", "Barguna", "Barisal", "Bhola", "Bogra", "Brahmanbaria", "Chandpur", "Chapainawabganj", "Chattogram", "Chuadanga", "Comilla", "Cox's Bazar", "Dhaka", "Dinajpur", "Faridpur", "Feni", "Gaibandha", "Gazipur", "Gopalganj", "Habiganj", "Jamalpur", "Jashore", "Jhalokati", "Jhenaidah", "Joypurhat", "Khagrachhari", "Khulna", "Kishoreganj", "Kurigram", "Kushtia", "Lakshmipur", "Lalmonirhat", "Madaripur", "Magura", "Manikganj", "Meherpur", "Moulvibazar", "Munshiganj", "Mymensingh", "Naogaon", "Narail", "Narayanganj", "Narsingdi", "Natore", "Netrokona", "Nilphamari", "Noakhali", "Pabna", "Panchagarh", "Patuakhali", "Pirojpur", "Rajbari", "Rajshahi", "Rangamati", "Rangpur", "Satkhira", "Shariatpur", "Sherpur", "Sirajganj", "Sunamganj", "Sylhet", "Tangail", "Thakurgaon", "Self Pickup"].sort();
 
   return (
     <div className="space-y-4">
@@ -501,42 +501,6 @@ export default function OrderDetailsClient({
               )}
             </div>
             <div className="px-5 py-5">
-              {/* Pathao pickup action banners */}
-              {order.status === "PACKAGING" && order.pathaoConsignmentId && (
-                <div className="mb-4 p-3 bg-blue-50 border border-blue-100 rounded-lg flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                  <div>
-                    <span className="text-xs font-bold text-blue-700 bg-blue-100 px-2 py-0.5 rounded border border-blue-200 uppercase tracking-wider">Pickup Requested</span>
-                    <p className="text-xs text-blue-600 mt-1">Pickup request sent to Pathao.</p>
-                  </div>
-                  <button
-                    onClick={async () => {
-                      const res = await cancelPathaoPickupAction(order.id);
-                      if (!res.success) { alert(`Error: ${res.error}`); } else { alert("⚠️ Pickup cancelled.\n\nAlso cancel manually from Pathao Merchant Panel."); router.refresh(); }
-                    }}
-                    className="px-3 py-1.5 bg-white border border-red-200 text-red-600 hover:bg-red-50 text-xs font-bold rounded-lg transition-all whitespace-nowrap"
-                  >
-                    Cancel Pickup
-                  </button>
-                </div>
-              )}
-              {order.status === "PACKAGING" && order.isStorePickup && !order.pathaoConsignmentId && (
-                <div className="mb-4 p-3 bg-indigo-50 border border-indigo-100 rounded-lg flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                  <div>
-                    <span className="text-xs font-bold text-indigo-700 block uppercase tracking-wider">Store Pickup Courier</span>
-                    <p className="text-xs text-indigo-600 mt-0.5">Manually request a Pathao courier pickup.</p>
-                  </div>
-                  <button
-                    onClick={async () => {
-                      const res = await sendPathaoPickupManually(order.id);
-                      if (!res.success) { alert(res.error); } else { alert("✅ Pickup requested manually."); router.refresh(); }
-                    }}
-                    className="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-lg transition-all whitespace-nowrap"
-                  >
-                    Send to Pathao
-                  </button>
-                </div>
-              )}
-
               {isSpecial ? (
                 <div className={`flex items-center gap-2 px-4 py-3 rounded-lg text-sm font-bold ${order.status === "CANCELLED" ? "bg-red-50 text-red-700 border border-red-100" : "bg-slate-50 text-slate-700 border border-slate-200"}`}>
                   <AlertCircle className="w-4 h-4 shrink-0" />

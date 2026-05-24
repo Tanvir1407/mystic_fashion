@@ -11,7 +11,7 @@ export const dynamic = "force-dynamic";
 export default async function AdminSuppliersPage({
   searchParams,
 }: {
-  searchParams: { page?: string; search?: string };
+  searchParams: { page?: string; limit?: string; search?: string; tab?: string };
 }) {
   const session = await getSession();
   const canView = hasPermission(session, "VIEW", "PURCHASES");
@@ -37,10 +37,13 @@ export default async function AdminSuppliersPage({
   }
 
   const page = Number(searchParams?.page) || 1;
+  const limit = Number(searchParams?.limit) || 10;
   const search = searchParams?.search || "";
-  const PER_PAGE = 10;
+  const tab = searchParams?.tab || "active";
+  const PER_PAGE = [10, 20, 50, 100].includes(limit) ? limit : 10;
 
-  // Fetch metrics programmatically
+
+  // Fetch metrics programmatically (always reflects active partners)
   const [totalCount, activeCount, purchaseSummary] = await Promise.all([
     prisma.supplier.count(),
     prisma.supplier.count({ where: { active: true } }),
@@ -54,14 +57,13 @@ export default async function AdminSuppliersPage({
   const totalSpent = purchaseSummary._sum.totalAmount ?? 0;
 
   // Fetch paginated suppliers with search query
-  const whereClause = search
-    ? {
-        OR: [
-          { name: { contains: search, mode: "insensitive" as any } },
-          { phone: { contains: search, mode: "insensitive" as any } },
-        ],
-      }
-    : {};
+  const whereClause: any = tab === "trash" ? { deletedAt: { not: null } as any } : {};
+  if (search) {
+    whereClause.OR = [
+      { name: { contains: search, mode: "insensitive" as any } },
+      { phone: { contains: search, mode: "insensitive" as any } },
+    ];
+  }
 
   const [suppliers, searchCount] = await Promise.all([
     prisma.supplier.findMany({
@@ -148,6 +150,7 @@ export default async function AdminSuppliersPage({
         searchVal={search}
         page={page}
         totalPages={totalPages}
+        currentTab={tab}
         canCreate={canCreate}
         canEdit={canEdit}
       />

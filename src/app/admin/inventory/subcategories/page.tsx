@@ -8,7 +8,7 @@ export const metadata: Metadata = {
   title: "Manage Subcategories | Mystic Admin",
 };
 
-export default async function SubcategoriesPage({ searchParams }: { searchParams: { page?: string } }) {
+export default async function SubcategoriesPage({ searchParams }: { searchParams: { page?: string; limit?: string; tab?: string } }) {
   const session = await getSession();
   const canView = hasPermission(session, "VIEW", "PRODUCTS");
   const canCreate = hasPermission(session, "CREATE", "PRODUCTS");
@@ -34,19 +34,24 @@ export default async function SubcategoriesPage({ searchParams }: { searchParams
   }
 
   const page = Number(searchParams?.page) || 1;
-  const PER_PAGE = 10;
+  const limit = Number(searchParams?.limit) || 10;
+  const tab = searchParams?.tab || "active";
+  const PER_PAGE = [10, 20, 50, 100].includes(limit) ? limit : 10;
+
+  const whereClause = tab === "trash" ? { deletedAt: { not: null } as any } : {};
 
   const [categories, subcategories, totalCount] = await Promise.all([
     prisma.category.findMany({
       orderBy: { name: "asc" },
     }),
     prisma.subcategory.findMany({
+      where: whereClause,
       include: { category: true },
       orderBy: { name: "asc" },
       skip: (page - 1) * PER_PAGE,
       take: PER_PAGE,
     }),
-    prisma.subcategory.count(),
+    prisma.subcategory.count({ where: whereClause }),
   ]);
 
   const totalPages = Math.ceil(totalCount / PER_PAGE);
@@ -57,6 +62,7 @@ export default async function SubcategoriesPage({ searchParams }: { searchParams
       categories={categories} 
       currentPage={page} 
       totalPages={totalPages} 
+      currentTab={tab}
       canCreate={canCreate}
       canEdit={canEdit}
       canDelete={canDelete}

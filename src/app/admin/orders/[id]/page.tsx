@@ -32,16 +32,37 @@ export default async function SingleOrderPage({ params }: { params: { id: string
   const products = await getProductsForOrder();
 
   const statusColor: Record<string, string> = {
-    DELIVERED:  "bg-emerald-100 text-emerald-700 border-emerald-200",
-    PENDING:    "bg-amber-100 text-amber-700 border-amber-200",
-    CONFIRMED:  "bg-blue-100 text-blue-700 border-blue-200",
-    PACKAGING:  "bg-purple-100 text-purple-700 border-purple-200",
-    PRINTING:   "bg-violet-100 text-violet-700 border-violet-200",
-    SHIPPED:    "bg-indigo-100 text-indigo-700 border-indigo-200",
-    CANCELLED:  "bg-red-100 text-red-700 border-red-200",
-    RETURNED:   "bg-slate-100 text-slate-600 border-slate-200",
+    DELIVERED: "bg-emerald-100 text-emerald-700 border-emerald-200",
+    PENDING: "bg-amber-100 text-amber-700 border-amber-200",
+    CONFIRMED: "bg-blue-100 text-blue-700 border-blue-200",
+    PACKAGING: "bg-purple-100 text-purple-700 border-purple-200",
+    PRINTING: "bg-violet-100 text-violet-700 border-violet-200",
+    SHIPPED: "bg-indigo-100 text-indigo-700 border-indigo-200",
+    CANCELLED: "bg-red-100 text-red-700 border-red-200",
+    RETURNED: "bg-slate-100 text-slate-600 border-slate-200",
   };
-
+  const modifyStatus = (status: string) => {
+    switch (status) {
+      case "PENDING":
+        return "Order Placed";
+      case "CONFIRMED":
+        return "Order Confirmed";
+      case "PRINTING":
+        return "Order Printing";
+      case "PACKAGING":
+        return "Order Packaged";
+      case "SHIPPED":
+        return "Order Shipped";
+      case "DELIVERED":
+        return "Order Delivered";
+      case "CANCELLED":
+        return "Order Cancelled";
+      case "RETURNED":
+        return "Order Returned";
+      default:
+        return status;
+    }
+  }
   return (
     <div className="flex flex-col gap-5 max-w-7xl mx-auto pb-10 px-4 sm:px-6">
       {/* Page Header */}
@@ -59,7 +80,7 @@ export default async function SingleOrderPage({ params }: { params: { id: string
                 Order ID: <span className="font-mono">{order.id}</span>
               </h1>
               <span className={`text-[10px] px-2.5 py-1 rounded-full border font-bold uppercase tracking-wider ${statusColor[order.status] ?? "bg-slate-100 text-slate-600 border-slate-200"}`}>
-                {order.status}
+                {modifyStatus(order.status)}
               </span>
               {order.isStorePickup && (
                 <span className="text-[10px] px-2.5 py-1 rounded-full border font-bold uppercase tracking-wider bg-teal-50 text-teal-700 border-teal-200">

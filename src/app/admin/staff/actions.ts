@@ -3,6 +3,7 @@
 import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { withAuditLog } from "@/lib/audit";
+import bcrypt from "bcryptjs";
 
 // ─── GET STAFF ──────────────────────────────────────────────────────────────
 
@@ -42,11 +43,12 @@ export async function getAvailableRoles() {
 
 async function _createStaff(data: { username: string; email: string; password: string; roleId?: string }) {
   try {
+    const hashedPassword = await bcrypt.hash(data.password, 10);
     const staff = await prisma.staff.create({
       data: {
         username: data.username,
         email: data.email,
-        password: data.password,
+        password: hashedPassword,
         roleId: data.roleId,
       },
       include: { role: true }
@@ -72,9 +74,13 @@ export const createStaff = withAuditLog(_createStaff, {
 
 async function _updateStaff(id: string, data: { username?: string; email?: string; password?: string; roleId?: string }) {
   try {
+    const updateData = { ...data };
+    if (updateData.password) {
+      updateData.password = await bcrypt.hash(updateData.password, 10);
+    }
     const staff = await prisma.staff.update({
       where: { id },
-      data,
+      data: updateData,
       include: { role: true }
     });
     revalidatePath("/admin/staff");

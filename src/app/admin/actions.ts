@@ -11,6 +11,35 @@ import { writeFile, mkdir } from "fs/promises";
 import { join, dirname } from "path";
 import { pathaoClient } from "@/lib/pathao/PathaoClient";
 import { slugify } from "@/utils/slugify";
+import bcrypt from "bcryptjs";
+
+// ─── LOGIN RATE LIMITER ───────────────────────────────────────────────────────
+const _loginAttempts = new Map<string, { count: number; resetAt: number }>();
+const LOGIN_MAX = 5;
+const LOGIN_WINDOW_MS = 15 * 60 * 1000;
+
+function _checkLoginRateLimit(email: string): void {
+  const now = Date.now();
+  const entry = _loginAttempts.get(email);
+  if (entry && now < entry.resetAt) {
+    if (entry.count >= LOGIN_MAX) {
+      const mins = Math.ceil((entry.resetAt - now) / 60000);
+      throw new Error(`Too many login attempts. Try again in ${mins} minute(s).`);
+    }
+    entry.count++;
+  } else {
+    _loginAttempts.set(email, { count: 1, resetAt: now + LOGIN_WINDOW_MS });
+  }
+}
+
+// ─── PHONE NORMALIZATION ─────────────────────────────────────────────────────
+function normalizePhone(raw: string): string {
+  let p = raw.replace(/[\s\-\(\)\.]/g, "");
+  if (p.startsWith("+880")) p = p.slice(4);
+  else if (p.startsWith("880") && p.length === 13) p = p.slice(3);
+  if (p.length === 10 && !p.startsWith("0")) p = "0" + p;
+  return p;
+}
 
 async function getOrCreateSystemAccount(tx: any, name: string, type: "INCOME" | "EXPENSE") {
   let account = await tx.chartOfAccount.findUnique({ where: { name } });
@@ -92,6 +121,8 @@ import { getRedirectUrlForSession } from "@/lib/permissions";
 
 export async function adminLogin(email: string, password: string) {
   try {
+    _checkLoginRateLimit(email);
+
     const staff = await prisma.staff.findUnique({
       where: { email },
       include: {
@@ -101,27 +132,48 @@ export async function adminLogin(email: string, password: string) {
       }
     });
 
-    if (staff && staff.password === password) {
-      if (!staff.role) {
-        return { success: false, error: "Access denied: No role assigned." };
-      }
-
-      const sessionPayload = {
-        userId: staff.id,
-        roleName: staff.role.name,
-        permissions: staff.role.name === "SUPERADMIN" ? [] : staff.role.permissions.map(p => ({
-          action: p.action,
-          subject: p.subject
-        }))
-      };
-
-      const token = await createSession(sessionPayload);
-      const redirectUrl = getRedirectUrlForSession(sessionPayload);
-
-      return { success: true, token, redirectUrl };
-    } else {
+    if (!staff) {
       return { success: false, error: "Invalid email or password" };
     }
+
+    // Progressive password migration: detect bcrypt hash vs legacy plain-text
+    const isHashed = staff.password.startsWith("$2b$") || staff.password.startsWith("$2a$");
+    let passwordValid: boolean;
+
+    if (isHashed) {
+      passwordValid = await bcrypt.compare(password, staff.password);
+    } else {
+      passwordValid = staff.password === password;
+      if (passwordValid) {
+        // Auto-upgrade: hash plain-text password on first successful login
+        const hashed = await bcrypt.hash(password, 10);
+        await prisma.staff.update({ where: { id: staff.id }, data: { password: hashed } });
+      }
+    }
+
+    if (!passwordValid) {
+      return { success: false, error: "Invalid email or password" };
+    }
+
+    if (!staff.role) {
+      return { success: false, error: "Access denied: No role assigned." };
+    }
+
+    _loginAttempts.delete(email);
+
+    const sessionPayload = {
+      userId: staff.id,
+      roleName: staff.role.name,
+      permissions: staff.role.name === "SUPERADMIN" ? [] : staff.role.permissions.map(p => ({
+        action: p.action,
+        subject: p.subject
+      }))
+    };
+
+    const token = await createSession(sessionPayload);
+    const redirectUrl = getRedirectUrlForSession(sessionPayload);
+
+    return { success: true, token, redirectUrl };
   } catch (error: any) {
     console.error("Error in adminLogin:", error);
     return { success: false, error: error instanceof Error ? error.message : "An unexpected error occurred." };
@@ -349,11 +401,6 @@ export const deleteProduct = withAuditLog(_deleteProduct, {
 
 async function _updateOrderStatus(orderId: string, status: OrderStatus) {
   try {
-    const orderWithItems = await prisma.order.findUnique({
-      where: { id: orderId },
-      include: { items: { include: { product: true } } },
-    });
-
     await prisma.$transaction(async (tx) => {
       const order = await tx.order.findUnique({
         where: { id: orderId },
@@ -365,20 +412,26 @@ async function _updateOrderStatus(orderId: string, status: OrderStatus) {
       const oldStatus = order.status;
       const newStatus = status;
 
-      // If already the same status, do nothing
       if (oldStatus === newStatus) return;
 
-      // Define Active States
-      const activeStatuses: OrderStatus[] = ["CONFIRMED", "PACKAGING", "SHIPPED", "DELIVERED"];
-      const isActive = (s: OrderStatus) => activeStatuses.includes(s);
-
-      // Rule 2: Can only revert to Pending from Confirmed status
-      if (newStatus === "PENDING" && oldStatus !== "CONFIRMED") {
-        throw new Error("Can only revert to Pending from Confirmed status.");
+      // RETURNED and CANCELLED are terminal — no further transitions allowed
+      if (["RETURNED", "CANCELLED"].includes(oldStatus)) {
+        throw new Error(`Order is ${oldStatus} and cannot be modified.`);
       }
 
-      // Execute Stock Action: Stock is deducted ONLY when the order transitions to SHIPPED for the first time
-      if (newStatus === "SHIPPED" && oldStatus !== "SHIPPED") {
+      // Can only revert to PENDING from CONFIRMED, PRINTING, or PACKAGING
+      if (newStatus === "PENDING" && !["CONFIRMED", "PRINTING", "PACKAGING"].includes(oldStatus)) {
+        throw new Error("Can only revert to Pending from Confirmed, Printing, or Packaging status.");
+      }
+
+      const stockHoldingStatuses: OrderStatus[] = ["CONFIRMED", "PRINTING", "PACKAGING", "SHIPPED", "DELIVERED"];
+      const isStockHolding = (s: OrderStatus) => stockHoldingStatuses.includes(s);
+
+      const oldIsHolding = isStockHolding(oldStatus);
+      const newIsHolding = isStockHolding(newStatus);
+
+      // non-holding → holding: deduct stock
+      if (!oldIsHolding && newIsHolding) {
         for (const item of order.items) {
           await tx.productVariant.update({
             where: {
@@ -393,13 +446,26 @@ async function _updateOrderStatus(orderId: string, status: OrderStatus) {
         }
       }
 
-      // Update the order status
-      await tx.order.update({
-        where: { id: orderId },
-        data: { status: newStatus },
-      });
+      // holding → non-holding: restore stock
+      if (oldIsHolding && !newIsHolding) {
+        for (const item of order.items) {
+          await tx.productVariant.update({
+            where: {
+              productId_size_color: {
+                productId: item.productId,
+                size: item.size,
+                color: (item as any).color || "Default",
+              },
+            },
+            data: { stock: { increment: item.quantity } },
+          });
+        }
+      }
 
-      // --- AUTO ACCOUNTING LOGIC ---
+      await tx.order.update({ where: { id: orderId }, data: { status: newStatus } });
+
+      // --- ACCOUNTING ---
+      // PENDING → CONFIRMED: create revenue credit
       if (oldStatus === "PENDING" && newStatus === "CONFIRMED") {
         const account = await getOrCreateSystemAccount(tx, "Sales Revenue", "INCOME");
         await createDoubleEntryJournal(tx, {
@@ -413,21 +479,27 @@ async function _updateOrderStatus(orderId: string, status: OrderStatus) {
         });
       }
 
-      // CONFIRMED → PENDING: reverse the earlier revenue entry
-      if (oldStatus === "CONFIRMED" && newStatus === "PENDING") {
-        const account = await getOrCreateSystemAccount(tx, "Sales Revenue", "INCOME");
-        await createDoubleEntryJournal(tx, {
-          accountId: account.id,
-          amount: order.totalAmount,
-          date: new Date(),
-          type: "DEBIT",
-          description: `Order reverted to pending - reversing sale for ${order.id}`,
-          referenceId: order.id,
-          referenceType: "ORDER",
+      // Any stock-holding → PENDING: reverse existing revenue credit if one exists
+      if (newStatus === "PENDING" && isStockHolding(oldStatus)) {
+        const existingCredit = await tx.transaction.findFirst({
+          where: { referenceId: orderId, referenceType: "ORDER", type: "CREDIT" },
         });
+        if (existingCredit) {
+          const account = await getOrCreateSystemAccount(tx, "Sales Revenue", "INCOME");
+          await createDoubleEntryJournal(tx, {
+            accountId: account.id,
+            amount: order.totalAmount,
+            date: new Date(),
+            type: "DEBIT",
+            description: `Order reverted to PENDING from ${oldStatus} - reversing sale for ${order.id}`,
+            referenceId: order.id,
+            referenceType: "ORDER",
+          });
+        }
       }
 
-      if (isActive(oldStatus) && newStatus === "CANCELLED") {
+      // stock-holding → CANCELLED: refund entry
+      if (isStockHolding(oldStatus) && newStatus === "CANCELLED") {
         const account = await getOrCreateSystemAccount(tx, "Sales Refunds", "EXPENSE");
         await createDoubleEntryJournal(tx, {
           accountId: account.id,
@@ -440,57 +512,6 @@ async function _updateOrderStatus(orderId: string, status: OrderStatus) {
         });
       }
     });
-
-    // Auto-trigger Pathao pickup for non-store-pickup orders going to PACKAGING
-    if (
-      status === "PACKAGING" &&
-      orderWithItems &&
-      !orderWithItems.isStorePickup &&
-      !orderWithItems.pathaoConsignmentId
-    ) {
-      try {
-        const stores = await pathaoClient.getStores();
-        if (stores.length > 0) {
-          const storeId = stores[0].store_id;
-          const sanitizePhone = (phone: string): string => {
-            let p = phone.trim();
-            if (p.startsWith("+88")) p = p.slice(3);
-            else if (p.startsWith("88") && p.length > 11) p = p.slice(2);
-            return p;
-          };
-          const totalQuantity = orderWithItems.items.reduce((sum: number, i: any) => sum + i.quantity, 0);
-          const collectionAmount = Math.max(0, orderWithItems.totalAmount - (orderWithItems.advancePaid || 0));
-          const payload = {
-            store_id: storeId,
-            merchant_order_id: orderWithItems.id,
-            recipient_name: orderWithItems.customerName,
-            recipient_phone: sanitizePhone(orderWithItems.phone),
-            recipient_address: orderWithItems.address,
-            recipient_city: orderWithItems.pathaoCityId || undefined,
-            recipient_zone: orderWithItems.pathaoZoneId || undefined,
-            recipient_area: orderWithItems.pathaoAreaId || undefined,
-            delivery_type: 48,
-            item_type: 2,
-            item_quantity: totalQuantity,
-            item_weight: 0.5,
-            amount_to_collect: collectionAmount,
-            item_description: orderWithItems.items.map((i: any) =>
-              `${i.product?.name || 'Item'} (Size: ${i.size}, Qty: ${i.quantity})`
-            ).join(", "),
-          };
-          const res = await pathaoClient.createOrder(payload);
-          if (res.consignment_id) {
-            await prisma.order.update({
-              where: { id: orderId },
-              data: { pathaoConsignmentId: res.consignment_id },
-            });
-          }
-        }
-      } catch (pathaoErr: any) {
-        // Non-blocking: log but do not fail the status update
-        console.error(`Auto Pathao pickup failed for order ${orderId}:`, pathaoErr.message);
-      }
-    }
 
     revalidatePath("/admin/orders");
     revalidatePath("/admin/products");
@@ -522,9 +543,28 @@ export async function bulkUpdateOrderStatus(orderIds: string[], status: OrderSta
 async function _deleteOrder(id: string) {
   try {
     await prisma.$transaction(async (tx) => {
-      await tx.orderItem.deleteMany({
-        where: { orderId: id },
+      const order = await tx.order.findUnique({
+        where: { id },
+        include: { items: true },
       });
+      if (order) {
+        const stockHoldingStatuses = ["CONFIRMED", "PRINTING", "PACKAGING", "SHIPPED", "DELIVERED"];
+        if (stockHoldingStatuses.includes(order.status)) {
+          for (const item of order.items) {
+            await tx.productVariant.update({
+              where: {
+                productId_size_color: {
+                  productId: item.productId,
+                  size: item.size,
+                  color: (item as any).color || "Default",
+                },
+              },
+              data: { stock: { increment: item.quantity } },
+            });
+          }
+        }
+      }
+
       await tx.order.delete({
         where: { id },
       });
@@ -555,9 +595,24 @@ export async function bulkDeleteOrders(orderIds: string[]) {
 
     // 2. Perform the deletions
     await prisma.$transaction(async (tx) => {
-      await tx.orderItem.deleteMany({
-        where: { orderId: { in: orderIds } },
-      });
+      const stockHoldingStatuses = ["CONFIRMED", "PRINTING", "PACKAGING", "SHIPPED", "DELIVERED"];
+      for (const order of orders) {
+        if (stockHoldingStatuses.includes(order.status)) {
+          for (const item of order.items) {
+            await tx.productVariant.update({
+              where: {
+                productId_size_color: {
+                  productId: item.productId,
+                  size: item.size,
+                  color: (item as any).color || "Default",
+                },
+              },
+              data: { stock: { increment: item.quantity } },
+            });
+          }
+        }
+      }
+
       await tx.order.deleteMany({
         where: { id: { in: orderIds } },
       });
@@ -614,6 +669,10 @@ async function _updateOrderDetails(id: string, data: {
     printCost: number;
   }[];
 }) {
+  if ((data.discountAmount ?? 0) < 0) return { success: false, error: "Discount amount cannot be negative." };
+  if ((data.advancePaid ?? 0) < 0) return { success: false, error: "Advance paid cannot be negative." };
+  if ((data.deliveryCharge ?? 0) < 0) return { success: false, error: "Delivery charge cannot be negative." };
+
   try {
     await prisma.$transaction(async (tx) => {
       // 1. Fetch current order items and delivery settings
@@ -626,6 +685,8 @@ async function _updateOrderDetails(id: string, data: {
 
       // Handle items update and stock adjustment
       if (data.items) {
+        const stockHoldingStatuses = ["CONFIRMED", "PRINTING", "PACKAGING", "SHIPPED", "DELIVERED"];
+        const isStockHolding = stockHoldingStatuses.includes(order.status);
         const oldItemsMap = new Map(order.items.map(i => [i.id, i]));
 
         for (const newItem of data.items) {
@@ -633,7 +694,7 @@ async function _updateOrderDetails(id: string, data: {
           if (oldItem) {
             // Determine if quantity changed on exact size
             const diff = newItem.quantity - oldItem.quantity;
-            if (diff !== 0) {
+            if (diff !== 0 && isStockHolding) {
               await tx.productVariant.update({
                 where: { productId_size_color: { productId: newItem.productId, size: newItem.size, color: (newItem as any).color || "Default" } },
                 data: { stock: { decrement: diff } } // If increased (diff > 0), decrement stock
@@ -642,19 +703,23 @@ async function _updateOrderDetails(id: string, data: {
             oldItemsMap.delete(newItem.id);
           } else {
             // New Item added
-            await tx.productVariant.update({
-              where: { productId_size_color: { productId: newItem.productId, size: newItem.size, color: (newItem as any).color || "Default" } },
-              data: { stock: { decrement: newItem.quantity } }
-            });
+            if (isStockHolding) {
+              await tx.productVariant.update({
+                where: { productId_size_color: { productId: newItem.productId, size: newItem.size, color: (newItem as any).color || "Default" } },
+                data: { stock: { decrement: newItem.quantity } }
+              });
+            }
           }
         }
 
         // Remaining items in oldItemsMap are deleted items
-        for (const remainingOld of oldItemsMap.values()) {
-          await tx.productVariant.update({
-            where: { productId_size_color: { productId: remainingOld.productId, size: remainingOld.size, color: (remainingOld as any).color || "Default" } },
-            data: { stock: { increment: remainingOld.quantity } }
-          });
+        if (isStockHolding) {
+          for (const remainingOld of oldItemsMap.values()) {
+            await tx.productVariant.update({
+              where: { productId_size_color: { productId: remainingOld.productId, size: remainingOld.size, color: (remainingOld as any).color || "Default" } },
+              data: { stock: { increment: remainingOld.quantity } }
+            });
+          }
         }
 
         // Wipe old items and create new ones
@@ -723,16 +788,29 @@ async function _updateOrderDetails(id: string, data: {
         },
       });
 
-      // 6. Automatically update Accounting Ledger (since totalAmount may have shifted)
-      // Only updates if the transaction had already been created (e.g. order moved past PENDING)
+      // 6. Sync accounting records when totalAmount changes (order must be past PENDING)
       const existingTx = await tx.transaction.findFirst({
-        where: { referenceId: id, referenceType: "ORDER" }
+        where: { referenceId: id, referenceType: "ORDER" },
       });
       if (existingTx) {
         await tx.transaction.update({
           where: { id: existingTx.id },
-          data: { amount: newTotalAmount }
+          data: { amount: newTotalAmount },
         });
+
+        // Also update the double-entry journal lines so the ledger stays balanced
+        const journalEntry = await tx.journalEntry.findFirst({
+          where: { referenceId: id, referenceType: "ORDER" },
+          include: { lines: true },
+        });
+        if (journalEntry) {
+          for (const line of journalEntry.lines) {
+            await tx.journalLine.update({
+              where: { id: line.id },
+              data: { amount: newTotalAmount },
+            });
+          }
+        }
       }
     });
 
@@ -844,12 +922,20 @@ async function _createPurchase(
         });
 
         if (!supplier) {
-          supplier = await tx.supplier.create({
-            data: {
-              name: sName,
-              active: true,
-            },
+          // Restore soft-deleted supplier with same name instead of creating a duplicate
+          const deleted = await (tx as any).supplier.findFirst({
+            where: { name: sName, deletedAt: { not: null } },
           });
+          if (deleted) {
+            supplier = await (tx as any).supplier.update({
+              where: { id: deleted.id },
+              data: { deletedAt: null, active: true },
+            });
+          } else {
+            supplier = await tx.supplier.create({
+              data: { name: sName, active: true },
+            });
+          }
         }
         supplierId = supplier.id;
       }
@@ -1106,9 +1192,37 @@ export const updatePurchase = withAuditLog(_updatePurchase, {
 
 async function _deletePurchase(id: string) {
   try {
-    const purchase = await prisma.purchase.delete({ where: { id } });
+    await prisma.$transaction(async (tx) => {
+      const purchase = await tx.purchase.findUnique({ where: { id }, include: { items: true } });
+      if (!purchase) throw new Error("Purchase not found");
+
+      // Reverse stock for each item before soft-deleting
+      for (const item of purchase.items) {
+        await tx.productVariant.update({
+          where: { id: item.variantId },
+          data: { stock: { decrement: item.quantity } },
+        });
+      }
+
+      // Accounting reversal: undo the original DEBIT on Inventory Purchases
+      const account = await getOrCreateSystemAccount(tx, "Inventory Purchases", "EXPENSE");
+      await createDoubleEntryJournal(tx, {
+        accountId: account.id,
+        amount: purchase.totalAmount,
+        date: new Date(),
+        type: "CREDIT",
+        description: `Purchase deleted - reversing inventory (Purchase: ${purchase.id})`,
+        referenceId: purchase.id,
+        referenceType: "PURCHASE",
+      });
+
+      // Soft-delete the purchase (extension intercepts and converts to update)
+      await tx.purchase.delete({ where: { id } });
+    });
+
     revalidatePath("/admin/purchases");
-    return { success: true, data: purchase };
+    revalidatePath("/admin/products");
+    return { success: true };
   } catch (error: any) {
     console.error("Error in deletePurchase:", error);
     return { success: false, error: error instanceof Error ? error.message : "An unexpected error occurred." };
@@ -1123,14 +1237,41 @@ export const deletePurchase = withAuditLog(_deletePurchase, {
   describe: (args) => `Deleted purchase ${args[0]}`,
 });
 
-async function _updatePurchaseStatus(id: string, status: string) {
+async function _updatePurchaseStatus(id: string, newStatus: string) {
   try {
-    const purchase = await prisma.purchase.update({
-      where: { id },
-      data: { status },
+    await prisma.$transaction(async (tx) => {
+      const purchase = await tx.purchase.findUnique({ where: { id }, include: { items: true } });
+      if (!purchase) throw new Error("Purchase not found");
+
+      const oldStatus = purchase.status;
+      if (oldStatus === newStatus) return;
+
+      // COMPLETED → non-COMPLETED: reverse stock
+      if (oldStatus === "COMPLETED" && newStatus !== "COMPLETED") {
+        for (const item of purchase.items) {
+          await tx.productVariant.update({
+            where: { id: item.variantId },
+            data: { stock: { decrement: item.quantity } },
+          });
+        }
+      }
+
+      // non-COMPLETED → COMPLETED: add stock
+      if (oldStatus !== "COMPLETED" && newStatus === "COMPLETED") {
+        for (const item of purchase.items) {
+          await tx.productVariant.update({
+            where: { id: item.variantId },
+            data: { stock: { increment: item.quantity } },
+          });
+        }
+      }
+
+      await tx.purchase.update({ where: { id }, data: { status: newStatus } });
     });
+
     revalidatePath("/admin/purchases");
-    return { success: true, data: purchase };
+    revalidatePath("/admin/products");
+    return { success: true };
   } catch (error: any) {
     console.error("Error in updatePurchaseStatus:", error);
     return { success: false, error: error instanceof Error ? error.message : "An unexpected error occurred." };
@@ -1265,26 +1406,22 @@ export const updateDTFPrintSetting = withAuditLog(_updateDTFPrintSetting, {
   describe: (args) => `Updated DTF print cost to ৳${args[0]}`,
 });
 
-export async function getLowStockProducts() {
+export async function getLowStockProducts(options?: { limit?: number; page?: number }) {
   const setting = await getInventorySettings();
   const threshold = setting.lowStockThreshold;
+  const limit = options?.limit ?? 100;
+  const skip = ((options?.page ?? 1) - 1) * limit;
 
   return await prisma.product.findMany({
     where: {
       variants: {
-        some: {
-          stock: {
-            lte: threshold,
-          },
-        },
+        some: { stock: { lte: threshold } },
       },
     },
-    include: {
-      variants: true,
-    },
-    orderBy: {
-      updatedAt: "desc",
-    },
+    include: { variants: true },
+    orderBy: { updatedAt: "desc" },
+    take: limit,
+    skip,
   });
 }
 
@@ -1357,7 +1494,7 @@ async function _createAdminOrder(data: {
       const customId = await generateOrderIdInternal(tx);
 
       // Check or create customer profile by phone
-      const phone = data.phone?.trim();
+      const phone = data.phone ? normalizePhone(data.phone) : undefined;
       let customerId: string | null = null;
       if (phone) {
         let customer = await tx.customer.findUnique({
@@ -1459,23 +1596,7 @@ async function _createAdminOrder(data: {
         },
       });
 
-      // 3. Update stock for each item (allowed to go negative for backorders)
-      for (const item of data.items) {
-        await tx.productVariant.update({
-          where: {
-            productId_size_color: {
-              productId: item.productId,
-              size: item.size,
-              color: (item as any).color || "Default"
-            },
-          },
-          data: {
-            stock: {
-              decrement: item.quantity,
-            },
-          },
-        });
-      }
+      // Update stock block removed because manual orders start as PENDING and do not hold stock until confirmed.
 
       return newOrder;
     });
@@ -1516,6 +1637,20 @@ async function _createExchangeOrder(data: {
   exchangeRefOrderId: string;
   exchangeItemNote: string;
 }) {
+  // Validate reference order exists and is in a state that allows exchange
+  if (data.exchangeRefOrderId) {
+    const refOrder = await prisma.order.findUnique({ where: { id: data.exchangeRefOrderId } });
+    if (!refOrder) {
+      return { success: false, error: "Reference order for exchange not found." };
+    }
+    if (!["DELIVERED", "RETURNED"].includes(refOrder.status)) {
+      return {
+        success: false,
+        error: `Exchange can only be created for DELIVERED or RETURNED orders. Current status: ${refOrder.status}`,
+      };
+    }
+  }
+
   return _createAdminOrder({
     ...data,
     isExchange: true,
@@ -1640,15 +1775,16 @@ export async function bulkSendToPathaoAction(orderIds: string[]) {
             include: { items: true },
           });
 
+          // Atomically save consignment ID + advance status to SHIPPED
           const updatedOrder = await prisma.order.update({
             where: { id: order.id },
             data: {
               pathaoConsignmentId: res.consignment_id,
+              status: "SHIPPED",
             },
             include: { items: true },
           });
 
-          // Log the update action individually
           const auditContext = await getAuditContext();
           if (auditContext) {
             logActivity({
@@ -1658,10 +1794,10 @@ export async function bulkSendToPathaoAction(orderIds: string[]) {
               action: "UPDATE",
               entityType: "Order",
               entityId: order.id,
-              description: `Pathao pickup requested for order ${order.id} (Consignment: ${res.consignment_id})`,
+              description: `Pathao pickup requested for order ${order.id} (Consignment: ${res.consignment_id}) — status set to SHIPPED`,
               dataBefore: orderBefore as any,
               dataAfter: updatedOrder as any,
-              changedFields: ["pathaoConsignmentId"],
+              changedFields: ["pathaoConsignmentId", "status"],
               ipAddress: auditContext.ipAddress,
               userAgent: auditContext.userAgent,
             });
@@ -1959,7 +2095,14 @@ async function _processSalesReturn(data: {
     const { orderId, orderItemId, returnReason, deliveryLossAmount, returnActionType, quantity } = data;
 
     const result = await prisma.$transaction(async (tx) => {
-      // 1. Fetch OrderItem and include Product
+      // 1. Fetch order and guard against terminal statuses
+      const order = await tx.order.findUnique({ where: { id: orderId }, select: { status: true } });
+      if (!order) throw new Error("Order not found");
+      if (["RETURNED", "CANCELLED"].includes(order.status)) {
+        throw new Error(`Cannot process a return for a ${order.status} order.`);
+      }
+
+      // 2. Fetch OrderItem and include Product
       const orderItem = await tx.orderItem.findUnique({
         where: { id: orderItemId },
         include: { product: true },
@@ -2273,6 +2416,7 @@ export async function getRecentSalesReturns() {
         }
       },
       orderBy: { createdAt: "desc" },
+      take: 50,
     });
   } catch (error: any) {
     console.error("Get recent sales returns error:", error);
@@ -2558,3 +2702,161 @@ export const updateSupplier = withAuditLog(_updateSupplier, {
   fetchAfter: (id) => prisma.supplier.findUnique({ where: { id } }),
   describe: (args) => `Updated supplier with ID ${args[0]}`,
 });
+
+async function _deleteSupplier(id: string) {
+  try {
+    await prisma.supplier.delete({ where: { id } });
+    revalidatePath("/admin/suppliers");
+    return { success: true };
+  } catch (error: any) {
+    return { success: false, error: error.message || "Failed to delete supplier." };
+  }
+}
+
+export const deleteSupplier = withAuditLog(_deleteSupplier, {
+  entityType: "Supplier",
+  action: "DELETE",
+  getEntityId: (args) => args[0],
+  fetchBefore: (id) => prisma.supplier.findUnique({ where: { id } }),
+  describe: (args) => `Deleted supplier ${args[0]}`,
+});
+
+async function _restoreProduct(id: string) {
+  try {
+    await prisma.product.update({
+      where: { id, deletedAt: { not: null } as any },
+      data: { deletedAt: null },
+    });
+    revalidatePath("/admin/products");
+    revalidatePath("/");
+    return { success: true };
+  } catch (error: any) {
+    return { success: false, error: error.message || "Failed to restore product." };
+  }
+}
+
+export const restoreProduct = withAuditLog(_restoreProduct, {
+  entityType: "Product",
+  action: "UPDATE",
+  getEntityId: (args) => args[0],
+  describe: (args) => `Restored product ${args[0]}`,
+});
+
+async function _restoreOrder(id: string) {
+  try {
+    await prisma.$transaction(async (tx) => {
+      // Restore the order first so items become queryable
+      await (tx as any).order.update({
+        where: { id, deletedAt: { not: null } },
+        data: { deletedAt: null },
+      });
+
+      // Re-fetch order with items to check status and re-deduct stock
+      const order = await tx.order.findUnique({
+        where: { id },
+        include: { items: true },
+      });
+
+      if (!order) throw new Error("Order not found after restore");
+
+      const stockHoldingStatuses = ["CONFIRMED", "PRINTING", "PACKAGING", "SHIPPED", "DELIVERED"];
+      if (stockHoldingStatuses.includes(order.status)) {
+        for (const item of order.items) {
+          await tx.productVariant.update({
+            where: {
+              productId_size_color: {
+                productId: item.productId,
+                size: item.size,
+                color: (item as any).color || "Default",
+              },
+            },
+            data: { stock: { decrement: item.quantity } },
+          });
+        }
+      }
+    });
+
+    revalidatePath("/admin/orders");
+    revalidatePath("/admin/products");
+    return { success: true };
+  } catch (error: any) {
+    return { success: false, error: error.message || "Failed to restore order." };
+  }
+}
+
+export const restoreOrder = withAuditLog(_restoreOrder, {
+  entityType: "Order",
+  action: "UPDATE",
+  getEntityId: (args) => args[0],
+  describe: (args) => `Restored order ${args[0]}`,
+});
+
+async function _restorePurchase(id: string) {
+  try {
+    await prisma.$transaction(async (tx) => {
+      // Restore the purchase record
+      await (tx as any).purchase.update({
+        where: { id, deletedAt: { not: null } },
+        data: { deletedAt: null },
+      });
+
+      // Re-fetch with items (now visible after restore)
+      const purchase = await tx.purchase.findUnique({ where: { id }, include: { items: true } });
+      if (!purchase) throw new Error("Purchase not found after restore");
+
+      // Re-add stock for each item
+      for (const item of purchase.items) {
+        await tx.productVariant.update({
+          where: { id: item.variantId },
+          data: { stock: { increment: item.quantity } },
+        });
+      }
+
+      // Re-create accounting entry
+      const account = await getOrCreateSystemAccount(tx, "Inventory Purchases", "EXPENSE");
+      await createDoubleEntryJournal(tx, {
+        accountId: account.id,
+        amount: purchase.totalAmount,
+        date: new Date(),
+        type: "DEBIT",
+        description: `Purchase restored - re-adding inventory (Purchase: ${purchase.id})`,
+        referenceId: purchase.id,
+        referenceType: "PURCHASE",
+      });
+    });
+
+    revalidatePath("/admin/purchases");
+    revalidatePath("/admin/products");
+    return { success: true };
+  } catch (error: any) {
+    return { success: false, error: error.message || "Failed to restore purchase." };
+  }
+}
+
+export const restorePurchase = withAuditLog(_restorePurchase, {
+  entityType: "Purchase",
+  action: "UPDATE",
+  getEntityId: (args) => args[0],
+  describe: (args) => `Restored purchase ${args[0]}`,
+});
+
+async function _restoreSupplier(id: string) {
+  try {
+    await prisma.supplier.update({
+      where: { id, deletedAt: { not: null } as any },
+      data: { deletedAt: null },
+    });
+    revalidatePath("/admin/suppliers");
+    return { success: true };
+  } catch (error: any) {
+    return { success: false, error: error.message || "Failed to restore supplier." };
+  }
+}
+
+export const restoreSupplier = withAuditLog(_restoreSupplier, {
+  entityType: "Supplier",
+  action: "UPDATE",
+  getEntityId: (args) => args[0],
+  describe: (args) => `Restored supplier ${args[0]}`,
+});
+
