@@ -349,11 +349,6 @@ export const deleteProduct = withAuditLog(_deleteProduct, {
 
 async function _updateOrderStatus(orderId: string, status: OrderStatus) {
   try {
-    const orderWithItems = await prisma.order.findUnique({
-      where: { id: orderId },
-      include: { items: { include: { product: true } } },
-    });
-
     await prisma.$transaction(async (tx) => {
       const order = await tx.order.findUnique({
         where: { id: orderId },
@@ -440,57 +435,6 @@ async function _updateOrderStatus(orderId: string, status: OrderStatus) {
         });
       }
     });
-
-    // Auto-trigger Pathao pickup for non-store-pickup orders going to PACKAGING
-    if (
-      status === "PACKAGING" &&
-      orderWithItems &&
-      !orderWithItems.isStorePickup &&
-      !orderWithItems.pathaoConsignmentId
-    ) {
-      try {
-        const stores = await pathaoClient.getStores();
-        if (stores.length > 0) {
-          const storeId = stores[0].store_id;
-          const sanitizePhone = (phone: string): string => {
-            let p = phone.trim();
-            if (p.startsWith("+88")) p = p.slice(3);
-            else if (p.startsWith("88") && p.length > 11) p = p.slice(2);
-            return p;
-          };
-          const totalQuantity = orderWithItems.items.reduce((sum: number, i: any) => sum + i.quantity, 0);
-          const collectionAmount = Math.max(0, orderWithItems.totalAmount - (orderWithItems.advancePaid || 0));
-          const payload = {
-            store_id: storeId,
-            merchant_order_id: orderWithItems.id,
-            recipient_name: orderWithItems.customerName,
-            recipient_phone: sanitizePhone(orderWithItems.phone),
-            recipient_address: orderWithItems.address,
-            recipient_city: orderWithItems.pathaoCityId || undefined,
-            recipient_zone: orderWithItems.pathaoZoneId || undefined,
-            recipient_area: orderWithItems.pathaoAreaId || undefined,
-            delivery_type: 48,
-            item_type: 2,
-            item_quantity: totalQuantity,
-            item_weight: 0.5,
-            amount_to_collect: collectionAmount,
-            item_description: orderWithItems.items.map((i: any) =>
-              `${i.product?.name || 'Item'} (Size: ${i.size}, Qty: ${i.quantity})`
-            ).join(", "),
-          };
-          const res = await pathaoClient.createOrder(payload);
-          if (res.consignment_id) {
-            await prisma.order.update({
-              where: { id: orderId },
-              data: { pathaoConsignmentId: res.consignment_id },
-            });
-          }
-        }
-      } catch (pathaoErr: any) {
-        // Non-blocking: log but do not fail the status update
-        console.error(`Auto Pathao pickup failed for order ${orderId}:`, pathaoErr.message);
-      }
-    }
 
     revalidatePath("/admin/orders");
     revalidatePath("/admin/products");

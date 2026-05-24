@@ -1,7 +1,7 @@
 "use client";
 
 import type { OrderStatus } from "@/generated/prisma/client";
-import { updateOrderStatus, deleteOrder, cancelPathaoPickupAction, sendPathaoPickupManually } from "../actions";
+import { updateOrderStatus, deleteOrder } from "../actions";
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Eye, Trash2 } from "lucide-react";
@@ -234,45 +234,6 @@ export default function OrderRowClient({
             </span>
           )}
 
-          {/* Pickup Action Buttons */}
-          {status === "PACKAGING" && order.pathaoConsignmentId && (
-            <div className="absolute top-full right-0 flex flex-col items-end gap-1 mt-1 z-10">
-              <span className="inline-flex text-[9px] font-black text-blue-600 bg-blue-50 px-2 py-0.5 rounded border border-blue-100 uppercase tracking-wider whitespace-nowrap">
-                Pickup Requested
-              </span>
-              <button
-                onClick={async () => {
-                  const res = await cancelPathaoPickupAction(order.id);
-                  if (!res.success) {
-                    window.alert(`Error: ${res.error}`);
-                  } else {
-                    window.alert("⚠️ Pickup cancelled in system.\n\nPlease also cancel this order manually from Pathao Merchant Panel.");
-                  }
-                }}
-                className="text-[10px] text-red-600 hover:underline font-bold whitespace-nowrap"
-              >
-                Cancel Pickup
-              </button>
-            </div>
-          )}
-
-          {status === "PACKAGING" && !order.isStorePickup && !order.pathaoConsignmentId && (
-            <div className="absolute top-full right-0 flex flex-col items-end mt-1 z-10">
-              <button
-                onClick={async () => {
-                  const res = await sendPathaoPickupManually(order.id);
-                  if (!res.success) {
-                    window.alert(res.error);
-                  } else {
-                    window.alert("✅ Pickup requested manually in system.");
-                  }
-                }}
-                className="text-[10px] text-indigo-600 hover:underline font-bold whitespace-nowrap"
-              >
-                Send to Pathao
-              </button>
-            </div>
-          )}
         </div>
       </td>
       <td className="px-2 py-4 text-right">

@@ -277,10 +277,10 @@ export default function OrderListClient({
                   >
                     {[
                       { value: "ALL", label: "All Statuses" },
-                      { value: "PENDING", label: "Pending" },
+                      { value: "PENDING", label: "Placed" },
                       { value: "CONFIRMED", label: "Confirmed" },
                       { value: "PRINTING", label: "Printing" },
-                      { value: "PACKAGING", label: "Packaging" },
+                      { value: "PACKAGING", label: "Packaged" },
                       { value: "SHIPPED", label: "Shipped" },
                       { value: "DELIVERED", label: "Delivered" },
                       { value: "CANCELLED", label: "Cancelled" },
@@ -351,10 +351,10 @@ export default function OrderListClient({
                         className="bg-transparent border-0 rounded px-2 py-1 text-xs font-semibold text-slate-700 outline-none cursor-pointer focus:ring-0 focus:border-0"
                       >
                         {[
-                          { value: "PENDING", label: "Set Pending" },
+                          { value: "PENDING", label: "Set Placed" },
                           { value: "CONFIRMED", label: "Set Confirmed" },
                           { value: "PRINTING", label: "Set Printing" },
-                          { value: "PACKAGING", label: "Set Packaging" },
+                          { value: "PACKAGING", label: "Set Packaged" },
                           { value: "SHIPPED", label: "Set Shipped" },
                           { value: "DELIVERED", label: "Set Delivered" },
                           { value: "CANCELLED", label: "Set Cancelled" },
