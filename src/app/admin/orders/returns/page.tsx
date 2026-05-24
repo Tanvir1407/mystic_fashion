@@ -21,7 +21,8 @@ export default async function ReturnsPage() {
             select: { name: true, price: true, purchasePrice: true }
           }
         }
-      }
+      },
+      salesReturns: { select: { orderItemId: true, quantity: true } },
     },
     orderBy: { createdAt: "desc" },
   });

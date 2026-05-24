@@ -1953,9 +1953,10 @@ async function _processSalesReturn(data: {
   returnActionType: ReturnStatus;
   returnCost?: number;
   returnCostPaid?: boolean;
+  quantity?: number;
 }) {
   try {
-    const { orderId, orderItemId, returnReason, deliveryLossAmount, returnActionType } = data;
+    const { orderId, orderItemId, returnReason, deliveryLossAmount, returnActionType, quantity } = data;
 
     const result = await prisma.$transaction(async (tx) => {
       // 1. Fetch OrderItem and include Product
@@ -1969,6 +1970,20 @@ async function _processSalesReturn(data: {
       // Verify the orderId matches the item's orderId
       if (orderItem.orderId !== orderId) {
         throw new Error("Order ID mismatch for the specified order item");
+      }
+
+      // Check already returned quantity for this order item
+      const existingReturns = await tx.salesReturn.findMany({
+        where: { orderItemId },
+        select: { quantity: true },
+      });
+      const alreadyReturnedQty = existingReturns.reduce((sum, r) => sum + r.quantity, 0);
+      const remainingQty = orderItem.quantity - alreadyReturnedQty;
+
+      const returnQty = quantity ?? remainingQty;
+      if (returnQty <= 0) throw new Error("Return quantity must be greater than zero");
+      if (returnQty > remainingQty) {
+        throw new Error(`Cannot return ${returnQty} items. Only ${remainingQty} remaining.`);
       }
 
       // 2. Fetch ProductVariant using productId, size, and color
@@ -1994,8 +2009,8 @@ async function _processSalesReturn(data: {
 
       if (status === "WASTAGE") {
         const purchasePrice = orderItem.product.purchasePrice ?? orderItem.product.price;
-        productLoss = purchasePrice * orderItem.quantity;
-        printingLoss = orderItem.printCost * orderItem.quantity;
+        productLoss = purchasePrice * returnQty;
+        printingLoss = orderItem.printCost * returnQty;
       }
 
       const totalLoss = deliveryLoss + productLoss + printingLoss;
@@ -2003,7 +2018,7 @@ async function _processSalesReturn(data: {
       // 5. Inventory Update
       if (status === "RESTOCKED") {
         const previousQuantity = variant.stock;
-        const newQuantity = previousQuantity + orderItem.quantity;
+        const newQuantity = previousQuantity + returnQty;
 
         // Update Product Variant Stock
         await tx.productVariant.update({
@@ -2016,7 +2031,7 @@ async function _processSalesReturn(data: {
           data: {
             variantId: variant.id,
             adjustmentType: "ADDITION",
-            quantity: orderItem.quantity,
+            quantity: returnQty,
             previousQuantity,
             newQuantity,
             reason: `Sales Return Restock (Order: ${orderId})`,
@@ -2043,8 +2058,8 @@ async function _processSalesReturn(data: {
         where: { orderId },
         select: { quantity: true },
       });
-      // Include the current return being created (quantity from orderItem)
-      const totalReturnedQty = allExistingReturns.reduce((sum, r) => sum + r.quantity, 0) + orderItem.quantity;
+      // Include the current return being created (quantity from returnQty)
+      const totalReturnedQty = allExistingReturns.reduce((sum, r) => sum + r.quantity, 0) + returnQty;
       const orderItems = await tx.orderItem.findMany({
         where: { orderId },
         select: { quantity: true },
@@ -2058,7 +2073,6 @@ async function _processSalesReturn(data: {
           data: { status: "RETURNED" },
         });
       }
-      // Partial return: do NOT change status. Tag will be derived from salesReturns data in UI.
 
       // 8. Create SalesReturn Record
       const salesReturn = await tx.salesReturn.create({
@@ -2066,7 +2080,7 @@ async function _processSalesReturn(data: {
           orderId,
           orderItemId,
           variantId: variant.id,
-          quantity: orderItem.quantity,
+          quantity: returnQty,
           returnReason,
           status,
           deliveryLoss,
@@ -2109,6 +2123,137 @@ export const processSalesReturn = withAuditLog(_processSalesReturn, {
   describe: (args) => `Processed sales return for item ${args[0].orderItemId} (Order: ${args[0].orderId}, Action: ${args[0].returnActionType})`,
 });
 
+async function _processFullSalesReturn(data: {
+  orderId: string;
+  deliveryLossAmount: number;
+  returnReason: string;
+  returnCost: number;
+  returnCostPaid: boolean;
+}) {
+  try {
+    const { orderId, deliveryLossAmount, returnReason, returnCost, returnCostPaid } = data;
+
+    await prisma.$transaction(async (tx) => {
+      // 1. Fetch order with all items and products
+      const order = await tx.order.findUnique({
+        where: { id: orderId },
+        include: {
+          items: { include: { product: true } },
+        },
+      });
+      if (!order) throw new Error("Order not found");
+      if (order.items.length === 0) throw new Error("Order has no items");
+
+      const itemCount = order.items.length;
+      // Split delivery loss equally across all items
+      const deliveryLossPerItem = Number((deliveryLossAmount / itemCount).toFixed(2));
+
+      let totalAccountingLoss = 0;
+
+      for (const orderItem of order.items) {
+        // 2. Find variant
+        const variant = await tx.productVariant.findUnique({
+          where: {
+            productId_size_color: {
+              productId: orderItem.productId,
+              size: orderItem.size,
+              color: (orderItem as any).color || "Default",
+            },
+          },
+        });
+        if (!variant) continue; // skip if variant not found, don't block
+
+        // 3. Determine return action: printed items → WASTAGE, others → RESTOCKED
+        const status: ReturnStatus = orderItem.requiresPrint ? "WASTAGE" : "RESTOCKED";
+
+        // 4. Financial calculations
+        const deliveryLoss = deliveryLossPerItem;
+        let productLoss = 0;
+        let printingLoss = 0;
+        if (status === "WASTAGE") {
+          const purchasePrice = orderItem.product.purchasePrice ?? orderItem.product.price;
+          productLoss = purchasePrice * orderItem.quantity;
+          printingLoss = orderItem.printCost * orderItem.quantity;
+        }
+        const itemLoss = deliveryLoss + productLoss + printingLoss;
+        totalAccountingLoss += itemLoss;
+
+        // 5. Restock inventory if RESTOCKED
+        if (status === "RESTOCKED") {
+          const previousQuantity = variant.stock;
+          const newQuantity = previousQuantity + orderItem.quantity;
+          await tx.productVariant.update({
+            where: { id: variant.id },
+            data: { stock: newQuantity },
+          });
+          await tx.stockAdjustment.create({
+            data: {
+              variantId: variant.id,
+              adjustmentType: "ADDITION",
+              quantity: orderItem.quantity,
+              previousQuantity,
+              newQuantity,
+              reason: `Full Sales Return Restock (Order: ${orderId})`,
+            },
+          });
+        }
+
+        // 6. Create SalesReturn record per item
+        await tx.salesReturn.create({
+          data: {
+            orderId,
+            orderItemId: orderItem.id,
+            variantId: variant.id,
+            quantity: orderItem.quantity,
+            returnReason,
+            status,
+            deliveryLoss,
+            productLoss,
+            printingLoss,
+            returnCost: returnCost,
+            returnCostPaid: returnCostPaid,
+          },
+        });
+      }
+
+      // 7. Single accounting entry for total loss
+      if (totalAccountingLoss > 0) {
+        const account = await getOrCreateSystemAccount(tx, "Returns & Wastage Loss", "EXPENSE");
+        await createDoubleEntryJournal(tx, {
+          accountId: account.id,
+          amount: totalAccountingLoss,
+          date: new Date(),
+          type: "DEBIT",
+          description: `Full return loss for Order ${orderId}.`,
+          referenceId: orderId,
+          referenceType: "ORDER",
+        });
+      }
+
+      // 8. Always set order status to RETURNED for full return
+      await tx.order.update({
+        where: { id: orderId },
+        data: { status: "RETURNED" },
+      });
+    });
+
+    revalidatePath("/admin/orders");
+    revalidatePath("/admin/orders/returns");
+    return { success: true };
+  } catch (error: any) {
+    console.error("Full return error:", error);
+    return { success: false, error: error.message };
+  }
+}
+
+export const processFullSalesReturn = withAuditLog(_processFullSalesReturn, {
+  entityType: "SalesReturn",
+  action: "CREATE",
+  getEntityId: () => null,
+  getEntityIdFromResult: () => null,
+  describe: (args) => `Processed FULL sales return for Order ${args[0].orderId}`,
+});
+
 export async function getRecentSalesReturns() {
   try {
     return await prisma.salesReturn.findMany({
@@ -2145,7 +2290,7 @@ export async function getOrderById(id: string) {
             product: { select: { name: true, price: true, purchasePrice: true } }
           }
         },
-        salesReturns: { select: { quantity: true } },
+        salesReturns: { select: { orderItemId: true, quantity: true } },
         exchangeOrders: { select: { id: true } },
       }
     });
@@ -2153,6 +2298,38 @@ export async function getOrderById(id: string) {
   } catch (error: any) {
     console.error("Get order by ID error:", error);
     return { success: false, error: error.message || "Failed to fetch order." };
+  }
+}
+
+export async function searchOrdersForReturn(searchQuery: string) {
+  try {
+    const trimmed = searchQuery.trim();
+    if (!trimmed) return { success: true, data: [] };
+
+    const orders = await prisma.order.findMany({
+      where: {
+        OR: [
+          { id: { contains: trimmed, mode: "insensitive" } },
+          { phone: { contains: trimmed, mode: "insensitive" } },
+          { customerName: { contains: trimmed, mode: "insensitive" } },
+        ],
+      },
+      include: {
+        items: {
+          include: {
+            product: { select: { name: true, price: true, purchasePrice: true } }
+          }
+        },
+        salesReturns: { select: { orderItemId: true, quantity: true } },
+        exchangeOrders: { select: { id: true } },
+      },
+      take: 10,
+    });
+
+    return { success: true, data: orders };
+  } catch (error: any) {
+    console.error("Search orders for return error:", error);
+    return { success: false, error: error.message || "Failed to search orders." };
   }
 }
 
