@@ -13,7 +13,7 @@ export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
 export const revalidate = 0;
 
-export default async function AdminProductsPage({ searchParams }: { searchParams: { page?: string, search?: string, category?: string } }) {
+export default async function AdminProductsPage({ searchParams }: { searchParams: { page?: string, limit?: string, search?: string, category?: string } }) {
   const session = await getSession();
   const canView = hasPermission(session, "VIEW", "PRODUCTS");
   const canCreate = hasPermission(session, "CREATE", "PRODUCTS");
@@ -39,9 +39,11 @@ export default async function AdminProductsPage({ searchParams }: { searchParams
   }
 
   const page = Number(searchParams?.page) || 1;
+  const limit = Number(searchParams?.limit) || 10;
   const search = searchParams?.search || "";
   const category = searchParams?.category || "ALL";
-  const PER_PAGE = 10;
+  const PER_PAGE = [10, 20, 50, 100].includes(limit) ? limit : 10;
+
 
   const whereClause: any = {};
   if (category !== "ALL") {

@@ -9,7 +9,7 @@ import { AdminPagination } from "@/components/AdminPagination";
 
 export const dynamic = "force-dynamic";
 
-export default async function AdminPurchasesPage({ searchParams }: { searchParams: { page?: string } }) {
+export default async function AdminPurchasesPage({ searchParams }: { searchParams: { page?: string; limit?: string } }) {
   const session = await getSession();
   const canView = hasPermission(session, "VIEW", "PURCHASES");
   const canCreate = hasPermission(session, "CREATE", "PURCHASES");
@@ -35,7 +35,9 @@ export default async function AdminPurchasesPage({ searchParams }: { searchParam
   }
 
   const page = Number(searchParams?.page) || 1;
-  const PER_PAGE = 10;
+  const limit = Number(searchParams?.limit) || 10;
+  const PER_PAGE = [10, 20, 50, 100].includes(limit) ? limit : 10;
+
 
   let purchases: any[] = [];
   let totalCount = 0;

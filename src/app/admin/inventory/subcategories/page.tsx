@@ -8,7 +8,7 @@ export const metadata: Metadata = {
   title: "Manage Subcategories | Mystic Admin",
 };
 
-export default async function SubcategoriesPage({ searchParams }: { searchParams: { page?: string } }) {
+export default async function SubcategoriesPage({ searchParams }: { searchParams: { page?: string; limit?: string } }) {
   const session = await getSession();
   const canView = hasPermission(session, "VIEW", "PRODUCTS");
   const canCreate = hasPermission(session, "CREATE", "PRODUCTS");
@@ -34,7 +34,8 @@ export default async function SubcategoriesPage({ searchParams }: { searchParams
   }
 
   const page = Number(searchParams?.page) || 1;
-  const PER_PAGE = 10;
+  const limit = Number(searchParams?.limit) || 10;
+  const PER_PAGE = [10, 20, 50, 100].includes(limit) ? limit : 10;
 
   const [categories, subcategories, totalCount] = await Promise.all([
     prisma.category.findMany({
@@ -48,6 +49,7 @@ export default async function SubcategoriesPage({ searchParams }: { searchParams
     }),
     prisma.subcategory.count(),
   ]);
+
 
   const totalPages = Math.ceil(totalCount / PER_PAGE);
 

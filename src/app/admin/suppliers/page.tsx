@@ -11,7 +11,7 @@ export const dynamic = "force-dynamic";
 export default async function AdminSuppliersPage({
   searchParams,
 }: {
-  searchParams: { page?: string; search?: string };
+  searchParams: { page?: string; limit?: string; search?: string };
 }) {
   const session = await getSession();
   const canView = hasPermission(session, "VIEW", "PURCHASES");
@@ -37,8 +37,10 @@ export default async function AdminSuppliersPage({
   }
 
   const page = Number(searchParams?.page) || 1;
+  const limit = Number(searchParams?.limit) || 10;
   const search = searchParams?.search || "";
-  const PER_PAGE = 10;
+  const PER_PAGE = [10, 20, 50, 100].includes(limit) ? limit : 10;
+
 
   // Fetch metrics programmatically
   const [totalCount, activeCount, purchaseSummary] = await Promise.all([

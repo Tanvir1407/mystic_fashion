@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
 export const revalidate = 0;
 
-export default async function AdminOrdersPage({ searchParams }: { searchParams: { page?: string, filter?: string, search?: string, source?: string } }) {
+export default async function AdminOrdersPage({ searchParams }: { searchParams: { page?: string, limit?: string, filter?: string, search?: string, source?: string } }) {
   const session = await getSession();
   const canView = hasPermission(session, "VIEW", "ORDERS");
   const canCreate = hasPermission(session, "CREATE", "ORDERS");
@@ -34,10 +34,12 @@ export default async function AdminOrdersPage({ searchParams }: { searchParams: 
   }
 
   const page = Number(searchParams?.page) || 1;
+  const limit = Number(searchParams?.limit) || 10;
   const filter = searchParams?.filter || "ALL";
   const source = searchParams?.source || "ALL";
   const search = searchParams?.search || "";
-  const PER_PAGE = 10;
+  const PER_PAGE = [10, 20, 50, 100].includes(limit) ? limit : 10;
+
 
   const whereClause: any = {};
   if (filter !== "ALL") {
