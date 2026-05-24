@@ -73,6 +73,8 @@ export default async function AdminOrdersPage({ searchParams }: { searchParams: 
             },
           },
           createdBy: true,
+          salesReturns: { select: { quantity: true } },
+          exchangeOrders: { select: { id: true } },
         },
       }),
       prisma.order.count({ where: whereClause }),

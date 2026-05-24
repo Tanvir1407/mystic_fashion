@@ -18,10 +18,11 @@ export default async function ReturnsPage() {
       items: {
         include: {
           product: {
-            select: { name: true, price: true, purchasePrice: true }
+            select: { name: true, price: true, purchasePrice: true, images: true }
           }
         }
-      }
+      },
+      salesReturns: { select: { orderItemId: true, quantity: true } },
     },
     orderBy: { createdAt: "desc" },
   });

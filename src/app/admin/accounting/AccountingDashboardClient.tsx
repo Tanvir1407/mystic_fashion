@@ -2,17 +2,17 @@
 
 import React, { useState, useEffect, useTransition } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { 
-  LayoutDashboard, Receipt, CreditCard, ShoppingBag, 
-  ArrowUpRight, ArrowDownRight, Wallet, Percent, 
-  FileBarChart, BookOpen, Plus, Search, Calendar, 
+import {
+  LayoutDashboard, Receipt, CreditCard, ShoppingBag,
+  ArrowUpRight, ArrowDownRight, Wallet, Percent,
+  FileBarChart, BookOpen, Plus, Search, Calendar,
   CheckCircle, AlertCircle, X, Download, Filter, RefreshCw
 } from "lucide-react";
 import { formatBDT } from "@/utils/formatPrice";
 import CreateAccountClient from "./CreateAccountClient";
 import TransactionFormClient from "./TransactionFormClient";
-import { 
-  getSalesJournal, getPurchasesJournal, getBankCashRegisters, 
+import {
+  getSalesJournal, getPurchasesJournal, getBankCashRegisters,
   getGeneralLedger, getFinancialReports, reconcileCourierDues,
   getFinancialSummary
 } from "./actions";
@@ -22,16 +22,16 @@ interface AccountingDashboardClientProps {
   initialSummary: any;
 }
 
-type TabType = 
-  | "overview" 
-  | "sales" 
-  | "expenses" 
-  | "purchases" 
-  | "receivable" 
-  | "payable" 
-  | "registers" 
-  | "tax" 
-  | "reports" 
+type TabType =
+  | "overview"
+  | "sales"
+  | "expenses"
+  | "purchases"
+  | "receivable"
+  | "payable"
+  | "registers"
+  | "tax"
+  | "reports"
   | "ledger";
 
 export default function AccountingDashboardClient({
@@ -282,11 +282,10 @@ export default function AccountingDashboardClient({
               <button
                 key={`page-${p}`}
                 onClick={() => onPageChange(p as number)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                  currentPage === p
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${currentPage === p
                     ? "bg-slate-900 text-white shadow-sm"
                     : "border border-slate-200 text-slate-600 bg-white hover:bg-slate-50 hover:text-slate-900"
-                }`}
+                  }`}
               >
                 {p}
               </button>
@@ -316,7 +315,7 @@ export default function AccountingDashboardClient({
           <h1 className="text-2xl font-bold tracking-tight text-slate-900">Accounting ERP & Financial Suite</h1>
           <p className="text-sm text-slate-500 mt-1">Multi-ledger double-entry accounts, courier settlements, and live financial statements.</p>
         </div>
-        <div className="flex items-center gap-3 flex-wrap">
+        <div className="flex items-center gap-3 flex-wrap justify-end">
           {/* Date Picker Form */}
           <div className="flex items-center space-x-2 bg-slate-50 rounded-lg border border-slate-200 p-1.5 shadow-inner">
             <input
@@ -335,7 +334,7 @@ export default function AccountingDashboardClient({
               title="End Date"
             />
             {(startDate || endDate) && (
-              <button 
+              <button
                 onClick={clearFilters}
                 className="p-1 text-slate-400 hover:text-slate-600 hover:bg-slate-200 rounded transition-colors text-xs font-semibold px-2"
               >
@@ -386,11 +385,10 @@ export default function AccountingDashboardClient({
             <button
               key={tab.id}
               onClick={() => { setActiveTab(tab.id as TabType); setCurrentPage(1); }}
-              className={`h-9 px-4 rounded-md text-xs font-semibold flex items-center gap-2 transition-all ${
-                isActive 
-                  ? "bg-slate-900 text-white shadow-sm" 
+              className={`h-9 px-4 rounded-md text-xs font-semibold flex items-center gap-2 transition-all ${isActive
+                  ? "bg-slate-900 text-white shadow-sm"
                   : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
-              }`}
+                }`}
             >
               <Icon className="w-4 h-4 shrink-0" />
               {tab.label}
@@ -497,7 +495,7 @@ export default function AccountingDashboardClient({
                   When settling cash remittances received from Pathao or Steadfast courier accounts, log them immediately using the **Courier Remit** wizard. This clears the Accounts Receivable dues and balanced debit items automatically into bKash/Bank.
                 </p>
               </div>
-              <button 
+              <button
                 onClick={() => setDrawerMode("RECONCILE")}
                 className="mt-6 w-full h-10 bg-white hover:bg-slate-50 text-slate-900 text-xs font-bold rounded-lg transition-colors shadow-sm flex items-center justify-center gap-1.5"
               >
@@ -561,13 +559,12 @@ export default function AccountingDashboardClient({
                       <span className="font-mono text-slate-500 text-[10px]">{order.customerPhone}</span>
                     </td>
                     <td className="px-6 py-4">
-                      <span className={`inline-flex px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
-                        order.status === "DELIVERED" 
-                          ? "bg-emerald-50 text-emerald-700" 
-                          : order.status === "CANCELLED" 
-                          ? "bg-rose-50 text-rose-700" 
-                          : "bg-amber-50 text-amber-700"
-                      }`}>
+                      <span className={`inline-flex px-2 py-0.5 rounded text-[10px] font-bold uppercase ${order.status === "DELIVERED"
+                          ? "bg-emerald-50 text-emerald-700"
+                          : order.status === "CANCELLED"
+                            ? "bg-rose-50 text-rose-700"
+                            : "bg-amber-50 text-amber-700"
+                        }`}>
                         {order.status}
                       </span>
                     </td>
@@ -639,11 +636,10 @@ export default function AccountingDashboardClient({
                       <span className="font-mono text-slate-500 text-[10px]">{bill.supplier?.phone || "N/A"}</span>
                     </td>
                     <td className="px-6 py-4">
-                      <span className={`inline-flex px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
-                        bill.status === "COMPLETED" || bill.status === "RECEIVED"
+                      <span className={`inline-flex px-2 py-0.5 rounded text-[10px] font-bold uppercase ${bill.status === "COMPLETED" || bill.status === "RECEIVED"
                           ? "bg-emerald-50 text-emerald-700"
                           : "bg-amber-50 text-amber-700"
-                      }`}>
+                        }`}>
                         {bill.status}
                       </span>
                     </td>
@@ -708,11 +704,10 @@ export default function AccountingDashboardClient({
                 <button
                   key={opt.id}
                   onClick={() => { setReportData(null); setReportType(opt.id as any); }}
-                  className={`h-8 px-4 rounded text-xs font-semibold transition-all ${
-                    reportType === opt.id 
-                      ? "bg-white text-slate-900 shadow-sm" 
+                  className={`h-8 px-4 rounded text-xs font-semibold transition-all ${reportType === opt.id
+                      ? "bg-white text-slate-900 shadow-sm"
                       : "text-slate-500 hover:text-slate-800"
-                  }`}
+                    }`}
                 >
                   {opt.label}
                 </button>
@@ -1004,7 +999,7 @@ export default function AccountingDashboardClient({
                 </h4>
                 <p className="text-xs text-slate-400 mt-0.5">ERP Financial Module Configuration</p>
               </div>
-              <button 
+              <button
                 onClick={() => setDrawerMode(null)}
                 className="w-6 h-6 rounded-full hover:bg-slate-200 flex items-center justify-center text-slate-500 transition-colors"
               >

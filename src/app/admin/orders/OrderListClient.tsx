@@ -503,7 +503,7 @@ export default function OrderListClient({
             setAlert({
               isOpen: true,
               title: "Success",
-              message: "Successfully processed Pathao consignments.",
+              message: "Pickup request sent to Pathao. Orders will remain in Packaged status until the rider picks up.",
               type: "warning"
             });
           }}

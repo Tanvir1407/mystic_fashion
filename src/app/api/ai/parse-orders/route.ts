@@ -30,6 +30,7 @@ RULES:
 19. If the jersey edition is not explicitly mentioned, do not default to fan edition; use the quoted/chat price to infer the most likely edition
 20. When a base team name is generic (for example, "Argentina away kit") and the quoted price is closer to player edition pricing than fan edition pricing, normalize teamName as the player edition variant for matching
 21. If the quoted price is much closer to fan pricing, only then use fan edition; otherwise prefer player edition when the message is ambiguous
+22. If the order mentions 'self pickup', 'office pickup', 'store pickup', 'নিজে নিবে', 'অফিস থেকে নেবে', set is_store_pickup to true and delivery_type to 'self_pickup'. In this case, set delivery_charge to 0 unless explicitly mentioned.
 
 For each order, extract:
 - customerName: Full name of the customer
@@ -45,12 +46,15 @@ For each order, extract:
   - printNumber: Number to print (if applicable)
   - hasBadge: Whether badge is needed (boolean)
 - deliveryCharge: Delivery charge in BDT (number, 0 if not specified or self-pickup)
+- delivery_charge: number (delivery charge amount, 0 if not mentioned or self-pickup)
+- is_store_pickup: boolean (true if customer is picking up from office/store)
 - printCost: Total printing/DTF cost (number, 0 if none)
 - badgeCost: Total badge cost (number, 0 if none)  
 - totalBill: Total bill amount before advance (number)
 - advance: Advance amount paid (number, 0 if none)
 - totalPayable: Amount to collect on delivery (number)
 - deliveryType: "pathao" | "non-pathao" | "self-pickup" | "unknown"
+- delivery_type: "pathao" | "non-pathao" | "self_pickup" | "unknown"
 - remarks: Any additional notes or special instructions
 
 IMPORTANT: Return ONLY a valid JSON array. No markdown, no code blocks, no explanation. Just the raw JSON array.
@@ -146,14 +150,15 @@ export async function POST(request: NextRequest) {
           selectedVariantSize: "",
         }))
         : [],
-      deliveryCharge: Math.max(0, parseFloat(order.deliveryCharge) || 0),
+      deliveryCharge: Math.max(0, parseFloat(order.delivery_charge || order.deliveryCharge) || 0),
+      isStorePickup: order.delivery_type === "self_pickup" || order.is_store_pickup === true || order.deliveryType === "self-pickup" || order.isStorePickup === true || false,
       printCost: Math.max(0, parseFloat(order.printCost) || 0),
       badgeCost: Math.max(0, parseFloat(order.badgeCost) || 0),
       totalBill: Math.max(0, parseFloat(order.totalBill) || 0),
       advance: Math.max(0, parseFloat(order.advance) || 0),
       totalPayable: Math.max(0, parseFloat(order.totalPayable) || 0),
-      deliveryType: ["pathao", "non-pathao", "self-pickup", "unknown"].includes(order.deliveryType)
-        ? order.deliveryType
+      deliveryType: ["pathao", "non-pathao", "self-pickup", "unknown"].includes(order.deliveryType || order.delivery_type)
+        ? (order.deliveryType || (order.delivery_type === "self_pickup" ? "self-pickup" : order.delivery_type))
         : "unknown",
       remarks: String(order.remarks || "").trim(),
       status: "parsed" as const, // parsed | ready | creating | created | error

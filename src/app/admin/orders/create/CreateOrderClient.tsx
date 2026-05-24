@@ -3,7 +3,7 @@
 import { useState, useMemo, useTransition, useEffect } from "react";
 import { Search, Plus, Trash2, User, Phone, MapPin, ShoppingBag, CheckCircle, ArrowLeft, Loader2 } from "lucide-react";
 import Link from "next/link";
-import { createAdminOrder } from "../../actions";
+import { createAdminOrder, createExchangeOrder } from "../../actions";
 import { useRouter } from "next/navigation";
 import { getPathaoCities, getPathaoZones, getPathaoAreas } from "@/app/actions/pathao";
 import { CustomSelect } from "@/components/CustomSelect";
@@ -50,6 +50,13 @@ export default function CreateOrderClient({
   const [remarks, setRemarks] = useState("");
   const [manualDiscountValue, setManualDiscountValue] = useState(0);
   const [manualDiscountType, setManualDiscountType] = useState<"FLAT" | "PERCENTAGE">("FLAT");
+  const [isStorePickup, setIsStorePickup] = useState(false);
+  const [deliveryCharge, setDeliveryCharge] = useState(0);
+
+  // Exchange states
+  const [isExchange, setIsExchange] = useState(false);
+  const [exchangeRefOrderId, setExchangeRefOrderId] = useState("");
+  const [exchangeItemNote, setExchangeItemNote] = useState("");
 
   // Pathao Location States
   const [cities, setCities] = useState<{ value: string, label: string }[]>([]);
@@ -238,11 +245,12 @@ export default function CreateOrderClient({
     [orderItems]
   );
 
-  const deliveryCharge = useMemo(() => {
+  const finalDeliveryCharge = useMemo(() => {
+    if (isStorePickup) return deliveryCharge;
     if (district === "Dhaka") return deliverySettings.insideDhaka;
     if (district === "Self Pickup") return 0;
     return deliverySettings.outsideDhaka;
-  }, [district, deliverySettings]);
+  }, [isStorePickup, deliveryCharge, district, deliverySettings]);
 
   const calculatedDiscount = useMemo(() => {
     if (manualDiscountType === "PERCENTAGE") {
@@ -251,7 +259,7 @@ export default function CreateOrderClient({
     return manualDiscountValue;
   }, [subtotal, manualDiscountValue, manualDiscountType]);
 
-  const totalAmount = (subtotal + totalDTFCost + deliveryCharge) - calculatedDiscount;
+  const totalAmount = (subtotal + totalDTFCost + finalDeliveryCharge) - calculatedDiscount;
 
   // If any item was added from a 0 or negative stock variant, this is a backorder
   const hasBackorderItems = useMemo(() =>
@@ -260,10 +268,15 @@ export default function CreateOrderClient({
   );
 
   const handleSubmit = () => {
-    if (!customerName || !phone || !address || orderItems.length === 0) {
+    if (!customerName || !phone || (!isStorePickup && !address) || orderItems.length === 0) {
       return alert("Please fill in all customer details and add at least one item.");
     }
 
+    if (isExchange) {
+      if (!exchangeRefOrderId.trim() || !exchangeItemNote.trim()) {
+        return alert("Please fill in the Original Order ID and Exchange Note.");
+      }
+    }
 
     const cityName = cities.find(c => c.value === selectedCityId?.toString())?.label || "";
     const zoneName = zones.find(z => z.value === selectedZoneId?.toString())?.label || "";
@@ -274,35 +287,66 @@ export default function CreateOrderClient({
     if (zoneName) addressParts.push(zoneName);
     if (cityName) addressParts.push(cityName);
 
-    const fullDeliveryAddress = district === "Self Pickup"
-      ? address
-      : addressParts.filter(Boolean).map(p => p.trim()).join(", ");
+    const fullDeliveryAddress = isStorePickup
+      ? (address || "Store Pickup")
+      : (district === "Self Pickup"
+        ? address
+        : addressParts.filter(Boolean).map(p => p.trim()).join(", "));
 
     startTransition(async () => {
       try {
-        const res = await createAdminOrder({
-          customerName,
-          phone,
-          district,
-          address: fullDeliveryAddress,
-          totalAmount,
-          advancePaid,
-          discountAmount: calculatedDiscount,
-          remarks,
-          pathaoCityId: selectedCityId || undefined,
-          pathaoZoneId: selectedZoneId || undefined,
-          pathaoAreaId: selectedAreaId || undefined,
-          items: orderItems.map(item => ({
-            productId: item.productId,
-            size: item.size,
-            quantity: item.quantity,
-            price: item.price,
-            requiresPrint: item.requiresPrint,
-            printCost: item.printCost,
-            printDetails: item.printDetails
-          })),
-          hasBackorderItems,
-        });
+        const res = isExchange
+          ? await createExchangeOrder({
+              customerName,
+              phone,
+              district,
+              address: fullDeliveryAddress,
+              totalAmount,
+              advancePaid,
+              discountAmount: calculatedDiscount,
+              remarks,
+              pathaoCityId: selectedCityId || undefined,
+              pathaoZoneId: selectedZoneId || undefined,
+              pathaoAreaId: selectedAreaId || undefined,
+              isStorePickup,
+              deliveryCharge: isStorePickup ? deliveryCharge : finalDeliveryCharge,
+              items: orderItems.map(item => ({
+                productId: item.productId,
+                size: item.size,
+                quantity: item.quantity,
+                price: item.price,
+                requiresPrint: item.requiresPrint,
+                printCost: item.printCost,
+                printDetails: item.printDetails
+              })),
+              exchangeRefOrderId: exchangeRefOrderId.trim(),
+              exchangeItemNote: exchangeItemNote.trim(),
+            })
+          : await createAdminOrder({
+              customerName,
+              phone,
+              district,
+              address: fullDeliveryAddress,
+              totalAmount,
+              advancePaid,
+              discountAmount: calculatedDiscount,
+              remarks,
+              pathaoCityId: selectedCityId || undefined,
+              pathaoZoneId: selectedZoneId || undefined,
+              pathaoAreaId: selectedAreaId || undefined,
+              isStorePickup,
+              deliveryCharge: isStorePickup ? deliveryCharge : finalDeliveryCharge,
+              items: orderItems.map(item => ({
+                productId: item.productId,
+                size: item.size,
+                quantity: item.quantity,
+                price: item.price,
+                requiresPrint: item.requiresPrint,
+                printCost: item.printCost,
+                printDetails: item.printDetails
+              })),
+              hasBackorderItems,
+            });
 
         if (res.success) {
           router.push(`/admin/orders`);
@@ -323,9 +367,42 @@ export default function CreateOrderClient({
 
         {/* Customer Details Card */}
         <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-          <div className="px-6 py-4 border-b border-slate-100 bg-slate-50 flex items-center gap-2">
-            <User className="w-4 h-4 text-indigo-500" />
-            <h2 className="text-sm font-bold text-slate-800 uppercase tracking-wider">Customer Information</h2>
+          <div className="px-6 py-4 border-b border-slate-100 bg-slate-50 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-2">
+              <User className="w-4 h-4 text-indigo-500" />
+              <h2 className="text-sm font-bold text-slate-800 uppercase tracking-wider">Customer Information</h2>
+            </div>
+            {/* Toggles on the right */}
+            <div className="flex items-center gap-6">
+              {/* Store Pickup Toggle */}
+              <label className="flex items-center gap-2 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={isStorePickup}
+                  onChange={(e) => {
+                    setIsStorePickup(e.target.checked);
+                    if (e.target.checked) {
+                      setDistrict("Self Pickup");
+                    } else {
+                      setDistrict("Dhaka");
+                    }
+                  }}
+                  className="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                />
+                <span className="text-xs font-bold text-slate-700 uppercase tracking-wide">Store Pickup</span>
+              </label>
+
+              {/* Exchange Order Toggle */}
+              <label className="flex items-center gap-2 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={isExchange}
+                  onChange={(e) => setIsExchange(e.target.checked)}
+                  className="w-4 h-4 rounded text-orange-600 focus:ring-orange-500 cursor-pointer"
+                />
+                <span className="text-xs font-bold text-orange-700 uppercase tracking-wide">Exchange Order</span>
+              </label>
+            </div>
           </div>
           <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-5">
             <div className="space-y-1.5">
@@ -354,57 +431,101 @@ export default function CreateOrderClient({
                 />
               </div>
             </div>
-            <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Select City *</label>
-                <CustomSelect
-                  options={cities}
-                  value={selectedCityId?.toString() || (district === "Self Pickup" ? "self-pickup" : "")}
-                  onChange={(val) => {
-                    if (val === "self-pickup") {
-                      setSelectedCityId(null);
-                      setSelectedZoneId(null);
+            {isStorePickup && (
+              <div className="space-y-1.5 animate-in fade-in duration-200">
+                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Pickup Delivery Charge</label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-bold text-slate-400">৳</span>
+                  <input
+                    type="number"
+                    min="0"
+                    value={deliveryCharge}
+                    onChange={(e) => setDeliveryCharge(parseFloat(e.target.value) || 0)}
+                    className="w-full pl-8 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm font-bold text-slate-800 focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all outline-none"
+                    placeholder="0"
+                  />
+                </div>
+              </div>
+            )}
+
+            {isExchange && (
+              <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4 p-4 border border-orange-100 bg-orange-50/30 rounded-xl animate-in fade-in duration-200">
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-orange-700 uppercase tracking-wider font-bold">Original Order ID *</label>
+                  <input
+                    type="text"
+                    value={exchangeRefOrderId}
+                    onChange={(e) => setExchangeRefOrderId(e.target.value.toUpperCase())}
+                    placeholder="e.g. MJEPE-26052301"
+                    className="w-full px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm font-mono focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 outline-none transition-all"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-orange-700 uppercase tracking-wider font-bold">Exchange Note *</label>
+                  <input
+                    type="text"
+                    value={exchangeItemNote}
+                    onChange={(e) => setExchangeItemNote(e.target.value)}
+                    placeholder="e.g. XL → XXL, Argentina Jersey"
+                    className="w-full px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 outline-none transition-all"
+                  />
+                </div>
+              </div>
+            )}
+
+            {!isStorePickup && (
+              <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-3 gap-4 animate-in fade-in duration-200">
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Select City *</label>
+                  <CustomSelect
+                    options={cities}
+                    value={selectedCityId?.toString() || (district === "Self Pickup" ? "self-pickup" : "")}
+                    onChange={(val) => {
+                      if (val === "self-pickup") {
+                        setSelectedCityId(null);
+                        setSelectedZoneId(null);
+                        setSelectedAreaId(null);
+                        setDistrict("Self Pickup");
+                      } else {
+                        const id = parseInt(val);
+                        setSelectedCityId(id);
+                        setSelectedZoneId(null);
+                        setSelectedAreaId(null);
+                        const city = cities.find(c => c.value === val);
+                        if (city) setDistrict(city.label);
+                      }
+                    }}
+                    placeholder={loadingCities ? "Loading..." : "-- Select City --"}
+                    searchable={true}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Select Zone</label>
+                  <CustomSelect
+                    options={zones}
+                    value={selectedZoneId?.toString() || ""}
+                    onChange={(val) => {
+                      setSelectedZoneId(parseInt(val));
                       setSelectedAreaId(null);
-                      setDistrict("Self Pickup");
-                    } else {
-                      const id = parseInt(val);
-                      setSelectedCityId(id);
-                      setSelectedZoneId(null);
-                      setSelectedAreaId(null);
-                      const city = cities.find(c => c.value === val);
-                      if (city) setDistrict(city.label);
-                    }
-                  }}
-                  placeholder={loadingCities ? "Loading..." : "-- Select City --"}
-                  searchable={true}
-                />
+                    }}
+                    placeholder={loadingZones ? "Loading..." : (selectedCityId ? "-- Select Zone --" : "First select city")}
+                    disabled={!selectedCityId || loadingZones}
+                    searchable={true}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Select Area </label>
+                  <CustomSelect
+                    options={areas}
+                    value={selectedAreaId?.toString() || ""}
+                    onChange={(val) => setSelectedAreaId(parseInt(val))}
+                    placeholder={loadingAreas ? "Loading..." : (selectedZoneId ? "-- Select Area --" : "First select zone")}
+                    disabled={!selectedZoneId || loadingAreas}
+                    searchable={true}
+                  />
+                </div>
               </div>
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Select Zone</label>
-                <CustomSelect
-                  options={zones}
-                  value={selectedZoneId?.toString() || ""}
-                  onChange={(val) => {
-                    setSelectedZoneId(parseInt(val));
-                    setSelectedAreaId(null);
-                  }}
-                  placeholder={loadingZones ? "Loading..." : (selectedCityId ? "-- Select Zone --" : "First select city")}
-                  disabled={!selectedCityId || loadingZones}
-                  searchable={true}
-                />
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Select Area </label>
-                <CustomSelect
-                  options={areas}
-                  value={selectedAreaId?.toString() || ""}
-                  onChange={(val) => setSelectedAreaId(parseInt(val))}
-                  placeholder={loadingAreas ? "Loading..." : (selectedZoneId ? "-- Select Area --" : "First select zone")}
-                  disabled={!selectedZoneId || loadingAreas}
-                  searchable={true}
-                />
-              </div>
-            </div>
+            )}
             <div className="space-y-1.5 md:col-span-2">
               <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Full Address *</label>
               <input
@@ -644,7 +765,7 @@ export default function CreateOrderClient({
                                   updated[idx].name = e.target.value;
                                   setPendingPrintDetails(updated);
                                 }}
-                                className="w-full px-2 py-1 text-xs border uppercase border-slate-200 rounded font-bold focus:outline-indigo-500"
+                                className="w-full px-2 py-1 text-xs border border-slate-200 rounded font-bold focus:outline-indigo-500"
                               />
                             </div>
                             <div className="col-span-4">
@@ -755,7 +876,7 @@ export default function CreateOrderClient({
             </div>
             <div className="flex justify-between text-sm text-slate-500">
               <span>Delivery Charge</span>
-              <span className="font-mono font-bold text-slate-800">{formatBDT(deliveryCharge)}</span>
+              <span className="font-mono font-bold text-slate-800">{formatBDT(finalDeliveryCharge)}</span>
             </div>
             {totalDTFCost > 0 && (
               <div className="flex justify-between text-sm text-indigo-600 font-medium">

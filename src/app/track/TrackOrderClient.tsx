@@ -18,37 +18,37 @@ const STEPS: Step[] = [
   {
     statusKey: "PENDING",
     title: "Order Placed",
-    description: "Your order has been successfully placed. We will review and verify your details shortly.",
+    description: "Your order has been placed successfully. One member from our team will contact you soon for confirmation.",
     icon: Package
   },
   {
     statusKey: "CONFIRMED",
     title: "Confirmed",
-    description: "We have verified your payment and confirmed your order details.",
+    description: "Your order has been confirmed and verified. We will proceed to the next step soon.",
     icon: CheckCircle2
   },
   {
     statusKey: "PRINTING",
     title: "Custom Printing",
-    description: "Your custom nameset and numbers are being premium heat-pressed/printed onto your jersey.",
+    description: "Your custom namesets and numbers are being premium heat-pressed onto your jersey. Almost there!",
     icon: Printer
   },
   {
     statusKey: "PACKAGING",
-    title: "Packaging",
-    description: "We are carefully inspecting and packaging your products to ensure secure transit.",
+    title: "Packaged",
+    description: "Your order has been packaged and is ready for pickup by the courier company.",
     icon: PackageCheck
   },
   {
     statusKey: "SHIPPED",
-    title: "Shipped & Delivering",
-    description: "Your package has been dispatched and is currently on its way to your destination with our delivery partner.",
+    title: "Shipped",
+    description: "We have successfully sent your order via our courier partner, and you will receive it very soon. Hang on.",
     icon: Truck
   },
   {
     statusKey: "DELIVERED",
     title: "Delivered",
-    description: "Your package has been successfully delivered. Thank you for choosing Mystic Fashion!",
+    description: "Your order has been delivered successfully. Enjoy and thanks for choosing Mystic!",
     icon: Check
   }
 ];
@@ -164,7 +164,7 @@ export default function TrackOrderClient() {
                     <p className="text-xs font-medium opacity-80 mt-1 max-w-sm mx-auto">
                       {result.order.status === "CANCELLED"
                         ? "This order has been cancelled. Please contact our support team if you have any questions."
-                        : "The package was successfully returned to our warehouse."}
+                        : "This order has been returned to our warehouse. Please contact our support team for further assistance."}
                     </p>
                   </div>
                 </div>

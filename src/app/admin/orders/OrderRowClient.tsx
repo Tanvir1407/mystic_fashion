@@ -1,15 +1,25 @@
 "use client";
 
 import type { OrderStatus } from "@/generated/prisma/client";
-import { updateOrderStatus } from "../actions";
+import { updateOrderStatus, deleteOrder, cancelPathaoPickupAction, sendPathaoPickupManually } from "../actions";
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Eye, Trash2 } from "lucide-react";
-import { deleteOrder } from "../actions";
 import { useRouter } from "next/navigation";
 import { StatusAlertModal } from "@/components/StatusAlertModal";
 import { formatDate, formatDateTime } from "@/utils/formatDate";
 import { formatBDT } from "@/utils/formatPrice";
+
+const STATUS_LABELS: Record<OrderStatus, string> = {
+  PENDING: "Placed",
+  CONFIRMED: "Confirmed",
+  PRINTING: "Printing",
+  PACKAGING: "Packaged",
+  SHIPPED: "Shipped",
+  DELIVERED: "Delivered",
+  RETURNED: "Returned",
+  CANCELLED: "Cancelled",
+};
 
 export default function OrderRowClient({
   order,
@@ -82,6 +92,40 @@ export default function OrderRowClient({
     }
   };
 
+  const getPostShipmentTag = () => {
+    const postShippedStatuses: OrderStatus[] = ["SHIPPED", "DELIVERED", "RETURNED"];
+    if (!postShippedStatuses.includes(status)) return null;
+
+    // Exchange: either this IS an exchange order, or this order HAS exchange orders
+    if (order.isExchange || (order.exchangeOrders && order.exchangeOrders.length > 0)) {
+      return "EXCHANGE";
+    }
+
+    // Return check
+    if (order.salesReturns && order.salesReturns.length > 0) {
+      const totalQty = (order.items || items || []).reduce(
+        (sum: number, i: any) => sum + i.quantity, 0
+      );
+      const returnedQty = order.salesReturns.reduce(
+        (sum: number, r: any) => sum + r.quantity, 0
+      );
+      if (returnedQty >= totalQty) return "FULL_RETURN";
+      return "PARTIAL_RETURN";
+    }
+
+    if (status === "DELIVERED") return "DELIVERED";
+    return null;
+  };
+
+  const postShipmentTag = getPostShipmentTag();
+
+  const TAG_CONFIG = {
+    EXCHANGE: { label: "Exchange", className: "bg-orange-50 text-orange-700 border-orange-200" },
+    FULL_RETURN: { label: "Full Return", className: "bg-rose-50 text-rose-700 border-rose-200" },
+    PARTIAL_RETURN: { label: "Partial Return", className: "bg-yellow-50 text-yellow-700 border-yellow-200" },
+    DELIVERED: { label: "Delivered", className: "bg-green-50 text-green-700 border-green-200" },
+  };
+
   return (
     <tr className="hover:bg-slate-50/50 transition-colors group">
       <td className="px-6 py-4">
@@ -123,7 +167,13 @@ export default function OrderRowClient({
       <td className="px-2 py-4">
         <div className="flex flex-col items-start gap-1">
           <span className="text-sm text-slate-600 max-w-[250px] truncate" title={order.address}>{order.address}</span>
-          <span className="bg-slate-100 text-slate-600 px-2 py-0.5 rounded text-[10px] uppercase font-bold tracking-wider">{order.district}</span>
+          <div className="flex items-center gap-2">
+            <span className="bg-slate-100 text-slate-600 px-2 py-0.5 rounded text-[10px] uppercase font-bold tracking-wider">{order.district}</span>          {postShipmentTag && TAG_CONFIG[postShipmentTag] && (
+              <span className={`inline-flex text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded border whitespace-nowrap ${TAG_CONFIG[postShipmentTag].className}`}>
+                {TAG_CONFIG[postShipmentTag].label}
+              </span>
+            )}
+          </div>
         </div>
       </td>
       <td className="px-2 py-4">
@@ -145,63 +195,108 @@ export default function OrderRowClient({
         {formatBDT(order.totalAmount)}
       </td>
       <td className="px-2 py-4 text-right">
-        {canEdit ? (
-          <select
-            value={status}
-            onChange={handleStatusChange}
-            disabled={loading || status === "CANCELLED" || status === "RETURNED"}
-            className={`w-32 text-[11px] font-black uppercase tracking-wider px-2 py-1.5 rounded-md border transition-all cursor-pointer outline-none focus:ring-2 focus:ring-opacity-50 ${status === "PENDING" ? "bg-amber-50 text-amber-700 border-amber-200 focus:ring-amber-500" :
-              status === "CONFIRMED" ? "bg-blue-50 text-blue-700 border-blue-200 focus:ring-blue-500" :
-                status === "PRINTING" ? "bg-cyan-50 text-cyan-700 border-cyan-200 focus:ring-cyan-500" :
-                  status === "PACKAGING" ? "bg-purple-50 text-purple-700 border-purple-200 focus:ring-purple-500" :
-                    status === "SHIPPED" ? "bg-indigo-50 text-indigo-700 border-indigo-200 focus:ring-indigo-500" :
-                      status === "DELIVERED" ? "bg-green-50 text-green-700 border-green-200 focus:ring-green-500" :
-                        status === "RETURNED" ? "bg-rose-50 text-rose-700 border-rose-200 focus:ring-rose-500" :
-                          "bg-red-50 text-red-700 border-red-200 focus:ring-red-500"
-              }`}
-          >
-            <option value="PENDING" disabled={status !== "PENDING"}>Pending</option>
-            <option value="CONFIRMED" disabled={status === "SHIPPED" || status === "DELIVERED" || status === "CANCELLED" || status === "RETURNED"}>Confirmed</option>
-            <option value="PRINTING" disabled={status === "SHIPPED" || status === "DELIVERED" || status === "CANCELLED" || status === "RETURNED"}>Printing</option>
-            <option value="PACKAGING" disabled={status === "SHIPPED" || status === "DELIVERED" || status === "CANCELLED" || status === "RETURNED"}>Packaging</option>
-            <option value="SHIPPED" disabled={status === "DELIVERED" || status === "CANCELLED" || status === "RETURNED"}>Shipped</option>
-            <option value="DELIVERED" disabled={status === "PENDING" || status === "CONFIRMED" || status === "PACKAGING" || status === "CANCELLED" || status === "RETURNED"}>Delivered</option>
-            <option value="RETURNED" disabled={status === "PENDING" || status === "CONFIRMED" || status === "PACKAGING" || status === "CANCELLED"}>Returned</option>
-            <option value="CANCELLED" disabled={status === "SHIPPED" || status === "DELIVERED" || status === "RETURNED"}>Cancelled</option>
-          </select>
-        ) : (
-          <span className={`inline-flex w-32 justify-center text-[11px] font-black uppercase tracking-wider px-2 py-1.5 rounded-md border ${status === "PENDING" ? "bg-amber-50 text-amber-700 border-amber-200" :
-            status === "CONFIRMED" ? "bg-blue-50 text-blue-700 border-blue-200" :
-              status === "PRINTING" ? "bg-cyan-50 text-cyan-700 border-cyan-200" :
-                status === "PACKAGING" ? "bg-purple-50 text-purple-700 border-purple-200" :
-                  status === "SHIPPED" ? "bg-indigo-50 text-indigo-700 border-indigo-200" :
-                    status === "DELIVERED" ? "bg-green-50 text-green-700 border-green-200" :
-                      status === "RETURNED" ? "bg-rose-50 text-rose-700 border-rose-200" :
-                        "bg-red-50 text-red-700 border-red-200"
-            }`}>
-            {status}
-          </span>
-        )}
+        <div className="inline-flex flex-col items-end relative">
+          {canEdit ? (
+            <select
+              value={status}
+              onChange={handleStatusChange}
+              disabled={loading || status === "CANCELLED" || status === "RETURNED"}
+              className={`w-32 text-[11px] font-black uppercase tracking-wider px-2 py-1.5 rounded-md border transition-all cursor-pointer outline-none focus:ring-2 focus:ring-opacity-50 ${status === "PENDING" ? "bg-amber-50 text-amber-700 border-amber-200 focus:ring-amber-500" :
+                status === "CONFIRMED" ? "bg-blue-50 text-blue-700 border-blue-200 focus:ring-blue-500" :
+                  status === "PRINTING" ? "bg-cyan-50 text-cyan-700 border-cyan-200 focus:ring-cyan-500" :
+                    status === "PACKAGING" ? "bg-purple-50 text-purple-700 border-purple-200 focus:ring-purple-500" :
+                      status === "SHIPPED" ? "bg-indigo-50 text-indigo-700 border-indigo-200 focus:ring-indigo-500" :
+                        status === "DELIVERED" ? "bg-green-50 text-green-700 border-green-200 focus:ring-green-500" :
+                          status === "RETURNED" ? "bg-rose-50 text-rose-700 border-rose-200 focus:ring-rose-500" :
+                            "bg-red-50 text-red-700 border-red-200 focus:ring-red-500"
+                }`}
+            >
+              <option value="PENDING" disabled={status !== "PENDING" && status !== "CONFIRMED"}>Placed</option>
+              <option value="CONFIRMED" disabled={status === "SHIPPED" || status === "DELIVERED" || status === "CANCELLED" || status === "RETURNED"}>Confirmed</option>
+              <option value="PRINTING" disabled={status === "SHIPPED" || status === "DELIVERED" || status === "CANCELLED" || status === "RETURNED"}>Printing</option>
+              <option value="PACKAGING" disabled={status === "SHIPPED" || status === "DELIVERED" || status === "CANCELLED" || status === "RETURNED"}>Packaged</option>
+              <option value="SHIPPED" disabled={status === "DELIVERED" || status === "CANCELLED" || status === "RETURNED"}>Shipped</option>
+              <option value="DELIVERED" disabled={status === "PENDING" || status === "CONFIRMED" || status === "PACKAGING" || status === "CANCELLED" || status === "RETURNED"}>Delivered</option>
+              <option value="RETURNED" disabled={status === "PENDING" || status === "CONFIRMED" || status === "PACKAGING" || status === "CANCELLED"}>Returned</option>
+              <option value="CANCELLED" disabled={status === "SHIPPED" || status === "DELIVERED" || status === "RETURNED"}>Cancelled</option>
+            </select>
+          ) : (
+            <span className={`inline-flex w-32 justify-center text-[11px] font-black uppercase tracking-wider px-2 py-1.5 rounded-md border ${status === "PENDING" ? "bg-amber-50 text-amber-700 border-amber-200" :
+              status === "CONFIRMED" ? "bg-blue-50 text-blue-700 border-blue-200" :
+                status === "PRINTING" ? "bg-cyan-50 text-cyan-700 border-cyan-200" :
+                  status === "PACKAGING" ? "bg-purple-50 text-purple-700 border-purple-200" :
+                    status === "SHIPPED" ? "bg-indigo-50 text-indigo-700 border-indigo-200" :
+                      status === "DELIVERED" ? "bg-green-50 text-green-700 border-green-200" :
+                        status === "RETURNED" ? "bg-rose-50 text-rose-700 border-rose-200" :
+                          "bg-red-50 text-red-700 border-red-200"
+              }`}>
+              {STATUS_LABELS[status] || status}
+            </span>
+          )}
+
+          {/* Pickup Action Buttons */}
+          {status === "PACKAGING" && order.pathaoConsignmentId && (
+            <div className="absolute top-full right-0 flex flex-col items-end gap-1 mt-1 z-10">
+              <span className="inline-flex text-[9px] font-black text-blue-600 bg-blue-50 px-2 py-0.5 rounded border border-blue-100 uppercase tracking-wider whitespace-nowrap">
+                Pickup Requested
+              </span>
+              <button
+                onClick={async () => {
+                  const res = await cancelPathaoPickupAction(order.id);
+                  if (!res.success) {
+                    window.alert(`Error: ${res.error}`);
+                  } else {
+                    window.alert("⚠️ Pickup cancelled in system.\n\nPlease also cancel this order manually from Pathao Merchant Panel.");
+                  }
+                }}
+                className="text-[10px] text-red-600 hover:underline font-bold whitespace-nowrap"
+              >
+                Cancel Pickup
+              </button>
+            </div>
+          )}
+
+          {status === "PACKAGING" && !order.isStorePickup && !order.pathaoConsignmentId && (
+            <div className="absolute top-full right-0 flex flex-col items-end mt-1 z-10">
+              <button
+                onClick={async () => {
+                  const res = await sendPathaoPickupManually(order.id);
+                  if (!res.success) {
+                    window.alert(res.error);
+                  } else {
+                    window.alert("✅ Pickup requested manually in system.");
+                  }
+                }}
+                className="text-[10px] text-indigo-600 hover:underline font-bold whitespace-nowrap"
+              >
+                Send to Pathao
+              </button>
+            </div>
+          )}
+        </div>
       </td>
       <td className="px-2 py-4 text-right">
-        <div className="flex items-center justify-end gap-2">
-          <Link
-            href={`/admin/orders/${order.id}`}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-indigo-600 bg-indigo-50 border border-indigo-200 rounded-md hover:bg-indigo-100 hover:border-indigo-300 transition-colors"
-          >
-            <Eye className="w-4 h-4" />
-            View
-          </Link>
-          {canDelete && (
-            <button
-              onClick={handleDelete}
-              disabled={loading}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-red-600 bg-red-50 border border-red-200 rounded-md hover:bg-red-100 hover:border-red-300 transition-colors disabled:opacity-50"
+        <div className="flex flex-col items-end gap-2">
+
+          <div className="flex items-center justify-end gap-2">
+            <Link
+              href={`/admin/orders/${order.id}`}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-indigo-600 bg-indigo-50 border border-indigo-200 rounded-md hover:bg-indigo-100 hover:border-indigo-300 transition-colors"
             >
-              <Trash2 className="w-4 h-4" />
-              Delete
-            </button>
-          )}
+              <Eye className="w-4 h-4" />
+              View
+            </Link>
+            {canDelete && (
+              <button
+                onClick={handleDelete}
+                disabled={loading}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-red-600 bg-red-50 border border-red-200 rounded-md hover:bg-red-100 hover:border-red-300 transition-colors disabled:opacity-50"
+              >
+                <Trash2 className="w-4 h-4" />
+                Delete
+              </button>
+            )}
+          </div>
         </div>
       </td>
       <StatusAlertModal

@@ -378,8 +378,53 @@ export default function AdminLayoutClient({ children, session }: { children: Rea
                 <Bell className="w-5 h-5" />
                 <span className="absolute top-0 right-0 w-2 h-2 bg-red-500 rounded-full border border-white"></span>
               </button>
-              <div className="w-8 h-8 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-600 overflow-hidden cursor-pointer">
-                <User className="w-4 h-4" />
+              {/* User Dropdown with Hover Trigger */}
+              <div className="relative group py-2">
+                <div className="w-8 h-8 rounded-full bg-slate-100 border border-slate-200 hover:border-slate-300 hover:bg-slate-200 flex items-center justify-center text-slate-600 cursor-pointer overflow-hidden transition-all duration-200">
+                  {session?.roleName ? (
+                    <span className="text-xs font-bold text-slate-700 uppercase">
+                      {session.roleName.charAt(0)}
+                    </span>
+                  ) : (
+                    <User className="w-4 h-4" />
+                  )}
+                </div>
+
+                {/* Dropdown Card */}
+                <div className="absolute right-0 top-full mt-1 w-48 bg-white border border-slate-200/80 shadow-[0_10px_30px_rgba(0,0,0,0.08)] rounded-xl py-1.5 z-50 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 transform scale-95 group-hover:scale-100 origin-top-right">
+                  <div className="px-4 py-2 border-b border-slate-100">
+                    <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">Logged in as</p>
+                    <p className="text-sm font-bold text-slate-800 truncate mt-0.5">{session?.roleName || "Staff"}</p>
+                  </div>
+                  
+                  {session?.userId && (
+                    <Link
+                      href={`/admin/staff/${session.userId}`}
+                      className="flex items-center gap-2.5 px-4 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 transition-colors"
+                    >
+                      <User className="w-3.5 h-3.5 text-slate-400" />
+                      My Profile
+                    </Link>
+                  )}
+
+                  <Link
+                    href="/admin/settings"
+                    className="flex items-center gap-2.5 px-4 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 transition-colors"
+                  >
+                    <Settings className="w-3.5 h-3.5 text-slate-400" />
+                    My Settings
+                  </Link>
+
+                  <div className="border-t border-slate-100 my-1"></div>
+
+                  <button
+                    onClick={() => adminLogout()}
+                    className="w-full flex items-center gap-2.5 px-4 py-2 text-xs font-bold text-rose-600 hover:bg-rose-50/50 transition-colors text-left"
+                  >
+                    <LogOut className="w-3.5 h-3.5 text-rose-500" />
+                    Sign Out
+                  </button>
+                </div>
               </div>
             </div>
           </header>

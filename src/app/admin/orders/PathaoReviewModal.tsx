@@ -63,7 +63,7 @@ export default function PathaoReviewModal({ isOpen, onClose, selectedOrders, onS
             </div>
             <div>
               <h3 className="text-lg font-bold text-slate-900">Review Pathao Consignments</h3>
-              <p className="text-xs text-slate-500 font-medium">Only orders with PACKAGING status can be processed</p>
+              <p className="text-xs text-slate-500 font-medium">Only orders with Packaged status can be processed</p>
             </div>
           </div>
           <button
@@ -87,7 +87,7 @@ export default function PathaoReviewModal({ isOpen, onClose, selectedOrders, onS
             <div className="mb-4 p-4 bg-amber-50 border border-amber-100 rounded-xl flex items-start gap-3 text-amber-700">
               <Info className="w-5 h-5 shrink-0 mt-0.5" />
               <p className="text-sm font-medium">
-                Note: {excludedCount} selected order(s) were excluded because they are not in the PACKAGING status.
+                Note: {excludedCount} selected order(s) were excluded because they are not in the PACKAGED status.
               </p>
             </div>
           )}
@@ -126,7 +126,7 @@ export default function PathaoReviewModal({ isOpen, onClose, selectedOrders, onS
               </div>
               <h4 className="text-slate-900 font-bold">No valid orders to send</h4>
               <p className="text-slate-500 text-sm mt-1 max-w-xs">
-                Please select orders with PACKAGING status to proceed with Pathao shipment.
+                Please select orders with Packaged status to proceed with Pathao shipment.
               </p>
             </div>
           )}

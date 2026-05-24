@@ -308,7 +308,7 @@ export default function CheckoutClient({
 
 
         <div className="mb-10 flex justify-between">
-          <h1 className="text-3xl md:text-4xl font-black uppercase tracking-tight mt-6">Checkout</h1>
+          <h1 className="text-xl md:text-4xl font-black uppercase tracking-tight mt-6">Checkout</h1>
           <Link href="/" className="inline-flex items-center gap-2 text-sm font-bold text-zinc-500 hover:text-primary transition-colors">
             <ArrowLeft className="w-4 h-4" />
             Back to Home
@@ -317,7 +317,7 @@ export default function CheckoutClient({
 
         {/* DTF Instruction Banner (Classic & Modern) */}
         {items.some(item => item.isCustomize) && (
-          <div className="mb-10 overflow-hidden bg-white border border-slate-200 rounded-lg shadow-sm flex items-stretch animate-in fade-in slide-in-from-top-4 duration-500">
+          <div className="mb-10 overflow-hidden bg-white border border-slate-200 flex items-stretch animate-in fade-in slide-in-from-top-4 duration-500">
             <div className="w-1.5 bg-primary" />
             <div className="p-5 flex items-center gap-5">
 
@@ -337,7 +337,7 @@ export default function CheckoutClient({
             </div>
             <h2 className="text-2xl font-bold mb-4">Your cart is empty</h2>
             <p className="text-zinc-500 mb-8 max-w-sm">Looks like you haven't added anything to your cart yet.</p>
-            <Link href="/" className="bg-primary text-white px-8 py-4 rounded-lg font-bold uppercase tracking-widest hover:bg-[#600018] transition-all">
+            <Link href="/" className="bg-primary text-white px-8 py-4 font-bold tracking-widest hover:bg-[#600018] transition-all">
               Start Shopping
             </Link>
           </div>
@@ -346,7 +346,7 @@ export default function CheckoutClient({
 
             {/* Left Side: Customer Info Form */}
             <div className="w-full lg:w-3/5">
-              <div className="bg-white p-6 md:p-8 rounded-2xl border border-slate-200 shadow-sm">
+              <div className="bg-white p-6 md:p-8 border border-slate-200 shadow-sm">
                 <h2 className="text-xl font-bold uppercase tracking-wide mb-6 pb-4 border-b border-slate-100">Delivery Information</h2>
 
                 <form id="checkout-form" onSubmit={handleSubmit} noValidate className="space-y-6">
@@ -354,11 +354,11 @@ export default function CheckoutClient({
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <label className="text-sm font-bold text-zinc-700">Full Name *</label>
-                      <input name="fullName" type="text" className="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-3 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all font-medium" placeholder="Enter your full name" />
+                      <input name="fullName" type="text" className="w-full bg-slate-50 border border-slate-200 px-4 py-3 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all font-medium" placeholder="Enter your full name" />
                     </div>
                     <div className="space-y-2">
                       <label className="text-sm font-bold text-zinc-700">Phone Number *</label>
-                      <input name="phone" type="tel" className="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-3 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all font-medium" placeholder="+880 1..." />
+                      <input name="phone" type="tel" className="w-full bg-slate-50 border border-slate-200 px-4 py-3 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all font-medium" placeholder="+880 1..." />
                     </div>
                   </div>
 
@@ -426,12 +426,12 @@ export default function CheckoutClient({
 
                     <div className="space-y-2">
                       <label className="text-sm font-bold text-zinc-700">House / Road / Flat No. / Landmark *</label>
-                      <textarea name="address" rows={3} className="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-3 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all resize-none font-medium" placeholder="e.g., House 12, Road 4, Block C, near the central mosque" />
+                      <textarea name="address" rows={3} className="w-full bg-slate-50 border border-slate-200 px-4 py-3 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all resize-none font-medium" placeholder="e.g., House 12, Road 4, Block C, near the central mosque" />
                     </div>
 
                     <div className="space-y-2 pt-2">
                       <label className="text-sm font-bold text-zinc-700">Order Remarks (Optional)</label>
-                      <textarea name="remarks" rows={2} className="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-3 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all resize-none text-sm" placeholder="Special instructions, gate codes, etc..." />
+                      <textarea name="remarks" rows={2} className="w-full bg-slate-50 border border-slate-200 px-4 py-3 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all resize-none text-sm" placeholder="Special instructions, gate codes, etc..." />
                     </div>
                   </div>
 
@@ -441,17 +441,17 @@ export default function CheckoutClient({
 
             {/* Right Side: Order Summary */}
             <div className="w-full lg:w-2/5">
-              <div className="bg-white p-6 md:p-8 rounded-2xl border border-slate-200 shadow-sm sticky top-32">
+              <div className="bg-white p-6 md:p-8 border border-slate-200 shadow-sm sticky top-32">
                 <h2 className="text-sm font-black uppercase tracking-[0.2em] text-slate-900 mb-8 pb-4 border-b border-slate-100 flex items-center justify-between">
                   <span>Order Summary</span>
-                  <span className="hidden md:block text-[10px] bg-slate-100 px-2 py-0.5 rounded text-slate-500">{items.length} Items</span>
+                  <span className="hidden md:block text-[10px] bg-slate-100 px-2 py-0.5 text-slate-500">{items.length} Items</span>
                 </h2>
 
                 <div className="space-y-5 mb-8 max-h-[40vh] overflow-y-auto pr-2 custom-scrollbar">
                   {items.map((item) => (
                     <div key={`${item.id}-${item.size}`} className="flex flex-col gap-3 pb-5 border-b border-slate-50 last:border-0 last:pb-0">
                       <div className="flex gap-4 group">
-                        <div className="relative w-16 h-20 bg-slate-50 rounded-lg overflow-hidden flex-shrink-0 border border-slate-100 group-hover:border-slate-300 transition-colors">
+                        <div className="relative w-16 h-20 bg-slate-50 overflow-hidden flex-shrink-0 border border-slate-100 group-hover:border-slate-300 transition-colors">
                           {item.image && (
                             <Image src={item.image} alt={item.name} fill className="object-cover" />
                           )}
@@ -460,7 +460,7 @@ export default function CheckoutClient({
                           <div>
                             <h4 className="font-bold text-xs uppercase tracking-tight text-slate-800 line-clamp-1 group-hover:text-black transition-colors">{item.name}</h4>
                             <div className="flex items-center gap-3 mt-1.5">
-                              {item.size && <span className="text-[10px] font-black uppercase bg-slate-100 px-1.5 py-0.5 rounded text-slate-500">Size: {item.size}</span>}
+                              {item.size && <span className="text-[10px] font-black uppercase bg-slate-100 px-1.5 py-0.5 text-slate-500">Size: {item.size}</span>}
                               <span className="text-[10px] font-bold text-slate-400 uppercase">Qty: {item.quantity}</span>
                             </div>
                           </div>
@@ -481,17 +481,17 @@ export default function CheckoutClient({
                               type="checkbox"
                               checked={item.requiresPrint}
                               onChange={(e) => handleDTFToggle(item.id, item.size, e.target.checked)}
-                              className="w-4 h-4 rounded border-slate-300 text-primary focus:ring-primary"
+                              className="w-4 h-4  border-slate-300 text-primary focus:ring-primary"
                             />
                             <span className="text-[10px] font-bold text-slate-600 uppercase">Add DTF Print (+৳{dtfCostPerItem})</span>
                           </label>
                           {item.requiresPrint && item.printDetails && item.printDetails.length > 0 && (
                             <div className="flex flex-col gap-2 mt-1">
                               {item.printDetails.map((detail, idx) => (
-                                <div key={idx} className="flex items-center gap-3 bg-slate-50 p-2 rounded-lg border border-slate-100">
+                                <div key={idx} className="flex items-center gap-3 bg-slate-50 p-2 border border-slate-100">
                                   <div className="flex flex-col">
                                     <span className="text-[8px] font-bold text-slate-400 uppercase tracking-widest">Print {idx + 1}</span>
-                                    <span className="text-[10px] font-black uppercase text-slate-900">{detail.name} ({detail.number})</span>
+                                    <span className="text-[10px] font-black text-slate-900">{detail.name} ({detail.number})</span>
                                   </div>
                                   <div className="ml-auto flex items-center gap-2">
                                     <button
@@ -529,7 +529,7 @@ export default function CheckoutClient({
                                     setDtfForm({ type: "custom", name: "", number: "" });
                                     setShowDTFModal(true);
                                   }}
-                                  className="text-[10px] font-bold text-primary border border-primary/20 bg-primary/5 py-2 rounded-lg border-dashed hover:bg-primary/10 transition-colors w-full text-center mt-1 uppercase tracking-widest"
+                                  className="text-[10px] font-bold text-primary border border-primary/20 bg-primary/5 py-2 border-dashed hover:bg-primary/10 transition-colors w-full text-center mt-1 uppercase tracking-widest"
                                 >
                                   + Add Print For Next Item
                                 </button>
@@ -553,7 +553,7 @@ export default function CheckoutClient({
                         onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
                         placeholder="COUPON CODE"
                         disabled={!!appliedCoupon}
-                        className="w-full pl-10 pr-4 py-3 bg-white border border-slate-200 rounded-lg text-xs font-black tracking-widest focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none disabled:text-slate-400"
+                        className="w-full pl-10 pr-4 py-3 bg-white border border-slate-200 text-xs font-black tracking-widest focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none disabled:text-slate-400"
                       />
                     </div>
                     {appliedCoupon ? (
@@ -565,7 +565,7 @@ export default function CheckoutClient({
                           setCouponCode("");
                           setCouponSuccess("");
                         }}
-                        className="px-5 py-3 bg-white border border-slate-200 text-slate-900 text-[10px] font-black uppercase tracking-widest rounded-lg hover:bg-slate-50 transition-all font-bold"
+                        className="px-5 py-3 bg-white border border-slate-200 text-slate-900 text-[10px] font-black uppercase tracking-widest hover:bg-slate-50 transition-all font-bold"
                       >
                         Remove
                       </button>
@@ -574,7 +574,7 @@ export default function CheckoutClient({
                         type="button"
                         onClick={handleApplyCoupon}
                         disabled={isValidating || !couponCode}
-                        className="px-6 py-3 bg-slate-900 text-white text-[10px] font-black uppercase tracking-widest rounded-lg hover:bg-black transition-all disabled:opacity-50 flex items-center gap-2 font-bold"
+                        className="px-6 py-3 bg-slate-900 text-white text-[10px] font-black uppercase tracking-widest  hover:bg-black transition-all disabled:opacity-50 flex items-center gap-2 font-bold"
                       >
                         {isValidating ? <Loader2 className="w-4 h-4 animate-spin" /> : "Apply"}
                       </button>
@@ -623,7 +623,7 @@ export default function CheckoutClient({
                 </div>
 
                 {errorMsg && (
-                  <div className="bg-red-500/10 text-red-500 p-4 rounded-lg mb-6  flex items-start justify-between gap-3">
+                  <div className="bg-red-500/10 text-red-500 p-4 mb-6  flex items-start justify-between gap-3">
                     <p className="leading-relaxed">{errorMsg}</p>
                     <button onClick={() => setErrorMsg("")} className="text-slate-400 hover:text-white transition-colors flex-shrink-0">
                       <X className="w-4 h-4" />
@@ -663,7 +663,7 @@ export default function CheckoutClient({
                           name="bkashNumber"
                           type="tel"
                           placeholder="Your bKash No."
-                          className="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-4 text-xs font-bold focus:bg-white focus:ring-0 focus:border-slate-900 outline-none transition-all placeholder:text-slate-300"
+                          className="w-full bg-slate-50 border border-slate-200 px-4 py-4 text-xs font-bold focus:bg-white focus:ring-0 focus:border-slate-900 outline-none transition-all placeholder:text-slate-300"
                         />
                       </div>
                       <div className="space-y-2">
@@ -676,7 +676,7 @@ export default function CheckoutClient({
                           name="bkashTrxId"
                           type="text"
                           placeholder="TrxID"
-                          className="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-4 text-xs font-bold focus:bg-white focus:ring-0 focus:border-slate-900 outline-none transition-all placeholder:text-slate-300"
+                          className="w-full bg-slate-50 border border-slate-200 px-4 py-4 text-xs font-bold focus:bg-white focus:ring-0 focus:border-slate-900 outline-none transition-all placeholder:text-slate-300"
                         />
                       </div>
                     </div>
@@ -689,7 +689,7 @@ export default function CheckoutClient({
                   type="submit"
                   form="checkout-form"
                   disabled={isPending || items.length === 0}
-                  className="w-full bg-primary text-white py-5 rounded-lg font-black uppercase tracking-[0.25em] text-xs hover:bg-black transition-all transform active:scale-[0.98] shadow-2xl shadow-slate-200 flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full bg-primary text-white py-5 font-black uppercase tracking-[0.25em] text-xs hover:bg-black transition-all transform active:scale-[0.98] shadow-2xl shadow-slate-200 flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {isPending ? (
                     <Loader2 className="w-5 h-5 animate-spin" />
@@ -712,7 +712,7 @@ export default function CheckoutClient({
       {/* DTF MODAL (Classic Aesthetic restored) */}
       {showDTFModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center px-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-300">
-          <div className="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden p-6 md:p-8 relative animate-in zoom-in-95 duration-300">
+          <div className="bg-white w-full max-w-md shadow-2xl overflow-hidden p-6 md:p-8 relative animate-in zoom-in-95 duration-300">
             <button onClick={() => setShowDTFModal(false)} className="absolute top-4 right-4 text-slate-400 hover:text-zinc-900 transition-colors">
               <X className="w-5 h-5" />
             </button>
@@ -735,7 +735,7 @@ export default function CheckoutClient({
                         name: opt.name.includes("(") ? opt.name.split(" (")[0] : "",
                         number: opt.name.includes("(") ? opt.name.split("(")[1].replace(")", "") : ""
                       })}
-                      className={`px-3 py-3 rounded-lg border text-[10px] font-bold uppercase tracking-wider transition-all ${dtfForm.type === opt.id ? 'bg-primary border-primary text-white shadow-lg shadow-primary/20' : 'border-slate-200 hover:border-primary hover:text-primary text-slate-600'}`}
+                      className={`px-3 py-3 border text-[10px] font-bold uppercase tracking-wider transition-all ${dtfForm.type === opt.id ? 'bg-primary border-primary text-white shadow-lg shadow-primary/20' : 'border-slate-200 hover:border-primary hover:text-primary text-slate-600'}`}
                     >
                       {opt.name}
                     </button>
@@ -744,15 +744,15 @@ export default function CheckoutClient({
               </div>
 
               {dtfForm.type === "custom" && (
-                <div className="grid grid-cols-2 gap-4 animate-in fade-in slide-in-from-top-2 duration-300 bg-slate-50 p-4 rounded-lg border border-slate-100">
+                <div className="grid grid-cols-2 gap-4 animate-in fade-in slide-in-from-top-2 duration-300 bg-slate-50 p-4 border border-slate-100">
                   <div className="space-y-1">
                     <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Name</label>
                     <input
                       type="text"
                       value={dtfForm.name}
-                      onChange={(e) => setDtfForm({ ...dtfForm, name: e.target.value.toUpperCase() })}
-                      className="w-full bg-white border border-slate-200 rounded-lg px-4 py-2 text-xs font-bold focus:border-primary outline-none transition-colors"
-                      placeholder="NAME"
+                      onChange={(e) => setDtfForm({ ...dtfForm, name: e.target.value })}
+                      className="w-full bg-white border border-slate-200 px-4 py-2 text-xs font-bold focus:border-primary outline-none transition-colors"
+                      placeholder="Name"
                       maxLength={200}
                     />
                   </div>
@@ -762,7 +762,7 @@ export default function CheckoutClient({
                       type="text"
                       value={dtfForm.number}
                       onChange={(e) => setDtfForm({ ...dtfForm, number: e.target.value.replace(/\D/g, '') })}
-                      className="w-full bg-white border border-slate-200 rounded-lg px-4 py-2 text-xs font-bold focus:border-primary outline-none transition-colors"
+                      className="w-full bg-white border border-slate-200 px-4 py-2 text-xs font-bold focus:border-primary outline-none transition-colors"
                       placeholder="00"
                       maxLength={10}
                     />
@@ -770,15 +770,15 @@ export default function CheckoutClient({
                 </div>
               )}
 
-              <div className="p-4 bg-slate-50 rounded-lg flex justify-between items-center text-[10px] font-black uppercase tracking-widest border border-slate-100">
+              <div className="p-4 bg-slate-50 flex justify-between items-center text-[10px] font-black tracking-widest border border-slate-100">
                 <span className="text-slate-400">Customization Fee</span>
-                <span className="text-primary italic animate-pulse">৳{dtfCostPerItem}</span>
+                <span className="text-primary italic ">৳{dtfCostPerItem}</span>
               </div>
 
               <button
                 onClick={saveDTF}
                 disabled={dtfForm.type === "custom" && (!dtfForm.name || !dtfForm.number)}
-                className="w-full bg-zinc-900 text-white py-4 rounded-lg font-bold uppercase tracking-[0.2em] text-xs hover:bg-black transition-all disabled:opacity-50"
+                className="w-full bg-zinc-900 text-white py-4  font-bold tracking-[0.2em] text-xs hover:bg-black transition-all disabled:opacity-50"
               >
                 Save Changes
               </button>
