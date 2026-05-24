@@ -8,7 +8,7 @@ export const metadata: Metadata = {
   title: "Manage Brands | Mystic Admin",
 };
 
-export default async function BrandsPage({ searchParams }: { searchParams: { page?: string; limit?: string } }) {
+export default async function BrandsPage({ searchParams }: { searchParams: { page?: string; limit?: string; tab?: string } }) {
   const session = await getSession();
   const canView = hasPermission(session, "VIEW", "PRODUCTS");
   const canCreate = hasPermission(session, "CREATE", "PRODUCTS");
@@ -35,15 +35,19 @@ export default async function BrandsPage({ searchParams }: { searchParams: { pag
 
   const page = Number(searchParams?.page) || 1;
   const limit = Number(searchParams?.limit) || 10;
+  const tab = searchParams?.tab || "active";
   const PER_PAGE = [10, 20, 50, 100].includes(limit) ? limit : 10;
+
+  const whereClause = tab === "trash" ? { deletedAt: { not: null } as any } : {};
 
   const [brands, totalCount] = await Promise.all([
     prisma.brand.findMany({
+      where: whereClause,
       orderBy: { name: "asc" },
       skip: (page - 1) * PER_PAGE,
       take: PER_PAGE,
     }),
-    prisma.brand.count(),
+    prisma.brand.count({ where: whereClause }),
   ]);
 
 
@@ -54,6 +58,7 @@ export default async function BrandsPage({ searchParams }: { searchParams: { pag
       brands={brands} 
       currentPage={page} 
       totalPages={totalPages} 
+      currentTab={tab}
       canCreate={canCreate}
       canEdit={canEdit}
       canDelete={canDelete}

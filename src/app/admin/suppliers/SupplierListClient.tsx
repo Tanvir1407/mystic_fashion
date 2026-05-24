@@ -2,8 +2,8 @@
 
 import React, { useState, useEffect, useTransition } from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
-import { Search, Eye, X, Plus, Calendar, DollarSign, Phone, MapPin, Edit, CheckCircle, AlertCircle } from "lucide-react";
-import { createSupplier, updateSupplier } from "@/app/admin/actions";
+import { Search, Eye, X, Plus, Calendar, DollarSign, Phone, MapPin, Edit, CheckCircle, AlertCircle, Trash2, RotateCcw } from "lucide-react";
+import { createSupplier, updateSupplier, deleteSupplier, restoreSupplier } from "@/app/admin/actions";
 import { AdminPagination } from "@/components/AdminPagination";
 
 interface Supplier {
@@ -13,6 +13,7 @@ interface Supplier {
   address: string | null;
   active: boolean;
   createdAt: Date;
+  deletedAt?: Date | null;
   purchaseCount: number;
   totalSpent: number;
   purchases: {
@@ -28,6 +29,7 @@ interface SupplierListClientProps {
   searchVal: string;
   page: number;
   totalPages: number;
+  currentTab?: string;
   canCreate: boolean;
   canEdit: boolean;
 }
@@ -37,6 +39,7 @@ export default function SupplierListClient({
   searchVal,
   page,
   totalPages,
+  currentTab = "active",
   canCreate,
   canEdit,
 }: SupplierListClientProps) {
@@ -78,6 +81,32 @@ export default function SupplierListClient({
 
     startTransition(() => {
       router.push(`${pathname}?${params.toString()}`);
+    });
+  };
+
+  const handleDelete = async (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!confirm("Are you sure you want to move this supplier to Trash?")) return;
+
+    startTransition(async () => {
+      const res = await deleteSupplier(id);
+      if (!res.success) {
+        alert(res.error);
+      } else {
+        router.refresh();
+      }
+    });
+  };
+
+  const handleRestore = async (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    startTransition(async () => {
+      const res = await restoreSupplier(id);
+      if (res.success) {
+        router.refresh();
+      } else {
+        alert(res.error);
+      }
     });
   };
 
@@ -155,7 +184,7 @@ export default function SupplierListClient({
           )}
         </div>
 
-        {canCreate && (
+        {canCreate && currentTab === "active" && (
           <button
             onClick={openAddDrawer}
             className="h-10 px-4 bg-slate-900 hover:bg-slate-800 text-white text-sm font-medium rounded-md flex items-center justify-center gap-2 transition-colors shadow-sm"
@@ -164,6 +193,40 @@ export default function SupplierListClient({
             Add Supplier
           </button>
         )}
+      </div>
+
+      {/* Tabs */}
+      <div className="flex border-b border-slate-200 gap-6 mb-4">
+        <button
+          onClick={() => {
+            const params = new URLSearchParams(searchParams.toString());
+            params.set("tab", "active");
+            params.set("page", "1");
+            router.push(`${pathname}?${params.toString()}`);
+          }}
+          className={`pb-3 text-sm font-bold uppercase tracking-wide border-b-2 transition-all ${
+            currentTab === "active"
+              ? "border-slate-900 text-slate-900"
+              : "border-transparent text-slate-400 hover:text-slate-600"
+          }`}
+        >
+          Active Partners
+        </button>
+        <button
+          onClick={() => {
+            const params = new URLSearchParams(searchParams.toString());
+            params.set("tab", "trash");
+            params.set("page", "1");
+            router.push(`${pathname}?${params.toString()}`);
+          }}
+          className={`pb-3 text-sm font-bold uppercase tracking-wide border-b-2 transition-all ${
+            currentTab === "trash"
+              ? "border-slate-900 text-slate-900"
+              : "border-transparent text-slate-400 hover:text-slate-600"
+          }`}
+        >
+          Trash Bin
+        </button>
       </div>
 
       {/* Main Grid Layout: Table + Optional Sidebar */}
@@ -203,12 +266,14 @@ export default function SupplierListClient({
                     <td className="px-6 py-4">
                       <span
                         className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold ${
-                          supplier.active
+                          supplier.deletedAt
+                            ? "bg-rose-50 text-rose-700"
+                            : supplier.active
                             ? "bg-emerald-50 text-emerald-700"
                             : "bg-slate-100 text-slate-600"
                         }`}
                       >
-                        {supplier.active ? "Active" : "Inactive"}
+                        {supplier.deletedAt ? "Deleted" : supplier.active ? "Active" : "Inactive"}
                       </span>
                     </td>
                     <td className="px-6 py-4">
@@ -220,22 +285,45 @@ export default function SupplierListClient({
                       ৳{supplier.totalSpent.toLocaleString()}
                     </td>
                     <td className="px-6 py-4 text-right space-x-2" onClick={(e) => e.stopPropagation()}>
-                      {canEdit && (
+                      {currentTab === "trash" ? (
                         <button
-                          onClick={(e) => openEditDrawer(supplier, e)}
-                          className="h-8 w-8 inline-flex items-center justify-center bg-slate-100 hover:bg-slate-200 text-slate-600 hover:text-slate-900 rounded-md transition-colors shadow-sm"
-                          title="Edit Supplier"
+                          onClick={(e) => handleRestore(supplier.id, e)}
+                          disabled={isPending}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 border border-indigo-200 text-indigo-700 hover:bg-indigo-100 text-xs font-bold transition-all disabled:opacity-50"
                         >
-                          <Edit className="w-4 h-4" />
+                          <RotateCcw className="w-3.5 h-3.5" />
+                          Restore
                         </button>
+                      ) : (
+                        <>
+                          {canEdit && (
+                            <button
+                              onClick={(e) => openEditDrawer(supplier, e)}
+                              className="h-8 w-8 inline-flex items-center justify-center bg-slate-100 hover:bg-slate-200 text-slate-600 hover:text-slate-900 rounded-md transition-colors shadow-sm"
+                              title="Edit Supplier"
+                            >
+                              <Edit className="w-4 h-4" />
+                            </button>
+                          )}
+                          <button
+                            onClick={() => openDetailsDrawer(supplier)}
+                            className="h-8 w-8 inline-flex items-center justify-center bg-slate-100 hover:bg-slate-200 text-slate-600 hover:text-slate-900 rounded-md transition-colors shadow-sm"
+                            title="View Purchases"
+                          >
+                            <Eye className="w-4 h-4" />
+                          </button>
+                          {canEdit && (
+                            <button
+                              onClick={(e) => handleDelete(supplier.id, e)}
+                              disabled={isPending}
+                              className="h-8 w-8 inline-flex items-center justify-center bg-red-50 hover:bg-red-100 text-red-600 hover:text-red-900 rounded-md transition-colors shadow-sm disabled:opacity-50"
+                              title="Move to Trash"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          )}
+                        </>
                       )}
-                      <button
-                        onClick={() => openDetailsDrawer(supplier)}
-                        className="h-8 w-8 inline-flex items-center justify-center bg-slate-100 hover:bg-slate-200 text-slate-600 hover:text-slate-900 rounded-md transition-colors shadow-sm"
-                        title="View Purchases"
-                      >
-                        <Eye className="w-4 h-4" />
-                      </button>
                     </td>
                   </tr>
                 ))}

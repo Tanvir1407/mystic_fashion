@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
 export const revalidate = 0;
 
-export default async function AdminOrdersPage({ searchParams }: { searchParams: { page?: string, limit?: string, filter?: string, search?: string, source?: string } }) {
+export default async function AdminOrdersPage({ searchParams }: { searchParams: { page?: string, limit?: string, filter?: string, search?: string, source?: string, tab?: string } }) {
   const session = await getSession();
   const canView = hasPermission(session, "VIEW", "ORDERS");
   const canCreate = hasPermission(session, "CREATE", "ORDERS");
@@ -38,10 +38,10 @@ export default async function AdminOrdersPage({ searchParams }: { searchParams: 
   const filter = searchParams?.filter || "ALL";
   const source = searchParams?.source || "ALL";
   const search = searchParams?.search || "";
+  const tab = searchParams?.tab || "active";
   const PER_PAGE = [10, 20, 50, 100].includes(limit) ? limit : 10;
 
-
-  const whereClause: any = {};
+  const whereClause: any = tab === "trash" ? { deletedAt: { not: null } as any } : {};
   if (filter !== "ALL") {
     whereClause.status = filter as any;
   }
@@ -107,6 +107,7 @@ export default async function AdminOrdersPage({ searchParams }: { searchParams: 
       currentFilter={filter}
       currentSource={source}
       currentSearch={search}
+      currentTab={tab}
       storePhone={storePhone}
       storeAddress={storeAddress}
       canCreate={canCreate}

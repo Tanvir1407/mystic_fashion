@@ -4,6 +4,14 @@ import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { roundPrice } from "@/utils/formatPrice";
 
+function normalizePhone(raw: string): string {
+  let p = raw.replace(/[\s\-\(\)\.]/g, "");
+  if (p.startsWith("+880")) p = p.slice(4);
+  else if (p.startsWith("880") && p.length === 13) p = p.slice(3);
+  if (p.length === 10 && !p.startsWith("0")) p = "0" + p;
+  return p;
+}
+
 export async function placeOrderAction(payload: {
   fullName: string;
   phone: string;
@@ -48,7 +56,7 @@ export async function placeOrderAction(payload: {
       const customId = `${datePrefix}${nextNum.toString().padStart(2, '0')}`;
 
       // 0. Check or create customer profile by phone
-      const phone = payload.phone?.trim();
+      const phone = payload.phone ? normalizePhone(payload.phone) : undefined;
       let customerId: string | null = null;
       if (phone) {
         let customer = await tx.customer.findUnique({

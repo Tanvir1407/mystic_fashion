@@ -1,8 +1,9 @@
 import prisma from "@/lib/prisma";
 import Link from "next/link";
 import { deleteProduct } from "../actions";
-import { Plus, Edit2, Filter, Star, Eye, EyeOff } from "lucide-react";
+import { Plus, Edit2, Filter, Star, Eye, EyeOff, RotateCcw } from "lucide-react";
 import { ProductDeleteButton } from "./ProductDeleteButton";
+import { ProductRestoreButton } from "./ProductRestoreButton";
 import { formatBDT } from "@/utils/formatPrice";
 import { AdminPagination } from "@/components/AdminPagination";
 import ProductFilterClient from "./ProductFilterClient";
@@ -13,7 +14,7 @@ export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
 export const revalidate = 0;
 
-export default async function AdminProductsPage({ searchParams }: { searchParams: { page?: string, limit?: string, search?: string, category?: string } }) {
+export default async function AdminProductsPage({ searchParams }: { searchParams: { page?: string, limit?: string, search?: string, category?: string, tab?: string } }) {
   const session = await getSession();
   const canView = hasPermission(session, "VIEW", "PRODUCTS");
   const canCreate = hasPermission(session, "CREATE", "PRODUCTS");
@@ -42,10 +43,10 @@ export default async function AdminProductsPage({ searchParams }: { searchParams
   const limit = Number(searchParams?.limit) || 10;
   const search = searchParams?.search || "";
   const category = searchParams?.category || "ALL";
+  const tab = searchParams?.tab || "active";
   const PER_PAGE = [10, 20, 50, 100].includes(limit) ? limit : 10;
 
-
-  const whereClause: any = {};
+  const whereClause: any = tab === "trash" ? { deletedAt: { not: null } as any } : {};
   if (category !== "ALL") {
     whereClause.category = category;
   }
@@ -94,7 +95,7 @@ export default async function AdminProductsPage({ searchParams }: { searchParams
           <h1 className="text-2xl font-semibold tracking-tight text-slate-900">Products</h1>
           <p className="text-sm text-slate-500 mt-1">Manage your jerseys, inventory, and pricing.</p>
         </div>
-        {canCreate && (
+        {canCreate && tab === "active" && (
           <Link
             href="/admin/products/new"
             className="h-10 px-4 bg-slate-900 text-white text-sm font-medium rounded-md flex items-center justify-center gap-2 hover:bg-slate-800 transition-colors shadow-sm"
@@ -113,6 +114,44 @@ export default async function AdminProductsPage({ searchParams }: { searchParams
           categories={categories}
         />
       </div>
+
+      {/* Tabs */}
+      {(() => {
+        const activeParams = new URLSearchParams();
+        if (search) activeParams.set("search", search);
+        if (category !== "ALL") activeParams.set("category", category);
+        activeParams.set("tab", "active");
+
+        const trashParams = new URLSearchParams();
+        if (search) trashParams.set("search", search);
+        if (category !== "ALL") trashParams.set("category", category);
+        trashParams.set("tab", "trash");
+
+        return (
+          <div className="flex border-b border-slate-200 gap-6">
+            <Link
+              href={`/admin/products?${activeParams.toString()}`}
+              className={`pb-3 text-sm font-bold uppercase tracking-wide border-b-2 transition-all ${
+                tab === "active"
+                  ? "border-slate-900 text-slate-900"
+                  : "border-transparent text-slate-400 hover:text-slate-600"
+              }`}
+            >
+              Active Products
+            </Link>
+            <Link
+              href={`/admin/products?${trashParams.toString()}`}
+              className={`pb-3 text-sm font-bold uppercase tracking-wide border-b-2 transition-all ${
+                tab === "trash"
+                  ? "border-slate-900 text-slate-900"
+                  : "border-transparent text-slate-400 hover:text-slate-600"
+              }`}
+            >
+              Trash Bin
+            </Link>
+          </div>
+        );
+      })()}
 
       {/* Data Table */}
       <div className="bg-white border border-slate-200 rounded-lg overflow-hidden shadow-sm">
@@ -137,22 +176,30 @@ export default async function AdminProductsPage({ searchParams }: { searchParams
                       <div className="flex flex-col gap-1">
                         <div className="flex items-center gap-2">
                           <span className="font-medium text-sm text-slate-900">{product.name}</span>
-                          {product.isFeatured && (
-                            <div className="flex items-center gap-1 px-1.5 py-0.5 bg-amber-100 text-amber-700 rounded text-[10px] font-bold uppercase tracking-wider border border-amber-200">
-                              <Star className="w-2.5 h-2.5 fill-amber-500 text-amber-500" />
-                              Featured
-                            </div>
-                          )}
-                          {product.isPublished ? (
-                            <div className="flex items-center gap-1 px-1.5 py-0.5 bg-emerald-100 text-emerald-700 rounded text-[10px] font-bold uppercase tracking-wider border border-emerald-200">
-                              <Eye className="w-2.5 h-2.5 text-emerald-500" />
-                              Published
+                          {product.deletedAt ? (
+                            <div className="flex items-center gap-1 px-1.5 py-0.5 bg-rose-100 text-rose-700 rounded text-[10px] font-bold uppercase tracking-wider border border-rose-200 animate-pulse">
+                              Deleted
                             </div>
                           ) : (
-                            <div className="flex items-center gap-1 px-1.5 py-0.5 bg-slate-100 text-slate-600 rounded text-[10px] font-bold uppercase tracking-wider border border-slate-200">
-                              <EyeOff className="w-2.5 h-2.5 text-slate-500" />
-                              Hidden
-                            </div>
+                            <>
+                              {product.isFeatured && (
+                                <div className="flex items-center gap-1 px-1.5 py-0.5 bg-amber-100 text-amber-700 rounded text-[10px] font-bold uppercase tracking-wider border border-amber-200">
+                                  <Star className="w-2.5 h-2.5 fill-amber-500 text-amber-500" />
+                                  Featured
+                                </div>
+                              )}
+                              {product.isPublished ? (
+                                <div className="flex items-center gap-1 px-1.5 py-0.5 bg-emerald-100 text-emerald-700 rounded text-[10px] font-bold uppercase tracking-wider border border-emerald-200">
+                                  <Eye className="w-2.5 h-2.5 text-emerald-500" />
+                                  Published
+                                </div>
+                              ) : (
+                                <div className="flex items-center gap-1 px-1.5 py-0.5 bg-slate-100 text-slate-600 rounded text-[10px] font-bold uppercase tracking-wider border border-slate-200">
+                                  <EyeOff className="w-2.5 h-2.5 text-slate-500" />
+                                  Hidden
+                                </div>
+                              )}
+                            </>
                           )}
                         </div>
                         <span className="text-xs text-slate-500">{product.category}</span>
@@ -185,24 +232,30 @@ export default async function AdminProductsPage({ searchParams }: { searchParams
                     </td>
                     <td className="px-2 py-4 text-right">
                       <div className="flex items-center justify-end gap-2">
-                        <Link
-                          href={`/admin/products/${product.id}`}
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-600 bg-slate-50 border border-slate-200 rounded-md hover:bg-slate-100 hover:border-slate-300 transition-colors"
-                        >
-                          <Eye className="w-3.5 h-3.5" />
-                          View
-                        </Link>
-                        {canEdit && (
-                          <Link
-                            href={`/admin/products/edit/${product.id}`}
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-indigo-600 bg-indigo-50 border border-indigo-200 rounded-md hover:bg-indigo-100 hover:border-indigo-300 transition-colors"
-                          >
-                            <Edit2 className="w-3.5 h-3.5" />
-                            Edit
-                          </Link>
-                        )}
-                        {canDelete && (
-                          <ProductDeleteButton productId={product.id} productName={product.name} />
+                        {tab === "trash" ? (
+                          <ProductRestoreButton productId={product.id} />
+                        ) : (
+                          <>
+                            <Link
+                              href={`/admin/products/${product.id}`}
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-600 bg-slate-50 border border-slate-200 rounded-md hover:bg-slate-100 hover:border-slate-300 transition-colors"
+                            >
+                              <Eye className="w-3.5 h-3.5" />
+                              View
+                            </Link>
+                            {canEdit && (
+                              <Link
+                                href={`/admin/products/edit/${product.id}`}
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-indigo-600 bg-indigo-50 border border-indigo-200 rounded-md hover:bg-indigo-100 hover:border-indigo-300 transition-colors"
+                              >
+                                <Edit2 className="w-3.5 h-3.5" />
+                                Edit
+                              </Link>
+                            )}
+                            {canDelete && (
+                              <ProductDeleteButton productId={product.id} productName={product.name} />
+                            )}
+                          </>
                         )}
                       </div>
                     </td>
@@ -212,7 +265,7 @@ export default async function AdminProductsPage({ searchParams }: { searchParams
               {products.length === 0 && (
                 <tr>
                   <td colSpan={6} className="px-6 py-12 text-center">
-                    <p className="text-sm text-slate-500 font-medium">No products found. Add some jerseys!</p>
+                    <p className="text-sm text-slate-500 font-medium">No products found.</p>
                   </td>
                 </tr>
               )}

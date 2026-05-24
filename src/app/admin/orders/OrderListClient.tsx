@@ -20,6 +20,7 @@ export default function OrderListClient({
   currentFilter = "ALL",
   currentSource = "ALL",
   currentSearch = "",
+  currentTab = "active",
   storePhone = "01920240230",
   storeAddress = "H# 68, R# 12, Sector 10, Uttara, Dhaka - 1230, Bangladesh",
   canCreate,
@@ -32,6 +33,7 @@ export default function OrderListClient({
   currentFilter?: string;
   currentSource?: string;
   currentSearch?: string;
+  currentTab?: string;
   storePhone?: string;
   storeAddress?: string;
   canCreate: boolean;
@@ -184,7 +186,7 @@ export default function OrderListClient({
             <h1 className="text-2xl font-semibold tracking-tight text-slate-900">Orders</h1>
             <p className="text-sm text-slate-500 mt-1">Manage customer orders and fulfillments.</p>
           </div>
-          {canCreate && (
+          {canCreate && currentTab === "active" && (
             <div className="flex items-center gap-2">
               <button
                 onClick={() => router.push("/admin/orders/ai-create")}
@@ -202,6 +204,40 @@ export default function OrderListClient({
               </button>
             </div>
           )}
+        </div>
+
+        {/* Tabs */}
+        <div className="flex border-b border-slate-200 gap-6 my-2">
+          <button
+            onClick={() => {
+              const params = new URLSearchParams(window.location.search);
+              params.set("tab", "active");
+              params.set("page", "1");
+              router.push(`/admin/orders?${params.toString()}`);
+            }}
+            className={`pb-3 text-sm font-bold uppercase tracking-wide border-b-2 transition-all ${
+              currentTab === "active"
+                ? "border-slate-900 text-slate-900"
+                : "border-transparent text-slate-400 hover:text-slate-600"
+            }`}
+          >
+            Active Orders
+          </button>
+          <button
+            onClick={() => {
+              const params = new URLSearchParams(window.location.search);
+              params.set("tab", "trash");
+              params.set("page", "1");
+              router.push(`/admin/orders?${params.toString()}`);
+            }}
+            className={`pb-3 text-sm font-bold uppercase tracking-wide border-b-2 transition-all ${
+              currentTab === "trash"
+                ? "border-slate-900 text-slate-900"
+                : "border-transparent text-slate-400 hover:text-slate-600"
+            }`}
+          >
+            Trash Bin
+          </button>
         </div>
 
         {/* Toolbar, Search & Bulk Actions */}
@@ -342,7 +378,7 @@ export default function OrderListClient({
               </div>
 
               <div className="flex flex-wrap items-center gap-2">
-                {canEdit && (
+                {canEdit && currentTab === "active" && (
                   <>
                     <div className="flex items-center gap-1.5 bg-white border border-slate-200 rounded-lg p-1 shadow-sm">
                       <select
@@ -393,7 +429,7 @@ export default function OrderListClient({
                   <Printer className="w-3.5 h-3.5" />
                   POS Print
                 </button>
-                {canEdit && (
+                {canEdit && currentTab === "active" && (
                   <button
                     onClick={() => setShowPathaoModal(true)}
                     disabled={loading}
@@ -403,7 +439,7 @@ export default function OrderListClient({
                     Send to Pathao
                   </button>
                 )}
-                {canDelete && (
+                {canDelete && currentTab === "active" && (
                   <button
                     onClick={handleBulkDelete}
                     disabled={loading}

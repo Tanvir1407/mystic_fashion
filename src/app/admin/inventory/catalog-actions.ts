@@ -228,3 +228,86 @@ export const deleteSubcategory = withAuditLog(_deleteSubcategory, {
   fetchBefore: (id) => prisma.subcategory.findUnique({ where: { id } }),
   describe: (args) => `Deleted subcategory ${args[0]}`,
 });
+
+async function _restoreBrand(id: string) {
+  try {
+    await prisma.brand.update({
+      where: { id, deletedAt: { not: null } as any },
+      data: { deletedAt: null },
+    });
+    revalidatePath("/admin/inventory/brands");
+    return { success: true };
+  } catch (error: any) {
+    return { success: false, error: error.message || "Failed to restore brand" };
+  }
+}
+
+export const restoreBrand = withAuditLog(_restoreBrand, {
+  entityType: "Brand",
+  action: "UPDATE",
+  getEntityId: (args) => args[0],
+  describe: (args) => `Restored brand ${args[0]}`,
+});
+
+async function _restoreCategory(id: string) {
+  try {
+    await prisma.$transaction(async (tx) => {
+      // Restore category
+      await (tx as any).category.update({
+        where: { id, deletedAt: { not: null } },
+        data: { deletedAt: null },
+      });
+
+      // Find soft-deleted subcategories to get their IDs for product restore
+      const subs = await (tx as any).subcategory.findMany({
+        where: { categoryId: id, deletedAt: { not: null } },
+        select: { id: true },
+      });
+      const subIds = subs.map((s: any) => s.id);
+
+      // Cascade restore subcategories
+      await (tx as any).subcategory.updateMany({
+        where: { categoryId: id, deletedAt: { not: null } },
+        data: { deletedAt: null },
+      });
+
+      // Cascade restore products under this category or its subcategories
+      const productWhere: any = { deletedAt: { not: null }, OR: [{ categoryId: id }] };
+      if (subIds.length > 0) productWhere.OR.push({ subcategoryId: { in: subIds } });
+      await (tx as any).product.updateMany({ where: productWhere, data: { deletedAt: null } });
+    });
+    revalidatePath("/admin/inventory/categories");
+    revalidatePath("/admin/products");
+    return { success: true };
+  } catch (error: any) {
+    return { success: false, error: error.message || "Failed to restore category" };
+  }
+}
+
+export const restoreCategory = withAuditLog(_restoreCategory, {
+  entityType: "Category",
+  action: "UPDATE",
+  getEntityId: (args) => args[0],
+  describe: (args) => `Restored category ${args[0]}`,
+});
+
+async function _restoreSubcategory(id: string) {
+  try {
+    await prisma.subcategory.update({
+      where: { id, deletedAt: { not: null } as any },
+      data: { deletedAt: null },
+    });
+    revalidatePath("/admin/inventory/subcategories");
+    return { success: true };
+  } catch (error: any) {
+    return { success: false, error: error.message || "Failed to restore subcategory" };
+  }
+}
+
+export const restoreSubcategory = withAuditLog(_restoreSubcategory, {
+  entityType: "Subcategory",
+  action: "UPDATE",
+  getEntityId: (args) => args[0],
+  describe: (args) => `Restored subcategory ${args[0]}`,
+});
+

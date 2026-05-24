@@ -9,7 +9,7 @@ import { AdminPagination } from "@/components/AdminPagination";
 
 export const dynamic = "force-dynamic";
 
-export default async function AdminPurchasesPage({ searchParams }: { searchParams: { page?: string; limit?: string } }) {
+export default async function AdminPurchasesPage({ searchParams }: { searchParams: { page?: string; limit?: string; tab?: string } }) {
   const session = await getSession();
   const canView = hasPermission(session, "VIEW", "PURCHASES");
   const canCreate = hasPermission(session, "CREATE", "PURCHASES");
@@ -36,14 +36,17 @@ export default async function AdminPurchasesPage({ searchParams }: { searchParam
 
   const page = Number(searchParams?.page) || 1;
   const limit = Number(searchParams?.limit) || 10;
+  const tab = searchParams?.tab || "active";
   const PER_PAGE = [10, 20, 50, 100].includes(limit) ? limit : 10;
 
+  const whereClause = tab === "trash" ? { deletedAt: { not: null } as any } : {};
 
   let purchases: any[] = [];
   let totalCount = 0;
   try {
     const [fetchedPurchases, fetchedCount] = await Promise.all([
       prisma.purchase.findMany({
+        where: whereClause,
         skip: (page - 1) * PER_PAGE,
         take: PER_PAGE,
         orderBy: { createdAt: "desc" },
@@ -56,7 +59,7 @@ export default async function AdminPurchasesPage({ searchParams }: { searchParam
           }
         }
       }),
-      prisma.purchase.count()
+      prisma.purchase.count({ where: whereClause })
     ]);
     purchases = fetchedPurchases;
     totalCount = fetchedCount;
@@ -74,7 +77,7 @@ export default async function AdminPurchasesPage({ searchParams }: { searchParam
           <h1 className="text-2xl font-semibold tracking-tight text-slate-900">Purchases</h1>
           <p className="text-sm text-slate-500 mt-1">Manage wholesale inventory purchases from suppliers.</p>
         </div>
-        {canCreate && (
+        {canCreate && tab === "active" && (
           <Link
             href="/admin/purchases/new"
             className="h-10 px-4 bg-slate-900 text-white text-sm font-medium rounded-md flex items-center justify-center gap-2 hover:bg-slate-800 transition-colors shadow-sm"
@@ -85,13 +88,39 @@ export default async function AdminPurchasesPage({ searchParams }: { searchParam
         )}
       </div>
 
-      {/* Toolbar */}
-      <div className="flex items-center gap-3">
-        <button className="h-9 px-3 bg-white border border-slate-200 text-slate-600 rounded-md text-sm font-medium flex items-center gap-2 hover:bg-slate-50 transition-colors shadow-sm">
-          <Filter className="w-4 h-4" />
-          Filter
-        </button>
+      {/* Tabs */}
+      <div className="flex border-b border-slate-200 gap-6 my-2">
+        <Link
+          href={`/admin/purchases?tab=active`}
+          className={`pb-3 text-sm font-bold uppercase tracking-wide border-b-2 transition-all ${
+            tab === "active"
+              ? "border-slate-900 text-slate-900"
+              : "border-transparent text-slate-400 hover:text-slate-600"
+          }`}
+        >
+          Active Purchases
+        </Link>
+        <Link
+          href={`/admin/purchases?tab=trash`}
+          className={`pb-3 text-sm font-bold uppercase tracking-wide border-b-2 transition-all ${
+            tab === "trash"
+              ? "border-slate-900 text-slate-900"
+              : "border-transparent text-slate-400 hover:text-slate-600"
+          }`}
+        >
+          Trash Bin
+        </Link>
       </div>
+
+      {/* Toolbar */}
+      {tab === "active" && (
+        <div className="flex items-center gap-3">
+          <button className="h-9 px-3 bg-white border border-slate-200 text-slate-600 rounded-md text-sm font-medium flex items-center gap-2 hover:bg-slate-50 transition-colors shadow-sm">
+            <Filter className="w-4 h-4" />
+            Filter
+          </button>
+        </div>
+      )}
 
       {/* Data Table */}
       <div className="bg-white border border-slate-200 rounded-lg overflow-hidden shadow-sm">
@@ -103,9 +132,7 @@ export default async function AdminPurchasesPage({ searchParams }: { searchParam
                 <th className="px-6 py-3 font-semibold text-xs text-slate-500 uppercase tracking-wider">Invoice / Ref</th>
                 <th className="px-6 py-3 font-semibold text-xs text-slate-500 uppercase tracking-wider">Items Logged</th>
                 <th className="px-6 py-3 font-semibold text-xs text-slate-500 uppercase tracking-wider">Total Amount</th>
-                {(canEdit || canDelete) && (
-                  <th className="px-6 py-3 font-semibold text-xs text-slate-500 uppercase tracking-wider text-right">Actions</th>
-                )}
+                <th className="px-6 py-3 font-semibold text-xs text-slate-500 uppercase tracking-wider text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200">
@@ -119,8 +146,8 @@ export default async function AdminPurchasesPage({ searchParams }: { searchParam
               ))}
               {purchases.length === 0 && (
                 <tr>
-                  <td colSpan={canEdit || canDelete ? 5 : 4} className="px-6 py-12 text-center text-slate-500 font-medium text-sm">
-                    No supplier purchases have been logged yet.
+                  <td colSpan={5} className="px-6 py-12 text-center text-slate-500 font-medium text-sm">
+                    No {tab === "trash" ? "deleted" : ""} supplier purchases have been logged yet.
                   </td>
                 </tr>
               )}

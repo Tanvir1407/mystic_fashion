@@ -15,7 +15,10 @@ model Discount {
   active       Boolean      @default(true)
   createdAt    DateTime     @default(now())
   updatedAt    DateTime     @updatedAt
+  deletedAt    DateTime?
   products     Product[]
+
+  @@index([deletedAt])
 }
 
 model Admin {
@@ -74,7 +77,10 @@ model Brand {
   active    Boolean   @default(true)
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
   products  Product[]
+
+  @@index([deletedAt])
 }
 
 model Category {
@@ -83,8 +89,11 @@ model Category {
   active        Boolean       @default(true)
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
+  deletedAt     DateTime?
   products      Product[]
   subcategories Subcategory[]
+
+  @@index([deletedAt])
 }
 
 model Subcategory {
@@ -94,10 +103,13 @@ model Subcategory {
   active     Boolean   @default(true)
   createdAt  DateTime  @default(now())
   updatedAt  DateTime  @updatedAt
-  category   Category  @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  deletedAt  DateTime?
+  category   Category  @relation(fields: [categoryId], references: [id], onDelete: Restrict)
   products   Product[]
 
   @@unique([name, categoryId])
+  @@index([categoryId])
+  @@index([deletedAt])
 }
 
 model Product {
@@ -117,6 +129,7 @@ model Product {
   discountId    String?
   createdAt     DateTime         @default(now())
   updatedAt     DateTime         @updatedAt
+  deletedAt     DateTime?
   isFeatured    Boolean          @default(false)
   isPublished   Boolean          @default(true)
   isCustomize   Boolean?         @default(false)
@@ -128,6 +141,11 @@ model Product {
   sizeChart     SizeChart?       @relation(fields: [sizeChartId], references: [id])
   variants      ProductVariant[]
   purchaseItems PurchaseItem[]
+
+  @@index([deletedAt])
+  @@index([brandId])
+  @@index([categoryId])
+  @@index([subcategoryId])
 }
 
 model ProductVariant {
@@ -145,6 +163,7 @@ model ProductVariant {
   stockAdjustments StockAdjustment[]
 
   @@unique([productId, size, color])
+  @@index([productId])
 }
 
 model Order {
@@ -158,6 +177,7 @@ model Order {
   orderSource         OrderSource   @default(Salesman)
   createdAt           DateTime      @default(now())
   updatedAt           DateTime      @updatedAt
+  deletedAt           DateTime?
   advancePaid         Float         @default(0)
   couponCode          String?
   discountAmount      Float         @default(0)
@@ -182,6 +202,12 @@ model Order {
   salesReturns        SalesReturn[]
   exchangeRefOrder   Order?  @relation("ExchangeOrders", fields: [exchangeRefOrderId], references: [id], onDelete: SetNull)
   exchangeOrders     Order[] @relation("ExchangeOrders")
+
+  @@index([status])
+  @@index([createdAt])
+  @@index([deletedAt])
+  @@index([customerId])
+  @@index([phone])
 }
 
 model Coupon {
@@ -194,7 +220,10 @@ model Coupon {
   isActive  Boolean    @default(true)
   createdAt DateTime   @default(now())
   updatedAt DateTime   @updatedAt
+  deletedAt DateTime?
   orders    Order[]
+
+  @@index([deletedAt])
 }
 
 model OrderItem {
@@ -209,8 +238,11 @@ model OrderItem {
   printNumber   String?
   requiresPrint Boolean       @default(false)
   order         Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  product       Product       @relation(fields: [productId], references: [id])
+  product       Product       @relation(fields: [productId], references: [id], onDelete: Restrict)
   salesReturns  SalesReturn[]
+
+  @@index([orderId])
+  @@index([productId])
 }
 
 model DeliverySetting {
@@ -241,6 +273,9 @@ model HeroSlide {
   active    Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  deletedAt DateTime?
+
+  @@index([deletedAt])
 }
 
 model Purchase {
@@ -252,9 +287,13 @@ model Purchase {
   status         String         @default("PENDING")
   createdAt      DateTime       @default(now())
   updatedAt      DateTime       @updatedAt
+  deletedAt      DateTime?
   discountAmount Float          @default(0)
   items          PurchaseItem[]
   supplier       Supplier?      @relation(fields: [supplierId], references: [id], onDelete: SetNull)
+
+  @@index([deletedAt])
+  @@index([supplierId])
 }
 
 model Supplier {
@@ -265,7 +304,10 @@ model Supplier {
   active     Boolean    @default(true)
   createdAt  DateTime   @default(now())
   updatedAt  DateTime   @updatedAt
+  deletedAt  DateTime?
   purchases  Purchase[]
+
+  @@index([deletedAt])
 }
 
 model PurchaseItem {
@@ -275,9 +317,12 @@ model PurchaseItem {
   variantId  String
   quantity   Int
   unitPrice  Float
-  product    Product        @relation(fields: [productId], references: [id])
+  product    Product        @relation(fields: [productId], references: [id], onDelete: Restrict)
   purchase   Purchase       @relation(fields: [purchaseId], references: [id], onDelete: Cascade)
   variant    ProductVariant @relation(fields: [variantId], references: [id])
+
+  @@index([purchaseId])
+  @@index([productId])
 }
 
 model FooterConfig {
@@ -311,6 +356,8 @@ model ChartOfAccount {
   updatedAt    DateTime      @updatedAt
   transactions Transaction[]
   journalLines JournalLine[]
+
+  @@index([name])
 }
 
 model Transaction {
@@ -324,7 +371,10 @@ model Transaction {
   referenceType String?
   createdAt     DateTime        @default(now())
   updatedAt     DateTime        @updatedAt
-  account       ChartOfAccount  @relation(fields: [accountId], references: [id])
+  account       ChartOfAccount  @relation(fields: [accountId], references: [id], onDelete: Restrict)
+
+  @@index([accountId])
+  @@index([referenceId])
 }
 
 model JournalEntry {
@@ -347,7 +397,10 @@ model JournalLine {
   createdAt      DateTime        @default(now())
   updatedAt      DateTime        @updatedAt
   journalEntry   JournalEntry    @relation(fields: [journalEntryId], references: [id], onDelete: Cascade)
-  account        ChartOfAccount  @relation(fields: [accountId], references: [id])
+  account        ChartOfAccount  @relation(fields: [accountId], references: [id], onDelete: Restrict)
+
+  @@index([accountId])
+  @@index([journalEntryId])
 }
 
 model ApiToken {
@@ -389,6 +442,9 @@ model SalesReturn {
   order        Order          @relation(fields: [orderId], references: [id])
   orderItem    OrderItem      @relation(fields: [orderItemId], references: [id])
   variant      ProductVariant @relation(fields: [variantId], references: [id])
+
+  @@index([orderId])
+  @@index([orderItemId])
 }
 
 model LabelSetting {
