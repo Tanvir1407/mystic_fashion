@@ -308,7 +308,7 @@ export default function CheckoutClient({
 
 
         <div className="mb-10 flex justify-between">
-          <h1 className="text-3xl md:text-4xl font-black uppercase tracking-tight mt-6">Checkout</h1>
+          <h1 className="text-xl md:text-4xl font-black uppercase tracking-tight mt-6">Checkout</h1>
           <Link href="/" className="inline-flex items-center gap-2 text-sm font-bold text-zinc-500 hover:text-primary transition-colors">
             <ArrowLeft className="w-4 h-4" />
             Back to Home
