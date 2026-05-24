@@ -68,7 +68,7 @@ export default async function AdminProductsPage({ searchParams }: { searchParams
         skip: (page - 1) * PER_PAGE,
         take: PER_PAGE,
         orderBy: { createdAt: "desc" },
-        include: { variants: true }
+        include: { variants: true, brand: true }
       }),
       prisma.product.count({ where: whereClause }),
       prisma.category.findMany({
@@ -162,7 +162,7 @@ export default async function AdminProductsPage({ searchParams }: { searchParams
                 <th className="px-2 py-3 font-semibold text-xs text-slate-500 uppercase tracking-wider">Product</th>
                 <th className="px-2 py-3 font-semibold text-xs text-slate-500 uppercase tracking-wider">Price (BDT)</th>
                 <th className="px-2 py-3 font-semibold text-xs text-slate-500 uppercase tracking-wider">Stock</th>
-                <th className="px-2 py-3 font-semibold text-xs text-slate-500 uppercase tracking-wider">Team</th>
+                <th className="px-2 py-3 font-semibold text-xs text-slate-500 uppercase tracking-wider">Brand</th>
                 <th className="px-2 py-3 font-semibold text-xs text-slate-500 uppercase tracking-wider">Date Added</th>
                 <th className="px-2 py-3 font-semibold text-xs text-slate-500 uppercase tracking-wider text-right">Actions</th>
               </tr>
@@ -219,9 +219,13 @@ export default async function AdminProductsPage({ searchParams }: { searchParams
                       </span>
                     </td>
                     <td className="px-2 py-4 text-sm text-slate-600">
-                      <span className="bg-slate-100 text-slate-700 px-2.5 py-1 rounded-full text-xs font-medium">
-                        {product.team}
-                      </span>
+                      {product.brand ? (
+                        <span className="bg-slate-100 text-slate-700 px-2.5 py-1 rounded-full text-xs font-medium">
+                          {product.brand.name}
+                        </span>
+                      ) : (
+                        <span className="text-slate-400 text-xs">—</span>
+                      )}
                     </td>
                     <td className="px-2 py-4 text-sm text-slate-600 whitespace-nowrap">
                       {new Date(product.createdAt).toLocaleDateString('en-GB', {

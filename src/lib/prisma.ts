@@ -37,7 +37,7 @@ const prismaClientSingleton = () => {
           if (softDeletableModels.includes(modelKey)) {
             const client = getClient(rest);
 
-            // Category soft-delete: cascade to subcategories AND their products
+            // Category soft-delete: cascade to subcategories, but products stay visible with categoryId = null
             if (modelKey === "category" && args.where?.id) {
               const subs = await client.subcategory.findMany({
                 where: { categoryId: args.where.id, deletedAt: null },
@@ -50,9 +50,17 @@ const prismaClientSingleton = () => {
                 data: { deletedAt: new Date() },
               });
 
-              const productWhere: any = { deletedAt: null, OR: [{ categoryId: args.where.id }] };
-              if (subIds.length > 0) productWhere.OR.push({ subcategoryId: { in: subIds } });
-              await client.product.updateMany({ where: productWhere, data: { deletedAt: new Date() } });
+              // Products are NOT soft-deleted — they remain visible but lose their category reference
+              await client.product.updateMany({
+                where: { categoryId: args.where.id, deletedAt: null },
+                data: { categoryId: null },
+              });
+              if (subIds.length > 0) {
+                await client.product.updateMany({
+                  where: { subcategoryId: { in: subIds }, deletedAt: null },
+                  data: { categoryId: null },
+                });
+              }
             }
 
             return client[modelKey].update({

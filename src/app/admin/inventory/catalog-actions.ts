@@ -258,7 +258,7 @@ async function _restoreCategory(id: string) {
         data: { deletedAt: null },
       });
 
-      // Find soft-deleted subcategories to get their IDs for product restore
+      // Find soft-deleted subcategories before restoring (need IDs for product re-link)
       const subs = await (tx as any).subcategory.findMany({
         where: { categoryId: id, deletedAt: { not: null } },
         select: { id: true },
@@ -271,10 +271,16 @@ async function _restoreCategory(id: string) {
         data: { deletedAt: null },
       });
 
-      // Cascade restore products under this category or its subcategories
-      const productWhere: any = { deletedAt: { not: null }, OR: [{ categoryId: id }] };
-      if (subIds.length > 0) productWhere.OR.push({ subcategoryId: { in: subIds } });
-      await (tx as any).product.updateMany({ where: productWhere, data: { deletedAt: null } });
+      // Products under restored subcategories had their categoryId set to null on delete.
+      // Re-link them now that their subcategory is restored.
+      if (subIds.length > 0) {
+        await (tx as any).product.updateMany({
+          where: { subcategoryId: { in: subIds }, categoryId: null, deletedAt: null },
+          data: { categoryId: id },
+        });
+      }
+      // Note: Products that were directly under this category (no subcategory) had their categoryId
+      // set to null and cannot be safely re-linked here — admin must reassign them manually.
     });
     revalidatePath("/admin/inventory/categories");
     revalidatePath("/admin/products");
