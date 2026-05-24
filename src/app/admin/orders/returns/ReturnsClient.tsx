@@ -12,14 +12,14 @@ import {
   Truck,
   Trash2,
   Boxes,
-  User,
-  Phone,
-  Check,
   Search,
-  TrendingDown
+  TrendingDown,
+  Package,
+  User,
 } from "lucide-react";
 import Link from "next/link";
-import { processSalesReturn, processFullSalesReturn, getOrderById, searchOrdersForReturn } from "../../actions";
+import UploadedImage from "@/components/UploadedImage";
+import { processSalesReturn, processFullSalesReturn, searchOrdersForReturn } from "../../actions";
 import { StatusAlertModal } from "@/components/StatusAlertModal";
 import { ReturnStatus } from "@/generated/prisma";
 import { CustomSelect } from "@/components/CustomSelect";
@@ -37,6 +37,7 @@ interface OrderItem {
     name: string;
     price: number;
     purchasePrice: number | null;
+    images: string[];
   };
 }
 
@@ -62,22 +63,14 @@ interface SalesReturn {
   returnCost: number;
   returnCostPaid: boolean;
   createdAt: Date;
-  order: {
-    customerName: string;
-  };
-  orderItem: {
-    product: {
-      name: string;
-    };
-  };
-  variant: {
-    size: string;
-  };
+  order: { customerName: string };
+  orderItem: { product: { name: string } };
+  variant: { size: string };
 }
 
 export default function ReturnsClient({
   orders,
-  initialReturns
+  initialReturns,
 }: {
   orders: Order[];
   initialReturns: SalesReturn[];
@@ -88,21 +81,14 @@ export default function ReturnsClient({
   const [fetchedOrders, setFetchedOrders] = useState<Order[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [activeTab, setActiveTab] = useState<"create" | "logs">("create");
-
-  // Return Mode State
   const [returnMode, setReturnMode] = useState<"FULL" | "PARTIAL">("FULL");
-
-  // Return logs search query
   const [logSearchQuery, setLogSearchQuery] = useState("");
 
-  // Merge default orders with fetched orders
   const allOrders = useMemo(() => {
     const merged = [...orders, ...fetchedOrders];
-    // Filter unique by ID
     return Array.from(new Map(merged.map((o) => [o.id, o])).values());
   }, [orders, fetchedOrders]);
 
-  // Form State
   const [selectedOrderId, setSelectedOrderId] = useState("");
   const [selectedOrderItemId, setSelectedOrderItemId] = useState("");
   const [returnAction, setReturnAction] = useState<ReturnStatus>("RESTOCKED");
@@ -117,7 +103,7 @@ export default function ReturnsClient({
 
   useEffect(() => {
     setSelectedOrderId(queryOrderId || "");
-    if (queryOrderId && !allOrders.some(o => o.id === queryOrderId)) {
+    if (queryOrderId && !allOrders.some((o) => o.id === queryOrderId)) {
       handleSearch(queryOrderId);
     }
   }, [queryOrderId, allOrders]);
@@ -135,22 +121,20 @@ export default function ReturnsClient({
     }
   }, [selectedOrderId, orders]);
 
-  // Modal State
   const [isErrorModalOpen, setIsErrorModalOpen] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
 
-  const orderOptions = useMemo(() => {
-    return allOrders.map((o) => ({
-      value: o.id,
-      label: `${o.id} - ${o.customerName} (${o.phone})`
-    }));
-  }, [allOrders]);
+  const orderOptions = useMemo(
+    () => allOrders.map((o) => ({ value: o.id, label: `${o.id} - ${o.customerName} (${o.phone})` })),
+    [allOrders]
+  );
 
-  const selectedOrder = useMemo(() => {
-    return allOrders.find((o) => o.id === selectedOrderId);
-  }, [allOrders, selectedOrderId]);
+  const selectedOrder = useMemo(
+    () => allOrders.find((o) => o.id === selectedOrderId),
+    [allOrders, selectedOrderId]
+  );
 
   const handleSearch = useCallback(async (val: string) => {
     const trimmed = val.trim();
@@ -159,7 +143,7 @@ export default function ReturnsClient({
       try {
         const res = await searchOrdersForReturn(trimmed);
         if (res.success && res.data) {
-          setFetchedOrders(prev => {
+          setFetchedOrders((prev) => {
             const merged = [...prev, ...(res.data as any[])];
             return Array.from(new Map(merged.map((o) => [o.id, o])).values());
           });
@@ -179,20 +163,18 @@ export default function ReturnsClient({
 
   const selectedItemRemainingQty = useMemo(() => {
     if (!selectedItem || !selectedOrder) return 0;
-    const itemReturns = selectedOrder.salesReturns || [];
-    const alreadyReturned = itemReturns
+    const alreadyReturned = (selectedOrder.salesReturns || [])
       .filter((r) => r.orderItemId === selectedItem.id)
       .reduce((sum, r) => sum + r.quantity, 0);
     return Math.max(0, selectedItem.quantity - alreadyReturned);
   }, [selectedItem, selectedOrder]);
- 
+
   const handleItemChange = (itemId: string) => {
     setSelectedOrderItemId(itemId);
     const item = selectedOrder?.items.find((i) => i.id === itemId);
     if (item) {
       setReturnAction(item.requiresPrint ? "WASTAGE" : "RESTOCKED");
-      const itemReturns = selectedOrder?.salesReturns || [];
-      const alreadyReturned = itemReturns
+      const alreadyReturned = (selectedOrder?.salesReturns || [])
         .filter((r) => r.orderItemId === itemId)
         .reduce((sum, r) => sum + r.quantity, 0);
       const rem = Math.max(0, item.quantity - alreadyReturned);
@@ -202,34 +184,25 @@ export default function ReturnsClient({
     }
   };
 
-  // Summaries
   const summaries = useMemo(() => {
-    let deliveryLoss = 0;
-    let wastageLoss = 0;
-    let restockedCount = 0;
-    let returnCost = 0;
-
+    let deliveryLoss = 0, wastageLoss = 0, restockedCount = 0, returnCostTotal = 0;
     returns.forEach((r) => {
       deliveryLoss += r.deliveryLoss;
-      returnCost += r.returnCost;
-      if (r.status === "WASTAGE") {
-        wastageLoss += r.productLoss + r.printingLoss;
-      } else if (r.status === "RESTOCKED") {
-        restockedCount += r.quantity;
-      }
+      returnCostTotal += r.returnCost;
+      if (r.status === "WASTAGE") wastageLoss += r.productLoss + r.printingLoss;
+      else if (r.status === "RESTOCKED") restockedCount += r.quantity;
     });
-
-    return { deliveryLoss, wastageLoss, restockedCount, returnCost };
+    return { deliveryLoss, wastageLoss, restockedCount, returnCost: returnCostTotal };
   }, [returns]);
 
-  // Filtered Returns for Logs search
   const filteredReturns = useMemo(() => {
     if (!logSearchQuery.trim()) return returns;
     const query = logSearchQuery.toLowerCase().trim();
-    return returns.filter(r =>
-      r.orderId.toLowerCase().includes(query) ||
-      r.order.customerName.toLowerCase().includes(query) ||
-      r.orderItem.product.name.toLowerCase().includes(query)
+    return returns.filter(
+      (r) =>
+        r.orderId.toLowerCase().includes(query) ||
+        r.order.customerName.toLowerCase().includes(query) ||
+        r.orderItem.product.name.toLowerCase().includes(query)
     );
   }, [returns, logSearchQuery]);
 
@@ -240,7 +213,6 @@ export default function ReturnsClient({
 
     startTransition(async () => {
       if (returnMode === "FULL") {
-        // Full return — process all items at once
         const res = await processFullSalesReturn({
           orderId: selectedOrderId,
           deliveryLossAmount: Number(deliveryLossAmount ?? 0),
@@ -248,25 +220,16 @@ export default function ReturnsClient({
           returnCost: Number(returnCost ?? 0),
           returnCostPaid,
         });
-
         if (res.success) {
           router.refresh();
-          setReturnReason("");
-          setDeliveryLossAmount(0);
-          setReturnCost(0);
-          setReturnCostPaid(false);
-          setSelectedOrderId("");
-          setSelectedOrderItemId("");
-          setReturnQty("");
+          setReturnReason(""); setDeliveryLossAmount(0); setReturnCost(0);
+          setReturnCostPaid(false); setSelectedOrderId(""); setSelectedOrderItemId(""); setReturnQty("");
           setSuccessMessage("Full return processed successfully! All items returned.");
-          setIsSuccessModalOpen(true);
-          setActiveTab("logs");
+          setIsSuccessModalOpen(true); setActiveTab("logs");
         } else {
-          setErrorMessage(res.error || "An error occurred.");
-          setIsErrorModalOpen(true);
+          setErrorMessage(res.error || "An error occurred."); setIsErrorModalOpen(true);
         }
       } else {
-        // Partial return — existing single-item flow
         const res = await processSalesReturn({
           orderId: selectedOrderId,
           orderItemId: selectedOrderItemId,
@@ -277,7 +240,6 @@ export default function ReturnsClient({
           returnCostPaid,
           quantity: returnQty !== "" ? Number(returnQty) : undefined,
         });
-
         if (res.success) {
           const returnedData = res.data;
           const newReturn: SalesReturn = {
@@ -288,223 +250,243 @@ export default function ReturnsClient({
             variant: { size: selectedItem?.size || "M" },
           };
           setReturns([newReturn, ...returns]);
-          setReturnReason("");
-          setDeliveryLossAmount(0);
-          setReturnCost(0);
-          setReturnCostPaid(false);
-          setSelectedOrderId("");
-          setSelectedOrderItemId("");
-          setReturnQty("");
+          setReturnReason(""); setDeliveryLossAmount(0); setReturnCost(0);
+          setReturnCostPaid(false); setSelectedOrderId(""); setSelectedOrderItemId(""); setReturnQty("");
           setSuccessMessage("Partial return processed successfully!");
-          setIsSuccessModalOpen(true);
-          setActiveTab("logs");
+          setIsSuccessModalOpen(true); setActiveTab("logs");
         } else {
-          setErrorMessage(res.error || "An error occurred.");
-          setIsErrorModalOpen(true);
+          setErrorMessage(res.error || "An error occurred."); setIsErrorModalOpen(true);
         }
       }
     });
   };
 
   return (
-    <div className="flex flex-col max-w-8xl">
-      <StatusAlertModal
-        isOpen={isErrorModalOpen}
-        onClose={() => setIsErrorModalOpen(false)}
-        title="Operation Failed"
-        message={errorMessage}
-      />
+    <div className="flex flex-col">
+      <StatusAlertModal isOpen={isErrorModalOpen} onClose={() => setIsErrorModalOpen(false)} title="Operation Failed" message={errorMessage} />
+      <StatusAlertModal isOpen={isSuccessModalOpen} onClose={() => setIsSuccessModalOpen(false)} title="Success" message={successMessage} />
 
-      <StatusAlertModal
-        isOpen={isSuccessModalOpen}
-        onClose={() => setIsSuccessModalOpen(false)}
-        title="Success"
-        message={successMessage}
-      />
-
-      {/* Header */}
+      {/* Page Header */}
       <div className="flex items-center gap-4 mb-6">
-        <Link href="/admin" className="p-2 bg-slate-100 hover:bg-slate-200 rounded-md transition-colors text-slate-500">
-          <ArrowLeft className="w-5 h-5" />
+        <Link href="/admin" className="p-2 bg-white border border-slate-200 hover:bg-slate-50 rounded-lg transition-colors text-slate-500 shadow-sm">
+          <ArrowLeft className="w-4 h-4" />
         </Link>
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-slate-900">Sales Returns & Wastage</h1>
-          <p className="text-sm text-slate-500 mt-1">Manage Cash on Delivery (COD) cancellations, calculate financial wastage, and restock non-printed items.</p>
+          <h1 className="text-xl font-bold text-slate-900 tracking-tight">Sales Returns & Wastage</h1>
+          <p className="text-xs text-slate-500 mt-0.5">Process COD cancellations, calculate wastage, and restock non-printed items.</p>
         </div>
       </div>
 
-      {/* Tabs Bar */}
-      <div className="flex border-b border-slate-200 mb-6 gap-6">
+      {/* Tabs */}
+      <div className="flex border-b border-slate-200 mb-6 gap-1">
         <button
           onClick={() => setActiveTab("create")}
-          className={`pb-3 text-sm font-bold uppercase tracking-wider border-b-2 transition-all flex items-center gap-2 ${activeTab === "create"
-              ? "border-indigo-600 text-indigo-600 font-extrabold"
+          className={`px-4 pb-3 text-sm font-semibold border-b-2 transition-all flex items-center gap-2 ${
+            activeTab === "create"
+              ? "border-slate-900 text-slate-900"
               : "border-transparent text-slate-400 hover:text-slate-600"
-            }`}
+          }`}
         >
           <PlusCircle className="w-4 h-4" />
           Create Return
         </button>
         <button
           onClick={() => setActiveTab("logs")}
-          className={`pb-3 text-sm font-bold uppercase tracking-wider border-b-2 transition-all flex items-center gap-2 ${activeTab === "logs"
-              ? "border-indigo-600 text-indigo-600 font-extrabold"
+          className={`px-4 pb-3 text-sm font-semibold border-b-2 transition-all flex items-center gap-2 ${
+            activeTab === "logs"
+              ? "border-slate-900 text-slate-900"
               : "border-transparent text-slate-400 hover:text-slate-600"
-            }`}
+          }`}
         >
           <History className="w-4 h-4" />
           Return Logs
-          <span className="bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded-full text-xs font-bold font-mono">
+          <span className="bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full text-xs font-bold">
             {returns.length}
           </span>
         </button>
       </div>
 
-      {/* Conditional Rendering of Tabs */}
       {activeTab === "create" ? (
-        <div className="bg-white border border-slate-200  p-8 shadow-sm max-w-8xl mx-auto w-full">
-          <h2 className="text-base font-bold text-slate-900 mb-6 flex items-center gap-2 border-b border-slate-100 pb-4">
-            <PlusCircle className="w-5 h-5 text-indigo-500" />
-            Process Return Entry
-          </h2>
-          <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Return Mode Selector */}
-            <div className="grid grid-cols-2 gap-2 mb-6">
-              <button
-                type="button"
-                onClick={() => { setReturnMode("FULL"); setSelectedOrderItemId(""); setReturnQty(""); }}
-                className={`py-2.5 px-3 text-xs font-black uppercase tracking-wider rounded-md border transition-all ${
-                  returnMode === "FULL"
-                    ? "bg-slate-900 text-white border-slate-900 shadow-sm font-bold"
-                    : "bg-white text-slate-500 border-slate-200 hover:border-slate-300 hover:bg-slate-50"
-                }`}
-              >
-                Full Return
-              </button>
-              <button
-                type="button"
-                onClick={() => { setReturnMode("PARTIAL"); setReturnQty(""); }}
-                className={`py-2.5 px-3 text-xs font-black uppercase tracking-wider rounded-md border transition-all ${
-                  returnMode === "PARTIAL"
-                    ? "bg-slate-900 text-white border-slate-900 shadow-sm font-bold"
-                    : "bg-white text-slate-500 border-slate-200 hover:border-slate-300 hover:bg-slate-50"
-                }`}
-              >
-                Partial Return
-              </button>
-            </div>
+        <form onSubmit={handleSubmit}>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+            {/* ── Left Main Column ── */}
+            <div className="lg:col-span-2 space-y-4">
 
-            {/* Mode description */}
-            <div className="mb-4 p-3 bg-slate-50 border border-slate-200 rounded-md text-xs text-slate-700 font-medium">
-              {returnMode === "FULL" 
-                ? "All items in the order will be returned. Printed items → Wastage. Non-printed items → Restocked."
-                : "Select a specific item and return quantity. Order status stays as-is unless all items are returned."
-              }
-            </div>
-
-            {/* Order Select — same as before */}
-            <CustomSelect
-              label="Select Order *"
-              placeholder="Search by Order ID..."
-              options={orderOptions}
-              value={selectedOrderId}
-              onChange={(val) => { setSelectedOrderId(val); setSelectedOrderItemId(""); setReturnQty(""); }}
-              searchable={true}
-              onSearchValueChange={handleSearch}
-              isLoading={isSearching}
-              className="text-sm"
-            />
-
-            {/* Full Return: show order summary */}
-            {returnMode === "FULL" && selectedOrder && (
-              <div className="mt-3 p-3 bg-slate-50 border border-slate-200 rounded-md space-y-1.5 animate-in fade-in slide-in-from-top-1 duration-200">
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-2">
-                  Items to be returned
-                </p>
-                {selectedOrder.items.map((item: any) => {
-                  const itemReturns = selectedOrder.salesReturns || [];
-                  const alreadyReturned = itemReturns
-                    .filter((r: any) => r.orderItemId === item.id)
-                    .reduce((sum: number, r: any) => sum + r.quantity, 0);
-                  const rem = Math.max(0, item.quantity - alreadyReturned);
-
-                  if (rem <= 0) return null; // skip fully returned items
-
-                  return (
-                    <div key={item.id} className="flex justify-between items-center text-xs">
-                      <span className="text-slate-700 font-medium">
-                        {item.product.name} 
-                        <span className="text-slate-400 ml-1">({item.size})</span>
-                      </span>
-                      <div className="flex items-center gap-2">
-                        <span className="font-mono text-slate-600">x{rem}</span>
-                        <span className={`text-[9px] font-black px-1.5 py-0.5 rounded uppercase ${
-                          item.requiresPrint 
-                            ? "bg-red-50 text-red-600 border border-red-100" 
-                            : "bg-emerald-50 text-emerald-600 border border-emerald-100"
-                        }`}>
-                          {item.requiresPrint ? "Wastage" : "Restock"}
-                        </span>
-                      </div>
-                    </div>
-                  );
-                })}
+              {/* Return Mode Card */}
+              <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
+                <div className="px-5 py-3.5 border-b border-slate-100">
+                  <h2 className="text-sm font-semibold text-slate-900">Return Type</h2>
+                </div>
+                <div className="p-5">
+                  <div className="grid grid-cols-2 gap-3">
+                    <button
+                      type="button"
+                      onClick={() => { setReturnMode("FULL"); setSelectedOrderItemId(""); setReturnQty(""); }}
+                      className={`py-3 px-4 text-sm font-semibold rounded-lg border-2 transition-all text-left ${
+                        returnMode === "FULL"
+                          ? "bg-slate-900 text-white border-slate-900"
+                          : "bg-white text-slate-500 border-slate-200 hover:border-slate-300 hover:bg-slate-50"
+                      }`}
+                    >
+                      <div className="font-bold">Full Return</div>
+                      <div className={`text-[11px] mt-0.5 ${returnMode === "FULL" ? "text-slate-300" : "text-slate-400"}`}>All items in the order</div>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { setReturnMode("PARTIAL"); setReturnQty(""); }}
+                      className={`py-3 px-4 text-sm font-semibold rounded-lg border-2 transition-all text-left ${
+                        returnMode === "PARTIAL"
+                          ? "bg-slate-900 text-white border-slate-900"
+                          : "bg-white text-slate-500 border-slate-200 hover:border-slate-300 hover:bg-slate-50"
+                      }`}
+                    >
+                      <div className="font-bold">Partial Return</div>
+                      <div className={`text-[11px] mt-0.5 ${returnMode === "PARTIAL" ? "text-slate-300" : "text-slate-400"}`}>Select specific item</div>
+                    </button>
+                  </div>
+                </div>
               </div>
-            )}
 
-            {/* Partial Return: item selector */}
-            {returnMode === "PARTIAL" && selectedOrderId && (
-              <div className="space-y-6 animate-in fade-in slide-in-from-top-1 duration-200">
-                <div className="mt-3">
+              {/* Order Search Card */}
+              <div className="bg-white border border-slate-200 rounded-xl shadow-sm">
+                <div className="px-5 py-3.5 border-b border-slate-100 rounded-t-xl">
+                  <h2 className="text-sm font-semibold text-slate-900">Select Order</h2>
+                </div>
+                <div className="p-5">
                   <CustomSelect
-                    label="Select Item to Return *"
-                    placeholder="Choose item..."
-                    options={selectedOrder.items.map((item) => {
-                      const itemReturns = selectedOrder.salesReturns || [];
-                      const alreadyReturned = itemReturns
-                        .filter((r) => r.orderItemId === item.id)
-                        .reduce((sum, r) => sum + r.quantity, 0);
-                      const rem = Math.max(0, item.quantity - alreadyReturned);
-                      return {
-                        value: item.id,
-                        label: `${item.product.name} (Size: ${item.size}, Qty: ${rem} remaining)`
-                      };
-                    })}
-                    value={selectedOrderItemId}
-                    onChange={handleItemChange}
+                    label=""
+                    placeholder="Search by Order ID, customer name or phone..."
+                    options={orderOptions}
+                    value={selectedOrderId}
+                    onChange={(val) => { setSelectedOrderId(val); setSelectedOrderItemId(""); setReturnQty(""); }}
+                    searchable={true}
+                    onSearchValueChange={handleSearch}
+                    isLoading={isSearching}
                     className="text-sm"
                   />
                 </div>
+              </div>
 
-                {selectedItem && (
-                  <div className="space-y-6 animate-in fade-in duration-200">
-                    {/* Return Quantity Selector if remainingQty > 1 */}
+              {/* Products Card */}
+              {selectedOrder && (
+                <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
+                  <div className="px-5 py-3.5 border-b border-slate-100 flex items-center justify-between">
+                    <h2 className="text-sm font-semibold text-slate-900">
+                      Products
+                      <span className="text-slate-400 font-normal ml-1.5 text-xs">({selectedOrder.items.length} item{selectedOrder.items.length !== 1 ? "s" : ""})</span>
+                    </h2>
+                    <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wider ${
+                      returnMode === "FULL"
+                        ? "bg-red-50 text-red-600 border border-red-100"
+                        : "bg-blue-50 text-blue-600 border border-blue-100"
+                    }`}>
+                      {returnMode === "FULL" ? "Full Return" : "Partial — Select Item"}
+                    </span>
+                  </div>
+
+                  <div className="divide-y divide-slate-100">
+                    {selectedOrder.items.map((item) => {
+                      const alreadyReturned = (selectedOrder.salesReturns || [])
+                        .filter((r) => r.orderItemId === item.id)
+                        .reduce((sum, r) => sum + r.quantity, 0);
+                      const rem = Math.max(0, item.quantity - alreadyReturned);
+                      const isSelected = selectedOrderItemId === item.id;
+                      const fullyReturned = rem <= 0;
+
+                      return (
+                        <div
+                          key={item.id}
+                          onClick={() => returnMode === "PARTIAL" && !fullyReturned ? handleItemChange(item.id) : undefined}
+                          className={`flex items-center gap-4 px-5 py-4 transition-colors ${
+                            returnMode === "PARTIAL" && !fullyReturned
+                              ? "cursor-pointer hover:bg-slate-50"
+                              : ""
+                          } ${isSelected && returnMode === "PARTIAL" ? "bg-slate-50" : ""} ${fullyReturned ? "opacity-40" : ""}`}
+                        >
+                          {/* Product Image */}
+                          <div className="w-14 h-16 relative bg-slate-100 rounded-lg overflow-hidden border border-slate-150 shrink-0">
+                            {item.product.images?.[0] ? (
+                              <UploadedImage
+                                src={item.product.images[0]}
+                                alt={item.product.name}
+                                fill
+                                className="object-cover"
+                              />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center">
+                                <Package className="w-5 h-5 text-slate-300" />
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Product Info */}
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-semibold text-slate-900 truncate">{item.product.name}</p>
+                            <div className="flex items-center gap-2 mt-1 flex-wrap">
+                              <span className="text-[10px] font-black bg-slate-900 text-white px-1.5 py-0.5 rounded tracking-widest">{item.size}</span>
+                              <span className="text-xs text-slate-500">Qty: <span className="font-semibold text-slate-700">{rem}</span></span>
+                              <span className="text-xs font-mono text-slate-600">{formatBDT(item.price)}</span>
+                            </div>
+                            {fullyReturned && (
+                              <p className="text-[10px] text-slate-400 mt-1 font-medium">Already fully returned</p>
+                            )}
+                          </div>
+
+                          {/* Status Badge */}
+                          <div className="flex items-center gap-3 shrink-0">
+                            <span className={`text-[9px] font-black px-2 py-1 rounded uppercase tracking-wider border ${
+                              item.requiresPrint
+                                ? "bg-red-50 text-red-600 border-red-100"
+                                : "bg-emerald-50 text-emerald-600 border-emerald-100"
+                            }`}>
+                              {item.requiresPrint ? "Wastage" : "Restock"}
+                            </span>
+
+                            {/* Partial radio selector */}
+                            {returnMode === "PARTIAL" && !fullyReturned && (
+                              <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors ${
+                                isSelected ? "border-slate-900 bg-slate-900" : "border-slate-300 bg-white"
+                              }`}>
+                                {isSelected && <div className="w-2 h-2 rounded-full bg-white" />}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Partial — quantity & action selectors */}
+              {returnMode === "PARTIAL" && selectedItem && (
+                <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden animate-in fade-in duration-200">
+                  <div className="px-5 py-3.5 border-b border-slate-100">
+                    <h2 className="text-sm font-semibold text-slate-900">Item Return Details</h2>
+                  </div>
+                  <div className="p-5 space-y-4">
                     {selectedItemRemainingQty > 1 && (
-                      <div className="mt-3 space-y-1.5">
-                        <label className="text-xs font-semibold text-slate-900 block">
-                          Return Quantity *
-                        </label>
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-semibold text-slate-700 block">Return Quantity</label>
                         <select
                           value={returnQty}
                           onChange={(e) => setReturnQty(Number(e.target.value))}
-                          className="w-full px-4 py-2 border border-slate-300 rounded-md focus:outline-none focus:border-slate-500 focus:ring-1 focus:ring-slate-500 text-sm font-mono bg-white"
+                          className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:border-slate-400 focus:ring-1 focus:ring-slate-400 text-sm bg-white text-slate-800"
                         >
                           {Array.from({ length: selectedItemRemainingQty }, (_, i) => i + 1).map((qty) => (
-                            <option key={qty} value={qty}>
-                              {qty} of {selectedItemRemainingQty}
-                            </option>
+                            <option key={qty} value={qty}>{qty} of {selectedItemRemainingQty}</option>
                           ))}
                         </select>
                       </div>
                     )}
 
-                    <div className="mt-3">
+                    <div>
                       <CustomSelect
-                        label="Return Action *"
+                        label="Return Action"
                         placeholder="Select action..."
                         options={[
                           { value: "RESTOCKED", label: "Restock to Inventory" },
-                          { value: "WASTAGE", label: "Mark as Wastage" }
+                          { value: "WASTAGE", label: "Mark as Wastage" },
                         ]}
                         value={returnAction}
                         onChange={(val) => setReturnAction(val as ReturnStatus)}
@@ -512,260 +494,308 @@ export default function ReturnsClient({
                       />
                     </div>
 
-                    {/* Existing warning cards — keep them exactly as they are */}
-                    {returnAction === "RESTOCKED" && selectedItem.requiresPrint === true && (
-                      <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl text-amber-800 text-xs flex items-start gap-3">
-                        <AlertCircle className="w-5 h-5 shrink-0 text-amber-500 mt-0.5" />
+                    {returnAction === "RESTOCKED" && selectedItem.requiresPrint && (
+                      <div className="p-3.5 bg-amber-50 border border-amber-200 rounded-lg text-amber-800 text-xs flex items-start gap-2.5">
+                        <AlertCircle className="w-4 h-4 shrink-0 text-amber-500 mt-0.5" />
                         <div>
-                          <span className="font-bold block mb-0.5">Manual Restock Override Warning</span>
-                          This item is customized with DTF printing. Ensure the custom print is reusable/standard before restocking.
+                          <span className="font-bold block mb-0.5">Manual Restock Override</span>
+                          This item has DTF printing. Verify the print is reusable before restocking.
                         </div>
                       </div>
                     )}
 
-                    {returnAction === "WASTAGE" && selectedItem.requiresPrint === false && (
-                      <div className="p-4 bg-orange-50 border border-orange-200 rounded-xl text-orange-800 text-xs flex items-start gap-3">
-                        <AlertCircle className="w-5 h-5 shrink-0 text-orange-500 mt-0.5" />
+                    {returnAction === "WASTAGE" && !selectedItem.requiresPrint && (
+                      <div className="p-3.5 bg-orange-50 border border-orange-200 rounded-lg text-orange-800 text-xs flex items-start gap-2.5">
+                        <AlertCircle className="w-4 h-4 shrink-0 text-orange-500 mt-0.5" />
                         <div>
-                          <span className="font-bold block mb-0.5">Manual Wastage Override Warning</span>
-                          You are marking a non-customized item as wastage. Purchase price will be written off as financial loss.
+                          <span className="font-bold block mb-0.5">Manual Wastage Override</span>
+                          Non-customized item marked as wastage. Purchase price will be written off as financial loss.
                         </div>
                       </div>
                     )}
                   </div>
-                )}
-              </div>
-            )}
-
-            {/* Common fields — shown for both modes when order is selected */}
-            {selectedOrderId && (
-              <div className="mt-4 space-y-4 border-t border-slate-100 pt-4 animate-in fade-in duration-200">
-                {/* Courier/Delivery Loss */}
-                <div className="space-y-1.5">
-                  <label className="text-xs font-semibold text-slate-900">
-                    Courier Loss Amount (BDT)
-                    {returnMode === "FULL" && (
-                      <span className="text-slate-400 font-normal ml-1">— split equally across items</span>
-                    )}
-                  </label>
-                  <input
-                    type="number"
-                    value={deliveryLossAmount}
-                    onChange={(e) => setDeliveryLossAmount(e.target.value === "" ? "" : Number(e.target.value))}
-                    min="0"
-                    placeholder="e.g. 120"
-                    className="w-full px-4 py-2 border border-slate-300 rounded-md focus:outline-none focus:border-slate-500 focus:ring-1 focus:ring-slate-500 text-sm font-mono"
-                  />
                 </div>
+              )}
 
-                {/* Return Pickup Cost */}
-                <div className="space-y-1.5">
-                  <label className="text-xs font-semibold text-slate-900">Return Pickup Cost (BDT)</label>
-                  <input
-                    type="number"
-                    value={returnCost}
-                    onChange={(e) => setReturnCost(e.target.value === "" ? "" : Number(e.target.value))}
-                    min="0"
-                    placeholder="Cost to collect this return (e.g. 80)"
-                    className="w-full px-4 py-2 border border-slate-300 rounded-md focus:outline-none focus:border-slate-500 focus:ring-1 focus:ring-slate-500 text-sm font-mono"
-                  />
-                </div>
+              {/* Return Details Card */}
+              {selectedOrderId && (
+                <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden animate-in fade-in duration-200">
+                  <div className="px-5 py-3.5 border-b border-slate-100">
+                    <h2 className="text-sm font-semibold text-slate-900">Return Details</h2>
+                  </div>
+                  <div className="p-5 space-y-4">
+                    {/* Delivery Loss */}
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-semibold text-slate-700 block">
+                        Courier Loss Amount (BDT)
+                        {returnMode === "FULL" && (
+                          <span className="text-slate-400 font-normal ml-1">— split equally across items</span>
+                        )}
+                      </label>
+                      <input
+                        type="number"
+                        value={deliveryLossAmount}
+                        onChange={(e) => setDeliveryLossAmount(e.target.value === "" ? "" : Number(e.target.value))}
+                        min="0"
+                        placeholder="e.g. 120"
+                        className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:border-slate-400 focus:ring-1 focus:ring-slate-400 text-sm font-mono text-slate-800"
+                      />
+                    </div>
 
-                {/* Return Cost Paid toggle */}
-                <div className="flex items-center justify-between py-2.5 px-3 bg-slate-50 border border-slate-200 rounded-md">
-                  <span className="text-xs font-semibold text-slate-700">Return Cost Paid?</span>
-                  <div className="flex items-center gap-2">
-                    <span className={`text-xs font-bold ${returnCostPaid ? "text-emerald-600" : "text-rose-500"}`}>
-                      {returnCostPaid ? "Paid" : "Unpaid"}
-                    </span>
-                    <input
-                      type="checkbox"
-                      checked={returnCostPaid}
-                      onChange={(e) => setReturnCostPaid(e.target.checked)}
-                      className="w-4 h-4 cursor-pointer accent-emerald-600"
-                    />
+                    {/* Return Cost */}
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-semibold text-slate-700 block">Return Pickup Cost (BDT)</label>
+                      <input
+                        type="number"
+                        value={returnCost}
+                        onChange={(e) => setReturnCost(e.target.value === "" ? "" : Number(e.target.value))}
+                        min="0"
+                        placeholder="Cost to collect this return (e.g. 80)"
+                        className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:border-slate-400 focus:ring-1 focus:ring-slate-400 text-sm font-mono text-slate-800"
+                      />
+                    </div>
+
+                    {/* Return Cost Paid toggle */}
+                    <div className="flex items-center justify-between py-3 px-4 bg-slate-50 border border-slate-200 rounded-lg">
+                      <span className="text-xs font-semibold text-slate-700">Return Cost Paid?</span>
+                      <div className="flex items-center gap-3">
+                        <span className={`text-xs font-bold ${returnCostPaid ? "text-emerald-600" : "text-rose-500"}`}>
+                          {returnCostPaid ? "Paid" : "Unpaid"}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setReturnCostPaid(!returnCostPaid)}
+                          className={`relative w-10 h-5 rounded-full transition-colors ${returnCostPaid ? "bg-emerald-500" : "bg-slate-300"}`}
+                        >
+                          <span className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${returnCostPaid ? "translate-x-5" : "translate-x-0.5"}`} />
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Return Reason */}
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-semibold text-slate-700 block">Return Reason <span className="text-rose-400">*</span></label>
+                      <textarea
+                        value={returnReason}
+                        onChange={(e) => setReturnReason(e.target.value)}
+                        placeholder="e.g. Customer rejected at doorstep"
+                        rows={3}
+                        required
+                        className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:border-slate-400 focus:ring-1 focus:ring-slate-400 text-sm resize-none text-slate-800"
+                      />
+                    </div>
+
+                    {/* Submit */}
+                    <button
+                      type="submit"
+                      disabled={
+                        isPending ||
+                        !selectedOrderId ||
+                        returnReason.trim() === "" ||
+                        (returnMode === "PARTIAL" && !selectedOrderItemId)
+                      }
+                      className="w-full h-11 bg-slate-900 hover:bg-slate-800 disabled:opacity-40 text-white text-sm font-bold rounded-lg transition-colors flex items-center justify-center gap-2 shadow-sm"
+                    >
+                      {isPending ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <>
+                          <Save className="w-4 h-4" />
+                          {returnMode === "FULL" ? "Process Full Return" : "Process Partial Return"}
+                        </>
+                      )}
+                    </button>
                   </div>
                 </div>
+              )}
+            </div>
 
-                {/* Return Reason */}
-                <div className="space-y-1.5">
-                  <label className="text-xs font-semibold text-slate-900">Return Reason *</label>
-                  <textarea
-                    value={returnReason}
-                    onChange={(e) => setReturnReason(e.target.value)}
-                    placeholder="e.g. Customer rejected at doorstep"
-                    rows={3}
-                    required
-                    className="w-full px-4 py-2 border border-slate-300 rounded-md focus:outline-none focus:border-slate-500 focus:ring-1 focus:ring-slate-500 text-sm resize-none"
-                  />
+            {/* ── Right Sidebar ── */}
+            <div className="space-y-4">
+              {/* Customer Card */}
+              {selectedOrder && (
+                <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden animate-in fade-in duration-200">
+                  <div className="px-4 py-3 border-b border-slate-100">
+                    <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Customer</h3>
+                  </div>
+                  <div className="p-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center shrink-0">
+                        <User className="w-5 h-5 text-slate-400" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold text-slate-900">{selectedOrder.customerName}</p>
+                        <p className="text-xs text-slate-500 mt-0.5">{selectedOrder.phone}</p>
+                      </div>
+                    </div>
+                  </div>
                 </div>
+              )}
 
-                {/* Submit Button */}
-                <button
-                  type="submit"
-                  disabled={
-                    isPending ||
-                    !selectedOrderId ||
-                    returnReason.trim() === "" ||
-                    (returnMode === "PARTIAL" && !selectedOrderItemId)
-                  }
-                  className="w-full h-10 text-white text-sm font-bold rounded-md transition-colors disabled:opacity-50 flex items-center justify-center gap-2 shadow-sm bg-black hover:bg-slate-900"
-                >
-                  {isPending ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                  ) : (
-                    <>
-                      <Save className="w-4 h-4" />
-                      {returnMode === "FULL" ? "Process Full Return" : "Process Partial Return"}
-                    </>
-                  )}
-                </button>
+              {/* Order Info Card */}
+              {selectedOrder && (
+                <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden animate-in fade-in duration-200">
+                  <div className="px-4 py-3 border-b border-slate-100">
+                    <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Order</h3>
+                  </div>
+                  <div className="p-4 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-slate-500">Order ID</span>
+                      <span className="text-xs font-mono font-bold text-slate-800">{selectedOrder.id}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-slate-500">Items</span>
+                      <span className="text-xs font-semibold text-slate-800">{selectedOrder.items.length} item{selectedOrder.items.length !== 1 ? "s" : ""}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-slate-500">Return Type</span>
+                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase ${
+                        returnMode === "FULL" ? "bg-red-50 text-red-600" : "bg-blue-50 text-blue-600"
+                      }`}>
+                        {returnMode}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Return Mode Info Card */}
+              <div className="bg-slate-50 border border-slate-200 rounded-xl overflow-hidden">
+                <div className="px-4 py-3 border-b border-slate-200">
+                  <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wider">How it works</h3>
+                </div>
+                <div className="p-4">
+                  <p className="text-xs text-slate-600 leading-relaxed">
+                    {returnMode === "FULL"
+                      ? "All items will be returned at once. Printed items are automatically marked as Wastage. Non-printed items are Restocked to inventory."
+                      : "Select one item from the order to return. You can set the quantity and choose to Restock or mark as Wastage. The order stays active unless all items are returned."}
+                  </p>
+                </div>
               </div>
-            )}
-          </form>
-        </div>
+            </div>
+          </div>
+        </form>
       ) : (
-        <div className="space-y-6">
-          {/* Financial Summary Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-            <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm flex items-center gap-4 animate-in fade-in duration-200">
-              <div className="p-3.5 bg-red-50 text-red-600 rounded-lg">
-                <Truck className="w-6 h-6" />
+        <div className="space-y-5">
+          {/* Summary Cards */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm flex items-center gap-3">
+              <div className="p-2.5 bg-red-50 text-red-500 rounded-lg shrink-0">
+                <Truck className="w-5 h-5" />
               </div>
               <div>
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">Total Delivery Loss</span>
-                <span className="text-2xl font-black font-mono text-slate-900 mt-1 block">{formatBDT(summaries.deliveryLoss)}</span>
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">Delivery Loss</span>
+                <span className="text-lg font-black font-mono text-slate-900 mt-0.5 block">{formatBDT(summaries.deliveryLoss)}</span>
               </div>
             </div>
-
-            <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm flex items-center gap-4 animate-in fade-in duration-300">
-              <div className="p-3.5 bg-orange-50 text-orange-600 rounded-lg">
-                <Trash2 className="w-6 h-6" />
+            <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm flex items-center gap-3">
+              <div className="p-2.5 bg-orange-50 text-orange-500 rounded-lg shrink-0">
+                <Trash2 className="w-5 h-5" />
               </div>
               <div>
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">Total Wastage Loss</span>
-                <span className="text-2xl font-black font-mono text-slate-900 mt-1 block">{formatBDT(summaries.wastageLoss)}</span>
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">Wastage Loss</span>
+                <span className="text-lg font-black font-mono text-slate-900 mt-0.5 block">{formatBDT(summaries.wastageLoss)}</span>
               </div>
             </div>
-
-            <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm flex items-center gap-4 animate-in fade-in duration-400">
-              <div className="p-3.5 bg-emerald-50 text-emerald-600 rounded-lg">
-                <Boxes className="w-6 h-6" />
+            <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm flex items-center gap-3">
+              <div className="p-2.5 bg-emerald-50 text-emerald-500 rounded-lg shrink-0">
+                <Boxes className="w-5 h-5" />
               </div>
               <div>
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">Total Restocked Items</span>
-                <span className="text-2xl font-black font-mono text-slate-900 mt-1 block">{summaries.restockedCount} Items</span>
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">Restocked</span>
+                <span className="text-lg font-black font-mono text-slate-900 mt-0.5 block">{summaries.restockedCount} Items</span>
               </div>
             </div>
-
-            <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm flex items-center gap-4 animate-in fade-in duration-500">
-              <div className="p-3.5 bg-violet-50 text-violet-600 rounded-lg">
-                <TrendingDown className="w-6 h-6" />
+            <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm flex items-center gap-3">
+              <div className="p-2.5 bg-violet-50 text-violet-500 rounded-lg shrink-0">
+                <TrendingDown className="w-5 h-5" />
               </div>
               <div>
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">Total Return Cost</span>
-                <span className="text-2xl font-black font-mono text-slate-900 mt-1 block">{formatBDT(summaries.returnCost)}</span>
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">Return Cost</span>
+                <span className="text-lg font-black font-mono text-slate-900 mt-0.5 block">{formatBDT(summaries.returnCost)}</span>
               </div>
             </div>
           </div>
 
-          {/* History Logs Table Card */}
-          <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden animate-in fade-in duration-300">
-            <div className="px-6 py-4 border-b border-slate-100 bg-slate-50 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <h2 className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2">
+          {/* Return Logs Table */}
+          <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
+            <div className="px-5 py-4 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <h2 className="text-sm font-semibold text-slate-900 flex items-center gap-2">
                 <History className="w-4 h-4 text-slate-400" />
-                Recent Return Logs
+                Return Logs
               </h2>
-              {/* Search Return Logs */}
               <div className="relative w-full sm:w-64">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
                 <input
                   type="text"
-                  placeholder="Search logs by Order, Customer..."
+                  placeholder="Search by order, customer..."
                   value={logSearchQuery}
                   onChange={(e) => setLogSearchQuery(e.target.value)}
-                  className="w-full pl-9 pr-4 py-1.5 bg-white border border-slate-200 rounded-lg text-xs focus:outline-none focus:border-slate-400 transition-colors"
+                  className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs focus:outline-none focus:border-slate-400 transition-colors"
                 />
               </div>
             </div>
 
             <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse">
+              <table className="w-full text-left">
                 <thead>
-                  <tr className="border-b border-slate-200 bg-slate-50/50">
-                    <th className="px-6 py-3 font-semibold text-[10px] text-slate-500 uppercase tracking-wider">Date</th>
-                    <th className="px-6 py-3 font-semibold text-[10px] text-slate-500 uppercase tracking-wider">Order / Customer</th>
-                    <th className="px-6 py-3 font-semibold text-[10px] text-slate-500 uppercase tracking-wider">Product Info</th>
-                    <th className="px-6 py-3 font-semibold text-[10px] text-slate-500 uppercase tracking-wider text-center">Status</th>
-                    <th className="px-6 py-3 font-semibold text-[10px] text-slate-500 uppercase tracking-wider text-center">Type</th>
-                    <th className="px-6 py-3 font-semibold text-[10px] text-slate-500 uppercase tracking-wider text-right">Total Loss</th>
-                    <th className="px-6 py-3 font-semibold text-[10px] text-slate-500 uppercase tracking-wider text-right">Return Cost</th>
-                    <th className="px-6 py-3 font-semibold text-[10px] text-slate-500 uppercase tracking-wider">Reason</th>
+                  <tr className="border-b border-slate-100 bg-slate-50/60">
+                    <th className="px-5 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Date</th>
+                    <th className="px-5 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Order / Customer</th>
+                    <th className="px-5 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Product</th>
+                    <th className="px-5 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider text-center">Status</th>
+                    <th className="px-5 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider text-right">Total Loss</th>
+                    <th className="px-5 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider text-right">Return Cost</th>
+                    <th className="px-5 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Reason</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100 text-slate-700">
+                <tbody className="divide-y divide-slate-100">
                   {filteredReturns.length === 0 ? (
                     <tr>
-                      <td colSpan={8} className="px-6 py-16 text-center text-sm text-slate-400 italic font-medium">
+                      <td colSpan={7} className="px-5 py-16 text-center text-sm text-slate-400">
                         No return records match your query.
                       </td>
                     </tr>
                   ) : (
                     filteredReturns.map((ret) => {
-                      const returnLoss = ret.deliveryLoss + ret.productLoss + ret.printingLoss;
+                      const totalLoss = ret.deliveryLoss + ret.productLoss + ret.printingLoss;
                       return (
-                        <tr key={ret.id} className="hover:bg-slate-50/30 transition-colors">
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <span className="text-xs text-slate-500 font-medium">
-                              {new Date(ret.createdAt).toLocaleDateString("en-GB", {
-                                day: "numeric",
-                                month: "short",
-                                year: "numeric"
-                              })}
-                            </span>
+                        <tr key={ret.id} className="hover:bg-slate-50/50 transition-colors">
+                          <td className="px-5 py-4 whitespace-nowrap text-xs text-slate-500">
+                            {new Date(ret.createdAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}
                           </td>
-                          <td className="px-6 py-4">
-                            <div className="flex flex-col">
-                              <span className="text-xs font-bold text-slate-800">{ret.orderId}</span>
-                              <span className="text-[10px] text-slate-400 mt-0.5">{ret.order?.customerName}</span>
-                            </div>
+                          <td className="px-5 py-4">
+                            <p className="text-xs font-bold text-slate-800">{ret.orderId}</p>
+                            <p className="text-[10px] text-slate-400 mt-0.5">{ret.order?.customerName}</p>
                           </td>
-                          <td className="px-6 py-4">
-                            <div className="flex flex-col gap-0.5">
-                              <span className="text-xs font-bold text-slate-800 truncate max-w-[200px]" title={ret.orderItem.product.name}>
-                                {ret.orderItem.product.name}
-                              </span>
-                              <span className="text-[9px] text-slate-400 uppercase font-black tracking-tight mt-0.5">
-                                Size: {ret.variant.size} • Qty: {ret.quantity}
-                              </span>
-                            </div>
+                          <td className="px-5 py-4">
+                            <p className="text-xs font-semibold text-slate-800 truncate max-w-[180px]" title={ret.orderItem.product.name}>
+                              {ret.orderItem.product.name}
+                            </p>
+                            <p className="text-[10px] text-slate-400 mt-0.5 uppercase font-bold tracking-tight">
+                              Size {ret.variant.size} · Qty {ret.quantity}
+                            </p>
                           </td>
-                          <td className="px-6 py-4 text-center whitespace-nowrap">
-                            <span
-                              className={`px-2.5 py-1 rounded text-[9px] font-black tracking-widest uppercase ${ret.status === "RESTOCKED"
-                                  ? "bg-emerald-50 text-emerald-700 border border-emerald-100"
-                                  : "bg-red-50 text-red-700 border border-red-100"
-                                }`}
-                            >
+                          <td className="px-5 py-4 text-center">
+                            <span className={`px-2.5 py-1 rounded-full text-[9px] font-bold tracking-widest uppercase ${
+                              ret.status === "RESTOCKED"
+                                ? "bg-emerald-50 text-emerald-700 border border-emerald-100"
+                                : "bg-red-50 text-red-700 border border-red-100"
+                            }`}>
                               {ret.status}
                             </span>
                           </td>
-                          <td className="px-6 py-4 text-center whitespace-nowrap">
-                            —
+                          <td className="px-5 py-4 text-right font-mono text-xs font-bold text-slate-900 whitespace-nowrap">
+                            {formatBDT(totalLoss)}
                           </td>
-                          <td className="px-6 py-4 text-right font-mono text-xs font-black text-slate-900 whitespace-nowrap">
-                            {formatBDT(returnLoss)}
-                          </td>
-                          <td className="px-6 py-4 text-right whitespace-nowrap">
-                            <div className="text-xs font-bold font-mono text-slate-900">{formatBDT(ret.returnCost)}</div>
-                            <div className={`text-[9px] font-bold uppercase tracking-wider mt-0.5 ${
-                              ret.returnCostPaid ? "text-emerald-600" : "text-rose-500"
-                            }`}>
+                          <td className="px-5 py-4 text-right whitespace-nowrap">
+                            <p className="text-xs font-bold font-mono text-slate-900">{formatBDT(ret.returnCost)}</p>
+                            <p className={`text-[9px] font-bold uppercase mt-0.5 ${ret.returnCostPaid ? "text-emerald-600" : "text-rose-500"}`}>
                               {ret.returnCostPaid ? "Paid" : "Unpaid"}
-                            </div>
+                            </p>
                           </td>
-                          <td className="px-6 py-4">
-                            <p className="text-xs text-slate-500 max-w-[180px] truncate leading-relaxed" title={ret.returnReason}>
+                          <td className="px-5 py-4">
+                            <p className="text-xs text-slate-500 max-w-[160px] truncate" title={ret.returnReason}>
                               {ret.returnReason}
                             </p>
                           </td>

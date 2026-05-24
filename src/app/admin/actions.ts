@@ -2287,7 +2287,7 @@ export async function getOrderById(id: string) {
       include: {
         items: {
           include: {
-            product: { select: { name: true, price: true, purchasePrice: true } }
+            product: { select: { name: true, price: true, purchasePrice: true, images: true } }
           }
         },
         salesReturns: { select: { orderItemId: true, quantity: true } },
@@ -2317,7 +2317,7 @@ export async function searchOrdersForReturn(searchQuery: string) {
       include: {
         items: {
           include: {
-            product: { select: { name: true, price: true, purchasePrice: true } }
+            product: { select: { name: true, price: true, purchasePrice: true, images: true } }
           }
         },
         salesReturns: { select: { orderItemId: true, quantity: true } },

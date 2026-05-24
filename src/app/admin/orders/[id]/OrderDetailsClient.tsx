@@ -1,21 +1,37 @@
 "use client";
 
 import { useState } from "react";
-import { User, MapPin, Phone, Edit2, Check, X, Package, Wallet, StickyNote, Save, Minus, VerifiedIcon, Trash2, Plus, Copy, Compass, CheckCircle2, Truck, PackageCheck, Printer, AlertCircle } from "lucide-react";
+import {
+  Edit2, Check, X, Package, Trash2, Plus, Copy,
+  Compass, CheckCircle2, Truck, PackageCheck, Printer,
+  AlertCircle, Minus, VerifiedIcon, Loader2,
+} from "lucide-react";
 import { updateOrderDetails, updateOrderRemark, cancelPathaoPickupAction, sendPathaoPickupManually } from "../../actions";
 import { useRouter } from "next/navigation";
-import Image from "next/image";
 import UploadedImage from "@/components/UploadedImage";
 import { CustomSelect } from "@/components/CustomSelect";
 import { formatBDT, roundPrice } from "@/utils/formatPrice";
 
-export default function OrderDetailsClient({ order, deliverySettings, products = [], pathaoInfo = null }: { order: any; deliverySettings: any; products?: any[]; pathaoInfo?: any }) {
+export default function OrderDetailsClient({
+  order,
+  deliverySettings,
+  products = [],
+  pathaoInfo = null,
+}: {
+  order: any;
+  deliverySettings: any;
+  products?: any[];
+  pathaoInfo?: any;
+}) {
   const router = useRouter();
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(false);
   const [remarkLoading, setRemarkLoading] = useState(false);
   const [isEditingRemark, setIsEditingRemark] = useState(false);
   const [remarks, setRemarks] = useState(order.remarks || "");
+  const [copied, setCopied] = useState(false);
+  const [isAddingProduct, setIsAddingProduct] = useState(false);
+
   const [formData, setFormData] = useState({
     customerName: order.customerName,
     phone: order.phone,
@@ -26,7 +42,7 @@ export default function OrderDetailsClient({ order, deliverySettings, products =
     items: order.items || [],
     deliveryCharge: order.deliveryCharge || 0,
   });
-  const [isAddingProduct, setIsAddingProduct] = useState(false);
+
   const [newProductData, setNewProductData] = useState({
     productId: "",
     size: "",
@@ -36,8 +52,6 @@ export default function OrderDetailsClient({ order, deliverySettings, products =
     printNumber: "",
     printCost: 300,
   });
-
-  const [copied, setCopied] = useState(false);
 
   const handleCopy = (text: string) => {
     navigator.clipboard.writeText(text);
@@ -65,8 +79,8 @@ export default function OrderDetailsClient({ order, deliverySettings, products =
         requiresPrint: i.requiresPrint,
         printName: i.printName,
         printNumber: i.printNumber,
-        printCost: i.printCost
-      }))
+        printCost: i.printCost,
+      })),
     });
     if (result.success) {
       setIsEditing(false);
@@ -78,68 +92,19 @@ export default function OrderDetailsClient({ order, deliverySettings, products =
     setLoading(false);
   };
 
-
-
-  const baseSubtotal = formData.items.reduce((acc: number, item: any) => acc + (item.price * item.quantity), 0);
-  const totalDTFCost = formData.items.reduce((acc: number, item: any) => acc + (item.requiresPrint ? item.printCost * item.quantity : 0), 0);
-  const discount = formData.discountAmount || 0;
-
-  // Logic: district focus, not total focus
-  const deliveryCharge = order.isStorePickup
-    ? (isEditing ? formData.deliveryCharge : order.deliveryCharge)
-    : (formData.district === "Dhaka"
-      ? deliverySettings.insideDhaka
-      : formData.district === "Self Pickup"
-        ? 0
-        : deliverySettings.outsideDhaka);
-
-  const currentTotalAmount = (baseSubtotal + totalDTFCost + deliveryCharge) - discount;
-
-  const updateItemQuantity = (index: number, delta: number) => {
-    const newItems = [...formData.items];
-    const newQuantity = newItems[index].quantity + delta;
-    if (newQuantity > 0) {
-      newItems[index].quantity = newQuantity;
-      setFormData({ ...formData, items: newItems });
-    }
-  };
-
-  const removeItem = (index: number) => {
-    const newItems = formData.items.filter((_: any, i: number) => i !== index);
-    setFormData({ ...formData, items: newItems });
-  };
-
-  const handleAddNewProduct = () => {
-    if (!newProductData.productId || !newProductData.size) {
-      alert("Please select a product and size.");
-      return;
-    }
-    const product = products.find(p => p.id === newProductData.productId);
-    let price = product.price;
-    if (product.discount) {
-      if (product.discount.discountType === "PERCENTAGE") {
-        price = roundPrice(price - (price * (product.discount.value / 100)));
-      } else {
-        price = roundPrice(price - product.discount.value);
-      }
-    }
-
-    const newItem = {
-      id: `new-${Date.now()}`,
-      productId: product.id,
-      product: product,
-      size: newProductData.size,
-      quantity: newProductData.quantity,
-      price: price,
-      requiresPrint: newProductData.requiresPrint,
-      printName: newProductData.requiresPrint ? newProductData.printName : "",
-      printNumber: newProductData.requiresPrint ? newProductData.printNumber : "",
-      printCost: newProductData.requiresPrint ? newProductData.printCost : 0,
-    };
-
-    setFormData({ ...formData, items: [...formData.items, newItem] });
+  const handleCancelEdit = () => {
+    setIsEditing(false);
     setIsAddingProduct(false);
-    setNewProductData({ productId: "", size: "", quantity: 1, requiresPrint: false, printName: "", printNumber: "", printCost: 300 });
+    setFormData({
+      customerName: order.customerName,
+      phone: order.phone,
+      district: order.district,
+      address: order.address,
+      advancePaid: order.advancePaid || 0,
+      discountAmount: order.discountAmount || 0,
+      items: order.items || [],
+      deliveryCharge: order.deliveryCharge || 0,
+    });
   };
 
   const handleSaveRemark = async () => {
@@ -154,598 +119,378 @@ export default function OrderDetailsClient({ order, deliverySettings, products =
     setRemarkLoading(false);
   };
 
+  const updateItemQuantity = (index: number, delta: number) => {
+    const newItems = [...formData.items];
+    const newQty = newItems[index].quantity + delta;
+    if (newQty > 0) { newItems[index].quantity = newQty; setFormData({ ...formData, items: newItems }); }
+  };
+
+  const removeItem = (index: number) => {
+    setFormData({ ...formData, items: formData.items.filter((_: any, i: number) => i !== index) });
+  };
+
+  const handleAddNewProduct = () => {
+    if (!newProductData.productId || !newProductData.size) { alert("Please select a product and size."); return; }
+    const product = products.find((p) => p.id === newProductData.productId);
+    let price = product.price;
+    if (product.discount) {
+      price = product.discount.discountType === "PERCENTAGE"
+        ? roundPrice(price - price * (product.discount.value / 100))
+        : roundPrice(price - product.discount.value);
+    }
+    setFormData({
+      ...formData,
+      items: [...formData.items, {
+        id: `new-${Date.now()}`, productId: product.id, product,
+        size: newProductData.size, quantity: newProductData.quantity, price,
+        requiresPrint: newProductData.requiresPrint,
+        printName: newProductData.requiresPrint ? newProductData.printName : "",
+        printNumber: newProductData.requiresPrint ? newProductData.printNumber : "",
+        printCost: newProductData.requiresPrint ? newProductData.printCost : 0,
+      }],
+    });
+    setIsAddingProduct(false);
+    setNewProductData({ productId: "", size: "", quantity: 1, requiresPrint: false, printName: "", printNumber: "", printCost: 300 });
+  };
+
+  // Financial calculations
+  const baseSubtotal = formData.items.reduce((acc: number, item: any) => acc + item.price * item.quantity, 0);
+  const totalDTFCost = formData.items.reduce((acc: number, item: any) => acc + (item.requiresPrint ? item.printCost * item.quantity : 0), 0);
+  const discount = formData.discountAmount || 0;
+  const deliveryCharge = order.isStorePickup
+    ? (isEditing ? formData.deliveryCharge : order.deliveryCharge)
+    : formData.district === "Dhaka"
+      ? deliverySettings.insideDhaka
+      : formData.district === "Self Pickup"
+        ? 0
+        : deliverySettings.outsideDhaka;
+  const currentTotal = baseSubtotal + totalDTFCost + deliveryCharge - discount;
+  const displayTotal = isEditing ? currentTotal : order.totalAmount;
+  const totalDue = displayTotal - (formData.advancePaid || 0);
+
+  // Status tracker
+  const STATUS_STEPS = [
+    { statusKey: "PENDING",   title: "Order Placed", icon: Package },
+    { statusKey: "CONFIRMED", title: "Confirmed",    icon: CheckCircle2 },
+    { statusKey: "PRINTING",  title: "Printing",     icon: Printer },
+    { statusKey: "PACKAGING", title: "Packaging",    icon: PackageCheck },
+    { statusKey: "SHIPPED",   title: "Shipped",      icon: Truck },
+    { statusKey: "DELIVERED", title: "Delivered",    icon: Check },
+  ];
+  const STATUS_ORDER = ["PENDING", "CONFIRMED", "PRINTING", "PACKAGING", "SHIPPED", "DELIVERED"];
+  const isSpecial = order.status === "CANCELLED" || order.status === "RETURNED";
+  const currentIndex = STATUS_ORDER.indexOf(order.status);
+  const hasPrint = order.items?.some((i: any) => i.requiresPrint);
+  const filteredSteps = STATUS_STEPS.filter((s) => s.statusKey !== "PRINTING" || hasPrint || order.status === "PRINTING");
+
+  const pathaoStatus = pathaoInfo?.order_status || pathaoInfo?.order_status_slug || null;
+  const pathaoStatusLower = (pathaoStatus || "").toLowerCase();
+
+  const DISTRICTS = ["Bagerhat","Bandarban","Barguna","Barisal","Bhola","Bogra","Brahmanbaria","Chandpur","Chapainawabganj","Chattogram","Chuadanga","Comilla","Cox's Bazar","Dhaka","Dinajpur","Faridpur","Feni","Gaibandha","Gazipur","Gopalganj","Habiganj","Jamalpur","Jashore","Jhalokati","Jhenaidah","Joypurhat","Khagrachhari","Khulna","Kishoreganj","Kurigram","Kushtia","Lakshmipur","Lalmonirhat","Madaripur","Magura","Manikganj","Meherpur","Moulvibazar","Munshiganj","Mymensingh","Naogaon","Narail","Narayanganj","Narsingdi","Natore","Netrokona","Nilphamari","Noakhali","Pabna","Panchagarh","Patuakhali","Pirojpur","Rajbari","Rajshahi","Rangamati","Rangpur","Satkhira","Shariatpur","Sherpur","Sirajganj","Sunamganj","Sylhet","Tangail","Thakurgaon","Self Pickup"].sort();
+
   return (
-    <div className="space-y-2">
-      {/* Action Header */}
-      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-4">
-        {/* Pathao Consignment ID Section */}
-
-        <div>
-          {order.pathaoConsignmentId && (<>
-            <span className="block text-[10px] uppercase font-bold text-slate-400 mb-2 tracking-wider">
-              Pathao Consignment ID / Tracking Number
-            </span>
-            <div className="flex items-center justify-between bg-indigo-50 border border-indigo-100  p-1 px-2 rounded-lg group transition-all hover:bg-indigo-100/50">
-              <span className="text-sm font-black text-indigo-700 tracking-widest uppercase font-mono">
-                {order.pathaoConsignmentId}
-              </span>
-              <button
-                onClick={() => handleCopy(order.pathaoConsignmentId)}
-                className="p-1.5 bg-white border border-indigo-200 rounded-md text-indigo-500 hover:text-indigo-700 hover:border-indigo-300 transition-all shadow-sm active:scale-95"
-                title="Copy to Clipboard"
-              >
-                {copied ? (
-                  <Check className="w-3.5 h-3.5 text-emerald-500 animate-in zoom-in-50 duration-200" />
-                ) : (
-                  <Copy className="w-3.5 h-3.5" />
-                )}
-              </button>
-            </div></>
-          )}
+    <div className="space-y-4">
+      {/* Edit Mode Action Bar */}
+      {isEditing && (
+        <div className="flex items-center justify-between px-4 py-3 bg-amber-50 border border-amber-200 rounded-xl animate-in fade-in slide-in-from-top-1 duration-200">
+          <p className="text-xs font-semibold text-amber-700">You are in edit mode — make changes and save.</p>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleSave}
+              disabled={loading}
+              className="flex items-center gap-1.5 px-4 py-2 bg-slate-900 text-white text-xs font-bold rounded-lg hover:bg-slate-800 transition-colors disabled:opacity-50 shadow-sm"
+            >
+              {loading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
+              {loading ? "Saving..." : "Save Changes"}
+            </button>
+            <button
+              onClick={handleCancelEdit}
+              disabled={loading}
+              className="flex items-center gap-1.5 px-4 py-2 bg-white border border-slate-200 text-slate-600 text-xs font-bold rounded-lg hover:bg-slate-50 transition-colors disabled:opacity-50"
+            >
+              <X className="w-3.5 h-3.5" />
+              Cancel
+            </button>
+          </div>
         </div>
+      )}
 
-        <div>
-          <div className="flex justify-end">
-            {!isEditing ? (
-              <button
-                onClick={() => setIsEditing(true)}
-                className="flex items-center gap-2 px-4 py-2 text-xs font-bold bg-white border border-slate-200 rounded-lg text-slate-600 hover:text-indigo-600 hover:border-indigo-200 transition-all   group"
-              >
-                <Edit2 className="w-3.5 h-3.5 group-hover:scale-110 transition-transform" />
-                Edit Customer Details
-              </button>
-            ) : (
-              <div className="flex items-center gap-3">
+      {/* Pathao Consignment ID */}
+      {order.pathaoConsignmentId && (
+        <div className="flex items-center justify-between bg-indigo-50 border border-indigo-100 px-4 py-2.5 rounded-xl">
+          <div>
+            <span className="block text-[10px] uppercase font-bold text-indigo-400 tracking-wider mb-0.5">Pathao Consignment ID</span>
+            <span className="text-sm font-black text-indigo-700 tracking-widest font-mono">{order.pathaoConsignmentId}</span>
+          </div>
+          <button
+            onClick={() => handleCopy(order.pathaoConsignmentId)}
+            className="p-2 bg-white border border-indigo-200 rounded-lg text-indigo-500 hover:border-indigo-300 transition-all shadow-sm"
+            title="Copy"
+          >
+            {copied ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
+          </button>
+        </div>
+      )}
+
+      {/* Main 2-column layout */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+
+        {/* ── Left Main Column ── */}
+        <div className="lg:col-span-2 space-y-4">
+
+          {/* Products Card */}
+          <div className="bg-white border border-slate-200 rounded-xl shadow-sm">
+            <div className="px-5 py-4 border-b border-slate-100 rounded-t-xl flex items-center justify-between">
+              <h2 className="text-sm font-semibold text-slate-900">
+                Products
+                <span className="text-slate-400 font-normal ml-1.5">({formData.items.length})</span>
+              </h2>
+              {!isEditing && (
                 <button
-                  onClick={handleSave}
-                  disabled={loading}
-                  className="flex items-center gap-1.5 px-4 py-2 text-xs font-bold bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-all shadow-md disabled:opacity-50"
+                  onClick={() => setIsEditing(true)}
+                  className="flex items-center gap-1.5 text-xs font-semibold text-indigo-600 hover:text-indigo-800 transition-colors"
                 >
-                  <Check className="w-3.5 h-3.5" />
-                  {loading ? "Saving..." : "Save Changes"}
+                  <Edit2 className="w-3.5 h-3.5" />
+                  Edit
                 </button>
-                <button
-                  onClick={() => {
-                    setIsEditing(false);
-                    setFormData({
-                      customerName: order.customerName,
-                      phone: order.phone,
-                      district: order.district,
-                      address: order.address,
-                      advancePaid: order.advancePaid || 0,
-                      discountAmount: order.discountAmount || 0,
-                      items: order.items || [],
-                      deliveryCharge: order.deliveryCharge || 0,
-                    });
-                    setIsAddingProduct(false);
-                  }}
-                  disabled={loading}
-                  className="flex items-center gap-1.5 px-4 py-2 text-xs font-bold bg-white border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50 transition-all   disabled:opacity-50"
-                >
-                  <X className="w-3.5 h-3.5" />
-                  Cancel
-                </button>
+              )}
+            </div>
+
+            <div className="divide-y divide-slate-100">
+              {formData.items.map((item: any, index: number) => (
+                <div key={item.id} className="flex items-start gap-4 px-5 py-4 hover:bg-slate-50/50 transition-colors">
+                  {/* Product Image */}
+                  <div className="w-14 h-16 relative bg-slate-100 rounded-lg overflow-hidden border border-slate-150 shrink-0">
+                    {item.product?.images?.[0] ? (
+                      <UploadedImage src={item.product.images[0]} alt={item.product.name} fill className="object-cover" />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center">
+                        <Package className="w-5 h-5 text-slate-300" />
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Product Info */}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-slate-900 truncate">{item.product?.name}</p>
+                    <div className="flex flex-wrap items-center gap-2 mt-1">
+                      <span className="text-[10px] font-black bg-slate-900 text-white px-1.5 py-0.5 rounded tracking-widest">{item.size}</span>
+                      <span className="text-xs text-slate-500">@ {formatBDT(item.price)}</span>
+                      {item.requiresPrint && (
+                        <span className="text-[9px] font-bold bg-indigo-50 text-indigo-600 border border-indigo-100 px-1.5 py-0.5 rounded uppercase tracking-wider">
+                          Print: {item.printName} #{item.printNumber}
+                        </span>
+                      )}
+                    </div>
+                    {item.requiresPrint && (
+                      <p className="text-[10px] text-indigo-500 font-medium mt-0.5">
+                        + {formatBDT(item.printCost * item.quantity)} DTF cost
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Qty + Price */}
+                  <div className="shrink-0 flex flex-col items-end gap-2">
+                    {isEditing ? (
+                      <div className="flex items-center border border-slate-200 rounded-lg overflow-hidden bg-white">
+                        <button onClick={() => updateItemQuantity(index, -1)} className="px-2.5 py-1.5 hover:bg-slate-100 text-slate-600 font-bold text-sm transition-colors">−</button>
+                        <span className="px-3 py-1.5 text-xs font-bold text-slate-800 bg-slate-50 min-w-[32px] text-center">{item.quantity}</span>
+                        <button onClick={() => updateItemQuantity(index, 1)} className="px-2.5 py-1.5 hover:bg-slate-100 text-slate-600 font-bold text-sm transition-colors">+</button>
+                      </div>
+                    ) : (
+                      <span className="text-xs font-semibold text-slate-600">Qty: {item.quantity}</span>
+                    )}
+                    <span className="text-sm font-bold text-slate-900">
+                      {formatBDT((item.price + (item.requiresPrint ? item.printCost : 0)) * item.quantity)}
+                    </span>
+                    {isEditing && (
+                      <button onClick={() => removeItem(index)} className="text-[10px] font-bold text-red-500 hover:text-red-700 flex items-center gap-0.5 transition-colors">
+                        <Trash2 className="w-3 h-3" /> Remove
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Add Product (edit mode) */}
+            {isEditing && (
+              <div className="px-5 py-4 border-t border-slate-100 bg-slate-50/50">
+                {!isAddingProduct ? (
+                  <button
+                    onClick={() => setIsAddingProduct(true)}
+                    className="flex items-center justify-center gap-2 w-full py-2.5 border-2 border-dashed border-slate-300 rounded-lg text-xs font-semibold text-slate-500 hover:bg-slate-100 hover:border-slate-400 hover:text-slate-700 transition-all"
+                  >
+                    <Plus className="w-3.5 h-3.5" /> Add Item
+                  </button>
+                ) : (
+                  <div className="space-y-3 bg-white border border-slate-200 rounded-xl p-4 shadow-sm animate-in fade-in duration-200">
+                    <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+                      <h4 className="text-sm font-semibold text-slate-800">Add New Product</h4>
+                      <button onClick={() => setIsAddingProduct(false)} className="text-slate-400 hover:text-slate-600"><X className="w-4 h-4" /></button>
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-bold uppercase text-slate-500 block mb-1">Product</label>
+                      <CustomSelect options={products.map((p) => ({ value: p.id, label: p.name }))} value={newProductData.productId} onChange={(val) => setNewProductData({ ...newProductData, productId: val })} searchable />
+                    </div>
+                    {newProductData.productId && (
+                      <div>
+                        <label className="text-[10px] font-bold uppercase text-slate-500 block mb-1">Size</label>
+                        <CustomSelect options={(products.find((p) => p.id === newProductData.productId)?.variants || []).map((v: any) => ({ value: v.size, label: `${v.size} (Stock: ${v.stock})` }))} value={newProductData.size} onChange={(val) => setNewProductData({ ...newProductData, size: val })} openUpwards />
+                      </div>
+                    )}
+                    <div>
+                      <label className="text-[10px] font-bold uppercase text-slate-500 block mb-1">Quantity</label>
+                      <div className="flex items-center border border-slate-200 rounded-lg overflow-hidden w-fit bg-white">
+                        <button onClick={() => setNewProductData({ ...newProductData, quantity: Math.max(1, newProductData.quantity - 1) })} className="px-3 py-1.5 hover:bg-slate-100 font-bold text-slate-600">−</button>
+                        <span className="px-4 py-1.5 text-xs font-bold bg-slate-50">{newProductData.quantity}</span>
+                        <button onClick={() => setNewProductData({ ...newProductData, quantity: newProductData.quantity + 1 })} className="px-3 py-1.5 hover:bg-slate-100 font-bold text-slate-600">+</button>
+                      </div>
+                    </div>
+                    <div className="p-3 bg-indigo-50/60 border border-indigo-100 rounded-lg">
+                      <label className="flex items-center gap-2 cursor-pointer text-xs font-semibold text-slate-800">
+                        <input type="checkbox" checked={newProductData.requiresPrint} onChange={(e) => setNewProductData({ ...newProductData, requiresPrint: e.target.checked })} className="rounded text-indigo-600" />
+                        Jersey Customization (Name & Number)
+                      </label>
+                      {newProductData.requiresPrint && (
+                        <div className="mt-3 grid grid-cols-2 gap-2">
+                          <input type="text" placeholder="Print Name" value={newProductData.printName} onChange={(e) => setNewProductData({ ...newProductData, printName: e.target.value })} className="text-xs px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:border-slate-400" />
+                          <input type="text" placeholder="Number" value={newProductData.printNumber} onChange={(e) => setNewProductData({ ...newProductData, printNumber: e.target.value })} className="text-xs px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:border-slate-400" />
+                        </div>
+                      )}
+                    </div>
+                    <button onClick={handleAddNewProduct} className="w-full py-2 bg-slate-900 text-white text-xs font-bold rounded-lg hover:bg-slate-800 transition-colors flex items-center justify-center gap-1.5">
+                      <Plus className="w-3.5 h-3.5" /> Add to Order
+                    </button>
+                  </div>
+                )}
               </div>
             )}
-
-
           </div>
-        </div>
-      </div>
 
-
-      {/* Row 1: 50/50 Split */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-white border border-slate-200 rounded-2xl p-4 sm:p-6 transition-shadow duration-300">
-        {/* Customer Identity */}
-        <div className="rounded-2xl p-6    transition-shadow duration-300">
-          <h3 className="font-bold text-slate-900 mb-6 uppercase tracking-widest text-[11px] flex items-center gap-2.5 pb-4 border-b border-slate-50">
-            <div className="p-1.5 bg-indigo-50 rounded-md">
-              <User className="w-4 h-4 text-indigo-500" />
+          {/* Order Summary Card */}
+          <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
+            <div className="px-5 py-4 border-b border-slate-100">
+              <h2 className="text-sm font-semibold text-slate-900">Order Summary</h2>
             </div>
-            Customer Identity
-          </h3>
-          <div className="space-y-6">
-            <div>
-              <span className="block text-[10px] uppercase font-bold text-slate-400 mb-2 tracking-wider">Full Legal Name</span>
-              {isEditing ? (
-                <input
-                  type="text"
-                  value={formData.customerName}
-                  onChange={(e) => setFormData({ ...formData, customerName: e.target.value })}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-400 font-semibold text-slate-800 transition-all"
-                />
-              ) : (
-                <span className="font-bold text-slate-800 text-lg block">{order.customerName}</span>
-              )}
-            </div>
-            <div>
-              <span className="block text-[10px] uppercase font-bold text-slate-400 mb-2 tracking-wider">Contact Phone</span>
-              {isEditing ? (
-                <input
-                  type="text"
-                  value={formData.phone}
-                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-400 font-semibold text-slate-800 transition-all font-mono"
-                />
-              ) : (
-                <a href={`tel:${order.phone}`} className="inline-flex items-center gap-3 text-slate-700 hover:text-indigo-600 transition-colors font-semibold py-2 px-3 bg-slate-50 rounded-lg border border-slate-100 hover:border-indigo-100">
-                  <Phone className="w-4 h-4 text-indigo-400" />
-                  {order.phone}
-                </a>
-              )}
-            </div>
-            <div>
-              <span className="block text-[10px] uppercase font-bold text-slate-400 mb-2 tracking-wider">Created By</span>
-              {order.createdBy ? (
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold text-indigo-700 bg-indigo-50 border border-indigo-100 rounded-lg">
-                  👤 {order.createdBy.username}
-                </span>
-              ) : order.orderSource === "eCommerce" ? (
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-100 rounded-lg">
-                  🌐 eCommerce
-                </span>
-              ) : (
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold text-violet-700 bg-violet-50 border border-violet-100 rounded-lg">
-                  👤 Salesman (Legacy)
-                </span>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* Shipping Coordinates */}
-        <div className=" p-6    transition-shadow duration-300">
-          <h3 className="font-bold text-slate-900 mb-6 uppercase tracking-widest text-[11px] flex items-center gap-2.5 pb-4 border-b border-slate-50">
-            <div className="p-1.5 bg-rose-50 rounded-md">
-              <MapPin className="w-4 h-4 text-rose-500" />
-            </div>
-            Shipping Coordinates
-          </h3>
-          <div className="space-y-5">
-            <div>
-              <span className="block text-[10px] uppercase font-bold text-slate-400 mb-2 tracking-wider">District</span>
-              <div className="flex flex-wrap items-center gap-2">
-                {isEditing ? (
-                  <CustomSelect
-                    options={[
-                      "Bagerhat", "Bandarban", "Barguna", "Barisal", "Bhola", "Bogra", "Brahmanbaria", "Chandpur", "Chapainawabganj", "Chattogram", "Chuadanga", "Comilla", "Cox's Bazar", "Dhaka", "Dinajpur", "Faridpur", "Feni", "Gaibandha", "Gazipur", "Gopalganj", "Habiganj", "Jamalpur", "Jashore", "Jhalokati", "Jhenaidah", "Joypurhat", "Khagrachhari", "Khulna", "Kishoreganj", "Kurigram", "Kushtia", "Lakshmipur", "Lalmonirhat", "Madaripur", "Magura", "Manikganj", "Meherpur", "Moulvibazar", "Munshiganj", "Mymensingh", "Naogaon", "Narail", "Narayanganj", "Narsingdi", "Natore", "Netrokona", "Nilphamari", "Noakhali", "Pabna", "Panchagarh", "Patuakhali", "Pirojpur", "Rajbari", "Rajshahi", "Rangamati", "Rangpur", "Satkhira", "Shariatpur", "Sherpur", "Sirajganj", "Sunamganj", "Sylhet", "Tangail", "Thakurgaon", "Self Pickup"
-                    ].sort().map(d => ({ value: d, label: d }))}
-                    value={formData.district}
-                    onChange={(val) => setFormData({ ...formData, district: val })}
-                    searchable={true}
-                  />
-                ) : (
-                  <span className="inline-block bg-[#800020] text-[#FFD700] px-4 py-1.5 rounded-md text-[10px] font-black tracking-[0.2em] uppercase   border border-[#600010]">
-                    {order.district}
-                  </span>
-                )}
-                {order.isStorePickup && (
-                  <span className="inline-flex items-center gap-1 bg-indigo-50 border border-indigo-200 text-indigo-700 text-[10px] font-black tracking-[0.1em] px-3 py-1.5 rounded-md uppercase">
-                    🏪 Store Pickup
-                  </span>
-                )}
+            <div className="px-5 py-4 space-y-3">
+              {/* Subtotal */}
+              <div className="flex justify-between items-center text-sm">
+                <span className="text-slate-500">{formData.items.length} item{formData.items.length !== 1 ? "s" : ""}</span>
+                <span className="font-semibold text-slate-800">{formatBDT(baseSubtotal)}</span>
               </div>
-            </div>
-            <div>
-              <span className="block text-[10px] uppercase font-bold text-slate-400 mb-2 tracking-wider">Address</span>
-              {isEditing ? (
-                <textarea
-                  value={formData.address}
-                  onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                  rows={3}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-400 text-slate-700 resize-none font-medium transition-all"
-                />
-              ) : (
-                <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 text-slate-700 font-medium leading-relaxed">
-                  {order.address}
+
+              {/* DTF Cost */}
+              {totalDTFCost > 0 && (
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-indigo-500">DTF Printing</span>
+                  <span className="font-semibold text-indigo-600">{formatBDT(totalDTFCost)}</span>
                 </div>
               )}
-            </div>
 
-
-          </div>
-        </div>
-
-        {/* Row 3: Administrative Remarks */}
-        <div className="md:col-span-2 px-0 sm:px-5">
-          <div className="flex items-center justify-between mb-1 pt-4 border-t border-slate-50">
-            <h3 className="block text-[10px] uppercase font-bold text-slate-400 tracking-wider">
-              Administrative Remarks
-            </h3>
-
-            {!isEditingRemark ? (
-              <button
-                onClick={() => setIsEditingRemark(true)}
-                className="flex items-center gap-2 px-3 py-1.5 text-[10px] font-black uppercase tracking-wider bg-white border border-slate-200 text-slate-600 rounded-md hover:text-indigo-600 hover:border-indigo-200 transition-all group"
-              >
-                <Edit2 className="w-3 h-3 group-hover:scale-110 transition-transform" />
-                Edit Remark
-              </button>
-            ) : (
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={handleSaveRemark}
-                  disabled={remarkLoading}
-                  className="flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-black uppercase tracking-wider bg-slate-900 text-white rounded-md hover:bg-slate-800 transition-all disabled:opacity-50 shadow-sm"
-                >
-                  <Check className="w-3.5 h-3.5" />
-                  {remarkLoading ? "Saving..." : "Save"}
-                </button>
-                <button
-                  onClick={() => {
-                    setIsEditingRemark(false);
-                    setRemarks(order.remarks || "");
-                  }}
-                  disabled={remarkLoading}
-                  className="flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-black uppercase tracking-wider bg-white border border-slate-200 text-slate-600 rounded-md hover:bg-slate-50 transition-all disabled:opacity-50"
-                >
-                  <X className="w-3.5 h-3.5" />
-                  Cancel
-                </button>
-              </div>
-            )}
-          </div>
-
-          {isEditingRemark ? (
-            <textarea
-              value={remarks}
-              onChange={(e) => setRemarks(e.target.value)}
-              placeholder="Add internal notes about this order, tracking info, or customer communication history..."
-              rows={4}
-              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500/10 focus:border-blue-400 text-slate-700 resize-none font-medium transition-all text-sm leading-relaxed"
-              autoFocus
-            />
-          ) : (
-            <div
-              onClick={() => setIsEditingRemark(true)}
-              className="w-full min-h-[50px] max-h-[150px] overflow-y-auto bg-slate-50/50 border border-slate-100 rounded-xl px-4 py-3 text-slate-700 text-sm leading-relaxed cursor-pointer hover:bg-slate-50 transition-colors"
-            >
-              {order.remarks ? (
-                <p className="whitespace-pre-wrap font-medium">{order.remarks}</p>
-              ) : (
-                <p className="text-slate-400 italic">No internal remarks added yet. Click to add notes...</p>
+              {/* Discount */}
+              {!isEditing && discount > 0 && (
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-slate-500">Discount {order.couponCode && <span className="text-[10px] font-bold bg-slate-100 px-1.5 py-0.5 rounded ml-1">{order.couponCode}</span>}</span>
+                  <span className="font-semibold text-red-500">−{formatBDT(discount)}</span>
+                </div>
               )}
-            </div>
-          )}
 
-
-        </div>
-      </div>
-
-      {/* Row 2: Financial Breakdown & Physical Artifacts */}
-      <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
-
-        {/* Financial Breakdown */}
-        <div className="lg:col-span-2 bg-white border border-slate-200 rounded-2xl p-4 sm:p-6 transition-shadow duration-300 h-fit">
-          <h3 className="font-bold text-slate-900 mb-6 uppercase tracking-widest text-[11px] flex items-center gap-2.5 pb-4 border-b border-slate-50">
-            <div className="p-1.5 bg-emerald-50 rounded-md">
-              <Wallet className="w-4 h-4 text-emerald-500" />
-            </div>
-            Financial Breakdown
-          </h3>
-          <div className="space-y-4">
-            <div className="flex justify-between items-center text-sm">
-              <span className="text-slate-500 font-medium whitespace-nowrap">Subtotal</span>
-              <span className="font-bold text-slate-800">{formatBDT(baseSubtotal)}</span>
-            </div>
-            {totalDTFCost > 0 && (
-              <div className="flex justify-between items-center text-sm text-indigo-600">
-                <span className="font-medium">DTF Printing Cost</span>
-                <span className="font-bold">{formatBDT(totalDTFCost)}</span>
-              </div>
-            )}
-            {discount > 0 && !isEditing && (
-              <div className="flex justify-between items-center text-sm text-red-500">
-                <span className="font-medium">Discount {order.couponCode && `(${order.couponCode})`}</span>
-                <span className="font-bold">-{formatBDT(discount)}</span>
-              </div>
-            )}
-
-            {isEditing && (
-              <div className="space-y-4 pt-2 border-t border-slate-100">
-                <div>
-                  <span className="block text-[10px] uppercase font-bold text-slate-500 mb-2 tracking-wider">Manual Discount</span>
+              {/* Discount edit mode */}
+              {isEditing && (
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-slate-500">Manual Discount</span>
                   <div className="relative">
-                    <span className="absolute left-4 top-1/2 -translate-y-1/2 font-bold text-slate-400">৳</span>
+                    <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-slate-400 font-bold">৳</span>
                     <input
                       type="number"
                       value={formData.discountAmount}
                       onChange={(e) => setFormData({ ...formData, discountAmount: parseFloat(e.target.value) || 0 })}
-                      className="w-full bg-slate-50 border border-slate-200 rounded-lg pl-8 pr-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-400 font-bold text-indigo-600 transition-all font-mono"
+                      className="w-28 pl-6 pr-3 py-1.5 border border-slate-200 rounded-lg text-xs font-bold text-red-500 text-right focus:outline-none focus:border-slate-400"
                     />
                   </div>
                 </div>
-              </div>
-            )}
-            <div className="flex justify-between items-center text-sm">
-              <span className="text-slate-500 font-medium">Delivery Charge</span>
-              {isEditing && order.isStorePickup ? (
-                <div className="relative w-32">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 font-bold text-slate-300 text-xs">৳</span>
-                  <input
-                    type="number"
-                    value={formData.deliveryCharge}
-                    onChange={(e) => setFormData({ ...formData, deliveryCharge: parseFloat(e.target.value) || 0 })}
-                    className="w-full bg-white border border-slate-200 rounded-lg pl-6 pr-3 py-1 text-slate-900 text-sm font-bold text-right outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
-                  />
-                </div>
-              ) : (
-                <span className="font-bold text-slate-800">{formatBDT(deliveryCharge)}</span>
               )}
-            </div>
 
-            <div className="pt-4 border-t-2 border-dashed border-slate-100 flex justify-between items-center">
-              <span className="text-sm uppercase font-black text-slate-400 tracking-[0.2em]">Grand Total</span>
-              <span className="font-bold text-slate-800">{formatBDT(isEditing ? currentTotalAmount : order.totalAmount)}</span>
-            </div>
-
-            <div className="space-y-6 ">
-              <div className="">
-                <div className="flex justify-between">
-                  <span className="text-slate-500 font-medium">Advance Paid</span>
-                  <span>
-                    {isEditing ? (
-                      <div className="relative">
-                        <span className="absolute left-3 top-1/2 -translate-y-1/2 font-bold text-slate-300 text-xs">৳</span>
-                        <input
-                          type="number"
-                          value={formData.advancePaid}
-                          onChange={(e) => setFormData({ ...formData, advancePaid: parseFloat(e.target.value) || 0 })}
-                          className="w-32 bg-white border border-slate-200 rounded-lg pl-6 pr-3 py-2 focus:outline-none focus:ring-2 focus:ring-slate-900/5 focus:border-slate-900 font-black text-slate-900 text-sm transition-all"
-                        />
-                      </div>
-                    ) : (
-                      <span className="flex items-center gap-1 text-xl font-bold text-slate-900 block tracking-tight">
-                        <Minus className="w-4 h-4 text-slate-500" /> {formatBDT(order.advancePaid || 0)}
-                      </span>
-                    )}
-                  </span>
-                </div>
-
+              {/* Delivery */}
+              <div className="flex justify-between items-center text-sm">
+                <span className="text-slate-500">Shipping {!order.isStorePickup && formData.district && <span className="text-[10px] text-slate-400 ml-1">({formData.district})</span>}</span>
+                {isEditing && order.isStorePickup ? (
+                  <div className="relative">
+                    <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-slate-400 font-bold">৳</span>
+                    <input
+                      type="number"
+                      value={formData.deliveryCharge}
+                      onChange={(e) => setFormData({ ...formData, deliveryCharge: parseFloat(e.target.value) || 0 })}
+                      className="w-28 pl-6 pr-3 py-1.5 border border-slate-200 rounded-lg text-xs font-bold text-slate-800 text-right focus:outline-none focus:border-slate-400"
+                    />
+                  </div>
+                ) : (
+                  <span className="font-semibold text-slate-800">{formatBDT(deliveryCharge)}</span>
+                )}
               </div>
 
-              <div className=" flex justify-between items-center py-6 border-t border-slate-200 border-dashed">
-                <span className="block text-sm uppercase font-black text-slate-400 mb-1.5 tracking-widest">Total Due</span>
-                <span className="text-3xl font-bold text-rose-500 tracking-tighter tabular-nums leading-none">
-                  {formatBDT((isEditing ? currentTotalAmount : order.totalAmount) - (formData.advancePaid || 0))}
+              {/* Total */}
+              <div className="flex justify-between items-center pt-3 border-t border-slate-200">
+                <span className="text-sm font-bold text-slate-900">Total</span>
+                <span className="text-sm font-bold text-slate-900">{formatBDT(displayTotal)}</span>
+              </div>
+
+              {/* Advance Paid */}
+              <div className="flex justify-between items-center text-sm">
+                <span className="text-slate-500">Advance Paid</span>
+                {isEditing ? (
+                  <div className="relative">
+                    <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-slate-400 font-bold">৳</span>
+                    <input
+                      type="number"
+                      value={formData.advancePaid}
+                      onChange={(e) => setFormData({ ...formData, advancePaid: parseFloat(e.target.value) || 0 })}
+                      className="w-28 pl-6 pr-3 py-1.5 border border-slate-200 rounded-lg text-xs font-bold text-emerald-600 text-right focus:outline-none focus:border-slate-400"
+                    />
+                  </div>
+                ) : (
+                  <span className="font-semibold text-emerald-600 flex items-center gap-1">
+                    <Minus className="w-3 h-3" /> {formatBDT(order.advancePaid || 0)}
+                  </span>
+                )}
+              </div>
+
+              {/* Payment Due */}
+              <div className="flex justify-between items-center pt-3 border-t-2 border-dashed border-slate-200">
+                <span className="text-sm font-bold text-slate-500 uppercase tracking-wider">Payment Due</span>
+                <span className={`text-2xl font-black tracking-tighter tabular-nums ${totalDue > 0 ? "text-rose-500" : "text-emerald-500"}`}>
+                  {formatBDT(totalDue)}
                 </span>
               </div>
-            </div>
 
-            {/* bKash Payment Details */}
-            {order.bkashNumber && (
-              <div className="mt-4 ">
-                <h3 className="font-bold text-slate-900 mb-6 uppercase tracking-widest text-[11px] flex items-center gap-2.5 pb-4 border-b border-slate-50">
-                  <div className="p-1.5 bg-emerald-50 rounded-md">
-                    <VerifiedIcon className="w-4 h-4 text-emerald-500" />
+              {/* bKash Payment Verification */}
+              {order.bkashNumber && (
+                <div className="mt-2 pt-4 border-t border-slate-100 space-y-2">
+                  <p className="text-[10px] font-bold uppercase text-slate-400 tracking-wider flex items-center gap-1.5">
+                    <VerifiedIcon className="w-3.5 h-3.5 text-emerald-500" /> bKash Verification
+                  </p>
+                  <div className="flex justify-between text-xs">
+                    <span className="text-slate-500">Customer bKash No.</span>
+                    <span className="font-bold font-mono text-slate-800">{order.bkashNumber}</span>
                   </div>
-                  Manual Verification
-                </h3>
-                <div className="space-y-4">
-                  <div className="flex  justify-between gap-1 border-b border-slate-100 pb-3">
-                    <span className="text-[11px] text-slate-400 font-black uppercase tracking-widest">Customer bKash No.</span>
-                    <span className="text-sm font-black text-slate-900 font-mono tracking-tighter">{order.bkashNumber}</span>
-                  </div>
-                  <div className="flex  justify-between gap-1">
-                    <span className="text-[9px] text-slate-400 font-black uppercase tracking-widest">Transaction ID</span>
-                    <span className="text-sm font-black text-slate-900 uppercase tracking-widest flex items-center justify-between">
-                      {order.bkashTrxId}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Physical Artifacts (Order Items) */}
-        <div className="lg:col-span-3 bg-white border border-slate-200 rounded-2xl overflow-hidden transition-shadow duration-300">
-          <div className="px-6 py-4 border-b border-slate-50 bg-slate-50/40">
-            <h3 className="font-bold text-slate-900 uppercase tracking-widest text-[11px] flex items-center gap-2.5">
-              <div className="p-1.5 bg-amber-50 rounded-md">
-                <Package className="w-4 h-4 text-amber-500" />
-              </div>
-              Physical Artifacts ({order.items.length})
-            </h3>
-          </div>
-          <div className="divide-y divide-slate-50 max-h-[480px] overflow-y-auto custom-scrollbar">
-            {formData.items.map((item: any, index: number) => (
-              <div key={item.id} className="p-5 flex gap-4 hover:bg-slate-50/50 transition-colors group">
-                <div className="w-16 h-20 relative bg-slate-50 rounded-lg overflow-hidden border border-slate-100 flex-shrink-0 group-hover:scale-[1.02] transition-transform">
-                  {item.product.images[0] && (
-                    <UploadedImage src={item.product.images[0]} alt={item.product.name} fill className="object-cover" />
-                  )}
-                </div>
-                <div className="flex-1 min-w-0 py-0.5">
-                  <h4 className="font-bold text-slate-900 text-sm leading-tight truncate mb-2">
-                    {item.product.name}
-                  </h4>
-                  <div className="flex flex-col gap-1.5 mb-2">
-                    <div className="flex items-center gap-2">
-                      <span className="font-mono bg-slate-900 text-[10px] px-2 py-0.5 rounded font-black text-white tracking-widest">
-                        {item.size}
-                      </span>
-                      {isEditing ? (
-                        <div className="flex items-center bg-slate-100 rounded border border-slate-200 overflow-hidden">
-                          <button onClick={() => updateItemQuantity(index, -1)} className="px-2 py-0.5 hover:bg-slate-200 text-slate-600 transition-colors cursor-pointer font-bold">-</button>
-                          <span className="text-[10px] bg-white px-2 py-0.5 font-bold uppercase text-slate-800 min-w-[24px] text-center">{item.quantity}</span>
-                          <button onClick={() => updateItemQuantity(index, 1)} className="px-2 py-0.5 hover:bg-slate-200 text-slate-600 transition-colors cursor-pointer font-bold">+</button>
-                        </div>
-                      ) : (
-                        <span className="text-[10px] bg-slate-100 text-slate-500 px-2 py-0.5 rounded font-bold uppercase">
-                          Qty: {item.quantity}
-                        </span>
-                      )}
-                    </div>
-
-                    {item.requiresPrint && (
-                      <div className="flex flex-col gap-1 p-2 bg-indigo-50/50 rounded-lg border border-indigo-100/50">
-                        <span className="text-[8px] font-black text-indigo-400 uppercase tracking-widest leading-none">Jersey Customization</span>
-                        <div className="flex items-center justify-between">
-                          <span className="text-[10px] font-black text-indigo-700">{item.printName} <span className="text-indigo-400">#{item.printNumber}</span></span>
-                          <span className="text-[10px] font-bold text-indigo-600">+{formatBDT(item.printCost * item.quantity)}</span>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                  <div className="flex flex-col gap-2 mt-auto pt-2 border-t border-slate-50">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs text-slate-400 font-medium">@ {formatBDT(item.price)}</span>
-                      <span className="font-bold text-slate-900 text-sm">{formatBDT((item.price + (item.requiresPrint ? item.printCost : 0)) * item.quantity)}</span>
-                    </div>
-                    {isEditing && (
-                      <div className="flex justify-end">
-                        <button onClick={() => removeItem(index)} className="flex items-center gap-1 text-[10px] font-bold text-red-500 hover:text-red-700 hover:bg-red-50 px-2 py-1 rounded transition-colors">
-                          <Trash2 className="w-3 h-3" /> Remove Item
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-          {isEditing && (
-            <div className="p-5 bg-slate-50 border-t border-slate-100">
-              {!isAddingProduct ? (
-                <button
-                  onClick={() => setIsAddingProduct(true)}
-                  className="flex items-center justify-center gap-2 w-full py-3 border-2 border-dashed border-slate-300 rounded-xl text-slate-500 font-bold hover:bg-slate-100 hover:text-slate-800 hover:border-slate-400 transition-all"
-                >
-                  <Plus className="w-4 h-4" /> Add Product to Order
-                </button>
-              ) : (
-                <div className="space-y-4 bg-white p-4 rounded-xl border border-slate-200 shadow-sm animate-in fade-in slide-in-from-bottom-2 duration-300">
-                  <div className="flex items-center justify-between border-b border-slate-100 pb-3 mb-3">
-                    <h4 className="font-bold text-slate-800 text-sm">Add New Product</h4>
-                    <button onClick={() => setIsAddingProduct(false)} className="text-slate-400 hover:text-slate-600 transition-colors">
-                      <X className="w-4 h-4" />
-                    </button>
-                  </div>
-
-                  <div className="space-y-3">
-                    <div>
-                      <label className="text-[10px] font-bold uppercase text-slate-500 block mb-1">Select Product</label>
-                      <CustomSelect
-                        options={products.map((p) => ({ value: p.id, label: p.name }))}
-                        value={newProductData.productId}
-                        onChange={(val) => setNewProductData({ ...newProductData, productId: val })}
-                        searchable={true}
-                      />
-                    </div>
-
-                    {newProductData.productId && (
-                      <div>
-                        <label className="text-[10px] font-bold uppercase text-slate-500 block mb-1">Select Size</label>
-                        <CustomSelect
-                          options={(products.find(p => p.id === newProductData.productId)?.variants || []).map((v: any) => ({ value: v.size, label: `${v.size} (Stock: ${v.stock})` }))}
-                          value={newProductData.size}
-                          onChange={(val) => setNewProductData({ ...newProductData, size: val })}
-                          openUpwards={true}
-                        />
-                      </div>
-                    )}
-
-                    <div className="flex items-center gap-4">
-                      <div>
-                        <label className="text-[10px] font-bold uppercase text-slate-500 block mb-1">Quantity</label>
-                        <div className="flex items-center bg-slate-100 rounded border border-slate-200 overflow-hidden">
-                          <button onClick={() => setNewProductData({ ...newProductData, quantity: Math.max(1, newProductData.quantity - 1) })} className="px-3 py-1.5 hover:bg-slate-200 text-slate-600 font-bold">-</button>
-                          <span className="text-xs bg-white px-4 py-1.5 font-bold">{newProductData.quantity}</span>
-                          <button onClick={() => setNewProductData({ ...newProductData, quantity: newProductData.quantity + 1 })} className="px-3 py-1.5 hover:bg-slate-200 text-slate-600 font-bold">+</button>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="p-3 bg-indigo-50/50 border border-indigo-100 rounded-lg">
-                      <label className="flex items-center gap-2 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={newProductData.requiresPrint}
-                          onChange={(e) => setNewProductData({ ...newProductData, requiresPrint: e.target.checked })}
-                          className="rounded text-indigo-600 focus:ring-indigo-500 scale-110"
-                        />
-                        <span className="text-xs font-bold text-slate-800">Add Jersey Customization (Name & Number)</span>
-                      </label>
-
-                      {newProductData.requiresPrint && (
-                        <div className="mt-3 grid grid-cols-2 gap-3">
-                          <div>
-                            <input
-                              type="text"
-                              placeholder="Print Name"
-                              value={newProductData.printName}
-                              onChange={(e) => setNewProductData({ ...newProductData, printName: e.target.value })}
-                              className="w-full text-xs px-3 py-2 border border-slate-200 rounded focus:ring-2 focus:ring-indigo-500 focus:outline-none"
-                            />
-                          </div>
-                          <div>
-                            <input
-                              type="text"
-                              placeholder="Number"
-                              value={newProductData.printNumber}
-                              onChange={(e) => setNewProductData({ ...newProductData, printNumber: e.target.value })}
-                              className="w-full text-xs px-3 py-2 border border-slate-200 rounded focus:ring-2 focus:ring-indigo-500 focus:outline-none"
-                            />
-                          </div>
-                        </div>
-                      )}
-                    </div>
-
-                    <button
-                      onClick={handleAddNewProduct}
-                      className="w-full py-2 bg-slate-900 text-white font-bold text-xs rounded-lg hover:bg-slate-800 transition-colors shadow-sm mt-4 inline-flex items-center justify-center gap-2"
-                    >
-                      <Plus className="w-3 h-3" /> Add Item to Order
-                    </button>
+                  <div className="flex justify-between text-xs">
+                    <span className="text-slate-500">Transaction ID</span>
+                    <span className="font-bold font-mono text-slate-800">{order.bkashTrxId}</span>
                   </div>
                 </div>
               )}
             </div>
-          )}
-        </div>
-      </div>
+          </div>
 
-      {/* Live Shipment Milestone */}
-      {(() => {
-        const STATUS_STEPS = [
-          { statusKey: "PENDING",   title: "Order Placed",       icon: Package },
-          { statusKey: "CONFIRMED", title: "Confirmed",          icon: CheckCircle2 },
-          { statusKey: "PRINTING",  title: "Printing",           icon: Printer },
-          { statusKey: "PACKAGING", title: "Packaging",          icon: PackageCheck },
-          { statusKey: "SHIPPED",   title: "Shipped",            icon: Truck },
-          { statusKey: "DELIVERED", title: "Delivered",          icon: Check },
-        ];
-        const STATUS_ORDER = ["PENDING", "CONFIRMED", "PRINTING", "PACKAGING", "SHIPPED", "DELIVERED"];
-
-        const isSpecial = order.status === "CANCELLED" || order.status === "RETURNED";
-        const currentIndex = STATUS_ORDER.indexOf(order.status);
-
-        const hasPrint = order.items?.some((i: any) => i.requiresPrint);
-        const filteredSteps = STATUS_STEPS.filter(s => s.statusKey !== "PRINTING" || hasPrint || order.status === "PRINTING");
-
-        // Pathao status helpers
-        const pathaoStatus = pathaoInfo?.order_status || pathaoInfo?.order_status_slug || null;
-        const pathaoStatusLower = (pathaoStatus || '').toLowerCase();
-        const pathaoStatusColor = pathaoStatusLower.includes('delivered')
-          ? 'bg-emerald-100 text-emerald-700'
-          : pathaoStatusLower.includes('cancel')
-            ? 'bg-red-100 text-red-700'
-            : 'bg-indigo-100 text-indigo-700';
-
-        return (
-          <div className="bg-white border border-slate-200 rounded-2xl p-4 sm:p-6">
-            {/* Card Header */}
-            <div className="flex items-center justify-between pb-4 border-b border-slate-50 mb-5">
-              <h3 className="font-bold text-slate-900 uppercase tracking-widest text-[11px] flex items-center gap-2.5">
-                <div className="p-1.5 bg-violet-50 rounded-md">
-                  <Compass className="w-4 h-4 text-violet-500" />
-                </div>
-                Live Shipment Milestone
-              </h3>
-
-              {/* Pathao live dot — only when SHIPPED */}
-              {order.status === 'SHIPPED' && order.pathaoConsignmentId && (
+          {/* Live Shipment Milestone Card */}
+          <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
+            <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
+              <h2 className="text-sm font-semibold text-slate-900 flex items-center gap-2">
+                <Compass className="w-4 h-4 text-violet-500" />
+                Shipment Status
+              </h2>
+              {order.status === "SHIPPED" && order.pathaoConsignmentId && (
                 <div className="flex items-center gap-1.5">
                   <span className="relative flex h-2 w-2">
                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75" />
@@ -755,142 +500,261 @@ export default function OrderDetailsClient({ order, deliverySettings, products =
                 </div>
               )}
             </div>
-
-            {/* Pickup Action Buttons */}
-            {order.status === "PACKAGING" && order.pathaoConsignmentId && (
-              <div className="mb-4 p-3 bg-blue-50 border border-blue-100 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 animate-in fade-in duration-200">
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-bold text-blue-700 bg-blue-100/50 px-2.5 py-1 rounded border border-blue-200 uppercase tracking-wider">
-                    Pickup Requested
-                  </span>
-                  <span className="text-xs text-blue-600 font-medium">Pickup request has been successfully sent to Pathao.</span>
+            <div className="px-5 py-5">
+              {/* Pathao pickup action banners */}
+              {order.status === "PACKAGING" && order.pathaoConsignmentId && (
+                <div className="mb-4 p-3 bg-blue-50 border border-blue-100 rounded-lg flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div>
+                    <span className="text-xs font-bold text-blue-700 bg-blue-100 px-2 py-0.5 rounded border border-blue-200 uppercase tracking-wider">Pickup Requested</span>
+                    <p className="text-xs text-blue-600 mt-1">Pickup request sent to Pathao.</p>
+                  </div>
+                  <button
+                    onClick={async () => {
+                      const res = await cancelPathaoPickupAction(order.id);
+                      if (!res.success) { alert(`Error: ${res.error}`); } else { alert("⚠️ Pickup cancelled.\n\nAlso cancel manually from Pathao Merchant Panel."); router.refresh(); }
+                    }}
+                    className="px-3 py-1.5 bg-white border border-red-200 text-red-600 hover:bg-red-50 text-xs font-bold rounded-lg transition-all whitespace-nowrap"
+                  >
+                    Cancel Pickup
+                  </button>
                 </div>
-                <button
-                  onClick={async () => {
-                    const res = await cancelPathaoPickupAction(order.id);
-                    if (!res.success) {
-                      alert(`Error: ${res.error}`);
-                    } else {
-                      alert("⚠️ Pickup cancelled in system.\n\nPlease also cancel this order manually from Pathao Merchant Panel.");
-                      router.refresh();
-                    }
-                  }}
-                  className="px-3 py-1.5 bg-white border border-red-200 text-red-600 hover:bg-red-50 text-xs font-bold rounded-lg transition-all shadow-sm active:scale-95 whitespace-nowrap"
-                >
-                  Cancel Pickup
-                </button>
-              </div>
-            )}
-
-            {order.status === "PACKAGING" && order.isStorePickup && !order.pathaoConsignmentId && (
-              <div className="mb-4 p-3 bg-indigo-50 border border-indigo-100 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 animate-in fade-in duration-200">
-                <div className="space-y-0.5">
-                  <span className="text-xs font-bold text-indigo-700 block uppercase tracking-wider">Store Pickup Courier Request</span>
-                  <span className="text-xs text-indigo-600 font-medium">This is a store pickup order. You can manually request a Pathao courier pickup.</span>
+              )}
+              {order.status === "PACKAGING" && order.isStorePickup && !order.pathaoConsignmentId && (
+                <div className="mb-4 p-3 bg-indigo-50 border border-indigo-100 rounded-lg flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div>
+                    <span className="text-xs font-bold text-indigo-700 block uppercase tracking-wider">Store Pickup Courier</span>
+                    <p className="text-xs text-indigo-600 mt-0.5">Manually request a Pathao courier pickup.</p>
+                  </div>
+                  <button
+                    onClick={async () => {
+                      const res = await sendPathaoPickupManually(order.id);
+                      if (!res.success) { alert(res.error); } else { alert("✅ Pickup requested manually."); router.refresh(); }
+                    }}
+                    className="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-lg transition-all whitespace-nowrap"
+                  >
+                    Send to Pathao
+                  </button>
                 </div>
-                <button
-                  onClick={async () => {
-                    const res = await sendPathaoPickupManually(order.id);
-                    if (!res.success) {
-                      alert(res.error);
-                    } else {
-                      alert("✅ Pickup requested manually in system.");
-                      router.refresh();
-                    }
-                  }}
-                  className="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-lg transition-all shadow-sm shadow-indigo-100 active:scale-95 whitespace-nowrap"
-                >
-                  Send to Pathao
-                </button>
-              </div>
-            )}
+              )}
 
-            {isSpecial ? (
-              <div className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold ${
-                order.status === "CANCELLED" ? "bg-red-50 text-red-700 border border-red-100" : "bg-slate-50 text-slate-700 border border-slate-200"
-              }`}>
-                <AlertCircle className="w-4 h-4 shrink-0" />
-                Order {order.status}
-              </div>
-            ) : (
-              <div className="relative flex items-start">
-                {/* Horizontal connector line */}
-                <div
-                  className="absolute top-4 left-0 right-0 h-[2px] bg-slate-100"
-                  style={{ zIndex: 0 }}
-                />
-                <div className="flex w-full" style={{ position: "relative" }}>
-                  {filteredSteps.map((step) => {
-                    const stepOrderIndex = STATUS_ORDER.indexOf(step.statusKey);
-                    const isCompleted = stepOrderIndex < currentIndex;
-                    const isActive = stepOrderIndex === currentIndex;
-                    const isShippedStep = step.statusKey === "SHIPPED";
-                    const showPathao = isShippedStep && order.pathaoConsignmentId;
-                    const Icon = step.icon;
-                    return (
-                      <div key={step.statusKey} className="flex flex-col items-center flex-1 min-w-0">
-                        {/* Icon bubble */}
-                        <div className={`relative z-10 w-8 h-8 rounded-full border-2 flex items-center justify-center shrink-0 transition-all duration-300 ${
-                          isActive
-                            ? "bg-violet-600 border-violet-600 text-white ring-4 ring-violet-100 shadow-lg scale-110"
-                            : isCompleted
-                              ? "bg-emerald-500 border-emerald-500 text-white shadow-sm"
-                              : "bg-white border-slate-200 text-slate-400"
-                        }`}>
-                          {isCompleted && !isActive ? (
-                            <Check className="w-3.5 h-3.5 stroke-[3px]" />
-                          ) : (
-                            <Icon className="w-3.5 h-3.5 stroke-[2.5px]" />
+              {isSpecial ? (
+                <div className={`flex items-center gap-2 px-4 py-3 rounded-lg text-sm font-bold ${order.status === "CANCELLED" ? "bg-red-50 text-red-700 border border-red-100" : "bg-slate-50 text-slate-700 border border-slate-200"}`}>
+                  <AlertCircle className="w-4 h-4 shrink-0" />
+                  Order {order.status}
+                </div>
+              ) : (
+                <div className="relative flex items-start">
+                  <div className="absolute top-4 left-0 right-0 h-[2px] bg-slate-100" style={{ zIndex: 0 }} />
+                  <div className="flex w-full relative">
+                    {filteredSteps.map((step) => {
+                      const stepIdx = STATUS_ORDER.indexOf(step.statusKey);
+                      const isCompleted = stepIdx < currentIndex;
+                      const isActive = stepIdx === currentIndex;
+                      const showPathao = step.statusKey === "SHIPPED" && order.pathaoConsignmentId;
+                      const Icon = step.icon;
+                      return (
+                        <div key={step.statusKey} className="flex flex-col items-center flex-1 min-w-0">
+                          <div className={`relative z-10 w-8 h-8 rounded-full border-2 flex items-center justify-center shrink-0 transition-all duration-300 ${isActive ? "bg-violet-600 border-violet-600 text-white ring-4 ring-violet-100 shadow-lg scale-110" : isCompleted ? "bg-emerald-500 border-emerald-500 text-white shadow-sm" : "bg-white border-slate-200 text-slate-400"}`}>
+                            {isCompleted ? <Check className="w-3.5 h-3.5 stroke-[3px]" /> : <Icon className="w-3.5 h-3.5 stroke-[2.5px]" />}
+                          </div>
+                          <span className={`mt-2 text-[10px] font-bold text-center leading-tight px-0.5 uppercase tracking-wide ${isActive ? "text-violet-600" : isCompleted ? "text-emerald-600" : "text-slate-400"}`}>
+                            {step.title}
+                          </span>
+                          {showPathao && (
+                            <div className="mt-1.5 flex flex-col items-center gap-1">
+                              {pathaoStatus ? (
+                                <span className={`inline-flex items-center gap-1 text-[9px] font-black px-2 py-0.5 rounded-full border tracking-wider uppercase ${pathaoStatusLower.includes("delivered") ? "bg-emerald-50 text-emerald-600 border-emerald-200" : pathaoStatusLower.includes("cancel") ? "bg-red-50 text-red-500 border-red-200" : "bg-indigo-50 text-indigo-600 border-indigo-200"}`}>
+                                  <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${pathaoStatusLower.includes("delivered") ? "bg-emerald-500" : pathaoStatusLower.includes("cancel") ? "bg-red-500" : "bg-indigo-500"}`} />
+                                  {pathaoStatus}
+                                </span>
+                              ) : (
+                                <span className="text-[9px] text-slate-400 italic">Syncing…</span>
+                              )}
+                              {pathaoInfo?.updated_at && (
+                                <span className="text-[8px] text-slate-400 text-center leading-tight">
+                                  {new Date(pathaoInfo.updated_at).toLocaleString("en-GB", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}
+                                </span>
+                              )}
+                            </div>
                           )}
                         </div>
-
-                        {/* Label */}
-                        <span className={`mt-2 text-[10px] font-bold text-center leading-tight px-0.5 uppercase tracking-wide ${
-                          isActive ? "text-violet-600" : isCompleted ? "text-emerald-600" : "text-slate-400"
-                        }`}>
-                          {step.title}
-                        </span>
-
-                        {/* Pathao status pill — beneath "Shipped" label only */}
-                        {showPathao && (
-                          <div className="mt-1.5 flex flex-col items-center gap-1">
-                            {pathaoStatus ? (
-                              <span className={`inline-flex items-center gap-1 text-[9px] font-black px-2 py-0.5 rounded-full border tracking-wider uppercase ${
-                                pathaoStatusLower.includes('delivered')
-                                  ? 'bg-emerald-50 text-emerald-600 border-emerald-200'
-                                  : pathaoStatusLower.includes('cancel')
-                                    ? 'bg-red-50 text-red-500 border-red-200'
-                                    : 'bg-indigo-50 text-indigo-600 border-indigo-200'
-                              }`}>
-                                <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${
-                                  pathaoStatusLower.includes('delivered') ? 'bg-emerald-500' :
-                                  pathaoStatusLower.includes('cancel') ? 'bg-red-500' : 'bg-indigo-500'
-                                }`} />
-                                {pathaoStatus}
-                              </span>
-                            ) : (
-                              <span className="text-[9px] text-slate-400 italic font-medium">Syncing…</span>
-                            )}
-                            {pathaoInfo?.updated_at && (
-                              <span className="text-[8px] text-slate-400 font-medium text-center leading-tight">
-                                {new Date(pathaoInfo.updated_at).toLocaleString('en-GB', {
-                                  day: '2-digit', month: 'short',
-                                  hour: '2-digit', minute: '2-digit'
-                                })}
-                              </span>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
+                      );
+                    })}
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
+            </div>
           </div>
-        );
-      })()}
+        </div>
 
+        {/* ── Right Sidebar ── */}
+        <div className="space-y-4">
+
+          {/* Notes / Remarks Card */}
+          <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
+            <div className="px-4 py-3.5 border-b border-slate-100 flex items-center justify-between">
+              <h3 className="text-sm font-semibold text-slate-900">Notes</h3>
+              {!isEditingRemark ? (
+                <button onClick={() => setIsEditingRemark(true)} className="text-xs font-semibold text-indigo-600 hover:text-indigo-800 transition-colors flex items-center gap-1">
+                  <Edit2 className="w-3 h-3" /> Edit
+                </button>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <button onClick={handleSaveRemark} disabled={remarkLoading} className="text-xs font-bold text-white bg-slate-900 px-2.5 py-1 rounded-lg hover:bg-slate-800 disabled:opacity-50 flex items-center gap-1 transition-colors">
+                    {remarkLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />}
+                    Save
+                  </button>
+                  <button onClick={() => { setIsEditingRemark(false); setRemarks(order.remarks || ""); }} disabled={remarkLoading} className="text-xs font-bold text-slate-500 hover:text-slate-700 transition-colors">
+                    Cancel
+                  </button>
+                </div>
+              )}
+            </div>
+            <div className="p-4">
+              {isEditingRemark ? (
+                <textarea
+                  value={remarks}
+                  onChange={(e) => setRemarks(e.target.value)}
+                  placeholder="Add internal notes about this order..."
+                  rows={4}
+                  autoFocus
+                  className="w-full text-sm text-slate-700 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2.5 focus:outline-none focus:border-slate-400 resize-none leading-relaxed"
+                />
+              ) : order.remarks ? (
+                <p className="text-sm text-slate-600 leading-relaxed whitespace-pre-wrap cursor-pointer hover:text-slate-800" onClick={() => setIsEditingRemark(true)}>
+                  {order.remarks}
+                </p>
+              ) : (
+                <p className="text-xs text-slate-400 italic cursor-pointer hover:text-slate-500" onClick={() => setIsEditingRemark(true)}>
+                  No internal notes. Click to add...
+                </p>
+              )}
+            </div>
+          </div>
+
+          {/* Customer Info Card */}
+          <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
+            <div className="px-4 py-3.5 border-b border-slate-100 flex items-center justify-between">
+              <h3 className="text-sm font-semibold text-slate-900">Customer info</h3>
+              {!isEditing && (
+                <button onClick={() => setIsEditing(true)} className="text-xs font-semibold text-indigo-600 hover:text-indigo-800 transition-colors flex items-center gap-1">
+                  <Edit2 className="w-3 h-3" /> Edit
+                </button>
+              )}
+            </div>
+            <div className="p-4 space-y-3">
+              {isEditing ? (
+                <>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Name</label>
+                    <input
+                      type="text"
+                      value={formData.customerName}
+                      onChange={(e) => setFormData({ ...formData, customerName: e.target.value })}
+                      className="w-full text-sm px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:border-slate-400 text-slate-800 font-medium"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Phone</label>
+                    <input
+                      type="text"
+                      value={formData.phone}
+                      onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                      className="w-full text-sm px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:border-slate-400 text-slate-800 font-mono"
+                    />
+                  </div>
+                </>
+              ) : (
+                <>
+                  <p className="text-sm font-semibold text-slate-900">{order.customerName}</p>
+                  <a href={`tel:${order.phone}`} className="text-sm text-indigo-600 hover:text-indigo-800 font-medium transition-colors block">
+                    {order.phone}
+                  </a>
+                </>
+              )}
+              <div className="pt-2 border-t border-slate-100">
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1.5">Created by</span>
+                {order.createdBy ? (
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold text-indigo-700 bg-indigo-50 border border-indigo-100 rounded-lg">👤 {order.createdBy.username}</span>
+                ) : order.orderSource === "eCommerce" ? (
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-100 rounded-lg">🌐 eCommerce</span>
+                ) : (
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold text-violet-700 bg-violet-50 border border-violet-100 rounded-lg">👤 Salesman</span>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Shipping Address Card */}
+          <div className="bg-white border border-slate-200 rounded-xl shadow-sm">
+            <div className="px-4 py-3.5 border-b border-slate-100 rounded-t-xl flex items-center justify-between">
+              <h3 className="text-sm font-semibold text-slate-900">Shipping address</h3>
+              {!isEditing && (
+                <button onClick={() => setIsEditing(true)} className="text-xs font-semibold text-indigo-600 hover:text-indigo-800 transition-colors flex items-center gap-1">
+                  <Edit2 className="w-3 h-3" /> Edit
+                </button>
+              )}
+            </div>
+            <div className="p-4 space-y-3">
+              {isEditing ? (
+                <>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">District</label>
+                    <CustomSelect
+                      options={DISTRICTS.map((d) => ({ value: d, label: d }))}
+                      value={formData.district}
+                      onChange={(val) => setFormData({ ...formData, district: val })}
+                      searchable
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Address</label>
+                    <textarea
+                      value={formData.address}
+                      onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                      rows={3}
+                      className="w-full text-sm px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:border-slate-400 text-slate-700 resize-none"
+                    />
+                  </div>
+                </>
+              ) : (
+                <div className="space-y-1.5">
+                  <p className="text-sm font-semibold text-slate-900">{order.customerName}</p>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="inline-block bg-[#800020] text-[#FFD700] px-3 py-1 rounded text-[10px] font-black tracking-wider uppercase border border-[#600010]">
+                      {order.district}
+                    </span>
+                    {order.isStorePickup && (
+                      <span className="text-[10px] font-bold bg-teal-50 text-teal-700 border border-teal-200 px-2 py-0.5 rounded uppercase tracking-wider">🏪 Store Pickup</span>
+                    )}
+                  </div>
+                  <p className="text-sm text-slate-600 leading-relaxed">{order.address}</p>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Order Source / Exchange Tag Card (if applicable) */}
+          {(order.isExchange || order.exchangeRefOrderId) && (
+            <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
+              <div className="px-4 py-3.5 border-b border-slate-100">
+                <h3 className="text-sm font-semibold text-slate-900">Exchange Order</h3>
+              </div>
+              <div className="p-4">
+                {order.exchangeRefOrderId && (
+                  <div className="text-xs text-slate-600 space-y-1">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Reference Order</span>
+                    <span className="font-mono font-bold text-slate-800">{order.exchangeRefOrderId}</span>
+                  </div>
+                )}
+                {order.exchangeItemNote && (
+                  <p className="text-xs text-slate-600 mt-2 leading-relaxed">{order.exchangeItemNote}</p>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
