@@ -3,14 +3,7 @@
 import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { roundPrice } from "@/utils/formatPrice";
-
-function normalizePhone(raw: string): string {
-  let p = raw.replace(/[\s\-\(\)\.]/g, "");
-  if (p.startsWith("+880")) p = p.slice(4);
-  else if (p.startsWith("880") && p.length === 13) p = p.slice(3);
-  if (p.length === 10 && !p.startsWith("0")) p = "0" + p;
-  return p;
-}
+import { normalizePhone } from "@/lib/utils";
 
 export async function placeOrderAction(payload: {
   fullName: string;

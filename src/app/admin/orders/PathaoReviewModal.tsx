@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from "react";
 import { X, Truck, Loader2, AlertCircle, Info } from "lucide-react";
-import { bulkSendToPathaoAction } from "../actions";
+import { bulkSendToPathaoAction } from "./actions";
 import { useRouter } from "next/navigation";
 import { formatBDT } from "@/utils/formatPrice";
 

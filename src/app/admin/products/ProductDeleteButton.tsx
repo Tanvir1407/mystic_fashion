@@ -1,7 +1,7 @@
 "use client";
 
 import { DeleteWarningModal } from "@/components/DeleteWarningModal";
-import { deleteProduct } from "@/app/admin/actions";
+import { deleteProduct } from "@/app/admin/products/actions";
 
 export function ProductDeleteButton({ productId, productName }: { productId: string; productName: string }) {
   return (

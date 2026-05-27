@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { createProduct, updateProduct, uploadImage } from "../../actions";
+import { createProduct, updateProduct, uploadImage } from "../actions";
 import { createBrand, createSubcategory, createCategory } from "../../inventory/catalog-actions";
 import { slugify } from "@/utils/slugify";
 import { Plus, Trash2, Save, ArrowLeft, GripVertical, Bold, Italic, Underline, List, ListOrdered, Undo, Redo, Eraser, X, Loader2, ChevronDown } from "lucide-react";

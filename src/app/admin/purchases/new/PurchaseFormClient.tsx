@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { createPurchase, updatePurchase } from "../../actions";
+import { createPurchase, updatePurchase } from "../actions";
 import { Plus, Trash2, Save, ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";

@@ -1,4 +1,5 @@
-import { getProductsForOrder, getDeliverySettings, getDTFPrintSetting } from "../../actions";
+import { getDeliverySettings, getDTFPrintSetting } from "../../actions";
+import { getProductsForOrder } from "@/app/admin/products/actions";
 import CreateOrderClient from "./CreateOrderClient";
 
 export default async function CreateOrderPage() {

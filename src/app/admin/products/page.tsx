@@ -1,6 +1,5 @@
 import prisma from "@/lib/prisma";
 import Link from "next/link";
-import { deleteProduct } from "../actions";
 import { Plus, Edit2, Filter, Star, Eye, EyeOff, RotateCcw } from "lucide-react";
 import { ProductDeleteButton } from "./ProductDeleteButton";
 import { ProductRestoreButton } from "./ProductRestoreButton";

@@ -6,7 +6,7 @@ import {
   Compass, CheckCircle2, Truck, PackageCheck, Printer,
   AlertCircle, Minus, VerifiedIcon, Loader2,
 } from "lucide-react";
-import { updateOrderDetails, updateOrderRemark } from "../../actions";
+import { updateOrderDetails, updateOrderRemark } from "../actions";
 import { useRouter } from "next/navigation";
 import UploadedImage from "@/components/UploadedImage";
 import { CustomSelect } from "@/components/CustomSelect";

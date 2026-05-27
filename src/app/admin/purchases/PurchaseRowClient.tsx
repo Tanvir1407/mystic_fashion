@@ -1,6 +1,6 @@
 "use client";
 
-import { updatePurchaseStatus, deletePurchase, restorePurchase } from "../actions";
+import { updatePurchaseStatus, deletePurchase, restorePurchase } from "./actions";
 import { useState } from "react";
 import { DeleteWarningModal } from "@/components/DeleteWarningModal";
 import { Edit, RotateCcw } from "lucide-react";

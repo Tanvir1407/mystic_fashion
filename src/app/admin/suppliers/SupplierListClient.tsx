@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useTransition } from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { Search, Eye, X, Plus, Calendar, DollarSign, Phone, MapPin, Edit, CheckCircle, AlertCircle, Trash2, RotateCcw } from "lucide-react";
-import { createSupplier, updateSupplier, deleteSupplier, restoreSupplier } from "@/app/admin/actions";
+import { createSupplier, updateSupplier, deleteSupplier, restoreSupplier } from "@/app/admin/purchases/actions";
 import { AdminPagination } from "@/components/AdminPagination";
 
 interface Supplier {

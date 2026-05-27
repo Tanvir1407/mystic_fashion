@@ -1,7 +1,7 @@
 "use client";
 
 import { useTransition } from "react";
-import { restoreProduct } from "@/app/admin/actions";
+import { restoreProduct } from "@/app/admin/products/actions";
 import { RotateCcw } from "lucide-react";
 import { useRouter } from "next/navigation";
 

@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import OrderRowClient from "./OrderRowClient";
 import type { OrderStatus } from "@/generated/prisma/client";
-import { bulkUpdateOrderStatus, bulkDeleteOrders } from "../actions";
+import { bulkUpdateOrderStatus, bulkDeleteOrders } from "./actions";
 import { Filter, Plus, Printer, Trash2, Search as SearchIcon, X, Truck, Sparkles } from "lucide-react";
 import InvoicePrintView from "./InvoicePrintView";
 import ThermalPrintView from "./ThermalPrintView";

@@ -1,6 +1,6 @@
 "use client";
 
-import { updateOrderStatus, deleteOrder, restoreOrder } from "../actions";
+import { updateOrderStatus, deleteOrder, restoreOrder } from "./actions";
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Eye, Trash2, RotateCcw } from "lucide-react";

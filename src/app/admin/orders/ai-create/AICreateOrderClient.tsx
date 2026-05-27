@@ -25,7 +25,7 @@ import {
   ChartArea,
 } from "lucide-react";
 import Link from "next/link";
-import { createAdminOrder } from "../../actions";
+import { createAdminOrder } from "../actions";
 import { useRouter } from "next/navigation";
 import { formatBDT, roundPrice } from "@/utils/formatPrice";
 
