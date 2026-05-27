@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import Image from "next/image";
 import { Plus, Trash2, Save, Eye, EyeOff, X, ImagePlus, Link as LinkIcon, AlignLeft, Hash, LayoutList, RefreshCw } from "lucide-react";
 import { createHeroSlide, updateHeroSlide, deleteHeroSlide } from "./actions";
-import { uploadImage } from "@/app/admin/actions";
+import { uploadImage } from "@/app/admin/products/actions";
 
 interface Slide {
   id: string;

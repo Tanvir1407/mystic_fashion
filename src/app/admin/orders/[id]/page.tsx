@@ -1,5 +1,6 @@
 import prisma from "@/lib/prisma";
-import { getDeliverySettings, getProductsForOrder } from "../../actions";
+import { getDeliverySettings } from "../../actions";
+import { getProductsForOrder } from "@/app/admin/products/actions";
 import { pathaoClient } from "@/lib/pathao/PathaoClient";
 import { notFound } from "next/navigation";
 import Link from "next/link";

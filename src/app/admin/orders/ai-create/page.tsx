@@ -1,4 +1,5 @@
-import { getProductsForOrder, getDeliverySettings, getDTFPrintSetting } from "../../actions";
+import { getDeliverySettings, getDTFPrintSetting } from "../../actions";
+import { getProductsForOrder } from "@/app/admin/products/actions";
 import AICreateOrderClient from "./AICreateOrderClient";
 import { getSession } from "@/lib/auth";
 import { hasPermission } from "@/lib/permissions";

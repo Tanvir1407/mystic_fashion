@@ -1,6 +1,6 @@
 import prisma from "@/lib/prisma";
 import Link from "next/link";
-import { deleteSizeChart } from "../actions";
+import { deleteSizeChart } from "@/app/admin/products/actions";
 import { Plus, Edit2, Trash2, Ruler } from "lucide-react";
 
 export const dynamic = "force-dynamic";
