@@ -7,7 +7,6 @@ import { getAuditContext } from "@/lib/audit";
 import { revalidatePath } from "next/cache";
 import { pathaoClient } from "@/lib/pathao/PathaoClient";
 import { getSession } from "@/lib/auth";
-import { getStaffSession } from "@/lib/staff-auth";
 import { getOrCreateSystemAccount, createDoubleEntryJournal } from "@/lib/accounting";
 import { normalizePhone } from "@/lib/utils";
 
@@ -611,9 +610,8 @@ async function _createAdminOrder(data: {
   exchangeItemNote?: string;
 }) {
   try {
-    const adminSession = await getSession();
-    const staffSession = !adminSession ? await getStaffSession() : null;
-    const createdById = adminSession?.userId || staffSession?.staffId || null;
+    const session = await getSession();
+    const createdById = session?.userId || null;
 
     const order = await prisma.$transaction(async (tx) => {
       const customId = await generateOrderIdInternal(tx);

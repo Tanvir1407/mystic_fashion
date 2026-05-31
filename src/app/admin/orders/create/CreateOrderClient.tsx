@@ -35,12 +35,14 @@ export default function CreateOrderClient({
   dtfCostPerItem = 300,
   backUrl = "/admin/orders",
   successUrl = "/admin/orders",
+  orderAction,
 }: {
   products: any[];
   deliverySettings: any;
   dtfCostPerItem?: number;
   backUrl?: string;
   successUrl?: string;
+  orderAction?: (data: any) => Promise<{ success: boolean; orderId?: string; error?: string }>;
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -326,7 +328,7 @@ export default function CreateOrderClient({
               exchangeRefOrderId: exchangeRefOrderId.trim(),
               exchangeItemNote: exchangeItemNote.trim(),
             })
-          : await createAdminOrder({
+          : await (orderAction ?? createAdminOrder)({
               customerName,
               phone,
               district,

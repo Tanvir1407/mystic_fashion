@@ -1,6 +1,7 @@
 import { getDeliverySettings, getDTFPrintSetting } from "@/app/admin/actions";
 import { getProductsForOrder } from "@/app/admin/products/actions";
 import CreateOrderClient from "@/app/admin/orders/create/CreateOrderClient";
+import { createStaffOrder } from "./actions";
 
 export const dynamic = "force-dynamic";
 
@@ -26,6 +27,7 @@ export default async function StaffCreateOrderPage() {
         dtfCostPerItem={dtfSetting.printCost}
         backUrl="/staff/orders"
         successUrl="/staff/orders"
+        orderAction={createStaffOrder}
       />
     </div>
   );
