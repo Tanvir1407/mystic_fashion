@@ -118,6 +118,12 @@ export default async function StaffDashboardPage() {
           sparkline={last7Days}
           monthName={monthName}
         />
+        <LeaderboardCard
+          leaderboard={leaderboard}
+          myId={session.staffId}
+          myRank={myRank}
+          monthName={monthName}
+        />
         <OrdersCard
           today={todayAgg._count.id}
           todaySales={todayAgg._sum.totalAmount ?? 0}
@@ -135,12 +141,7 @@ export default async function StaffDashboardPage() {
           rate={rate}
           monthName={monthName}
         />
-        <LeaderboardCard
-          leaderboard={leaderboard}
-          myId={session.staffId}
-          myRank={myRank}
-          monthName={monthName}
-        />
+        
       </div>
 
       {/* Pending banner */}
