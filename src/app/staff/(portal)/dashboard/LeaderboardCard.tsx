@@ -1,7 +1,7 @@
 "use client";
 
 import { formatBDT } from "@/utils/formatPrice";
-import { Trophy, Crown, TrendingUp } from "lucide-react";
+import { Trophy, Crown } from "lucide-react";
 
 export default function LeaderboardCard({
   leaderboard,
@@ -14,11 +14,8 @@ export default function LeaderboardCard({
   myRank: number;
   monthName: string;
 }) {
-  const myEntry = leaderboard.find((s) => s.id === myId);
   const top3 = leaderboard.slice(0, 3);
   const rest = leaderboard.slice(3, 10); // max 10 total
-  const nextEntry = myRank > 1 ? leaderboard[myRank - 2] : null;
-  const gap = nextEntry ? nextEntry.totalSales - (myEntry?.totalSales ?? 0) : 0;
 
   // Podium order: 2nd left, 1st center, 3rd right
   const podiumOrder = [top3[1], top3[0], top3[2]].filter(Boolean) as typeof top3;
