@@ -219,6 +219,7 @@ model Order {
   exchangeItemNote   String?
   createdById         String?
   customerId          String?
+  commissionRate      Float?
   createdBy           Staff?        @relation(fields: [createdById], references: [id], onDelete: SetNull)
   customer            Customer?     @relation(fields: [customerId], references: [id], onDelete: SetNull)
   coupon              Coupon?       @relation(fields: [couponCode], references: [code])

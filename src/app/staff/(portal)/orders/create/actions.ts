@@ -4,6 +4,7 @@ import prisma from "@/lib/prisma";
 import { getStaffSession } from "@/lib/staff-auth";
 import { normalizePhone } from "@/lib/utils";
 import { revalidatePath } from "next/cache";
+import { getEffectiveCommissionRate } from "@/lib/commission";
 
 async function generateOrderId(tx: any): Promise<string> {
   const now = new Date();
@@ -53,6 +54,8 @@ export async function createStaffOrder(data: {
     const session = await getStaffSession();
     if (!session) return { success: false, error: "Not authenticated." };
 
+    const rate = await getEffectiveCommissionRate(session.staffId);
+
     const order = await prisma.$transaction(async (tx) => {
       const customId = await generateOrderId(tx);
       const phone = data.phone ? normalizePhone(data.phone) : data.phone;
@@ -91,6 +94,7 @@ export async function createStaffOrder(data: {
           status: "PENDING",
           orderSource: "Salesman",
           createdById: session.staffId,
+          commissionRate: rate,
           customerId,
           items: {
             create: data.items.flatMap((item) => {
