@@ -1,6 +1,5 @@
 import './load-env';
 import prisma from '../src/lib/prisma';
-import { getEffectiveCommissionRate } from '../src/lib/commission';
 
 async function main() {
   console.log('--- Starting Commission Rate Backfill ---');
