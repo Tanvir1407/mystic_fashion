@@ -4,16 +4,16 @@ import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  LayoutDashboard, ShoppingBag, TrendingUp,
+  LayoutDashboard, ShoppingBag, Wallet,
   LogOut, Menu, X, Plus,
 } from "lucide-react";
 import { staffLogout } from "../login/actions";
 import type { StaffSessionPayload } from "@/lib/staff-auth";
 
 const NAV_ITEMS = [
-  { href: "/staff/dashboard", label: "Dashboard", icon: LayoutDashboard, exact: true },
-  { href: "/staff/orders",    label: "My Orders",  icon: ShoppingBag,    exact: false },
-  { href: "/staff/commission", label: "Commission", icon: TrendingUp,    exact: false },
+  { href: "/staff/dashboard", label: "Dashboard",       icon: LayoutDashboard, exact: true  },
+  { href: "/staff/orders",    label: "My Orders",        icon: ShoppingBag,     exact: false },
+  { href: "/staff/payments",  label: "Payment History",  icon: Wallet,          exact: false },
 ];
 
 export default function StaffLayoutClient({
@@ -180,11 +180,11 @@ export default function StaffLayoutClient({
               </div>
 
               <Link
-                href="/staff/commission"
+                href="/staff/payments"
                 className="flex items-center gap-2.5 px-4 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 transition-colors"
               >
-                <TrendingUp className="w-3.5 h-3.5 text-slate-400" />
-                My Commission
+                <Wallet className="w-3.5 h-3.5 text-slate-400" />
+                Payment History
               </Link>
 
               <div className="border-t border-slate-100 my-1" />

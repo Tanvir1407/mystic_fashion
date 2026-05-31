@@ -1,10 +1,14 @@
 import { getStaffSession } from "@/lib/staff-auth";
 import { redirect } from "next/navigation";
 import prisma from "@/lib/prisma";
-import { getStaffCommissionSummary } from "@/lib/commission";
+import { getEffectiveCommissionRate, calcOrderCommission, calcPotentialCommission } from "@/lib/commission";
 import { formatBDT } from "@/utils/formatPrice";
-import { ShoppingBag, TrendingUp, Wallet, Clock, Trophy, Plus } from "lucide-react";
+import { Plus } from "lucide-react";
 import Link from "next/link";
+import SalesCard from "./SalesCard";
+import OrdersCard from "./OrdersCard";
+import CommissionCard from "./CommissionCard";
+import LeaderboardCard from "./LeaderboardCard";
 
 export const dynamic = "force-dynamic";
 
@@ -12,163 +16,145 @@ export default async function StaffDashboardPage() {
   const session = await getStaffSession();
   if (!session) redirect("/staff/login");
 
-  const now = new Date();
-  const month = now.getMonth() + 1;
-  const year = now.getFullYear();
-
-  // Personal summary for this month
-  const summary = await getStaffCommissionSummary(session.staffId, month, year);
-
-  // Today's orders count
+  const now        = new Date();
   const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const todayOrders = await prisma.order.count({
-    where: { createdById: session.staffId, createdAt: { gte: todayStart }, deletedAt: null },
-  });
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+  const monthEnd   = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+  const month      = now.getMonth() + 1;
+  const year       = now.getFullYear();
+  const monthName  = now.toLocaleString("en-US", { month: "long" });
 
-  // Leaderboard: all staff with portal access, this month
-  const startDate = new Date(year, month - 1, 1);
-  const endDate = new Date(year, month, 1);
+  const rate     = await getEffectiveCommissionRate(session.staffId);
+  const baseWhere = { createdById: session.staffId, deletedAt: null as any };
 
-  const allStaff = await prisma.staff.findMany({
-    where: { hasPortalAccess: true },
-    select: { id: true, username: true },
-  });
+  const [
+    todayAgg, monthAgg, totalAgg,
+    monthOrders, allDelivered,
+    totalPaidAgg, monthPayments,
+    allStaff,
+    // last 7 days for sparkline
+    last7Days,
+  ] = await Promise.all([
+    prisma.order.aggregate({ where: { ...baseWhere, createdAt: { gte: todayStart } },              _sum: { totalAmount: true }, _count: { id: true } }),
+    prisma.order.aggregate({ where: { ...baseWhere, createdAt: { gte: monthStart, lt: monthEnd } }, _sum: { totalAmount: true }, _count: { id: true } }),
+    prisma.order.aggregate({ where: baseWhere,                                                      _sum: { totalAmount: true }, _count: { id: true } }),
+    prisma.order.findMany({
+      where: { ...baseWhere, createdAt: { gte: monthStart, lt: monthEnd } },
+      include: { salesReturns: { select: { returnCost: true, productLoss: true, printingLoss: true, deliveryLoss: true } } },
+    }),
+    prisma.order.findMany({
+      where: { ...baseWhere, status: "DELIVERED" },
+      include: { salesReturns: { select: { returnCost: true, productLoss: true, printingLoss: true, deliveryLoss: true } } },
+    }),
+    prisma.commissionPayment.aggregate({ where: { staffId: session.staffId }, _sum: { amount: true } }),
+    prisma.commissionPayment.findMany({ where: { staffId: session.staffId, month, year } }),
+    prisma.staff.findMany({ where: { hasPortalAccess: true }, select: { id: true, username: true } }),
+    // last 7 days daily sales
+    (async () => {
+      const days: { date: string; amount: number; count: number }[] = [];
+      for (let i = 6; i >= 0; i--) {
+        const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() - i);
+        const next = new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1);
+        const agg = await prisma.order.aggregate({
+          where: { ...baseWhere, createdAt: { gte: d, lt: next }, status: { not: "CANCELLED" } },
+          _sum: { totalAmount: true }, _count: { id: true },
+        });
+        days.push({ date: d.toLocaleDateString("en-US", { weekday: "short" }), amount: agg._sum.totalAmount ?? 0, count: agg._count.id });
+      }
+      return days;
+    })(),
+  ]);
 
+  // Commission
+  const monthCommission = monthOrders.reduce((s, o) => s + calcPotentialCommission(o, rate), 0);
+  const monthEarned     = allDelivered.filter(o => {
+    const oDate = new Date(o.createdAt);
+    return oDate >= monthStart && oDate < monthEnd;
+  }).reduce((s, o) => s + calcOrderCommission(o, rate), 0);
+  const totalCommission = allDelivered.reduce((s, o) => s + calcOrderCommission(o, rate), 0);
+  const totalPaid       = totalPaidAgg._sum.amount ?? 0;
+  const monthPaid       = monthPayments.reduce((s, p) => s + p.amount, 0);
+  const monthPending    = Math.max(0, monthEarned - monthPaid);
+  const totalPending    = Math.max(0, totalCommission - totalPaid);
+
+  // Leaderboard
   const leaderboard = await Promise.all(
     allStaff.map(async (s) => {
-      const orders = await prisma.order.aggregate({
-        where: {
-          createdById: s.id,
-          createdAt: { gte: startDate, lt: endDate },
-          deletedAt: null,
-          status: { not: "CANCELLED" },
-        },
-        _sum: { totalAmount: true },
-        _count: { id: true },
+      const agg = await prisma.order.aggregate({
+        where: { createdById: s.id, createdAt: { gte: monthStart, lt: monthEnd }, deletedAt: null, status: { not: "CANCELLED" } },
+        _sum: { totalAmount: true }, _count: { id: true },
       });
-      return {
-        id: s.id,
-        username: s.username,
-        totalSales: orders._sum.totalAmount ?? 0,
-        orderCount: orders._count.id,
-      };
+      return { id: s.id, username: s.username, totalSales: agg._sum.totalAmount ?? 0, orderCount: agg._count.id };
     })
   );
-
   leaderboard.sort((a, b) => b.totalSales - a.totalSales);
   const myRank = leaderboard.findIndex((s) => s.id === session.staffId) + 1;
 
-  const monthName = now.toLocaleString("en-US", { month: "long" });
-
   return (
-    <div className="space-y-6 max-w-8xl">
+    <div className="space-y-5">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl font-bold text-slate-900">Welcome back, {session.username}</h1>
-          <p className="text-sm text-slate-500 mt-0.5">{monthName} {year} performance</p>
+          <p className="text-sm text-slate-500 mt-0.5">{monthName} {year}</p>
         </div>
         <Link
           href="/staff/orders/create"
-          className="flex items-center gap-1.5 px-4 py-2 bg-[#1a3a5c] text-white text-sm font-medium rounded-lg hover:bg-[#15304f] transition-colors"
+          className="flex items-center gap-1.5 px-4 py-2 bg-[#800020] text-white text-sm font-semibold rounded-lg hover:bg-[#600018] transition-colors shadow-sm"
         >
-          <Plus className="w-4 h-4" />
-          New Order
+          <Plus className="w-4 h-4" /> New Order
         </Link>
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard icon={ShoppingBag} label="Today's Orders" value={String(todayOrders)} color="blue" />
-        <StatCard icon={Clock} label="This Month Orders" value={String(summary.orderCount)} color="purple" />
-        <StatCard icon={TrendingUp} label="Month Sales" value={formatBDT(summary.totalSales)} color="green" />
-        <StatCard icon={Wallet} label="Commission Earned" value={formatBDT(summary.earned)} sub={`${summary.rate}% rate`} color="amber" />
+      {/* 4 cards grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+        <SalesCard
+          today={todayAgg._sum.totalAmount ?? 0}
+          todayCount={todayAgg._count.id}
+          month={monthAgg._sum.totalAmount ?? 0}
+          monthCount={monthAgg._count.id}
+          total={totalAgg._sum.totalAmount ?? 0}
+          totalCount={totalAgg._count.id}
+          sparkline={last7Days}
+          monthName={monthName}
+        />
+        <OrdersCard
+          today={todayAgg._count.id}
+          todaySales={todayAgg._sum.totalAmount ?? 0}
+          month={monthAgg._count.id}
+          monthSales={monthAgg._sum.totalAmount ?? 0}
+          total={totalAgg._count.id}
+          monthName={monthName}
+          sparkline={last7Days}
+        />
+        <CommissionCard
+          monthCommission={monthCommission}
+          monthPending={monthPending}
+          totalCommission={totalCommission}
+          totalPaid={totalPaid}
+          rate={rate}
+          monthName={monthName}
+        />
+        <LeaderboardCard
+          leaderboard={leaderboard}
+          myId={session.staffId}
+          myRank={myRank}
+          monthName={monthName}
+        />
       </div>
 
-      {/* Commission pending */}
-      {summary.pending > 0 && (
+      {/* Pending banner */}
+      {monthPending > 0 && (
         <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-center justify-between">
           <div>
-            <p className="text-sm font-medium text-amber-800">Pending Commission</p>
-            <p className="text-2xl font-bold text-amber-900 mt-0.5">{formatBDT(summary.pending)}</p>
+            <p className="text-xs font-bold text-amber-600 uppercase tracking-wide">Pending Commission — {monthName}</p>
+            <p className="text-2xl font-black text-amber-800 mt-0.5">{formatBDT(monthPending)}</p>
           </div>
-          <Link href="/staff/commission" className="text-sm text-amber-700 font-medium hover:underline">
-            View details →
+          <Link href="/staff/payments" className="text-xs font-semibold text-amber-700 bg-amber-100 hover:bg-amber-200 px-3 py-2 rounded-lg transition-colors border border-amber-300">
+            View History →
           </Link>
         </div>
       )}
-
-      {/* Leaderboard */}
-      <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
-        <div className="px-5 py-4 border-b border-slate-100 flex items-center gap-2">
-          <Trophy className="w-4 h-4 text-amber-500" />
-          <h2 className="text-sm font-semibold text-slate-900">
-            Sales Leaderboard — {monthName}
-          </h2>
-          {myRank > 0 && (
-            <span className="ml-auto text-xs text-slate-500">Your rank: <strong className="text-slate-800">#{myRank}</strong></span>
-          )}
-        </div>
-        <div className="divide-y divide-slate-100">
-          {leaderboard.length === 0 && (
-            <p className="px-5 py-8 text-center text-sm text-slate-400">No sales this month yet.</p>
-          )}
-          {leaderboard.map((s, idx) => {
-            const isMe = s.id === session.staffId;
-            return (
-              <div
-                key={s.id}
-                className={`flex items-center gap-4 px-5 py-3.5 ${isMe ? "bg-blue-50" : ""}`}
-              >
-                <span className={`w-6 text-sm font-bold text-center flex-shrink-0 ${idx === 0 ? "text-amber-500" : idx === 1 ? "text-slate-400" : idx === 2 ? "text-orange-400" : "text-slate-400"}`}>
-                  {idx + 1}
-                </span>
-                <div className="w-7 h-7 rounded-full bg-slate-200 flex items-center justify-center flex-shrink-0">
-                  <span className="text-xs font-bold text-slate-600 uppercase">{s.username.charAt(0)}</span>
-                </div>
-                <span className={`flex-1 text-sm font-medium ${isMe ? "text-blue-700" : "text-slate-800"}`}>
-                  {s.username} {isMe && <span className="text-xs font-normal">(you)</span>}
-                </span>
-                <span className="text-xs text-slate-500">{s.orderCount} orders</span>
-                <span className={`text-sm font-semibold ${isMe ? "text-blue-700" : "text-slate-900"}`}>
-                  {formatBDT(s.totalSales)}
-                </span>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function StatCard({
-  icon: Icon,
-  label,
-  value,
-  sub,
-  color,
-}: {
-  icon: any;
-  label: string;
-  value: string;
-  sub?: string;
-  color: "blue" | "purple" | "green" | "amber";
-}) {
-  const colors = {
-    blue: "bg-blue-50 text-blue-600",
-    purple: "bg-purple-50 text-purple-600",
-    green: "bg-green-50 text-green-600",
-    amber: "bg-amber-50 text-amber-600",
-  };
-  return (
-    <div className="bg-white rounded-xl border border-slate-200 p-4">
-      <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${colors[color]} mb-3`}>
-        <Icon className="w-4 h-4" />
-      </div>
-      <p className="text-xs text-slate-500">{label}</p>
-      <p className="text-lg font-bold text-slate-900 mt-0.5">{value}</p>
-      {sub && <p className="text-xs text-slate-400 mt-0.5">{sub}</p>}
     </div>
   );
 }

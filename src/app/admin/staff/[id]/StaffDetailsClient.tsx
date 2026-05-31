@@ -36,7 +36,7 @@ function CommissionPanel({
   const handlePay = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    const payAmount = parseFloat(amount);
+    const payAmount = Math.ceil(parseFloat(amount));
     const res = await createCommissionPayment({
       staffId,
       amount: payAmount,
@@ -222,7 +222,7 @@ function CommissionPanel({
               </div>
               <button
                 type="button"
-                onClick={() => { setPayFull(true); setAmount(String(summary.pending)); }}
+                onClick={() => { setPayFull(true); setAmount(String(Math.ceil(summary.pending))); }}
                 className="text-xs font-bold text-amber-700 bg-amber-100 hover:bg-amber-200 px-3 py-1.5 rounded-lg transition-colors border border-amber-300"
               >
                 Pay Full
@@ -237,12 +237,12 @@ function CommissionPanel({
                   <input
                     type="number"
                     min={1}
-                    step={0.01}
+                    step={1}
                     required
                     autoFocus
                     value={amount}
-                    onChange={(e) => { setAmount(e.target.value); setPayFull(false); }}
-                    placeholder="0.00"
+                    onChange={(e) => { setAmount(String(Math.floor(Number(e.target.value)))); setPayFull(false); }}
+                    placeholder="0"
                     className="w-full text-sm pl-7 pr-3 py-2.5 border border-slate-200 rounded-xl focus:border-slate-400 focus:outline-none font-semibold"
                   />
                 </div>
