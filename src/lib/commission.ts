@@ -18,16 +18,26 @@ interface OrderForCommission {
   salesReturns: { returnCost: number; productLoss: number; printingLoss: number; deliveryLoss: number }[];
 }
 
-export function calcOrderCommission(order: OrderForCommission, rate: number): number {
-  if (order.status !== "DELIVERED") return 0;
-
+function calcBase(order: OrderForCommission, rate: number): number {
+  if (order.status === "CANCELLED") return 0;
   const netOrderValue = order.totalAmount - order.deliveryCharge - order.discountAmount;
-  const returnDeduction = order.salesReturns.reduce(
+  const returnDeduction = (order.salesReturns ?? []).reduce(
     (sum, r) => sum + r.returnCost + r.productLoss,
     0
   );
   const commissionBase = Math.max(0, netOrderValue - returnDeduction);
   return parseFloat(((commissionBase * rate) / 100).toFixed(2));
+}
+
+// For summary/earned calculation — only DELIVERED counts
+export function calcOrderCommission(order: OrderForCommission, rate: number): number {
+  if (order.status !== "DELIVERED") return 0;
+  return calcBase(order, rate);
+}
+
+// For display — shows potential commission for any non-cancelled status
+export function calcPotentialCommission(order: OrderForCommission, rate: number): number {
+  return calcBase(order, rate);
 }
 
 export async function getStaffCommissionSummary(staffId: string, month: number, year: number) {

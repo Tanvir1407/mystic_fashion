@@ -26,131 +26,250 @@ function CommissionPanel({
   const [loading, setLoading] = useState(false);
   const [payments, setPayments] = useState(recentPayments);
   const [summary, setSummary] = useState(commissionSummary);
+  const [payFull, setPayFull] = useState(false);
+  const [payPage, setPayPage] = useState(1);
+  const payPerPage = 5;
 
   const monthName = new Date(currentYear, currentMonth - 1).toLocaleString("en-US", { month: "long" });
+  const paidPercent = summary.earned > 0 ? Math.min(100, (summary.paid / summary.earned) * 100) : 0;
 
   const handlePay = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    const payAmount = parseFloat(amount);
     const res = await createCommissionPayment({
       staffId,
-      amount: parseFloat(amount),
+      amount: payAmount,
       month: currentMonth,
       year: currentYear,
       note: note.trim() || undefined,
     });
     if (res.success) {
-      const paid = parseFloat(amount);
       setSummary((prev: any) => ({
         ...prev,
-        paid: prev.paid + paid,
-        pending: Math.max(0, prev.pending - paid),
+        paid: parseFloat((prev.paid + payAmount).toFixed(2)),
+        pending: parseFloat(Math.max(0, prev.pending - payAmount).toFixed(2)),
       }));
       setPayments((prev) => [res.data, ...prev]);
       setShowModal(false);
       setAmount("");
       setNote("");
+      setPayFull(false);
     }
     setLoading(false);
   };
 
   return (
-    <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
-      <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
-        <div className="flex items-center gap-2">
-          <Wallet className="w-4 h-4 text-slate-500" />
-          <h3 className="text-sm font-semibold text-slate-900">Commission — {monthName} {currentYear}</h3>
-        </div>
-        <button
-          onClick={() => setShowModal(true)}
-          className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-900 text-white text-xs font-medium rounded-lg hover:bg-slate-800 transition-colors"
-        >
-          <Plus className="w-3 h-3" /> Record Payment
-        </button>
-      </div>
-
-      <div className="grid grid-cols-3 divide-x divide-slate-100 border-b border-slate-100">
-        <div className="p-4">
-          <p className="text-xs text-slate-500">Rate</p>
-          <p className="text-lg font-bold text-slate-900">{summary.rate}%</p>
-        </div>
-        <div className="p-4">
-          <p className="text-xs text-slate-500">Earned</p>
-          <p className="text-lg font-bold text-green-700">{formatBDT(summary.earned)}</p>
-        </div>
-        <div className="p-4">
-          <p className="text-xs text-slate-500">Pending</p>
-          <p className={`text-lg font-bold ${summary.pending > 0 ? "text-amber-600" : "text-slate-900"}`}>
-            {formatBDT(summary.pending)}
-          </p>
-        </div>
-      </div>
-
-      {payments.length > 0 && (
-        <div className="divide-y divide-slate-100">
-          <p className="px-5 py-2.5 text-xs font-semibold text-slate-500 uppercase tracking-wide bg-slate-50">Payment History</p>
-          {payments.map((p: any) => (
-            <div key={p.id} className="flex items-center justify-between px-5 py-3">
-              <div>
-                <p className="text-sm font-medium text-slate-900">{formatBDT(p.amount)}</p>
-                {p.note && <p className="text-xs text-slate-400">{p.note}</p>}
-              </div>
-              <div className="text-right">
-                <p className="text-xs text-slate-500">{formatDate(p.paidAt)}</p>
-                <p className="text-xs text-slate-400">{new Date(p.year, p.month - 1).toLocaleString("en-US", { month: "short", year: "numeric" })}</p>
-              </div>
+    <>
+      <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm">
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 bg-gradient-to-r from-slate-50 to-white">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center">
+              <Wallet className="w-4 h-4 text-emerald-600" />
             </div>
-          ))}
+            <div>
+              <h3 className="text-sm font-bold text-slate-900">Commission</h3>
+              <p className="text-xs text-slate-400">{monthName} {currentYear}</p>
+            </div>
+          </div>
+          <button
+            onClick={() => { setShowModal(true); setPayFull(false); setAmount(""); setNote(""); }}
+            className="flex items-center gap-1.5 px-3.5 py-2 bg-slate-900 text-white text-xs font-semibold rounded-lg hover:bg-slate-800 transition-colors shadow-sm"
+          >
+            <Plus className="w-3.5 h-3.5" /> Record Payment
+          </button>
         </div>
-      )}
+
+        {/* Stats grid */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 divide-x divide-y sm:divide-y-0 divide-slate-100">
+          <div className="p-4 space-y-1">
+            <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Rate</p>
+            <p className="text-2xl font-black text-slate-900">{summary.rate}<span className="text-base font-bold text-slate-400">%</span></p>
+            <p className="text-[10px] text-slate-400">commission rate</p>
+          </div>
+          <div className="p-4 space-y-1">
+            <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Total Earned</p>
+            <p className="text-2xl font-black text-emerald-600">{formatBDT(summary.earned)}</p>
+            <p className="text-[10px] text-slate-400">{summary.orderCount ?? 0} delivered orders</p>
+          </div>
+          <div className="p-4 space-y-1">
+            <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Paid Out</p>
+            <p className="text-2xl font-black text-blue-600">{formatBDT(summary.paid)}</p>
+            <p className="text-[10px] text-slate-400">{payments.length} payment{payments.length !== 1 ? "s" : ""}</p>
+          </div>
+          <div className="p-4 space-y-1">
+            <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Pending</p>
+            <p className={`text-2xl font-black ${summary.pending > 0 ? "text-amber-600" : "text-slate-400"}`}>
+              {formatBDT(summary.pending)}
+            </p>
+            <p className="text-[10px] text-slate-400">{summary.pending > 0 ? "awaiting payment" : "fully paid"}</p>
+          </div>
+        </div>
+
+        {/* Progress bar */}
+        {summary.earned > 0 && (
+          <div className="px-5 py-3 border-t border-slate-100 bg-slate-50/50">
+            <div className="flex items-center justify-between mb-1.5">
+              <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">Payment Progress</p>
+              <p className="text-[10px] font-bold text-slate-600">{paidPercent.toFixed(0)}% paid</p>
+            </div>
+            <div className="h-2 bg-slate-200 rounded-full overflow-hidden">
+              <div
+                className={`h-full rounded-full transition-all duration-500 ${paidPercent >= 100 ? "bg-emerald-500" : "bg-blue-500"}`}
+                style={{ width: `${paidPercent}%` }}
+              />
+            </div>
+            <div className="flex justify-between mt-1">
+              <span className="text-[10px] text-slate-400">Paid: {formatBDT(summary.paid)}</span>
+              <span className="text-[10px] text-slate-400">Total: {formatBDT(summary.earned)}</span>
+            </div>
+          </div>
+        )}
+
+        {/* Payment history */}
+        {payments.length > 0 && (() => {
+          const totalPayPages = Math.ceil(payments.length / payPerPage);
+          const paginated = payments.slice((payPage - 1) * payPerPage, payPage * payPerPage);
+          const startIdx = (payPage - 1) * payPerPage;
+          return (
+            <div className="border-t border-slate-100">
+              <div className="flex items-center justify-between px-5 py-2.5 bg-slate-50 border-b border-slate-100">
+                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Payment History</p>
+                <p className="text-[10px] text-slate-400">{payments.length} record{payments.length !== 1 ? "s" : ""}</p>
+              </div>
+              <div className="divide-y divide-slate-100">
+                {paginated.map((p: any, idx: number) => (
+                  <div key={p.id} className="flex items-center gap-3 px-5 py-3 hover:bg-slate-50 transition-colors">
+                    <div className="w-7 h-7 rounded-full bg-blue-50 flex items-center justify-center flex-shrink-0">
+                      <span className="text-[9px] font-black text-blue-600">#{startIdx + idx + 1}</span>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-bold text-slate-900">{formatBDT(p.amount)}</p>
+                      {p.note && <p className="text-xs text-slate-400 truncate">{p.note}</p>}
+                    </div>
+                    <div className="text-right flex-shrink-0">
+                      <p className="text-xs font-medium text-slate-600">{formatDate(p.paidAt)}</p>
+                      <p className="text-[10px] text-slate-400">
+                        {new Date(p.year, p.month - 1).toLocaleString("en-US", { month: "short", year: "numeric" })}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              {totalPayPages > 1 && (
+                <div className="flex items-center justify-between px-5 py-3 border-t border-slate-100 bg-slate-50">
+                  <p className="text-[10px] text-slate-400">
+                    Showing {startIdx + 1}–{Math.min(payPage * payPerPage, payments.length)} of {payments.length}
+                  </p>
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={() => setPayPage(p => Math.max(1, p - 1))}
+                      disabled={payPage === 1}
+                      className="p-1.5 rounded-md text-slate-400 hover:text-slate-700 hover:bg-slate-200 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                    >
+                      <ChevronLeft className="w-3.5 h-3.5" />
+                    </button>
+                    {Array.from({ length: totalPayPages }, (_, i) => i + 1).map(pg => (
+                      <button
+                        key={pg}
+                        onClick={() => setPayPage(pg)}
+                        className={`w-6 h-6 text-[10px] font-bold rounded-md transition-colors ${pg === payPage ? "bg-slate-900 text-white" : "text-slate-500 hover:bg-slate-200"}`}
+                      >
+                        {pg}
+                      </button>
+                    ))}
+                    <button
+                      onClick={() => setPayPage(p => Math.min(totalPayPages, p + 1))}
+                      disabled={payPage === totalPayPages}
+                      className="p-1.5 rounded-md text-slate-400 hover:text-slate-700 hover:bg-slate-200 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                    >
+                      <ChevronRight className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        })()}
+
+        {payments.length === 0 && summary.earned === 0 && (
+          <div className="px-5 py-8 text-center border-t border-slate-100">
+            <p className="text-sm text-slate-400">No commission earned this month yet.</p>
+          </div>
+        )}
+      </div>
 
       {/* Payment Modal */}
       {showModal && (
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-sm border border-slate-200">
-            <div className="flex items-center justify-between p-5 border-b border-slate-100">
-              <h3 className="text-sm font-semibold text-slate-900">Record Commission Payment</h3>
-              <button onClick={() => setShowModal(false)} className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-md transition-colors">
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm border border-slate-200 overflow-hidden">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 bg-slate-50">
+              <div>
+                <h3 className="text-sm font-bold text-slate-900">Record Commission Payment</h3>
+                <p className="text-xs text-slate-500 mt-0.5">{monthName} {currentYear}</p>
+              </div>
+              <button onClick={() => setShowModal(false)} className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-200 rounded-lg transition-colors">
                 <X className="w-4 h-4" />
               </button>
             </div>
-            <form onSubmit={handlePay} className="p-5 space-y-4">
+
+            {/* Pending summary */}
+            <div className="mx-5 mt-4 p-3 bg-amber-50 border border-amber-200 rounded-xl flex items-center justify-between">
+              <div>
+                <p className="text-[10px] font-bold text-amber-600 uppercase tracking-wider">Pending Amount</p>
+                <p className="text-xl font-black text-amber-700">{formatBDT(summary.pending)}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => { setPayFull(true); setAmount(String(summary.pending)); }}
+                className="text-xs font-bold text-amber-700 bg-amber-100 hover:bg-amber-200 px-3 py-1.5 rounded-lg transition-colors border border-amber-300"
+              >
+                Pay Full
+              </button>
+            </div>
+
+            <form onSubmit={handlePay} className="p-5 space-y-3.5">
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-slate-700">Amount (৳)</label>
-                <input
-                  type="number"
-                  min={1}
-                  step={0.01}
-                  required
-                  autoFocus
-                  value={amount}
-                  onChange={(e) => setAmount(e.target.value)}
-                  placeholder={`Pending: ${formatBDT(summary.pending)}`}
-                  className="w-full text-sm px-3 py-2 border border-slate-200 rounded-lg focus:border-slate-400 focus:outline-none"
-                />
+                <label className="text-xs font-semibold text-slate-700">Amount (৳)</label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-bold text-slate-400">৳</span>
+                  <input
+                    type="number"
+                    min={1}
+                    step={0.01}
+                    required
+                    autoFocus
+                    value={amount}
+                    onChange={(e) => { setAmount(e.target.value); setPayFull(false); }}
+                    placeholder="0.00"
+                    className="w-full text-sm pl-7 pr-3 py-2.5 border border-slate-200 rounded-xl focus:border-slate-400 focus:outline-none font-semibold"
+                  />
+                </div>
               </div>
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-slate-700">Note (optional)</label>
+                <label className="text-xs font-semibold text-slate-700">Note <span className="text-slate-400 font-normal">(optional)</span></label>
                 <input
                   type="text"
                   value={note}
                   onChange={(e) => setNote(e.target.value)}
-                  placeholder="e.g. bKash transfer"
-                  className="w-full text-sm px-3 py-2 border border-slate-200 rounded-lg focus:border-slate-400 focus:outline-none"
+                  placeholder="e.g. bKash — 01XXXXXXXXX"
+                  className="w-full text-sm px-3 py-2.5 border border-slate-200 rounded-xl focus:border-slate-400 focus:outline-none"
                 />
               </div>
               <div className="flex gap-2 pt-1">
                 <button
                   type="submit"
-                  disabled={loading}
-                  className="flex-1 h-10 flex items-center justify-center gap-2 bg-slate-900 text-white text-sm font-medium rounded-lg hover:bg-slate-800 transition-colors disabled:opacity-50"
+                  disabled={loading || !amount}
+                  className="flex-1 h-11 flex items-center justify-center gap-2 bg-slate-900 text-white text-sm font-bold rounded-xl hover:bg-slate-800 transition-colors disabled:opacity-50 shadow-sm"
                 >
-                  {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Confirm Payment"}
+                  {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
+                  {loading ? "Processing..." : "Confirm Payment"}
                 </button>
                 <button
                   type="button"
                   onClick={() => setShowModal(false)}
-                  className="h-10 px-4 border border-slate-200 text-slate-700 text-sm font-medium rounded-lg hover:bg-slate-50 transition-colors"
+                  className="h-11 px-4 border border-slate-200 text-slate-600 text-sm font-semibold rounded-xl hover:bg-slate-50 transition-colors"
                 >
                   Cancel
                 </button>
@@ -159,7 +278,7 @@ function CommissionPanel({
           </div>
         </div>
       )}
-    </div>
+    </>
   );
 }
 
@@ -624,6 +743,15 @@ export default function StaffDetailsClient({
         </div>
       </div>
 
+                    {/* Commission panel */}
+        <CommissionPanel
+          staffId={staff.id}
+          commissionSummary={commissionSummary}
+          recentPayments={recentPayments}
+          currentMonth={currentMonth}
+          currentYear={currentYear}
+        />
+
       {/* Main Grid: Left Column (Breakdowns), Right Column (Order log) */}
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
 
@@ -887,15 +1015,9 @@ export default function StaffDetailsClient({
           )}
         </div>
 
-        {/* Commission panel */}
-        <CommissionPanel
-          staffId={staff.id}
-          commissionSummary={commissionSummary}
-          recentPayments={recentPayments}
-          currentMonth={currentMonth}
-          currentYear={currentYear}
-        />
+
       </div>
+
     </div>
   );
 }

@@ -303,56 +303,56 @@ export default function CreateOrderClient({
       try {
         const res = isExchange
           ? await createExchangeOrder({
-              customerName,
-              phone,
-              district,
-              address: fullDeliveryAddress,
-              totalAmount,
-              advancePaid,
-              discountAmount: calculatedDiscount,
-              remarks,
-              pathaoCityId: selectedCityId || undefined,
-              pathaoZoneId: selectedZoneId || undefined,
-              pathaoAreaId: selectedAreaId || undefined,
-              isStorePickup,
-              deliveryCharge: isStorePickup ? deliveryCharge : finalDeliveryCharge,
-              items: orderItems.map(item => ({
-                productId: item.productId,
-                size: item.size,
-                quantity: item.quantity,
-                price: item.price,
-                requiresPrint: item.requiresPrint,
-                printCost: item.printCost,
-                printDetails: item.printDetails
-              })),
-              exchangeRefOrderId: exchangeRefOrderId.trim(),
-              exchangeItemNote: exchangeItemNote.trim(),
-            })
+            customerName,
+            phone,
+            district,
+            address: fullDeliveryAddress,
+            totalAmount,
+            advancePaid,
+            discountAmount: calculatedDiscount,
+            remarks,
+            pathaoCityId: selectedCityId || undefined,
+            pathaoZoneId: selectedZoneId || undefined,
+            pathaoAreaId: selectedAreaId || undefined,
+            isStorePickup,
+            deliveryCharge: isStorePickup ? deliveryCharge : finalDeliveryCharge,
+            items: orderItems.map(item => ({
+              productId: item.productId,
+              size: item.size,
+              quantity: item.quantity,
+              price: item.price,
+              requiresPrint: item.requiresPrint,
+              printCost: item.printCost,
+              printDetails: item.printDetails
+            })),
+            exchangeRefOrderId: exchangeRefOrderId.trim(),
+            exchangeItemNote: exchangeItemNote.trim(),
+          })
           : await (orderAction ?? createAdminOrder)({
-              customerName,
-              phone,
-              district,
-              address: fullDeliveryAddress,
-              totalAmount,
-              advancePaid,
-              discountAmount: calculatedDiscount,
-              remarks,
-              pathaoCityId: selectedCityId || undefined,
-              pathaoZoneId: selectedZoneId || undefined,
-              pathaoAreaId: selectedAreaId || undefined,
-              isStorePickup,
-              deliveryCharge: isStorePickup ? deliveryCharge : finalDeliveryCharge,
-              items: orderItems.map(item => ({
-                productId: item.productId,
-                size: item.size,
-                quantity: item.quantity,
-                price: item.price,
-                requiresPrint: item.requiresPrint,
-                printCost: item.printCost,
-                printDetails: item.printDetails
-              })),
-              hasBackorderItems,
-            });
+            customerName,
+            phone,
+            district,
+            address: fullDeliveryAddress,
+            totalAmount,
+            advancePaid,
+            discountAmount: calculatedDiscount,
+            remarks,
+            pathaoCityId: selectedCityId || undefined,
+            pathaoZoneId: selectedZoneId || undefined,
+            pathaoAreaId: selectedAreaId || undefined,
+            isStorePickup,
+            deliveryCharge: isStorePickup ? deliveryCharge : finalDeliveryCharge,
+            items: orderItems.map(item => ({
+              productId: item.productId,
+              size: item.size,
+              quantity: item.quantity,
+              price: item.price,
+              requiresPrint: item.requiresPrint,
+              printCost: item.printCost,
+              printDetails: item.printDetails
+            })),
+            hasBackorderItems,
+          });
 
         if (res.success) {
           router.push(successUrl);
@@ -953,7 +953,7 @@ export default function CreateOrderClient({
 
           <div className="px-6 py-4 bg-slate-50 border-t border-slate-100">
             <div className="flex items-center gap-3 text-[10px] text-slate-400">
-              <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+              <div className="w-2 h-2 rounded-full bg-green-500" />
               <span>SYSTEM ONLINE & READY</span>
             </div>
           </div>
