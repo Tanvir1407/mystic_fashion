@@ -6,6 +6,7 @@ import { formatBDT } from "@/utils/formatPrice";
 import { calcPotentialCommission, getEffectiveCommissionRate } from "@/lib/commission";
 import Link from "next/link";
 import { Plus, ShoppingBag, ExternalLink } from "lucide-react";
+import { AdminPagination } from "@/components/AdminPagination";
 
 export const dynamic = "force-dynamic";
 
@@ -31,13 +32,25 @@ const STATUS_STYLES: Record<string, string> = {
   CANCELLED: "bg-red-50 text-red-700 border-red-200",
 };
 
-export default async function StaffOrdersPage() {
+export default async function StaffOrdersPage({
+  searchParams,
+}: {
+  searchParams: { page?: string; limit?: string };
+}) {
   const session = await getStaffSession();
   if (!session) redirect("/staff/login");
 
-  const [orders, rate] = await Promise.all([
+  const page = Number(searchParams?.page) || 1;
+  const limit = Number(searchParams?.limit) || 10;
+  const PER_PAGE = [10, 20, 50, 100].includes(limit) ? limit : 10;
+
+  const whereClause = { createdById: session.staffId, deletedAt: null };
+
+  const [orders, totalCount, rate] = await Promise.all([
     prisma.order.findMany({
-      where: { createdById: session.staffId, deletedAt: null },
+      where: whereClause,
+      skip: (page - 1) * PER_PAGE,
+      take: PER_PAGE,
       orderBy: { createdAt: "desc" },
       include: {
         salesReturns: {
@@ -46,15 +59,18 @@ export default async function StaffOrdersPage() {
         items: { select: { quantity: true } },
       },
     }),
+    prisma.order.count({ where: whereClause }),
     getEffectiveCommissionRate(session.staffId),
   ]);
+
+  const totalPages = Math.ceil(totalCount / PER_PAGE);
 
   return (
     <div className="space-y-5 max-w-8xl">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl font-bold text-slate-900">My Orders</h1>
-          <p className="text-sm text-slate-500 mt-0.5">{orders.length} total orders</p>
+          <p className="text-sm text-slate-500 mt-0.5">{totalCount} total orders</p>
         </div>
         <Link
           href="/staff/orders/create"
@@ -65,7 +81,7 @@ export default async function StaffOrdersPage() {
         </Link>
       </div>
 
-      {orders.length === 0 ? (
+      {totalCount === 0 ? (
         <div className="bg-white rounded-xl border border-slate-200 p-12 text-center">
           <ShoppingBag className="w-10 h-10 text-slate-300 mx-auto mb-3" />
           <p className="text-sm font-medium text-slate-600">No orders yet</p>
@@ -78,7 +94,7 @@ export default async function StaffOrdersPage() {
           </Link>
         </div>
       ) : (
-        <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+        <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
@@ -149,6 +165,7 @@ export default async function StaffOrdersPage() {
               </tbody>
             </table>
           </div>
+          <AdminPagination currentPage={page} totalPages={totalPages} />
         </div>
       )}
     </div>
