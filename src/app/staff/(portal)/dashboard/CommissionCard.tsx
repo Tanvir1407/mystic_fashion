@@ -36,10 +36,19 @@ export default function CommissionCard({
 
       {/* 4 stats */}
       <div className="grid grid-cols-2 divide-x divide-y divide-slate-100">
-                <div className="px-5 py-4">
-          <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">This Month Earned</p>
-          <p className="text-2xl font-black text-emerald-700 mt-1">{formatBDT(monthCommission)}</p>
-          <p className="text-[10px] text-slate-400 mt-0.5">{monthName}</p>
+        <div className="px-5 py-4 flex flex-col justify-between">
+          <div>
+            <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">This Month Earned</p>
+            <div className="flex flex-wrap items-baseline gap-1.5 mt-1">
+              <p className="text-2xl font-black text-emerald-700">{formatBDT(monthCommission)}</p>
+              {monthPending > 0 && (
+                <span className="text-[10px] font-bold text-amber-600 bg-amber-50 border border-amber-200/50 px-1 py-0.5 rounded">
+                  +{formatBDT(monthPending)} pending
+                </span>
+              )}
+            </div>
+          </div>
+          <p className="text-[10px] text-slate-400 mt-1.5">{monthName} (delivered only)</p>
         </div>
         <div className="px-5 py-4">
           <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">All Time Earned</p>

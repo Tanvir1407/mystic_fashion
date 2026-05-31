@@ -16,15 +16,16 @@ export default async function StaffDashboardPage() {
   const session = await getStaffSession();
   if (!session) redirect("/staff/login");
 
-  const now        = new Date();
+  const now = new Date();
   const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-  const monthEnd   = new Date(now.getFullYear(), now.getMonth() + 1, 1);
-  const month      = now.getMonth() + 1;
-  const year       = now.getFullYear();
-  const monthName  = now.toLocaleString("en-US", { month: "long" });
+  const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+  const month = now.getMonth() + 1;
+  const year = now.getFullYear();
+  const monthName = now.toLocaleString("en-US", { month: "long" });
 
-  const rate     = await getEffectiveCommissionRate(session.staffId);
+  const rate = await getEffectiveCommissionRate(session.staffId);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const baseWhere = { createdById: session.staffId, deletedAt: null as any };
 
   const [
@@ -35,9 +36,9 @@ export default async function StaffDashboardPage() {
     // last 7 days for sparkline
     last7Days,
   ] = await Promise.all([
-    prisma.order.aggregate({ where: { ...baseWhere, createdAt: { gte: todayStart } },              _sum: { totalAmount: true }, _count: { id: true } }),
+    prisma.order.aggregate({ where: { ...baseWhere, createdAt: { gte: todayStart } }, _sum: { totalAmount: true }, _count: { id: true } }),
     prisma.order.aggregate({ where: { ...baseWhere, createdAt: { gte: monthStart, lt: monthEnd } }, _sum: { totalAmount: true }, _count: { id: true } }),
-    prisma.order.aggregate({ where: baseWhere,                                                      _sum: { totalAmount: true }, _count: { id: true } }),
+    prisma.order.aggregate({ where: baseWhere, _sum: { totalAmount: true }, _count: { id: true } }),
     prisma.order.findMany({
       where: { ...baseWhere, createdAt: { gte: monthStart, lt: monthEnd } },
       include: { salesReturns: { select: { returnCost: true, productLoss: true, printingLoss: true, deliveryLoss: true } } },
@@ -67,15 +68,14 @@ export default async function StaffDashboardPage() {
 
   // Commission
   const monthCommission = monthOrders.reduce((s, o) => s + calcPotentialCommission(o, rate), 0);
-  const monthEarned     = allDelivered.filter(o => {
+  const monthEarned = allDelivered.filter(o => {
     const oDate = new Date(o.createdAt);
     return oDate >= monthStart && oDate < monthEnd;
   }).reduce((s, o) => s + calcOrderCommission(o, rate), 0);
   const totalCommission = allDelivered.reduce((s, o) => s + calcOrderCommission(o, rate), 0);
-  const totalPaid       = totalPaidAgg._sum.amount ?? 0;
-  const monthPaid       = monthPayments.reduce((s, p) => s + p.amount, 0);
-  const monthPending    = Math.max(0, monthEarned - monthPaid);
-  const totalPending    = Math.max(0, totalCommission - totalPaid);
+  const totalPaid = totalPaidAgg._sum.amount ?? 0;
+  const monthPaid = monthPayments.reduce((s, p) => s + p.amount, 0);
+  const monthPending = Math.max(0, monthEarned - monthPaid);
 
   // Leaderboard
   const leaderboard = await Promise.all(
@@ -134,14 +134,14 @@ export default async function StaffDashboardPage() {
           sparkline={last7Days}
         />
         <CommissionCard
-          monthCommission={monthCommission}
-          monthPending={monthPending}
+          monthCommission={monthEarned}
+          monthPending={Math.max(0, monthCommission - monthEarned)}
           totalCommission={totalCommission}
           totalPaid={totalPaid}
           rate={rate}
           monthName={monthName}
         />
-        
+
       </div>
 
       {/* Pending banner */}
