@@ -41,7 +41,14 @@ export async function getAvailableRoles() {
 
 // ─── CREATE STAFF ───────────────────────────────────────────────────────────
 
-async function _createStaff(data: { username: string; email: string; password: string; roleId?: string }) {
+async function _createStaff(data: {
+  username: string;
+  email: string;
+  password: string;
+  roleId?: string;
+  hasPortalAccess?: boolean;
+  commissionRate?: number | null;
+}) {
   try {
     const hashedPassword = await bcrypt.hash(data.password, 10);
     const staff = await prisma.staff.create({
@@ -50,6 +57,8 @@ async function _createStaff(data: { username: string; email: string; password: s
         email: data.email,
         password: hashedPassword,
         roleId: data.roleId,
+        hasPortalAccess: data.hasPortalAccess ?? false,
+        commissionRate: data.commissionRate ?? null,
       },
       include: { role: true }
     });
@@ -72,9 +81,16 @@ export const createStaff = withAuditLog(_createStaff, {
 
 // ─── UPDATE STAFF ───────────────────────────────────────────────────────────
 
-async function _updateStaff(id: string, data: { username?: string; email?: string; password?: string; roleId?: string }) {
+async function _updateStaff(id: string, data: {
+  username?: string;
+  email?: string;
+  password?: string;
+  roleId?: string | null;
+  hasPortalAccess?: boolean;
+  commissionRate?: number | null;
+}) {
   try {
-    const updateData = { ...data };
+    const updateData: any = { ...data };
     if (updateData.password) {
       updateData.password = await bcrypt.hash(updateData.password, 10);
     }
@@ -105,7 +121,7 @@ export const updateStaff = withAuditLog(_updateStaff, {
 async function _deleteStaff(id: string) {
   try {
     const staff = await prisma.staff.findUnique({ where: { id } });
-    
+
     if (staff?.username === "admin") {
       throw new Error("The primary 'admin' account cannot be deleted.");
     }
@@ -128,3 +144,23 @@ export const deleteStaff = withAuditLog(_deleteStaff, {
   fetchBefore: (id) => prisma.staff.findUnique({ where: { id }, select: { id: true, username: true, email: true, roleId: true } }),
   describe: (args) => `Deleted staff member ${args[0]}`,
 });
+
+// ─── COMMISSION PAYMENT ──────────────────────────────────────────────────────
+
+export async function createCommissionPayment(data: {
+  staffId: string;
+  amount: number;
+  month: number;
+  year: number;
+  note?: string;
+  paidById?: string;
+}) {
+  try {
+    const payment = await prisma.commissionPayment.create({ data });
+    revalidatePath(`/admin/staff/${data.staffId}`);
+    return { success: true, data: payment };
+  } catch (error: any) {
+    console.error("Error in createCommissionPayment:", error);
+    return { success: false, error: error instanceof Error ? error.message : "An unexpected error occurred." };
+  }
+}

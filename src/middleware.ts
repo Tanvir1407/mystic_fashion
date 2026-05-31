@@ -8,40 +8,54 @@ const encodedSecret = new TextEncoder().encode(JWT_SECRET);
 
 export async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
-  console.log(`[Middleware] Request Path: ${pathname}`);
 
-  // If the user is trying to access an /admin route (excluding /admin/login)
+  // ── Admin routes ──────────────────────────────────────────────────────────
   if (pathname.startsWith('/admin') && !pathname.startsWith('/admin/login')) {
     const sessionCookie = request.cookies.get('admin-session');
-    console.log(`[Middleware] Admin Route Check. Cookie exists: ${!!sessionCookie}`);
-    
     if (!sessionCookie) {
-      console.log(`[Middleware] Redirecting to login (no cookie found)`);
       return NextResponse.redirect(new URL('/admin/login', request.url));
     }
-
     try {
       await jwtVerify(sessionCookie.value, encodedSecret, { algorithms: ['HS256'] });
-      console.log(`[Middleware] JWT verified successfully`);
-    } catch (error) {
-      console.error(`[Middleware] JWT verification failed:`, error);
+    } catch {
       return NextResponse.redirect(new URL('/admin/login', request.url));
     }
   }
 
-  // If the user is already logged in and tries to access /admin/login, redirect to their permitted page
   if (pathname.startsWith('/admin/login')) {
     const sessionCookie = request.cookies.get('admin-session');
     if (sessionCookie) {
-      console.log(`[Middleware] Login Page Check. Cookie exists: ${!!sessionCookie}`);
       try {
         const { payload } = await jwtVerify(sessionCookie.value, encodedSecret, { algorithms: ['HS256'] });
         const redirectUrl = getRedirectUrlForSession(payload);
-        console.log(`[Middleware] Already logged in. Redirecting to ${redirectUrl}`);
         return NextResponse.redirect(new URL(redirectUrl, request.url));
-      } catch (error) {
-        console.error(`[Middleware] Login Page JWT verification failed:`, error);
-        // Invalid token, let them access login
+      } catch {
+        // invalid token — let them access login
+      }
+    }
+  }
+
+  // ── Staff portal routes ───────────────────────────────────────────────────
+  if (pathname.startsWith('/staff') && !pathname.startsWith('/staff/login')) {
+    const sessionCookie = request.cookies.get('staff-session');
+    if (!sessionCookie) {
+      return NextResponse.redirect(new URL('/staff/login', request.url));
+    }
+    try {
+      await jwtVerify(sessionCookie.value, encodedSecret, { algorithms: ['HS256'] });
+    } catch {
+      return NextResponse.redirect(new URL('/staff/login', request.url));
+    }
+  }
+
+  if (pathname.startsWith('/staff/login')) {
+    const sessionCookie = request.cookies.get('staff-session');
+    if (sessionCookie) {
+      try {
+        await jwtVerify(sessionCookie.value, encodedSecret, { algorithms: ['HS256'] });
+        return NextResponse.redirect(new URL('/staff/dashboard', request.url));
+      } catch {
+        // invalid token — let them access login
       }
     }
   }
@@ -50,5 +64,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/admin/:path*'],
+  matcher: ['/admin/:path*', '/staff/:path*'],
 };

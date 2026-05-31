@@ -9,6 +9,7 @@ import { pathaoClient } from "@/lib/pathao/PathaoClient";
 import { getSession } from "@/lib/auth";
 import { getOrCreateSystemAccount, createDoubleEntryJournal } from "@/lib/accounting";
 import { normalizePhone } from "@/lib/utils";
+import { getEffectiveCommissionRate } from "@/lib/commission";
 
 // ─── INTERNAL HELPERS ────────────────────────────────────────────────────────
 
@@ -612,6 +613,13 @@ async function _createAdminOrder(data: {
   try {
     const session = await getSession();
     const createdById = session?.userId || null;
+    let commissionRate: number | null = null;
+    if (createdById) {
+      const staff = await prisma.staff.findUnique({ where: { id: createdById }, select: { id: true } });
+      if (staff) {
+        commissionRate = await getEffectiveCommissionRate(staff.id);
+      }
+    }
 
     const order = await prisma.$transaction(async (tx) => {
       const customId = await generateOrderIdInternal(tx);
@@ -669,6 +677,7 @@ async function _createAdminOrder(data: {
           status: "PENDING",
           orderSource: "Salesman",
           createdById,
+          commissionRate,
           customerId,
           items: {
             create: data.items.flatMap((item) => {

@@ -82,6 +82,7 @@ const NAV_LINKS = [
     icon: <Settings className="w-4 h-4 shrink-0" />,
     children: [
       { href: "/admin/settings", label: "General Settings", exact: true, action: "VIEW", subject: "GENERAL_SETTINGS" },
+      { href: "/admin/settings/commission", label: "Commission Settings", action: "VIEW", subject: "GENERAL_SETTINGS" },
       { href: "/admin/settings/footer", label: "Footer Settings", action: "VIEW", subject: "FOOTER_SETTINGS" },
       { href: "/admin/settings/audit-logs", label: "Activity Logs", action: "VIEW", subject: "ACTIVITY_LOGS" },
       { href: "/admin/staff", label: "Staff Members", action: "VIEW", subject: "STAFF_MEMBERS" },
