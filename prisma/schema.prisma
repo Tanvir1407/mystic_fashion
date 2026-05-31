@@ -33,15 +33,39 @@ model Admin {
 }
 
 model Staff {
+  id                 String              @id @default(uuid())
+  username           String              @unique
+  email              String              @unique
+  password           String
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  roleId             String?
+  hasPortalAccess    Boolean             @default(false)
+  commissionRate     Float?
+  role               Role?               @relation(fields: [roleId], references: [id])
+  orders             Order[]
+  commissionPayments CommissionPayment[]
+}
+
+model CommissionSetting {
+  id             String   @id @default("default")
+  commissionRate Float    @default(10)
+  updatedAt      DateTime @updatedAt
+}
+
+model CommissionPayment {
   id        String   @id @default(uuid())
-  username  String   @unique
-  email     String   @unique
-  password  String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  roleId    String?
-  role      Role?    @relation(fields: [roleId], references: [id])
-  orders    Order[]
+  staffId   String
+  amount    Float
+  month     Int
+  year      Int
+  note      String?
+  paidAt    DateTime @default(now())
+  paidById  String?
+  staff     Staff    @relation(fields: [staffId], references: [id], onDelete: Cascade)
+
+  @@index([staffId])
+  @@index([year, month])
 }
 
 model Role {

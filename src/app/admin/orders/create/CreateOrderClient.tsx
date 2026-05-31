@@ -32,11 +32,15 @@ interface OrderItem {
 export default function CreateOrderClient({
   products,
   deliverySettings,
-  dtfCostPerItem = 300
+  dtfCostPerItem = 300,
+  backUrl = "/admin/orders",
+  successUrl = "/admin/orders",
 }: {
   products: any[];
   deliverySettings: any;
   dtfCostPerItem?: number;
+  backUrl?: string;
+  successUrl?: string;
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -349,7 +353,7 @@ export default function CreateOrderClient({
             });
 
         if (res.success) {
-          router.push(`/admin/orders`);
+          router.push(successUrl);
         } else {
           alert(res.error || "Failed to create order.");
         }
@@ -936,7 +940,7 @@ export default function CreateOrderClient({
               </button>
 
               <Link
-                href="/admin/orders"
+                href={backUrl}
                 className="w-full h-12 flex items-center justify-center gap-2 text-slate-500 hover:text-slate-800 text-xs font-bold transition-colors"
               >
                 <ArrowLeft className="w-4 h-4" />
