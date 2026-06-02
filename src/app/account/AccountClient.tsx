@@ -6,24 +6,26 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import SidebarCart from "@/components/SidebarCart";
 import { CustomSelect } from "@/components/CustomSelect";
-import { 
-  User, 
-  Package, 
-  MapPin, 
-  LogOut, 
-  Plus, 
-  Trash2, 
-  Edit, 
-  CheckCircle, 
-  Clock, 
-  Truck, 
-  AlertCircle, 
-  ChevronRight, 
-  ChevronDown, 
-  Download, 
-  MapPinned, 
-  Calendar, 
+import { FooterData } from "@/lib/footer";
+import {
+  User,
+  Package,
+  MapPin,
+  LogOut,
+  Plus,
+  Trash2,
+  Edit,
+  CheckCircle,
+  Clock,
+  Truck,
+  AlertCircle,
+  ChevronRight,
+  ChevronDown,
+  Download,
+  MapPinned,
+  Calendar,
   CreditCard,
   X,
   Loader2
@@ -80,11 +82,13 @@ interface Order {
 export default function AccountClient({
   customer,
   initialAddresses,
-  orders
+  orders,
+  footerData
 }: {
   customer: { id: string; name: string; phone: string; email?: string | null; createdAt: string };
   initialAddresses: Address[];
   orders: Order[];
+  footerData: FooterData | null;
 }) {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<"orders" | "addresses" | "profile">("orders");
@@ -324,7 +328,7 @@ export default function AccountClient({
             </div>
             <div>
               <h1 className="text-xl md:text-2xl font-black text-slate-900 leading-tight">Welcome, {customer.name}</h1>
-              <p className="text-xs text-slate-500 mt-1">Customer ID: {customer.id} &bull; Member since {formatDate(customer.createdAt)}</p>
+              <p className="text-xs text-slate-500 mt-1"> &bull; Member since {formatDate(customer.createdAt)}</p>
             </div>
           </div>
           <button
@@ -342,23 +346,21 @@ export default function AccountClient({
             <nav className="flex flex-row lg:flex-col bg-white border border-slate-200 p-1 lg:p-2 divide-x lg:divide-x-0 lg:divide-y divide-slate-100 sticky top-28">
               <button
                 onClick={() => setActiveTab("orders")}
-                className={`flex-1 lg:flex-none flex items-center justify-center lg:justify-start gap-3 px-4 py-3.5 text-xs font-black uppercase tracking-wider transition-all ${
-                  activeTab === "orders" 
-                    ? "text-[#800020] bg-rose-50/50 border-b-2 lg:border-b-0 lg:border-l-4 lg:border-primary" 
+                className={`flex-1 lg:flex-none flex items-center justify-center lg:justify-start gap-3 px-4 py-3.5 text-xs font-black uppercase tracking-wider transition-all ${activeTab === "orders"
+                    ? "text-[#800020] bg-rose-50/50 border-b-2 lg:border-b-0 lg:border-l-4 lg:border-primary"
                     : "text-slate-500 hover:text-slate-900"
-                }`}
+                  }`}
               >
                 <Package className="w-4 h-4" />
                 <span className="hidden sm:inline">My Orders</span>
               </button>
-              
+
               <button
                 onClick={() => setActiveTab("addresses")}
-                className={`flex-1 lg:flex-none flex items-center justify-center lg:justify-start gap-3 px-4 py-3.5 text-xs font-black uppercase tracking-wider transition-all ${
-                  activeTab === "addresses" 
-                    ? "text-[#800020] bg-rose-50/50 border-b-2 lg:border-b-0 lg:border-l-4 lg:border-primary" 
+                className={`flex-1 lg:flex-none flex items-center justify-center lg:justify-start gap-3 px-4 py-3.5 text-xs font-black uppercase tracking-wider transition-all ${activeTab === "addresses"
+                    ? "text-[#800020] bg-rose-50/50 border-b-2 lg:border-b-0 lg:border-l-4 lg:border-primary"
                     : "text-slate-500 hover:text-slate-900"
-                }`}
+                  }`}
               >
                 <MapPin className="w-4 h-4" />
                 <span className="hidden sm:inline">Address Book</span>
@@ -366,11 +368,10 @@ export default function AccountClient({
 
               <button
                 onClick={() => setActiveTab("profile")}
-                className={`flex-1 lg:flex-none flex items-center justify-center lg:justify-start gap-3 px-4 py-3.5 text-xs font-black uppercase tracking-wider transition-all ${
-                  activeTab === "profile" 
-                    ? "text-[#800020] bg-rose-50/50 border-b-2 lg:border-b-0 lg:border-l-4 lg:border-primary" 
+                className={`flex-1 lg:flex-none flex items-center justify-center lg:justify-start gap-3 px-4 py-3.5 text-xs font-black uppercase tracking-wider transition-all ${activeTab === "profile"
+                    ? "text-[#800020] bg-rose-50/50 border-b-2 lg:border-b-0 lg:border-l-4 lg:border-primary"
                     : "text-slate-500 hover:text-slate-900"
-                }`}
+                  }`}
               >
                 <User className="w-4 h-4" />
                 <span className="hidden sm:inline">Profile Settings</span>
@@ -402,7 +403,7 @@ export default function AccountClient({
                     {orders.map((order) => (
                       <div key={order.id} className="bg-white border border-slate-200 shadow-sm overflow-hidden">
                         {/* Order Header Summary */}
-                        <div 
+                        <div
                           onClick={() => handleOrderExpand(order.id, order.pathaoConsignmentId)}
                           className="p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 cursor-pointer hover:bg-slate-50/50 transition-colors select-none"
                         >
@@ -449,7 +450,7 @@ export default function AccountClient({
                                         <span>Qty: {item.quantity}</span>
                                         <span>Price: {formatBDT(item.price)}</span>
                                       </div>
-                                      
+
                                       {item.requiresPrint && (
                                         <div className="mt-2 text-[10px] bg-amber-50/80 border border-amber-100 text-amber-800 px-2.5 py-1 inline-flex items-center gap-1.5 font-semibold">
                                           <span>DTF Customized:</span>
@@ -471,7 +472,7 @@ export default function AccountClient({
                                 <p className="text-xs font-black uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
                                   <Truck className="w-4 h-4 text-[#800020]" /> Live Delivery Status (Pathao Courier)
                                 </p>
-                                
+
                                 <div className="bg-white border border-slate-100 p-5 rounded-none">
                                   {loadingTracking ? (
                                     <div className="flex items-center gap-2 text-xs text-slate-500 py-2 justify-center">
@@ -491,7 +492,7 @@ export default function AccountClient({
                                           </span>
                                         </div>
                                       </div>
-                                      
+
                                       {/* Consignment Timeline / Description */}
                                       <div className="text-xs text-slate-600 leading-relaxed bg-slate-50 p-3.5 border border-slate-100 flex items-start gap-2.5">
                                         <AlertCircle className="w-4.5 h-4.5 text-amber-600 flex-shrink-0 mt-0.5" />
@@ -578,7 +579,7 @@ export default function AccountClient({
                               </span>
                             )}
                           </div>
-                          
+
                           <h4 className="font-bold text-sm text-slate-900">{addr.fullName}</h4>
                           <p className="text-xs text-slate-600 mt-1.5">{addr.phone}</p>
                           <p className="text-xs text-slate-600 mt-1">{addr.address}</p>
@@ -645,7 +646,7 @@ export default function AccountClient({
       {isAddressModalOpen && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[999] flex items-center justify-center p-4">
           <div className="bg-white w-full max-w-lg border border-slate-200 p-6 sm:p-8 shadow-2xl relative animate-fadeIn max-h-[90vh] overflow-y-auto">
-            <button 
+            <button
               onClick={() => setIsAddressModalOpen(false)}
               className="absolute top-4 right-4 text-slate-400 hover:text-slate-900 p-1"
             >
@@ -672,11 +673,10 @@ export default function AccountClient({
                       key={l}
                       type="button"
                       onClick={() => setAddressLabel(l)}
-                      className={`flex-1 py-2 text-xs font-bold transition-all border ${
-                        addressLabel === l 
-                          ? "bg-[#800020] text-white border-primary" 
+                      className={`flex-1 py-2 text-xs font-bold transition-all border ${addressLabel === l
+                          ? "bg-[#800020] text-white border-primary"
                           : "bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100"
-                      }`}
+                        }`}
                     >
                       {l}
                     </button>
@@ -799,7 +799,8 @@ export default function AccountClient({
         </div>
       )}
 
-      <Footer config={null as any} />
+      <Footer config={footerData} />
+      <SidebarCart />
     </div>
   );
 }

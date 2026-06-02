@@ -2,6 +2,7 @@ import { getCustomerSession } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import AccountClient from "./AccountClient";
+import { getFooterData } from "@/lib/footer";
 
 export const dynamic = "force-dynamic";
 
@@ -40,6 +41,8 @@ export default async function AccountPage() {
     // Session is invalid if user has been deleted
     redirect("/auth/login?callbackUrl=/account");
   }
+
+  const footerData = await getFooterData();
 
   // Serialize models safely for client component hydration
   const serializedCustomer = {
@@ -97,6 +100,7 @@ export default async function AccountPage() {
       customer={serializedCustomer}
       initialAddresses={serializedAddresses}
       orders={serializedOrders}
+      footerData={footerData}
     />
   );
 }
