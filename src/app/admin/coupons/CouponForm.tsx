@@ -3,15 +3,27 @@
 import { useState } from "react";
 import { CouponType } from "@/generated/prisma/client";
 import { createCoupon, updateCoupon } from "./actions";
-import { Loader2, X, Percent, Banknote, Calendar } from "lucide-react";
+import { Loader2, ArrowLeft, Save, Percent, Banknote, Calendar, ShieldCheck, Tag, Info } from "lucide-react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { CustomMultiSelect } from "@/app/admin/components/CustomMultiSelect";
+
+const toDateTimeLocalString = (date: Date | string | null | undefined) => {
+  if (!date) return "";
+  const d = new Date(date);
+  if (isNaN(d.getTime())) return "";
+  const pad = (num: number) => String(num).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+};
 
 interface CouponFormProps {
   coupon?: any;
-  onClose: () => void;
-  onSuccess: () => void;
+  products?: { id: string; name: string }[];
+  categories?: { id: string; name: string }[];
 }
 
-export function CouponForm({ coupon, onClose, onSuccess }: CouponFormProps) {
+export function CouponForm({ coupon, products = [], categories = [] }: CouponFormProps) {
+  const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -19,9 +31,20 @@ export function CouponForm({ coupon, onClose, onSuccess }: CouponFormProps) {
     code: coupon?.code || "",
     type: (coupon?.type as CouponType) || "FLAT",
     value: coupon?.value || 0,
-    startDate: coupon?.startDate ? new Date(coupon.startDate).toISOString().split("T")[0] : "",
-    endDate: coupon?.endDate ? new Date(coupon.endDate).toISOString().split("T")[0] : "",
+    startDate: toDateTimeLocalString(coupon?.startDate),
+    endDate: toDateTimeLocalString(coupon?.endDate),
     isActive: coupon?.isActive ?? true,
+    minCartValue: coupon?.minCartValue !== undefined && coupon?.minCartValue !== null ? coupon.minCartValue : "",
+    maxCartValue: coupon?.maxCartValue !== undefined && coupon?.maxCartValue !== null ? coupon.maxCartValue : "",
+    maxDiscountAmount: coupon?.maxDiscountAmount !== undefined && coupon?.maxDiscountAmount !== null ? coupon.maxDiscountAmount : "",
+    excludeSaleItems: coupon?.excludeSaleItems ?? false,
+    usageLimitTotal: coupon?.usageLimitTotal !== undefined && coupon?.usageLimitTotal !== null ? coupon.usageLimitTotal : "",
+    usageLimitPerUser: coupon?.usageLimitPerUser ?? 1,
+    customerSegment: coupon?.customerSegment || "ALL",
+    includedProductIds: coupon?.includedProductIds || [],
+    excludedProductIds: coupon?.excludedProductIds || [],
+    includedCategoryIds: coupon?.includedCategoryIds || [],
+    excludedCategoryIds: coupon?.excludedCategoryIds || [],
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -29,10 +52,31 @@ export function CouponForm({ coupon, onClose, onSuccess }: CouponFormProps) {
     setLoading(true);
     setError("");
 
+    const parseNumber = (val: any) => {
+      const parsed = parseFloat(val);
+      return isNaN(parsed) ? null : parsed;
+    };
+
+    const parseIntNumber = (val: any) => {
+      const parsed = parseInt(val);
+      return isNaN(parsed) ? null : parsed;
+    };
+
     const data = {
       ...formData,
+      value: formData.type === "FREE_SHIPPING" ? 0 : parseFloat(formData.value as any) || 0,
       startDate: formData.startDate ? new Date(formData.startDate) : null,
       endDate: formData.endDate ? new Date(formData.endDate) : null,
+      minCartValue: parseNumber(formData.minCartValue),
+      maxCartValue: parseNumber(formData.maxCartValue),
+      maxDiscountAmount: parseNumber(formData.maxDiscountAmount),
+      usageLimitTotal: parseIntNumber(formData.usageLimitTotal),
+      usageLimitPerUser: parseInt(formData.usageLimitPerUser as any) || 1,
+      customerSegment: formData.customerSegment === "ALL" ? null : formData.customerSegment,
+      includedProductIds: formData.includedProductIds,
+      excludedProductIds: formData.excludedProductIds,
+      includedCategoryIds: formData.includedCategoryIds,
+      excludedCategoryIds: formData.excludedCategoryIds,
     };
 
     const res = coupon
@@ -40,119 +84,248 @@ export function CouponForm({ coupon, onClose, onSuccess }: CouponFormProps) {
       : await createCoupon(data);
 
     if (res.success) {
-      onSuccess();
+      router.push("/admin/coupons");
+      router.refresh();
     } else {
       setError(res.error || "An error occurred.");
+      setLoading(false);
     }
-    setLoading(false);
   };
 
+  const productOptions = (products || []).map(p => ({ value: p.id, label: p.name }));
+  const categoryOptions = (categories || []).map(c => ({ value: c.id, label: c.name }));
+
   return (
-    <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden border border-slate-200 ring-1 ring-black/5 animate-in zoom-in-95 duration-200">
-        <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+    <form onSubmit={handleSubmit} className="flex flex-col gap-6 w-full pb-12 px-4 max-w-[1600px] mx-auto">
+
+      {/* Header Section */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-slate-200 pb-5">
+        <div className="flex items-center gap-4">
+          <Link href="/admin/coupons" className="p-2 bg-slate-100 hover:bg-slate-200 rounded-none transition-colors text-slate-500 font-bold flex items-center justify-center">
+            <ArrowLeft className="w-5 h-5" />
+          </Link>
           <div>
-            <h2 className="text-xl font-bold text-slate-900">{coupon ? "Edit Coupon" : "Create New Coupon"}</h2>
-            <p className="text-xs text-slate-500 font-medium mt-0.5">Define your discount structure and validity.</p>
+            <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900">
+              {coupon ? "Edit Coupon" : "Add New Coupon"}
+            </h1>
+            <p className="text-xs sm:text-sm text-slate-500 mt-1">Configure coupon properties, targeting filters, and cart limit rules.</p>
           </div>
-          <button onClick={onClose} className="p-2 text-slate-400 hover:text-slate-600 hover:bg-white rounded-lg transition-all border border-transparent hover:border-slate-200">
-            <X className="w-5 h-5" />
-          </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-6">
-          {error && (
-            <div className="p-4 bg-red-50 border border-red-100 rounded-xl text-red-600 text-sm font-bold flex items-center gap-3">
-              <div className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
-              {error}
-            </div>
+        <button
+          type="submit"
+          disabled={loading}
+          className="px-6 py-2.5 bg-slate-900 text-white text-xs font-bold uppercase tracking-widest rounded-none flex items-center justify-center gap-2 hover:bg-slate-800 transition-all disabled:opacity-75 shadow-none active:scale-[0.98]"
+        >
+          {loading ? (
+            <Loader2 className="w-4 h-4 animate-spin" />
+          ) : (
+            <Save className="w-4 h-4" />
           )}
+          Save Coupon Promo
+        </button>
+      </div>
 
-          <div className="grid grid-cols-1 gap-6">
-            <div className="space-y-1.5">
-              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Coupon Code</label>
-              <input
-                type="text"
-                required
-                value={formData.code}
-                onChange={(e) => setFormData({ ...formData, code: e.target.value.toUpperCase() })}
-                placeholder="E.G. SUMMER25"
-                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-black tracking-widest focus:bg-white focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all outline-none"
-              />
-            </div>
+      {error && (
+        <div className="p-4 bg-red-50 border border-red-100 rounded-none text-red-600 text-sm font-bold flex items-center gap-3">
+          <div className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
+          {error}
+        </div>
+      )}
 
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Discount Type</label>
-                <div className="grid grid-cols-2 gap-2 p-1 bg-slate-100 rounded-xl border border-slate-200">
-                  <button
-                    type="button"
-                    onClick={() => setFormData({ ...formData, type: "FLAT" })}
-                    className={`flex items-center justify-center gap-2 py-2.5 rounded-lg text-xs font-bold transition-all ${formData.type === "FLAT" ? "bg-white text-indigo-600 shadow-sm ring-1 ring-black/5" : "text-slate-500 hover:text-slate-700"
-                      }`}
-                  >
-                    <Banknote className="w-3.5 h-3.5" />
-                    Flat
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setFormData({ ...formData, type: "PERCENTAGE" })}
-                    className={`flex items-center justify-center gap-2 py-2.5 rounded-lg text-xs font-bold transition-all ${formData.type === "PERCENTAGE" ? "bg-white text-indigo-600 shadow-sm ring-1 ring-black/5" : "text-slate-500 hover:text-slate-700"
-                      }`}
-                  >
-                    <Percent className="w-3.5 h-3.5" />
-                    Percentage
-                  </button>
-                </div>
-              </div>
+      {/* Main Grid Layout - 3 Columns on Large Screens */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
 
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Value</label>
-                <div className="relative">
+        {/* Left Column (2/3 of Page) - Core Information & Targeting */}
+        <div className="lg:col-span-2 space-y-6">
+
+          {/* Card 1: Basic Discount Configurations */}
+          <div className="bg-white border border-slate-200 rounded-none p-6 shadow-none">
+            <h2 className="text-sm font-bold text-slate-900 uppercase tracking-wider mb-4 border-b border-slate-100 pb-2 flex items-center gap-2">
+              <Tag className="w-4 h-4 text-indigo-600" />
+              Basic Discount Configuration
+            </h2>
+
+            <div className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-500 mb-2">Coupon Code *</label>
                   <input
-                    type="number"
+                    type="text"
                     required
-                    min="0"
-                    step="0.001"
-                    value={formData.value}
-                    onChange={(e) => setFormData({ ...formData, value: parseFloat(e.target.value) || 0 })}
-                    className="w-full pl-4 pr-10 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold focus:bg-white focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all outline-none"
+                    value={formData.code}
+                    onChange={(e) => setFormData({ ...formData, code: e.target.value.toUpperCase() })}
+                    placeholder="E.G. SUMMER50"
+                    className="w-full px-4 py-2.5 border border-slate-300 rounded-none focus:outline-none focus:border-slate-900 focus:ring-0 text-sm font-black tracking-widest bg-slate-50 focus:bg-white placeholder:font-normal placeholder:text-slate-400"
                   />
-                  <div className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400">
-                    {formData.type === "FLAT" ? <span className="text-xs font-black">৳</span> : <Percent className="w-4 h-4" />}
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-500 mb-2">Discount Type *</label>
+                  <div className="grid grid-cols-3 gap-1 p-1 bg-slate-100 rounded-none border border-slate-200">
+                    <button
+                      type="button"
+                      onClick={() => setFormData({ ...formData, type: "FLAT" })}
+                      className={`flex items-center justify-center gap-1.5 py-2.5 rounded-none text-xs font-bold transition-all ${formData.type === "FLAT" ? "bg-white text-indigo-600 shadow-sm ring-1 ring-black/5" : "text-slate-500 hover:text-slate-700"}`}
+                    >
+                      <Banknote className="w-3.5 h-3.5" />
+                      Flat
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setFormData({ ...formData, type: "PERCENTAGE" })}
+                      className={`flex items-center justify-center gap-1.5 py-2.5 rounded-none text-xs font-bold transition-all ${formData.type === "PERCENTAGE" ? "bg-white text-indigo-600 shadow-sm ring-1 ring-black/5" : "text-slate-500 hover:text-slate-700"}`}
+                    >
+                      <Percent className="w-3.5 h-3.5" />
+                      Percent
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setFormData({ ...formData, type: "FREE_SHIPPING" })}
+                      className={`flex items-center justify-center gap-1.5 py-2.5 rounded-none text-xs font-bold transition-all ${formData.type === "FREE_SHIPPING" ? "bg-white text-indigo-600 shadow-sm ring-1 ring-black/5" : "text-slate-500 hover:text-slate-700"}`}
+                    >
+                      Free Ship
+                    </button>
                   </div>
                 </div>
               </div>
-            </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1 flex items-center gap-1.5">
-                  <Calendar className="w-3 h-3" />
-                  Start Date
-                </label>
-                <input
-                  type="date"
-                  value={formData.startDate}
-                  onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
-                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium focus:bg-white focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all outline-none"
-                />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {formData.type !== "FREE_SHIPPING" ? (
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-500 mb-2">Discount Value *</label>
+                    <div className="relative">
+                      <input
+                        type="number"
+                        required
+                        min="0"
+                        step="0.01"
+                        value={formData.value}
+                        onChange={(e) => setFormData({ ...formData, value: parseFloat(e.target.value) || 0 })}
+                        className="w-full pl-4 pr-10 py-2.5 border border-slate-300 rounded-none focus:outline-none focus:border-slate-900 text-sm font-bold bg-slate-50 focus:bg-white placeholder:font-normal placeholder:text-slate-400"
+                      />
+                      <div className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400">
+                        {formData.type === "FLAT" ? <span className="text-xs font-black">৳</span> : <Percent className="w-4 h-4" />}
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="bg-indigo-50 border border-indigo-100 rounded-none p-3.5 flex flex-col justify-center">
+                    <span className="text-xs font-bold text-indigo-800 flex items-center gap-1.5"> Free Shipping Active</span>
+                    <span className="text-[10px] text-indigo-600/80 font-medium">Waives all delivery and shipping fees.</span>
+                  </div>
+                )}
+
+                {formData.type === "PERCENTAGE" && (
+                  <div className="animate-in fade-in duration-200">
+                    <label className="block text-xs font-semibold text-slate-500 mb-2">Maximum Discount Cap (৳)</label>
+                    <input
+                      type="number"
+                      min="0"
+                      placeholder="E.G. 1000 (No cap if empty)"
+                      value={formData.maxDiscountAmount}
+                      onChange={(e) => setFormData({ ...formData, maxDiscountAmount: e.target.value })}
+                      className="w-full px-4 py-2.5 border border-slate-300 rounded-none focus:outline-none focus:border-slate-900 text-sm font-bold bg-slate-50 focus:bg-white placeholder:font-normal placeholder:text-slate-400"
+                    />
+                  </div>
+                )}
               </div>
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1 flex items-center gap-1.5">
-                  <Calendar className="w-3 h-3" />
-                  End Date
-                </label>
-                <input
-                  type="date"
-                  value={formData.endDate}
-                  onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
-                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium focus:bg-white focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all outline-none"
-                />
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-500 mb-2 flex items-center gap-1.5">
+                    <Calendar className="w-4 h-4" />
+                    Start Date
+                  </label>
+                  <input
+                    type="datetime-local"
+                    value={formData.startDate}
+                    onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
+                    className="w-full px-4 py-2.5 border border-slate-300 rounded-none focus:outline-none focus:border-slate-900 text-sm font-medium bg-slate-50 focus:bg-white"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-500 mb-2 flex items-center gap-1.5">
+                    <Calendar className="w-4 h-4" />
+                    End Date
+                  </label>
+                  <input
+                    type="datetime-local"
+                    value={formData.endDate}
+                    onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
+                    className="w-full px-4 py-2.5 border border-slate-300 rounded-none focus:outline-none focus:border-slate-900 text-sm font-medium bg-slate-50 focus:bg-white"
+                  />
+                </div>
               </div>
             </div>
+          </div>
 
-            <label className="flex items-center gap-3 p-4 bg-slate-50 border border-slate-200 rounded-xl cursor-pointer group hover:bg-white transition-all">
+          {/* Card 2: Targeting & Filter Whitelists / Blacklists */}
+          <div className="bg-white border border-slate-200 rounded-none p-6 shadow-none">
+            <h2 className="text-sm font-bold text-slate-900 uppercase tracking-wider mb-4 border-b border-slate-100 pb-2">
+              Targeting Filters (Whitelists / Blacklists)
+            </h2>
+            <p className="text-[11px] text-slate-400 flex items-center gap-1 bg-slate-50 p-2.5 rounded-none border border-slate-200/50 mb-6">
+              <Info className="w-4 h-4 flex-shrink-0 text-slate-500" />
+              Search and select products and categories to restrict this coupon's applicability. Leave empty to apply cart-wide.
+            </p>
+
+            <div className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <CustomMultiSelect
+                    label="Included Product IDs"
+                    options={productOptions}
+                    value={formData.includedProductIds}
+                    onChange={(val) => setFormData({ ...formData, includedProductIds: val })}
+                    placeholder="Search and select products..."
+                  />
+                </div>
+                <div>
+                  <CustomMultiSelect
+                    label="Excluded Product IDs"
+                    options={productOptions}
+                    value={formData.excludedProductIds}
+                    onChange={(val) => setFormData({ ...formData, excludedProductIds: val })}
+                    placeholder="Search and select products..."
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <CustomMultiSelect
+                    label="Included Category IDs"
+                    options={categoryOptions}
+                    value={formData.includedCategoryIds}
+                    onChange={(val) => setFormData({ ...formData, includedCategoryIds: val })}
+                    placeholder="Search and select categories..."
+                  />
+                </div>
+                <div>
+                  <CustomMultiSelect
+                    label="Excluded Category IDs"
+                    options={categoryOptions}
+                    value={formData.excludedCategoryIds}
+                    onChange={(val) => setFormData({ ...formData, excludedCategoryIds: val })}
+                    placeholder="Search and select categories..."
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Right Column (1/3 of Page) - Rules, Restrictions & Status */}
+        <div className="space-y-6">
+
+          {/* Card 3: Status & Activation */}
+          <div className="bg-white border border-slate-200 rounded-none p-6 shadow-none">
+            <h2 className="text-sm font-bold text-slate-900 uppercase tracking-wider mb-4 border-b border-slate-100 pb-2">
+              Status & Activation
+            </h2>
+
+            <label className="flex items-center gap-3 p-2 rounded-none cursor-pointer group">
               <div className="relative inline-flex items-center cursor-pointer">
                 <input
                   type="checkbox"
@@ -160,37 +333,103 @@ export function CouponForm({ coupon, onClose, onSuccess }: CouponFormProps) {
                   onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
                   className="sr-only peer"
                 />
-                <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+                <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
               </div>
-              <span className="text-sm font-bold text-slate-700 group-hover:text-slate-900 transition-colors">Mark as Active</span>
+              <div className="flex flex-col">
+                <span className="text-sm font-bold text-slate-700 group-hover:text-slate-900 transition-colors">Mark as Active</span>
+                <span className="text-[10px] text-slate-400">Coupon will be checkable by checkout cart</span>
+              </div>
             </label>
           </div>
 
-          <div className="pt-4 flex items-center gap-3">
-            <button
-              type="submit"
-              disabled={loading}
-              className="flex-1 bg-slate-900 text-white py-4 rounded-xl font-black uppercase tracking-widest text-xs hover:bg-black hover:shadow-xl hover:shadow-black/10 transition-all flex items-center justify-center gap-3 disabled:opacity-50 group active:scale-[0.98]"
-            >
-              {loading ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <>
-                  {coupon ? "Update Coupon" : "Create Coupon"}
-                </>
-              )}
-            </button>
-            <button
-              type="button"
-              onClick={onClose}
-              disabled={loading}
-              className="px-6 py-4 border border-slate-200 rounded-xl font-bold uppercase tracking-widest text-xs hover:bg-slate-50 transition-all active:scale-[0.98] text-slate-600"
-            >
-              Cancel
-            </button>
+          {/* Card 4: Spend & Claims Restrictions */}
+          <div className="bg-white border border-slate-200 rounded-none p-6 shadow-none">
+            <h2 className="text-sm font-bold text-slate-900 uppercase tracking-wider mb-4 border-b border-slate-100 pb-2 flex items-center gap-2">
+              <ShieldCheck className="w-4 h-4 text-indigo-600" />
+              Usage Restrictions
+            </h2>
+
+            <div className="space-y-5">
+              <div>
+                <label className="block text-xs font-semibold text-slate-500 mb-2">Minimum Cart Spend (৳)</label>
+                <input
+                  type="number"
+                  min="0"
+                  placeholder="Unlimited if empty"
+                  value={formData.minCartValue}
+                  onChange={(e) => setFormData({ ...formData, minCartValue: e.target.value })}
+                  className="w-full px-4 py-2 border border-slate-300 rounded-none focus:outline-none focus:border-slate-900 text-sm font-semibold bg-slate-50 focus:bg-white placeholder:font-normal placeholder:text-slate-400"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-500 mb-2">Maximum Cart Spend (৳)</label>
+                <input
+                  type="number"
+                  min="0"
+                  placeholder="Unlimited if empty"
+                  value={formData.maxCartValue}
+                  onChange={(e) => setFormData({ ...formData, maxCartValue: e.target.value })}
+                  className="w-full px-4 py-2 border border-slate-300 rounded-none focus:outline-none focus:border-slate-900 text-sm font-semibold bg-slate-50 focus:bg-white placeholder:font-normal placeholder:text-slate-400"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-500 mb-2">Global Usage Limit (Stock)</label>
+                <input
+                  type="number"
+                  min="0"
+                  placeholder="Unlimited if empty"
+                  value={formData.usageLimitTotal}
+                  onChange={(e) => setFormData({ ...formData, usageLimitTotal: e.target.value })}
+                  className="w-full px-4 py-2 border border-slate-300 rounded-none focus:outline-none focus:border-slate-900 text-sm font-semibold bg-slate-50 focus:bg-white placeholder:font-normal placeholder:text-slate-400"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-500 mb-2">Usage Limit Per User</label>
+                <input
+                  type="number"
+                  min="1"
+                  required
+                  value={formData.usageLimitPerUser}
+                  onChange={(e) => setFormData({ ...formData, usageLimitPerUser: parseInt(e.target.value) || 1 })}
+                  className="w-full px-4 py-2 border border-slate-300 rounded-none focus:outline-none focus:border-slate-900 text-sm font-semibold bg-slate-50 focus:bg-white placeholder:font-normal placeholder:text-slate-400"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-500 mb-2">Customer Segment Target</label>
+                <select
+                  value={formData.customerSegment}
+                  onChange={(e) => setFormData({ ...formData, customerSegment: e.target.value })}
+                  className="w-full px-4 py-2 border border-slate-300 rounded-none focus:outline-none focus:border-slate-900 text-sm font-semibold bg-slate-50 focus:bg-white cursor-pointer"
+                >
+                  <option value="ALL">All Customers</option>
+                  <option value="NEW_USER">New User Only</option>
+                  <option value="VIP">VIP Segment</option>
+                </select>
+              </div>
+
+              <label className="flex items-center gap-3 p-3 bg-slate-50 border border-slate-200 rounded-none cursor-pointer group hover:bg-white transition-all mt-4">
+                <div className="relative inline-flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={formData.excludeSaleItems}
+                    onChange={(e) => setFormData({ ...formData, excludeSaleItems: e.target.checked })}
+                    className="sr-only peer"
+                  />
+                  <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+                </div>
+                <div className="flex flex-col select-none">
+                  <span className="text-xs font-bold text-slate-700 group-hover:text-slate-950 transition-colors">Exclude Sale Items</span>
+                  <span className="text-[9px] text-slate-400 mt-0.5">Do not apply to sale/discounted items</span>
+                </div>
+              </label>
+            </div>
           </div>
-        </form>
+        </div>
       </div>
-    </div>
+    </form>
   );
 }

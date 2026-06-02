@@ -223,6 +223,7 @@ model Order {
   createdBy           Staff?        @relation(fields: [createdById], references: [id], onDelete: SetNull)
   customer            Customer?     @relation(fields: [customerId], references: [id], onDelete: SetNull)
   coupon              Coupon?       @relation(fields: [couponCode], references: [code])
+  couponUsage         CouponUsage?
   items               OrderItem[]
   salesReturns        SalesReturn[]
   exchangeRefOrder   Order?  @relation("ExchangeOrders", fields: [exchangeRefOrderId], references: [id], onDelete: SetNull)
@@ -236,19 +237,71 @@ model Order {
 }
 
 model Coupon {
-  id        String     @id @default(cuid())
-  code      String     @unique
-  type      CouponType @default(FLAT)
-  value     Float
-  startDate DateTime?
-  endDate   DateTime?
-  isActive  Boolean    @default(true)
-  createdAt DateTime   @default(now())
-  updatedAt DateTime   @updatedAt
-  deletedAt DateTime?
-  orders    Order[]
+  id                  String        @id @default(cuid())
+  code                String        @unique
+  type                CouponType    @default(FLAT)
+  value               Float
+  startDate           DateTime?
+  endDate             DateTime?
+  isActive            Boolean       @default(true)
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
+  deletedAt           DateTime?
+  orders              Order[]
+
+  // Advanced Limits & Conditions
+  minCartValue        Float?
+  maxCartValue        Float?
+  maxDiscountAmount   Float?
+  excludeSaleItems    Boolean       @default(false)
+  usageLimitTotal     Int?
+  usageLimitPerUser   Int           @default(1)
+  customerSegment     String?       // 'ALL', 'NEW_USER', 'VIP'
+
+  // Whitelists & Blacklists
+  includedProductIds  String[]      @default([])
+  excludedProductIds  String[]      @default([])
+  includedCategoryIds String[]      @default([])
+  excludedCategoryIds String[]      @default([])
+
+  usages              CouponUsage[]
+  locks               CouponLock[]
 
   @@index([deletedAt])
+}
+
+model CouponUsage {
+  id             String   @id @default(uuid())
+  couponId       String
+  customerId     String?
+  phone          String
+  orderId        String   @unique
+  discountAmount Float
+  usedAt         DateTime @default(now())
+
+  coupon   Coupon    @relation(fields: [couponId], references: [id], onDelete: Restrict)
+  customer Customer? @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  order    Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([couponId])
+  @@index([customerId])
+  @@index([phone])
+}
+
+model CouponLock {
+  id        String   @id @default(uuid())
+  couponId  String
+  phone     String?
+  sessionId String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  coupon Coupon @relation(fields: [couponId], references: [id], onDelete: Cascade)
+
+  @@index([couponId])
+  @@index([expiresAt])
+  @@index([sessionId])
+  @@index([phone])
 }
 
 model OrderItem {
@@ -493,6 +546,7 @@ enum DiscountType {
 enum CouponType {
   FLAT
   PERCENTAGE
+  FREE_SHIPPING
 }
 
 enum OrderStatus {
@@ -597,4 +651,5 @@ model Customer {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
   orders       Order[]
+  couponUsages CouponUsage[]
 }

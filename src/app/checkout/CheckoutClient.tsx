@@ -37,6 +37,8 @@ export default function CheckoutClient({
   const [couponSuccess, setCouponSuccess] = useState("");
   const [bkashNumber, setBkashNumber] = useState("");
   const [bkashTrxId, setBkashTrxId] = useState("");
+  const [couponSessionId, setCouponSessionId] = useState("");
+  const [phone, setPhone] = useState("");
   // DTF Modal State
   const [showDTFModal, setShowDTFModal] = useState(false);
   const [activeItem, setActiveItem] = useState<{ id: string, size: string | undefined, editIndex: number } | null>(null);
@@ -75,6 +77,16 @@ export default function CheckoutClient({
       });
     }
   }, [items.length]);
+
+  useEffect(() => {
+    let sessId = sessionStorage.getItem("coupon_session_id");
+    if (!sessId) {
+      sessId = "sess_" + Math.random().toString(36).substring(2, 15);
+      sessionStorage.setItem("coupon_session_id", sessId);
+    }
+    setCouponSessionId(sessId);
+  }, []);
+
 
   // Fetch Pathao Cities on mount
   useEffect(() => {
@@ -138,16 +150,16 @@ export default function CheckoutClient({
   const originalBaseSubtotal = items.reduce((total, item) => total + (item.originalPrice || item.price) * item.quantity, 0);
   const totalItemDiscount = originalBaseSubtotal - baseSubtotal;
 
-  const handleApplyCoupon = async () => {
-    if (!couponCode) return;
+  const handleApplyCoupon = async (codeToUse = couponCode, phoneToUse = phone) => {
+    if (!codeToUse) return;
     setIsValidating(true);
     setCouponError("");
     setCouponSuccess("");
 
-    const res = await validateCoupon(couponCode, baseSubtotal);
+    const res = await validateCoupon(codeToUse, items, deliveryFee, phoneToUse, couponSessionId);
     if (res.success && res.discountAmount !== undefined) {
       setCouponDiscount(res.discountAmount);
-      setAppliedCoupon(res.couponCode || couponCode);
+      setAppliedCoupon(res.couponCode || codeToUse);
       setCouponSuccess(`Coupon applied! Saved ${formatBDT(res.discountAmount)}`);
     } else {
       setCouponError(res.error || "Invalid coupon code.");
@@ -157,6 +169,16 @@ export default function CheckoutClient({
     setIsValidating(false);
   };
 
+  // Auto-revalidate coupon if items, phone, or delivery fee changes
+  useEffect(() => {
+    if (appliedCoupon) {
+      const delayDebounce = setTimeout(() => {
+        handleApplyCoupon(appliedCoupon, phone);
+      }, 600);
+      return () => clearTimeout(delayDebounce);
+    }
+  }, [phone, items.length, deliveryFee]);
+
   const [isPending, startTransition] = useTransition();
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
@@ -164,7 +186,7 @@ export default function CheckoutClient({
     const formData = new FormData(e.currentTarget);
 
     const fullName = (formData.get("fullName") as string || "").trim();
-    const phone = (formData.get("phone") as string || "").trim();
+    const phoneVal = (formData.get("phone") as string || "").trim();
     const specificAddress = (formData.get("address") as string || "").trim();
 
     const cityName = cities.find(c => c.value === selectedCityId?.toString())?.label || "";
@@ -173,7 +195,7 @@ export default function CheckoutClient({
 
     const fullDeliveryAddress = `${specificAddress}, ${areaName}, ${zoneName}, ${cityName}`;
 
-    if (!fullName || !phone || !selectedCityId || !selectedZoneId || !selectedAreaId || !specificAddress) {
+    if (!fullName || !phoneVal || !selectedCityId || !selectedZoneId || !selectedAreaId || !specificAddress) {
       setErrorMsg("Please provide all the required information (Name, Phone, City, Zone, Area, and Detail Address).");
       return;
     }
@@ -192,7 +214,7 @@ export default function CheckoutClient({
     startTransition(async () => {
       const result = await placeOrderAction({
         fullName,
-        phone,
+        phone: phoneVal,
         district: selectedDistrict, // Now using React state
         address: fullDeliveryAddress,
         items,
@@ -205,6 +227,7 @@ export default function CheckoutClient({
         pathaoCityId: selectedCityId || undefined,
         pathaoZoneId: selectedZoneId || undefined,
         pathaoAreaId: selectedAreaId || undefined,
+        couponSessionId: couponSessionId || undefined,
       });
 
       if (result.success) {
@@ -358,7 +381,17 @@ export default function CheckoutClient({
                     </div>
                     <div className="space-y-2">
                       <label className="text-sm font-bold text-zinc-700">Phone Number *</label>
-                      <input name="phone" type="tel" className="w-full bg-slate-50 border border-slate-200 px-4 py-3 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all font-medium" placeholder="+880 1..." />
+                      <input
+                        name="phone"
+                        type="tel"
+                        value={phone}
+                        onChange={(e) => {
+                          setPhone(e.target.value);
+                          setErrorMsg("");
+                        }}
+                        className="w-full bg-slate-50 border border-slate-200 px-4 py-3 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all font-medium"
+                        placeholder="+880 1..."
+                      />
                     </div>
                   </div>
 
@@ -572,7 +605,7 @@ export default function CheckoutClient({
                     ) : (
                       <button
                         type="button"
-                        onClick={handleApplyCoupon}
+                        onClick={() => handleApplyCoupon()}
                         disabled={isValidating || !couponCode}
                         className="px-6 py-3 bg-slate-900 text-white text-[10px] font-black uppercase tracking-widest  hover:bg-black transition-all disabled:opacity-50 flex items-center gap-2 font-bold"
                       >

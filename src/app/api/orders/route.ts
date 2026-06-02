@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { roundPrice } from "@/utils/formatPrice";
 import { normalizePhone } from "@/lib/utils";
+import { validateCouponRules } from "@/lib/coupon/couponValidator";
 
 export async function POST(req: NextRequest) {
   try {
@@ -91,16 +92,65 @@ export async function POST(req: NextRequest) {
       }
 
       // Validate coupon if provided
+      let validatedDiscountAmount = 0;
+      let couponIdToLog: string | null = null;
+      let finalDeliveryCharge = deliveryCharge || 0;
       const sanitizedCoupon = couponCode?.trim().toUpperCase() || null;
+
       if (sanitizedCoupon) {
-        const coupon = await tx.coupon.findUnique({ where: { code: sanitizedCoupon } });
-        if (!coupon || !coupon.isActive || coupon.deletedAt) {
-          throw new Error("Invalid or inactive coupon code.");
+        const validationResult = await validateCouponRules(
+          sanitizedCoupon,
+          items,
+          deliveryCharge || 0,
+          rawPhone,
+          undefined, // No sessionId for API orders
+          tx
+        );
+
+        if (!validationResult.isValid) {
+          throw new Error(validationResult.error || "Coupon validation failed.");
         }
-        const now2 = new Date();
-        if (coupon.startDate && now2 < coupon.startDate) throw new Error("Coupon is not yet active.");
-        if (coupon.endDate && now2 > coupon.endDate) throw new Error("Coupon has expired.");
+
+        validatedDiscountAmount = validationResult.discountAmount;
+
+        const dbCoupon = await tx.coupon.findUnique({
+          where: { code: sanitizedCoupon },
+          select: { id: true, type: true }
+        });
+        if (dbCoupon) {
+          couponIdToLog = dbCoupon.id;
+          if (dbCoupon.type === "FREE_SHIPPING") {
+            finalDeliveryCharge = 0;
+          }
+        }
       }
+
+      // Recalculate subtotal securely from DB
+      const productIds = items.map((item: any) => item.id);
+      const dbProducts = await tx.product.findMany({
+        where: { id: { in: productIds } },
+        include: { discount: true }
+      });
+      const dbProductMap = new Map(dbProducts.map(p => [p.id, p]));
+
+      let calculatedSubtotal = 0;
+      for (const item of items) {
+        const dbProd = dbProductMap.get(item.id);
+        if (!dbProd) throw new Error(`Product not found: ${item.name || item.id}`);
+        let finalPrice = dbProd.price;
+        if (dbProd.discount && dbProd.discount.active) {
+          if (dbProd.discount.discountType === "PERCENTAGE") {
+            finalPrice = finalPrice - (finalPrice * (dbProd.discount.value / 100));
+          } else {
+            finalPrice = finalPrice - dbProd.discount.value;
+          }
+        }
+        calculatedSubtotal += roundPrice(finalPrice) * item.quantity;
+      }
+
+      const secureTotalAmount = roundPrice(
+        calculatedSubtotal - validatedDiscountAmount + calculatedAdvance + finalDeliveryCharge
+      );
 
       // Validate variants exist
       for (const item of items) {
@@ -125,14 +175,14 @@ export async function POST(req: NextRequest) {
           phone: rawPhone,
           district,
           address,
-          totalAmount: roundPrice(totalAmount),
+          totalAmount: secureTotalAmount,
           advancePaid: calculatedAdvance,
-          deliveryCharge: deliveryCharge || 0,
+          deliveryCharge: finalDeliveryCharge,
           bkashNumber: bkashNumber || null,
           bkashTrxId: bkashTrxId || null,
           remarks: remarks || null,
           couponCode: sanitizedCoupon,
-          discountAmount: discountAmount || 0,
+          discountAmount: validatedDiscountAmount,
           pathaoCityId: pathaoCityId || null,
           pathaoZoneId: pathaoZoneId || null,
           pathaoAreaId: pathaoAreaId || null,
@@ -182,6 +232,26 @@ export async function POST(req: NextRequest) {
           },
         },
       });
+
+      // Log Coupon Usage and clean lock
+      if (sanitizedCoupon && couponIdToLog) {
+        await tx.couponUsage.create({
+          data: {
+            couponId: couponIdToLog,
+            customerId,
+            phone: normalizePhone(rawPhone),
+            orderId: order.id,
+            discountAmount: validatedDiscountAmount
+          }
+        });
+
+        await tx.couponLock.deleteMany({
+          where: {
+            couponId: couponIdToLog,
+            phone: normalizePhone(rawPhone)
+          }
+        });
+      }
 
       return order.id;
     });

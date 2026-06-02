@@ -1,45 +1,41 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { roundPrice } from "@/utils/formatPrice";
+import { validateCouponRules } from "@/lib/coupon/couponValidator";
 
 export async function GET(req: NextRequest, { params }: { params: { code: string } }) {
   try {
     const code = params.code.toUpperCase();
-    const subtotal = Number(req.nextUrl.searchParams.get("subtotal") || 0);
-
-    const coupon = await prisma.coupon.findUnique({
-      where: { code },
-    });
-
-    if (!coupon || !coupon.isActive || coupon.deletedAt) {
-      return NextResponse.json({ success: false, error: "Invalid or inactive coupon code." }, { status: 404 });
+    const phone = req.nextUrl.searchParams.get("phone") || undefined;
+    const deliveryCharge = Number(req.nextUrl.searchParams.get("deliveryCharge") || 0);
+    const itemsRaw = req.nextUrl.searchParams.get("items");
+    let items = [];
+    if (itemsRaw) {
+      try {
+        items = JSON.parse(itemsRaw);
+      } catch (e) {}
     }
 
-    const now = new Date();
-    if (coupon.startDate && now < coupon.startDate) {
-      return NextResponse.json({ success: false, error: "This coupon is not yet active." }, { status: 400 });
-    }
-    if (coupon.endDate && now > coupon.endDate) {
-      return NextResponse.json({ success: false, error: "This coupon has expired." }, { status: 400 });
-    }
-
-    let discountAmount = 0;
-    if (subtotal > 0) {
-      if (coupon.type === "PERCENTAGE") {
-        discountAmount = (coupon.value / 100) * subtotal;
-      } else {
-        discountAmount = coupon.value;
+    // Fallback: If no items are provided, we construct a dummy item with the subtotal
+    if (items.length === 0) {
+      const subtotal = Number(req.nextUrl.searchParams.get("subtotal") || 0);
+      if (subtotal > 0) {
+        items = [{ id: "dummy", name: "Dummy", price: subtotal, quantity: 1 }];
       }
-      discountAmount = Math.min(discountAmount, subtotal);
+    }
+
+    const res = await validateCouponRules(code, items, deliveryCharge, phone);
+
+    if (!res.isValid) {
+      return NextResponse.json({ success: false, error: res.error || "Invalid coupon." }, { status: 400 });
     }
 
     return NextResponse.json({
       success: true,
       data: {
-        code: coupon.code,
-        type: coupon.type,
-        value: coupon.value,
-        discountAmount: roundPrice(discountAmount),
+        code,
+        discountAmount: roundPrice(res.discountAmount),
+        appliedItems: res.appliedItems
       },
     });
   } catch (err: any) {
