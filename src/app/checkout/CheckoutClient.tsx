@@ -16,17 +16,23 @@ import { getPathaoCities, getPathaoZones, getPathaoAreas } from "@/app/actions/p
 export default function CheckoutClient({
   deliveryData,
   footerData,
-  dtfCostPerItem = 300
+  dtfCostPerItem = 300,
+  customerSession,
+  savedAddresses = []
 }: {
   deliveryData: { insideDhaka: number, outsideDhaka: number },
   footerData: FooterData,
-  dtfCostPerItem?: number
+  dtfCostPerItem?: number,
+  customerSession?: { id: string, name: string, phone: string, email?: string | null } | null,
+  savedAddresses?: any[]
 }) {
   const { items, getTotalPrice, clearCart, updateItem } = useCartStore();
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [confirmedOrderId, setConfirmedOrderId] = useState("");
   const [errorMsg, setErrorMsg] = useState("");
   const [selectedDistrict, setSelectedDistrict] = useState("");
+  const [fullName, setFullName] = useState("");
+  const [specificAddress, setSpecificAddress] = useState("");
 
   // Coupon States
   const [couponCode, setCouponCode] = useState("");
@@ -100,6 +106,56 @@ export default function CheckoutClient({
     }
     fetchCities();
   }, []);
+
+  const handleSelectAddress = async (addr: any) => {
+    setFullName(addr.fullName || "");
+    setPhone(addr.phone || "");
+    setSpecificAddress(addr.address || "");
+
+    if (addr.pathaoCityId) {
+      setSelectedCityId(addr.pathaoCityId);
+      setSelectedZoneId(null);
+      setSelectedAreaId(null);
+      setSelectedDistrict(addr.district || "");
+      
+      setLoadingZones(true);
+      const zoneRes = await getPathaoZones(addr.pathaoCityId);
+      if (zoneRes.success && zoneRes.data) {
+        const mappedZones = zoneRes.data.map((z: any) => ({ value: z.zone_id.toString(), label: z.zone_name }));
+        setZones(mappedZones);
+        
+        if (addr.pathaoZoneId) {
+          setSelectedZoneId(addr.pathaoZoneId);
+          
+          setLoadingAreas(true);
+          const areaRes = await getPathaoAreas(addr.pathaoZoneId);
+          if (areaRes.success && areaRes.data) {
+            const mappedAreas = areaRes.data.map((a: any) => ({ value: a.area_id.toString(), label: a.area_name }));
+            setAreas(mappedAreas);
+            
+            if (addr.pathaoAreaId) {
+              setSelectedAreaId(addr.pathaoAreaId);
+            }
+          }
+          setLoadingAreas(false);
+        }
+      }
+      setLoadingZones(false);
+    }
+  };
+
+  // Auto-initialize address from customerSession & default saved addresses
+  useEffect(() => {
+    if (savedAddresses && savedAddresses.length > 0) {
+      const defaultAddr = savedAddresses.find((a: any) => a.isDefault) || savedAddresses[0];
+      if (defaultAddr) {
+        handleSelectAddress(defaultAddr);
+      }
+    } else if (customerSession) {
+      setFullName(customerSession.name || "");
+      setPhone(customerSession.phone || "");
+    }
+  }, [customerSession, savedAddresses.length]);
 
   // Fetch Zones when City changes
   useEffect(() => {
@@ -371,13 +427,62 @@ export default function CheckoutClient({
             <div className="w-full lg:w-3/5">
               <div className="bg-white p-6 md:p-8 border border-slate-200 shadow-sm">
                 <h2 className="text-xl font-bold uppercase tracking-wide mb-6 pb-4 border-b border-slate-100">Delivery Information</h2>
+                {/* Login Prompt Banner if guest checkout */}
+                {!customerSession && (
+                  <div className="bg-rose-50/50 border border-rose-100 p-4 mb-6 flex items-center justify-between gap-4">
+                    <div className="text-xs text-slate-700">
+                      <span className="font-bold text-[#800020]">Already have an account? </span>
+                      Sign in to checkout faster with saved addresses and track orders live.
+                    </div>
+                    <Link 
+                      href="/login?callbackUrl=/checkout" 
+                      className="px-4 py-2 border border-[#800020] text-[#800020] text-xs font-bold uppercase tracking-wider hover:bg-[#800020] hover:text-white transition-all whitespace-nowrap"
+                    >
+                      Sign In
+                    </Link>
+                  </div>
+                )}
+
+                {/* Saved Address Cards for quick selection */}
+                {savedAddresses && savedAddresses.length > 0 && (
+                  <div className="mb-6">
+                    <label className="text-xs font-black uppercase tracking-wider text-slate-500 block mb-2.5">Ship to Saved Address</label>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      {savedAddresses.map((addr) => (
+                        <button
+                          key={addr.id}
+                          type="button"
+                          onClick={() => handleSelectAddress(addr)}
+                          className="text-left p-4 bg-white border border-slate-200 hover:border-[#800020] hover:bg-slate-50/30 transition-all shadow-sm focus:outline-none flex flex-col justify-between"
+                        >
+                          <div className="w-full">
+                            <div className="flex items-center justify-between mb-2">
+                              <span className="text-[10px] font-bold bg-slate-100 px-2 py-0.5 uppercase tracking-wide text-slate-700">{addr.label}</span>
+                              {addr.isDefault && <span className="text-[10px] font-black uppercase text-[#800020]">Default</span>}
+                            </div>
+                            <p className="font-bold text-xs text-slate-900 truncate">{addr.fullName}</p>
+                            <p className="text-[11px] text-slate-500 mt-0.5">{addr.phone}</p>
+                            <p className="text-[11px] text-slate-600 mt-1 line-clamp-1">{addr.address}</p>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
                 <form id="checkout-form" onSubmit={handleSubmit} noValidate className="space-y-6">
                   {/* Name and Phone */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <label className="text-sm font-bold text-zinc-700">Full Name *</label>
-                      <input name="fullName" type="text" className="w-full bg-slate-50 border border-slate-200 px-4 py-3 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all font-medium" placeholder="Enter your full name" />
+                      <input 
+                        name="fullName" 
+                        type="text" 
+                        value={fullName}
+                        onChange={(e) => setFullName(e.target.value)}
+                        className="w-full bg-slate-50 border border-slate-200 px-4 py-3 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all font-medium" 
+                        placeholder="Enter your full name" 
+                      />
                     </div>
                     <div className="space-y-2">
                       <label className="text-sm font-bold text-zinc-700">Phone Number *</label>
@@ -445,21 +550,18 @@ export default function CheckoutClient({
                           searchable={true}
                         />
                       </div>
-
-                      {/* <div className="space-y-2">
-                        <label className="text-sm font-bold text-zinc-700">District (Auto-detected)</label>
-                        <input
-                          readOnly
-                          name="district"
-                          value={selectedDistrict}
-                          className="w-full bg-slate-100 border border-slate-200 rounded-lg px-4 py-3 focus:outline-none text-zinc-500 font-medium cursor-not-allowed"
-                        />
-                      </div> */}
                     </div>
 
                     <div className="space-y-2">
                       <label className="text-sm font-bold text-zinc-700">House / Road / Flat No. / Landmark *</label>
-                      <textarea name="address" rows={3} className="w-full bg-slate-50 border border-slate-200 px-4 py-3 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all resize-none font-medium" placeholder="e.g., House 12, Road 4, Block C, near the central mosque" />
+                      <textarea 
+                        name="address" 
+                        rows={3} 
+                        value={specificAddress}
+                        onChange={(e) => setSpecificAddress(e.target.value)}
+                        className="w-full bg-slate-50 border border-slate-200 px-4 py-3 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all resize-none font-medium" 
+                        placeholder="e.g., House 12, Road 4, Block C, near the central mosque" 
+                      />
                     </div>
 
                     <div className="space-y-2 pt-2">

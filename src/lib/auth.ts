@@ -68,3 +68,71 @@ export async function hasPermission(action: string, subject: string): Promise<bo
     p => p.action === action && p.subject === subject
   );
 }
+
+// ─── CUSTOMER AUTHENTICATION HELPERS ──────────────────────────────────────────
+
+export interface CustomerSessionPayload {
+  customerId: string;
+  name: string;
+  phone: string;
+  email?: string | null;
+  [key: string]: any;
+}
+
+export async function createCustomerSession(payload: CustomerSessionPayload) {
+  console.log(`[Auth] createCustomerSession called with payload:`, JSON.stringify(payload));
+  try {
+    const session = await new SignJWT(payload)
+      .setProtectedHeader({ alg: 'HS256' })
+      .setIssuedAt()
+      .setExpirationTime('30d') // Persistent session for 30 days
+      .sign(encodedSecret);
+    console.log(`[Auth] Customer JWT Session generated successfully`);
+
+    try {
+      const cookieStore = cookies();
+      cookieStore.set('customer-session', session, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        maxAge: 60 * 60 * 24 * 30, // 30 days
+        path: '/',
+      });
+      console.log(`[Auth] Cookie 'customer-session' set successfully`);
+    } catch (cookieError: any) {
+      console.warn(`[Auth] Cookies could not be set (non-request context):`, cookieError.message);
+    }
+    return session;
+  } catch (error) {
+    console.error(`[Auth] Error in createCustomerSession:`, error);
+    throw error;
+  }
+}
+
+export async function getCustomerSession(): Promise<CustomerSessionPayload | null> {
+  let session: string | undefined;
+  try {
+    const cookieStore = cookies();
+    session = cookieStore.get('customer-session')?.value;
+  } catch (cookieError: any) {
+    console.warn(`[Auth] Cookies could not be read (non-request context):`, cookieError.message);
+  }
+  if (!session) return null;
+
+  try {
+    const { payload } = await jwtVerify(session, encodedSecret, {
+      algorithms: ['HS256'],
+    });
+    return payload as unknown as CustomerSessionPayload;
+  } catch (error) {
+    return null;
+  }
+}
+
+export async function destroyCustomerSession() {
+  try {
+    const cookieStore = cookies();
+    cookieStore.delete('customer-session');
+  } catch (cookieError: any) {
+    console.warn(`[Auth] Cookies could not be deleted (non-request context):`, cookieError.message);
+  }
+}

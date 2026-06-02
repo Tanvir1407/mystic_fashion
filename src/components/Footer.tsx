@@ -2,8 +2,8 @@ import Link from "next/link";
 import Image from "next/image";
 import { FooterData } from "@/lib/footer";
 
-export default function Footer({ config }: { config: FooterData }) {
-  const companyLinks = config.companyLinks || [];
+export default function Footer({ config }: { config: FooterData | null }) {
+  const companyLinks = config?.companyLinks || [];
 
   return (
     <footer className="bg-slate-50 text-zinc-600 border-t border-slate-200">
@@ -22,12 +22,12 @@ export default function Footer({ config }: { config: FooterData }) {
               />
             </Link>
             <p className="text-zinc-400 text-sm mt-4 leading-relaxed max-w-sm">
-              {config.aboutText}
+              {config?.aboutText}
             </p>
 
             {/* Social Icons */}
             <div className="flex gap-3 mt-6">
-              {config.facebookUrl && (
+              {config?.facebookUrl && (
                 <a
                   href={config.facebookUrl}
                   target="_blank"
@@ -39,7 +39,7 @@ export default function Footer({ config }: { config: FooterData }) {
                   </svg>
                 </a>
               )}
-              {config.instagramUrl && (
+              {config?.instagramUrl && (
                 <a
                   href={config.instagramUrl}
                   target="_blank"
@@ -51,7 +51,7 @@ export default function Footer({ config }: { config: FooterData }) {
                   </svg>
                 </a>
               )}
-              {config.whatsappPhone && (
+              {config?.whatsappPhone && (
                 <a
                   href={`https://wa.me/${config.whatsappPhone}`}
                   target="_blank"
@@ -83,9 +83,9 @@ export default function Footer({ config }: { config: FooterData }) {
           <div className="md:col-span-3">
             <h4 className="text-zinc-800 text-xs font-bold uppercase tracking-[0.2em] mb-5">Reach Us</h4>
             <ul className="space-y-3 text-sm text-zinc-400">
-              <li>{config.contactEmail}</li>
-              <li>{config.contactPhone}</li>
-              <li>{config.contactAddress}</li>
+              <li>{config?.contactEmail}</li>
+              <li>{config?.contactPhone}</li>
+              <li>{config?.contactAddress}</li>
             </ul>
           </div>
 

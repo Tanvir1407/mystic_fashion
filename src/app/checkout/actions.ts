@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { roundPrice } from "@/utils/formatPrice";
 import { normalizePhone } from "@/lib/utils";
 import { validateCouponRules } from "@/lib/coupon/couponValidator";
+import { getCustomerSession } from "@/lib/auth";
 
 export async function placeOrderAction(payload: {
   fullName: string;
@@ -25,36 +26,53 @@ export async function placeOrderAction(payload: {
 }) {
   try {
     return await prisma.$transaction(async (tx) => {
-      // 0. Check or create customer profile by phone
+      // 0. Check active session or check/create customer profile by phone
       const phone = payload.phone ? normalizePhone(payload.phone) : undefined;
+      const session = await getCustomerSession();
+      const sessionCustomerId = session?.customerId || null;
       let customerId: string | null = null;
-      if (phone) {
-        let customer = await tx.customer.findUnique({
-          where: { phone },
-        });
 
-        if (!customer) {
-          customer = await tx.customer.create({
-            data: {
-              phone,
-              name: payload.fullName?.trim() || `Customer ${phone}`,
-              address: payload.address?.trim() || null,
-            },
+      if (sessionCustomerId) {
+        customerId = sessionCustomerId;
+        // Optionally update customer's last used name and address
+        const nameToUse = payload.fullName?.trim();
+        const addressToUse = payload.address?.trim();
+        await tx.customer.update({
+          where: { id: sessionCustomerId },
+          data: {
+            name: nameToUse || undefined,
+            address: addressToUse || undefined,
+          }
+        });
+      } else {
+        if (phone) {
+          let customer = await tx.customer.findUnique({
+            where: { phone },
           });
-        } else {
-          const nameToUse = payload.fullName?.trim();
-          const addressToUse = payload.address?.trim();
-          if ((nameToUse && nameToUse !== customer.name) || (addressToUse && addressToUse !== customer.address)) {
-            customer = await tx.customer.update({
-              where: { phone },
+
+          if (!customer) {
+            customer = await tx.customer.create({
               data: {
-                name: nameToUse || customer.name,
-                address: addressToUse || customer.address,
+                phone,
+                name: payload.fullName?.trim() || `Customer ${phone}`,
+                address: payload.address?.trim() || null,
               },
             });
+          } else {
+            const nameToUse = payload.fullName?.trim();
+            const addressToUse = payload.address?.trim();
+            if ((nameToUse && nameToUse !== customer.name) || (addressToUse && addressToUse !== customer.address)) {
+              customer = await tx.customer.update({
+                where: { phone },
+                data: {
+                  name: nameToUse || customer.name,
+                  address: addressToUse || customer.address,
+                },
+              });
+            }
           }
+          customerId = customer.id;
         }
-        customerId = customer.id;
       }
 
       // Recalculate subtotal securely from DB

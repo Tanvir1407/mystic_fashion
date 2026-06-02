@@ -7,6 +7,7 @@ import { Search, Menu, X, Phone, Truck, User, ChevronDown } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useCartStore } from "../store/cartStore";
 import { getHeaderCategories } from "@/app/actions/categories";
+import { getCurrentCustomerSessionAction } from "@/app/actions/customerAuth";
 
 import Image from "next/image";
 
@@ -18,6 +19,7 @@ export default function Header() {
   const [searchQuery, setSearchQuery] = useState("");
   const { getTotalItems, toggleCart } = useCartStore();
   const pathname = usePathname();
+  const [customerName, setCustomerName] = useState<string | null>(null);
 
   const [categories, setCategories] = useState<any[]>([
   ]);
@@ -27,6 +29,11 @@ export default function Header() {
     getHeaderCategories().then((res) => {
       if (res.success && res.categories && res.categories.length > 0) {
         setCategories(res.categories);
+      }
+    });
+    getCurrentCustomerSessionAction().then((session) => {
+      if (session) {
+        setCustomerName(session.name);
       }
     });
   }, []);
@@ -139,15 +146,19 @@ export default function Header() {
           <div className="flex items-center gap-2.5 md:gap-4 lg:gap-6 flex-shrink-0 md:flex-1 justify-end">
 
             {/* Account (Desktop only) */}
-            {/* <Link href="/admin" className="hidden md:flex items-center gap-2.5 group">
+            <Link href="/account" className="hidden md:flex items-center gap-2.5 group">
               <div className="w-10 h-10 rounded-full border border-slate-200 flex items-center justify-center text-slate-600 group-hover:border-primary group-hover:text-primary transition-colors">
                 <User className="w-5 h-5" />
               </div>
               <div className="flex flex-col text-left">
-                <span className="text-[11px] text-slate-500 leading-none">Sign In</span>
-                <span className="text-xs font-bold text-slate-900 mt-0.5 leading-tight group-hover:text-primary transition-colors">Your Account</span>
+                <span className="text-[10px] text-slate-500 leading-none">
+                  {customerName ? "Hello," : "Sign In"}
+                </span>
+                <span className="text-xs font-bold text-slate-950 mt-0.5 leading-tight group-hover:text-primary transition-colors truncate max-w-[80px]">
+                  {customerName ? customerName.split(" ")[0] : "Your Account"}
+                </span>
               </div>
-            </Link> */}
+            </Link>
 
             {/* Cart (Desktop and Mobile) */}
             <button
@@ -166,9 +177,9 @@ export default function Header() {
             </button>
 
             {/* Account (Mobile only) */}
-            {/* <Link href="/admin" className="md:hidden p-1 text-foreground hover:text-primary transition-colors flex items-center justify-center">
+            <Link href="/account" className="md:hidden p-1 text-foreground hover:text-primary transition-colors flex items-center justify-center">
               <User className="w-6 h-6" />
-            </Link> */}
+            </Link>
           </div>
         </div>
       </div>
