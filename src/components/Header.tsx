@@ -2,12 +2,13 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
-import { Search, Menu, X, Phone, Truck, User, ChevronDown } from "lucide-react";
+import { useEffect, useState, useRef } from "react";
+import { Search, Menu, X, Phone, Truck, User, ChevronDown, LogOut, Package, MapPin } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useCartStore } from "../store/cartStore";
 import { getHeaderCategories } from "@/app/actions/categories";
 import { getCurrentCustomerSessionAction } from "@/app/actions/customerAuth";
+import { logoutCustomerAction } from "@/app/actions/customerAuth";
 
 import Image from "next/image";
 
@@ -16,10 +17,12 @@ export default function Header() {
   const [mounted, setMounted] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const { getTotalItems, toggleCart } = useCartStore();
   const pathname = usePathname();
   const [customerName, setCustomerName] = useState<string | null>(null);
+  const userMenuRef = useRef<HTMLDivElement>(null);
 
   const [categories, setCategories] = useState<any[]>([
   ]);
@@ -38,6 +41,22 @@ export default function Header() {
     });
   }, []);
 
+  // Close user menu when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
+        setIsUserMenuOpen(false);
+      }
+    }
+
+    if (isUserMenuOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [isUserMenuOpen]);
+
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (searchQuery.trim()) {
@@ -45,6 +64,17 @@ export default function Header() {
       setIsMobileMenuOpen(false);
       setIsSearchOpen(false);
     }
+  };
+
+  const handleLogout = async () => {
+    await logoutCustomerAction();
+    setIsUserMenuOpen(false);
+    router.push("/");
+  };
+
+  const navigateAndClose = (path: string) => {
+    router.push(path);
+    setIsUserMenuOpen(false);
   };
 
   // Hide header elements completely in the admin panel to avoid conflict
@@ -177,9 +207,85 @@ export default function Header() {
             </button>
 
             {/* Account (Mobile only) */}
-            <Link href="/account" className="md:hidden p-1 text-foreground hover:text-primary transition-colors flex items-center justify-center">
-              <User className="w-6 h-6" />
-            </Link>
+            <div ref={userMenuRef} className="md:hidden relative">
+              <button
+                onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
+                className="p-1 text-foreground hover:text-primary transition-colors flex items-center justify-center"
+              >
+                <User className="w-6 h-6" />
+              </button>
+
+              {/* Mobile User Menu Dropdown */}
+              <AnimatePresence>
+                {isUserMenuOpen && (
+                  <motion.div
+                    initial={{ scale: 0.95, opacity: 0, y: -10 }}
+                    animate={{ scale: 1, opacity: 1, y: 0 }}
+                    exit={{ scale: 0.95, opacity: 0, y: -10 }}
+                    transition={{ duration: 0.15 }}
+                    className="absolute right-0 mt-2 w-56 bg-white dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 shadow-xl z-[60]"
+                  >
+                    {customerName ? (
+                      <>
+                        {/* User Info */}
+                        <div className="p-4 border-b border-slate-100 dark:border-zinc-800">
+                          <p className="text-sm font-bold text-slate-900 dark:text-zinc-100">
+                            {customerName}
+                          </p>
+                          <p className="text-xs text-slate-500 dark:text-zinc-400">Customer Dashboard</p>
+                        </div>
+
+                        {/* Menu Items */}
+                        <div className="py-2 space-y-1">
+                          <button
+                            onClick={() => navigateAndClose("/account?tab=orders")}
+                            className="w-full text-left px-4 py-2.5 text-sm font-medium text-slate-700 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-zinc-900 hover:text-primary transition-colors flex items-center gap-3"
+                          >
+                            <Package className="w-4 h-4" />
+                            My Orders
+                          </button>
+                          <button
+                            onClick={() => navigateAndClose("/account?tab=addresses")}
+                            className="w-full text-left px-4 py-2.5 text-sm font-medium text-slate-700 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-zinc-900 hover:text-primary transition-colors flex items-center gap-3"
+                          >
+                            <MapPin className="w-4 h-4" />
+                            Address Book
+                          </button>
+                          <button
+                            onClick={() => navigateAndClose("/account?tab=profile")}
+                            className="w-full text-left px-4 py-2.5 text-sm font-medium text-slate-700 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-zinc-900 hover:text-primary transition-colors flex items-center gap-3"
+                          >
+                            <User className="w-4 h-4" />
+                            Profile Settings
+                          </button>
+                        </div>
+
+                        {/* Logout Button */}
+                        <div className="p-2 border-t border-slate-100 dark:border-zinc-800">
+                          <button
+                            onClick={handleLogout}
+                            className="w-full px-4 py-2.5 text-sm font-medium text-rose-700 dark:text-rose-500 hover:bg-rose-50 dark:hover:bg-zinc-900 transition-colors flex items-center justify-center gap-2 border border-rose-200 dark:border-rose-900"
+                          >
+                            <LogOut className="w-4 h-4" />
+                            Sign Out
+                          </button>
+                        </div>
+                      </>
+                    ) : (
+                      <div className="p-4">
+                        <Link
+                          href="/auth/login"
+                          onClick={() => setIsUserMenuOpen(false)}
+                          className="w-full inline-block px-4 py-2.5 text-sm font-bold text-white bg-primary hover:bg-opacity-90 transition-colors text-center"
+                        >
+                          Sign In
+                        </Link>
+                      </div>
+                    )}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
           </div>
         </div>
       </div>

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useTransition } from "react";
 import Image from "next/image";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
@@ -91,7 +91,9 @@ export default function AccountClient({
   footerData: FooterData | null;
 }) {
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState<"orders" | "addresses" | "profile">("orders");
+  const searchParams = useSearchParams();
+  const tabParam = searchParams.get("tab") as "orders" | "addresses" | "profile" | null;
+  const [activeTab, setActiveTab] = useState<"orders" | "addresses" | "profile">(tabParam || "orders");
   const [addresses, setAddresses] = useState<Address[]>(initialAddresses);
   const [isPending, startTransition] = useTransition();
 
@@ -118,6 +120,13 @@ export default function AccountClient({
   const [expandedOrderId, setExpandedOrderId] = useState<string | null>(null);
   const [liveTrackingInfo, setLiveTrackingInfo] = useState<any>(null);
   const [loadingTracking, setLoadingTracking] = useState(false);
+
+  // Update active tab when URL parameter changes
+  useEffect(() => {
+    if (tabParam && tabParam !== activeTab) {
+      setActiveTab(tabParam);
+    }
+  }, [tabParam, activeTab]);
 
   // Fetch Pathao cities on modal mount
   useEffect(() => {
