@@ -336,13 +336,13 @@ export default function AccountClient({
               {customer.name.charAt(0).toUpperCase()}
             </div>
             <div>
-              <h1 className="text-xl md:text-2xl font-black text-slate-900 leading-tight">Welcome, {customer.name}</h1>
+              <h1 className="text-xl md:text-xl font-semibold text-slate-900 leading-tight">Welcome, {customer.name}</h1>
               <p className="text-xs text-slate-500 mt-1"> &bull; Member since {formatDate(customer.createdAt)}</p>
             </div>
           </div>
           <button
             onClick={handleLogout}
-            className="px-5 py-2.5 bg-slate-100 hover:bg-rose-50 hover:text-rose-700 text-slate-700 text-xs font-bold uppercase tracking-wider transition-colors flex items-center gap-2 border border-slate-200"
+            className="px-5 py-2.5 bg-slate-100 hover:bg-rose-50 hover:text-rose-700 text-slate-700 text-xs font-semibold uppercase tracking-wider transition-colors flex items-center gap-2 border border-slate-200"
           >
             <LogOut className="w-4 h-4" /> Sign Out
           </button>
@@ -355,8 +355,8 @@ export default function AccountClient({
             <nav className="flex flex-row lg:flex-col bg-white border border-slate-200 p-1 lg:p-2 divide-x lg:divide-x-0 lg:divide-y divide-slate-100 sticky top-28">
               <button
                 onClick={() => setActiveTab("orders")}
-                className={`flex-1 lg:flex-none flex items-center justify-center lg:justify-start gap-3 px-4 py-3.5 text-xs font-black uppercase tracking-wider transition-all ${activeTab === "orders"
-                    ? "text-[#800020] bg-rose-50/50 border-b-2 lg:border-b-0 lg:border-l-4 lg:border-primary"
+                className={`flex-1 lg:flex-none flex items-center justify-center lg:justify-start gap-3 px-4 py-3.5 text-xs font-medium transition-all ${activeTab === "orders"
+                    ? "text-[#800020] bg-rose-50/50 border-b-2 lg:border-b-0 "
                     : "text-slate-500 hover:text-slate-900"
                   }`}
               >
@@ -366,7 +366,7 @@ export default function AccountClient({
 
               <button
                 onClick={() => setActiveTab("addresses")}
-                className={`flex-1 lg:flex-none flex items-center justify-center lg:justify-start gap-3 px-4 py-3.5 text-xs font-black uppercase tracking-wider transition-all ${activeTab === "addresses"
+                className={`flex-1 lg:flex-none flex items-center justify-center lg:justify-start gap-3 px-4 py-3.5 text-xs font-medium transition-all ${activeTab === "addresses"
                     ? "text-[#800020] bg-rose-50/50 border-b-2 lg:border-b-0 lg:border-l-4 lg:border-primary"
                     : "text-slate-500 hover:text-slate-900"
                   }`}
@@ -377,7 +377,7 @@ export default function AccountClient({
 
               <button
                 onClick={() => setActiveTab("profile")}
-                className={`flex-1 lg:flex-none flex items-center justify-center lg:justify-start gap-3 px-4 py-3.5 text-xs font-black uppercase tracking-wider transition-all ${activeTab === "profile"
+                className={`flex-1 lg:flex-none flex items-center justify-center lg:justify-start gap-3 px-4 py-3.5 text-xs font-medium transition-all ${activeTab === "profile"
                     ? "text-[#800020] bg-rose-50/50 border-b-2 lg:border-b-0 lg:border-l-4 lg:border-primary"
                     : "text-slate-500 hover:text-slate-900"
                   }`}
@@ -394,8 +394,8 @@ export default function AccountClient({
             {activeTab === "orders" && (
               <div className="space-y-6">
                 <div className="flex items-center justify-between border-b border-slate-200 pb-4">
-                  <h2 className="text-lg font-black uppercase tracking-wide">Order History</h2>
-                  <span className="text-xs bg-slate-100 text-slate-600 px-3 py-1 font-bold">{orders.length} orders total</span>
+                  <h2 className="text-md font-semibold">Order History</h2>
+                  <span className="text-xs bg-slate-100 text-slate-600 px-3 py-1 font-bold">{orders.length} orders</span>
                 </div>
 
                 {orders.length === 0 ? (
@@ -549,7 +549,7 @@ export default function AccountClient({
               <div className="space-y-6">
                 <div className="flex items-center justify-between border-b border-slate-200 pb-4">
                   <div>
-                    <h2 className="text-lg font-black uppercase tracking-wide">Saved Addresses</h2>
+                    <h2 className="text-lg font-medium">Saved Addresses</h2>
                     <p className="text-xs text-slate-500 mt-0.5">Manage up to 2 addresses for shipping checkout speed.</p>
                   </div>
                   <button
@@ -621,26 +621,26 @@ export default function AccountClient({
             {activeTab === "profile" && (
               <div className="space-y-6">
                 <div className="border-b border-slate-200 pb-4">
-                  <h2 className="text-lg font-black uppercase tracking-wide">Account Details</h2>
+                  <h2 className="text-lg font-medium">Account Details</h2>
                   <p className="text-xs text-slate-500 mt-0.5">Verify your personal profile registration details.</p>
                 </div>
 
                 <div className="bg-white border border-slate-200 p-6 md:p-8 space-y-6">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
-                      <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">Full Name</span>
+                      <span className="text-[10px] font-semibold text-slate-400">Full Name</span>
                       <p className="font-bold text-slate-900 text-sm mt-0.5">{customer.name}</p>
                     </div>
                     <div>
-                      <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">Phone Number</span>
+                      <span className="text-[10px] font-semibold text-slate-400">Phone Number</span>
                       <p className="font-bold text-slate-900 text-sm mt-0.5">{customer.phone}</p>
                     </div>
                     <div>
-                      <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">Email Address</span>
+                      <span className="text-[10px] font-semibold text-slate-400">Email Address</span>
                       <p className="font-bold text-slate-900 text-sm mt-0.5">{customer.email || "Not Provided"}</p>
                     </div>
                     <div>
-                      <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">Registration Date</span>
+                      <span className="text-[10px] font-semibold text-slate-400">Registration Date</span>
                       <p className="font-bold text-slate-900 text-sm mt-0.5">{formatDate(customer.createdAt)}</p>
                     </div>
                   </div>
