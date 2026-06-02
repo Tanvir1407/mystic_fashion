@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Ticket, Plus, Trash2, Edit2, CheckCircle2, XCircle, Search, Filter } from "lucide-react";
 import { deleteCoupon, toggleCouponStatus } from "./actions";
-import { CouponForm } from "./CouponForm";
+import Link from "next/link";
 
 export function CouponList({ 
   initialCoupons,
@@ -17,8 +17,6 @@ export function CouponList({
   canDelete: boolean
 }) {
   const [coupons, setCoupons] = useState(initialCoupons);
-  const [showForm, setShowForm] = useState(false);
-  const [editingCoupon, setEditingCoupon] = useState<any>(null);
   const [searchQuery, setSearchQuery] = useState("");
 
   const handleDelete = async (id: string) => {
@@ -52,16 +50,13 @@ export function CouponList({
           <p className="text-sm text-slate-500 mt-1">Create promotional codes and manage customer discounts.</p>
         </div>
         {canCreate && (
-          <button
-            onClick={() => {
-              setEditingCoupon(null);
-              setShowForm(true);
-            }}
+          <Link
+            href="/admin/coupons/new"
             className="h-10 px-4 bg-slate-900 text-white text-sm font-medium rounded-md flex items-center justify-center gap-2 hover:bg-slate-800 transition-colors shadow-sm"
           >
             <Plus className="w-4 h-4" />
             Add New Coupon
-          </button>
+          </Link>
         )}
       </div>
 
@@ -91,6 +86,8 @@ export function CouponList({
               <tr className="border-b border-slate-200 bg-slate-50">
                 <th className="px-4 py-3 font-semibold text-xs text-slate-500 uppercase tracking-wider">Coupon Code</th>
                 <th className="px-4 py-3 font-semibold text-xs text-slate-500 uppercase tracking-wider">Discount</th>
+                <th className="px-4 py-3 font-semibold text-xs text-slate-500 uppercase tracking-wider">Restrictions</th>
+                <th className="px-4 py-3 font-semibold text-xs text-slate-500 uppercase tracking-wider">Usage Stats</th>
                 <th className="px-4 py-3 font-semibold text-xs text-slate-500 uppercase tracking-wider">Validity Period</th>
                 <th className="px-4 py-3 font-semibold text-xs text-slate-500 uppercase tracking-wider">Status</th>
                 {(canEdit || canDelete) && (
@@ -105,6 +102,14 @@ export function CouponList({
                 const end = coupon.endDate ? new Date(coupon.endDate) : null;
                 const isExpired = end && now > end;
                 const isNotStarted = start && now < start;
+
+                const hasTargeting = (coupon.includedProductIds?.length ?? 0) > 0 ||
+                                     (coupon.excludedProductIds?.length ?? 0) > 0 ||
+                                     (coupon.includedCategoryIds?.length ?? 0) > 0 ||
+                                     (coupon.excludedCategoryIds?.length ?? 0) > 0;
+
+                const usagesCount = coupon._count?.usages ?? 0;
+                const usageLimit = coupon.usageLimitTotal;
                 
                 return (
                   <tr key={coupon.id} className="hover:bg-slate-50/50 transition-colors group">
@@ -113,28 +118,77 @@ export function CouponList({
                         <div className="w-8 h-8 rounded bg-slate-100 flex items-center justify-center border border-slate-200">
                           <Ticket className="w-4 h-4 text-slate-500" />
                         </div>
-                        <span className="font-medium text-sm text-slate-900">{coupon.code}</span>
+                        <div className="flex flex-col">
+                          <span className="font-bold text-sm text-slate-900">{coupon.code}</span>
+                          {coupon.customerSegment && (
+                            <span className="text-[9px] font-black text-indigo-600 uppercase tracking-wider mt-0.5">
+                              Segment: {coupon.customerSegment}
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </td>
                     <td className="px-4 py-4">
                       <div className="flex flex-col">
-                        <span className="text-sm text-slate-900">
-                          {coupon.type === "PERCENTAGE" ? `${coupon.value}% Off` : `৳${coupon.value.toLocaleString()} Flat`}
+                        <span className="text-sm font-semibold text-slate-950">
+                          {coupon.type === "FREE_SHIPPING" ? (
+                            "Free Shipping 🚚"
+                          ) : coupon.type === "PERCENTAGE" ? (
+                            `${coupon.value}% Off`
+                          ) : (
+                            `৳${coupon.value.toLocaleString()} Flat`
+                          )}
                         </span>
-                        <span className="text-[10px] text-slate-500 uppercase mt-0.5">On all orders</span>
+                        {coupon.type === "PERCENTAGE" && coupon.maxDiscountAmount && (
+                          <span className="text-[10px] text-slate-500 mt-0.5">
+                            Capped at ৳{coupon.maxDiscountAmount.toLocaleString()}
+                          </span>
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-4 py-4">
+                      <div className="flex flex-col gap-0.5">
+                        {coupon.minCartValue && (
+                          <span className="text-xs text-slate-700">
+                            Min spend: ৳{coupon.minCartValue.toLocaleString()}
+                          </span>
+                        )}
+                        {coupon.excludeSaleItems && (
+                          <span className="text-[9px] font-bold text-rose-600 bg-rose-50 border border-rose-100/50 px-1.5 py-0.5 rounded w-max mt-0.5">
+                            Excludes Sale Items
+                          </span>
+                        )}
+                        {hasTargeting && (
+                          <span className="text-[9px] font-bold text-amber-600 bg-amber-50 border border-amber-100/50 px-1.5 py-0.5 rounded w-max mt-0.5">
+                            Targeted Filters
+                          </span>
+                        )}
+                        {!coupon.minCartValue && !coupon.excludeSaleItems && !hasTargeting && (
+                          <span className="text-xs text-slate-400 font-medium">None</span>
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-4 py-4">
+                      <div className="flex flex-col">
+                        <span className="text-sm text-slate-900 font-medium">
+                          {usagesCount} / {usageLimit !== null ? usageLimit : "∞"} claimed
+                        </span>
+                        <span className="text-[9px] text-slate-400 mt-0.5 uppercase tracking-wider">
+                          Limit per user: {coupon.usageLimitPerUser}
+                        </span>
                       </div>
                     </td>
                     <td className="px-4 py-4">
                       <div className="flex flex-col gap-1">
                         <div className="flex items-center gap-1.5">
-                          <span className="text-sm text-slate-600">
+                          <span className="text-xs text-slate-600 font-medium">
                             {start ? start.toLocaleDateString('en-GB') : "No start"}
                             <span className="mx-1 text-slate-400">-</span>
                             {end ? end.toLocaleDateString('en-GB') : "Infinite"}
                           </span>
                         </div>
-                        {isExpired && <span className="text-[10px] font-medium text-red-600">Expired</span>}
-                        {isNotStarted && <span className="text-[10px] font-medium text-amber-600">Upcoming</span>}
+                        {isExpired && <span className="text-[9px] font-bold text-rose-600 bg-rose-50 px-1.5 py-0.5 rounded border border-rose-100/50 w-max">Expired</span>}
+                        {isNotStarted && <span className="text-[9px] font-bold text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-100/50 w-max">Upcoming</span>}
                       </div>
                     </td>
                     <td className="px-4 py-4">
@@ -165,16 +219,13 @@ export function CouponList({
                       <td className="px-4 py-4 text-right">
                         <div className="flex items-center justify-end gap-2 outline-none">
                           {canEdit && (
-                            <button
-                              onClick={() => {
-                                setEditingCoupon(coupon);
-                                setShowForm(true);
-                              }}
+                            <Link
+                              href={`/admin/coupons/edit/${coupon.id}`}
                               className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-indigo-600 bg-indigo-50 border border-indigo-200 rounded-md hover:bg-indigo-100 hover:border-indigo-300 transition-colors"
                             >
                               <Edit2 className="w-3.5 h-3.5" />
                               Edit
-                            </button>
+                            </Link>
                           )}
                           {canDelete && (
                             <button
@@ -193,7 +244,7 @@ export function CouponList({
               })}
               {filteredCoupons.length === 0 && (
                 <tr>
-                  <td colSpan={canEdit || canDelete ? 5 : 4} className="px-6 py-20 text-center">
+                  <td colSpan={canEdit || canDelete ? 7 : 6} className="px-6 py-20 text-center">
                     <div className="flex flex-col items-center gap-3">
                       <div className="w-16 h-16 rounded-full bg-slate-50 flex items-center justify-center">
                         <Ticket className="w-8 h-8 text-slate-200" />
@@ -207,22 +258,6 @@ export function CouponList({
           </table>
         </div>
       </div>
-
-      {showForm && (
-        <CouponForm
-          coupon={editingCoupon}
-          onClose={() => {
-            setShowForm(false);
-            setEditingCoupon(null);
-          }}
-          onSuccess={() => {
-            setShowForm(false);
-            setEditingCoupon(null);
-            // Refresh strategy: Since we're client side, we might just re-fetch
-            window.location.reload(); 
-          }}
-        />
-      )}
     </div>
   );
 }

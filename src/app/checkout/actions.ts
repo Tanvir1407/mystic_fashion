@@ -4,6 +4,7 @@ import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { roundPrice } from "@/utils/formatPrice";
 import { normalizePhone } from "@/lib/utils";
+import { validateCouponRules } from "@/lib/coupon/couponValidator";
 
 export async function placeOrderAction(payload: {
   fullName: string;
@@ -20,34 +21,10 @@ export async function placeOrderAction(payload: {
   pathaoCityId?: number;
   pathaoZoneId?: number;
   pathaoAreaId?: number;
+  couponSessionId?: string;
 }) {
   try {
     return await prisma.$transaction(async (tx) => {
-      const calculatedAdvance = payload.items.reduce((sum, item) => {
-        const printCount = item.printDetails?.length || (item.requiresPrint ? 1 : 0);
-        return sum + (printCount * (item.printCost || 0));
-      }, 0);
-
-      // Generate Custom Order ID
-      const now = new Date();
-      const year = now.getFullYear().toString().slice(-2);
-      const month = (now.getMonth() + 1).toString().padStart(2, '0');
-      const date = now.getDate().toString().padStart(2, '0');
-      const datePrefix = `MJEPE-${year}${month}${date}`;
-
-      const lastOrder = await tx.order.findFirst({
-        where: { id: { startsWith: datePrefix } },
-        orderBy: { id: 'desc' },
-        select: { id: true }
-      });
-
-      let nextNum = 1;
-      if (lastOrder) {
-        const lastNumStr = lastOrder.id.replace(datePrefix, "");
-        nextNum = parseInt(lastNumStr) + 1;
-      }
-      const customId = `${datePrefix}${nextNum.toString().padStart(2, '0')}`;
-
       // 0. Check or create customer profile by phone
       const phone = payload.phone ? normalizePhone(payload.phone) : undefined;
       let customerId: string | null = null;
@@ -80,7 +57,104 @@ export async function placeOrderAction(payload: {
         customerId = customer.id;
       }
 
+      // Recalculate subtotal securely from DB
+      const productIds = payload.items.map(item => item.id);
+      const dbProducts = await tx.product.findMany({
+        where: { id: { in: productIds } },
+        include: { discount: true }
+      });
+      const dbProductMap = new Map(dbProducts.map(p => [p.id, p]));
+
+      let calculatedSubtotal = 0;
+      for (const item of payload.items) {
+        const dbProd = dbProductMap.get(item.id);
+        if (!dbProd) throw new Error(`Product not found: ${item.name}`);
+        let finalPrice = dbProd.price;
+        if (dbProd.discount && dbProd.discount.active) {
+          if (dbProd.discount.discountType === "PERCENTAGE") {
+            finalPrice = finalPrice - (finalPrice * (dbProd.discount.value / 100));
+          } else {
+            finalPrice = finalPrice - dbProd.discount.value;
+          }
+        }
+        calculatedSubtotal += roundPrice(finalPrice) * item.quantity;
+      }
+
+      // Calculate DTF Cost
+      const calculatedAdvance = payload.items.reduce((sum, item) => {
+        const printCount = item.printDetails?.length || (item.requiresPrint ? 1 : 0);
+        return sum + (printCount * (item.printCost || 0));
+      }, 0);
+
+      // Delivery Setting & Charge
+      let insideCharge = 80;
+      let outsideCharge = 150;
+      const delSetting = await tx.deliverySetting.findUnique({ where: { id: "default" } });
+      if (delSetting) {
+        insideCharge = delSetting.insideDhaka;
+        outsideCharge = delSetting.outsideDhaka;
+      }
+      const isDhaka = payload.district?.toLowerCase() === "dhaka";
+      const deliveryCharge = isDhaka ? insideCharge : outsideCharge;
+
+      // Validate Coupon if provided
+      let validatedDiscountAmount = 0;
+      let couponIdToLog: string | null = null;
+      let finalDeliveryCharge = deliveryCharge;
       const sanitizedCoupon = payload.couponCode?.trim().toUpperCase() || null;
+
+      if (sanitizedCoupon) {
+        const validationResult = await validateCouponRules(
+          sanitizedCoupon,
+          payload.items,
+          deliveryCharge,
+          payload.phone,
+          payload.couponSessionId,
+          tx
+        );
+
+        if (!validationResult.isValid) {
+          throw new Error(validationResult.error || "Coupon validation failed.");
+        }
+
+        validatedDiscountAmount = validationResult.discountAmount;
+
+        const dbCoupon = await tx.coupon.findUnique({
+          where: { code: sanitizedCoupon },
+          select: { id: true, type: true }
+        });
+        if (dbCoupon) {
+          couponIdToLog = dbCoupon.id;
+          if (dbCoupon.type === "FREE_SHIPPING") {
+            finalDeliveryCharge = 0;
+          }
+        }
+      }
+
+      // Calculate Secure Grand Total
+      const secureTotalAmount = roundPrice(
+        calculatedSubtotal - validatedDiscountAmount + calculatedAdvance + finalDeliveryCharge
+      );
+
+      // Generate Custom Order ID
+      const now = new Date();
+      const year = now.getFullYear().toString().slice(-2);
+      const month = (now.getMonth() + 1).toString().padStart(2, '0');
+      const date = now.getDate().toString().padStart(2, '0');
+      const datePrefix = `MJEPE-${year}${month}${date}`;
+
+      const lastOrder = await tx.order.findFirst({
+        where: { id: { startsWith: datePrefix } },
+        orderBy: { id: 'desc' },
+        select: { id: true }
+      });
+
+      let nextNum = 1;
+      if (lastOrder) {
+        const lastNumStr = lastOrder.id.replace(datePrefix, "");
+        nextNum = parseInt(lastNumStr) + 1;
+      }
+      const customId = `${datePrefix}${nextNum.toString().padStart(2, '0')}`;
 
       // 1. Create the order & items
       const order = await tx.order.create({
@@ -90,13 +164,14 @@ export async function placeOrderAction(payload: {
           phone: payload.phone,
           district: payload.district,
           address: payload.address,
-          totalAmount: roundPrice(payload.totalAmount),
+          totalAmount: secureTotalAmount,
           advancePaid: calculatedAdvance,
           bkashNumber: payload.bkashNumber,
           bkashTrxId: payload.bkashTrxId,
           remarks: payload.remarks,
           couponCode: sanitizedCoupon,
-          discountAmount: payload.discountAmount || 0,
+          discountAmount: validatedDiscountAmount,
+          deliveryCharge: finalDeliveryCharge,
           pathaoCityId: payload.pathaoCityId,
           pathaoZoneId: payload.pathaoZoneId,
           pathaoAreaId: payload.pathaoAreaId,
@@ -146,7 +221,32 @@ export async function placeOrderAction(payload: {
         },
       });
 
-      // 2. Validate stock availability but don't decrement yet
+      // 2. Log Coupon Usage and delete lock
+      if (sanitizedCoupon && couponIdToLog) {
+        await tx.couponUsage.create({
+          data: {
+            couponId: couponIdToLog,
+            customerId: customerId,
+            phone: phone || normalizePhone(payload.phone),
+            orderId: order.id,
+            discountAmount: validatedDiscountAmount
+          }
+        });
+
+        // Cleanup lock for this user
+        const phoneMatch = phone || normalizePhone(payload.phone);
+        await tx.couponLock.deleteMany({
+          where: {
+            couponId: couponIdToLog,
+            OR: [
+              { phone: phoneMatch },
+              payload.couponSessionId ? { sessionId: payload.couponSessionId } : {}
+            ]
+          }
+        });
+      }
+
+      // 3. Validate stock availability but don't decrement yet
       for (const item of payload.items) {
         if (!item.size) {
           throw new Error(`Size not selected for ${item.name}`);
@@ -165,8 +265,6 @@ export async function placeOrderAction(payload: {
         if (!variant) {
           throw new Error(`Variant not found for ${item.name} (${item.size})`);
         }
-
-        // Stock will only be validated and decremented when admin moves status to CONFIRMED
       }
 
       revalidatePath("/admin/products");
@@ -180,38 +278,52 @@ export async function placeOrderAction(payload: {
   }
 }
 
-export async function validateCoupon(code: string, baseSubtotal: number) {
+export async function validateCoupon(
+  code: string,
+  items: any[],
+  deliveryCharge: number,
+  phone?: string,
+  sessionId?: string
+) {
   try {
-    const coupon = await prisma.coupon.findUnique({
-      where: { code: code.toUpperCase() },
-    });
+    const res = await validateCouponRules(code, items, deliveryCharge, phone, sessionId);
 
-    if (!coupon || !coupon.isActive) {
-      return { success: false, error: "Invalid or inactive coupon code." };
+    if (res.isValid && sessionId) {
+      const coupon = await prisma.coupon.findUnique({
+        where: { code: code.toUpperCase() }
+      });
+      if (coupon) {
+        const phoneMatch = phone ? normalizePhone(phone) : null;
+        // Clean existing lock for this session
+        await prisma.couponLock.deleteMany({
+          where: { sessionId, couponId: coupon.id }
+        });
+        // Create new lock
+        await prisma.couponLock.create({
+          data: {
+            couponId: coupon.id,
+            sessionId,
+            phone: phoneMatch,
+            expiresAt: new Date(Date.now() + 15 * 60 * 1000)
+          }
+        });
+      }
+    } else if (!res.isValid && sessionId && code) {
+      const coupon = await prisma.coupon.findUnique({
+        where: { code: code.toUpperCase() }
+      });
+      if (coupon) {
+        await prisma.couponLock.deleteMany({
+          where: { sessionId, couponId: coupon.id }
+        });
+      }
     }
-
-    const now = new Date();
-    if (coupon.startDate && now < coupon.startDate) {
-      return { success: false, error: "This coupon is not yet active." };
-    }
-    if (coupon.endDate && now > coupon.endDate) {
-      return { success: false, error: "This coupon has expired." };
-    }
-
-    let discountAmount = 0;
-    if (coupon.type === "PERCENTAGE") {
-      discountAmount = (coupon.value / 100) * baseSubtotal;
-    } else {
-      discountAmount = coupon.value;
-    }
-
-    // Ensure discount doesn't exceed Subtotal
-    discountAmount = Math.min(discountAmount, baseSubtotal);
 
     return {
-      success: true,
-      discountAmount: roundPrice(discountAmount),
-      couponCode: coupon.code
+      success: res.isValid,
+      discountAmount: res.discountAmount,
+      couponCode: code.toUpperCase(),
+      error: res.error
     };
   } catch (error: any) {
     return { success: false, error: "Failed to validate coupon." };

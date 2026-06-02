@@ -9,6 +9,11 @@ import { withAuditLog } from "@/lib/audit";
 
 export async function getCoupons() {
   return await prisma.coupon.findMany({
+    include: {
+      _count: {
+        select: { usages: true }
+      }
+    },
     orderBy: { createdAt: "desc" },
   });
 }
@@ -22,6 +27,17 @@ async function _createCoupon(data: {
   startDate?: Date | null;
   endDate?: Date | null;
   isActive: boolean;
+  minCartValue?: number | null;
+  maxCartValue?: number | null;
+  maxDiscountAmount?: number | null;
+  excludeSaleItems?: boolean;
+  usageLimitTotal?: number | null;
+  usageLimitPerUser?: number;
+  customerSegment?: string | null;
+  includedProductIds?: string[];
+  excludedProductIds?: string[];
+  includedCategoryIds?: string[];
+  excludedCategoryIds?: string[];
 }) {
   try {
     const coupon = await prisma.coupon.create({
@@ -32,6 +48,17 @@ async function _createCoupon(data: {
         startDate: data.startDate,
         endDate: data.endDate,
         isActive: data.isActive,
+        minCartValue: data.minCartValue,
+        maxCartValue: data.maxCartValue,
+        maxDiscountAmount: data.maxDiscountAmount,
+        excludeSaleItems: data.excludeSaleItems ?? false,
+        usageLimitTotal: data.usageLimitTotal,
+        usageLimitPerUser: data.usageLimitPerUser ?? 1,
+        customerSegment: data.customerSegment,
+        includedProductIds: data.includedProductIds || [],
+        excludedProductIds: data.excludedProductIds || [],
+        includedCategoryIds: data.includedCategoryIds || [],
+        excludedCategoryIds: data.excludedCategoryIds || [],
       },
     });
     revalidatePath("/admin/coupons");
@@ -62,6 +89,17 @@ async function _updateCoupon(id: string, data: {
   startDate?: Date | null;
   endDate?: Date | null;
   isActive: boolean;
+  minCartValue?: number | null;
+  maxCartValue?: number | null;
+  maxDiscountAmount?: number | null;
+  excludeSaleItems?: boolean;
+  usageLimitTotal?: number | null;
+  usageLimitPerUser?: number;
+  customerSegment?: string | null;
+  includedProductIds?: string[];
+  excludedProductIds?: string[];
+  includedCategoryIds?: string[];
+  excludedCategoryIds?: string[];
 }) {
   try {
     const coupon = await prisma.coupon.update({
@@ -73,6 +111,17 @@ async function _updateCoupon(id: string, data: {
         startDate: data.startDate,
         endDate: data.endDate,
         isActive: data.isActive,
+        minCartValue: data.minCartValue,
+        maxCartValue: data.maxCartValue,
+        maxDiscountAmount: data.maxDiscountAmount,
+        excludeSaleItems: data.excludeSaleItems ?? false,
+        usageLimitTotal: data.usageLimitTotal,
+        usageLimitPerUser: data.usageLimitPerUser ?? 1,
+        customerSegment: data.customerSegment,
+        includedProductIds: data.includedProductIds || [],
+        excludedProductIds: data.excludedProductIds || [],
+        includedCategoryIds: data.includedCategoryIds || [],
+        excludedCategoryIds: data.excludedCategoryIds || [],
       },
     });
     revalidatePath("/admin/coupons");
