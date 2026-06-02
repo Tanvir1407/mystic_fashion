@@ -39,14 +39,14 @@ export async function middleware(request: NextRequest) {
   if (pathname.startsWith('/account')) {
     const sessionCookie = request.cookies.get('customer-session');
     if (!sessionCookie) {
-      const loginUrl = new URL('/login', request.url);
+      const loginUrl = new URL('/auth/login', request.url);
       loginUrl.searchParams.set('callbackUrl', pathname);
       return NextResponse.redirect(loginUrl);
     }
     try {
       await jwtVerify(sessionCookie.value, encodedSecret, { algorithms: ['HS256'] });
     } catch {
-      const loginUrl = new URL('/login', request.url);
+      const loginUrl = new URL('/auth/login', request.url);
       loginUrl.searchParams.set('callbackUrl', pathname);
       return NextResponse.redirect(loginUrl);
     }

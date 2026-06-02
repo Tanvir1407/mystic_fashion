@@ -12,7 +12,7 @@ export default async function CustomerInvoicePage({
 }) {
   const session = await getCustomerSession();
   if (!session) {
-    redirect("/login?callbackUrl=/account");
+    redirect("/auth/login?callbackUrl=/account");
   }
 
   // Fetch the order and verify that it belongs to the logged-in customer

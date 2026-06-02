@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { Loader2, ArrowRight, User, Mail, Phone, Lock, Sparkles, CheckCircle2 } from "lucide-react";
-import { registerCustomerAction } from "../actions/customerAuth";
+import { registerCustomerAction } from "../../actions/customerAuth";
 
 export default function CustomerRegisterPage() {
   const router = useRouter();
@@ -231,7 +231,7 @@ export default function CustomerRegisterPage() {
           {/* Login Prompt Link */}
           <div className="mt-8 pt-6 border-t border-slate-100 text-center text-xs">
             <span className="text-slate-500">Already have an account? </span>
-            <Link href="/login" className="font-black text-[#800020] hover:underline">
+            <Link href="/auth/login" className="font-black text-[#800020] hover:underline">
               Log In Instead
             </Link>
           </div>

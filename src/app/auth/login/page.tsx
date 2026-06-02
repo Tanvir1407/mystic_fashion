@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { Loader2, ArrowRight, Key, Mail, Phone, Lock, Sparkles, CheckCircle2 } from "lucide-react";
-import { loginCustomerAction, sendCustomerOtpAction, verifyCustomerOtpAction } from "../actions/customerAuth";
+import { loginCustomerAction, sendCustomerOtpAction, verifyCustomerOtpAction } from "../../actions/customerAuth";
 
 function LoginPageContent() {
   const router = useRouter();
@@ -14,11 +14,11 @@ function LoginPageContent() {
 
   // Login Mode: "password" | "otp"
   const [mode, setMode] = useState<"password" | "otp">("password");
-  
+
   // Form State
   const [emailOrPhone, setEmailOrPhone] = useState("");
   const [password, setPassword] = useState("");
-  
+
   // OTP States
   const [otpEmail, setOtpEmail] = useState("");
   const [otpSent, setOtpSent] = useState(false);
@@ -125,7 +125,7 @@ function LoginPageContent() {
         <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff08_1px,transparent_1px),linear-gradient(to_bottom,#ffffff08_1px,transparent_1px)] bg-[size:40px_40px] pointer-events-none" />
         <div className="absolute top-1/4 -left-20 w-80 h-80 rounded-full bg-red-800/30 blur-3xl pointer-events-none" />
         <div className="absolute bottom-1/4 -right-20 w-96 h-96 rounded-full bg-rose-950/40 blur-3xl pointer-events-none" />
-        
+
         {/* Cover Image backdrop */}
         <div
           className="absolute inset-0 bg-cover bg-center opacity-25 mix-blend-luminosity"
@@ -145,9 +145,7 @@ function LoginPageContent() {
           </div>
 
           <div className="max-w-md space-y-6">
-            <div className="inline-flex items-center gap-2 px-3 py-1 bg-white/10 backdrop-blur-md rounded-full text-xs font-semibold tracking-wide border border-white/20">
-              <Sparkles className="w-3 h-3 text-amber-300" /> Premium Customer Portal
-            </div>
+
             <h2 className="text-4xl font-black tracking-tight leading-none text-white">
               Elevate Your <br />
               <span className="text-rose-200">Shopping Journey.</span>
@@ -179,7 +177,7 @@ function LoginPageContent() {
 
           {/* Heading */}
           <div className="text-center sm:text-left">
-            <h1 className="text-2xl font-black text-slate-900 tracking-tight">Customer Portal</h1>
+            <h1 className="text-2xl font-black text-slate-900 tracking-tight">Welcome Back</h1>
             <p className="text-sm text-slate-500 mt-1.5 mb-8">Access your account to manage your shopping experience.</p>
           </div>
 
@@ -191,11 +189,10 @@ function LoginPageContent() {
                 setErrorMsg("");
                 setSuccessMsg("");
               }}
-              className={`flex-1 py-2.5 text-xs font-bold uppercase tracking-wider transition-all border-b-2 ${
-                mode === "password"
-                  ? "border-[#800020] text-[#800020] bg-white shadow-sm"
-                  : "border-transparent text-slate-500 hover:text-slate-900"
-              }`}
+              className={`flex-1 py-2.5 text-xs font-bold uppercase tracking-wider transition-all border-b-2 ${mode === "password"
+                ? "border-[#800020] text-[#800020] bg-white shadow-sm"
+                : "border-transparent text-slate-500 hover:text-slate-900"
+                }`}
             >
               Password Login
             </button>
@@ -205,11 +202,10 @@ function LoginPageContent() {
                 setErrorMsg("");
                 setSuccessMsg("");
               }}
-              className={`flex-1 py-2.5 text-xs font-bold uppercase tracking-wider transition-all border-b-2 ${
-                mode === "otp"
-                  ? "border-[#800020] text-[#800020] bg-white shadow-sm"
-                  : "border-transparent text-slate-500 hover:text-slate-900"
-              }`}
+              className={`flex-1 py-2.5 text-xs font-bold uppercase tracking-wider transition-all border-b-2 ${mode === "otp"
+                ? "border-[#800020] text-[#800020] bg-white shadow-sm"
+                : "border-transparent text-slate-500 hover:text-slate-900"
+                }`}
             >
               Email OTP Login
             </button>
@@ -252,7 +248,7 @@ function LoginPageContent() {
               <div className="space-y-2">
                 <div className="flex justify-between items-center">
                   <label className="text-xs font-black uppercase tracking-wider text-slate-700">Password</label>
-                  <Link href="/forgot-password" className="text-xs font-bold text-[#800020] hover:underline">
+                  <Link href="/auth/forgot-password" className="text-xs font-bold text-[#800020] hover:underline">
                     Forgot password?
                   </Link>
                 </div>
@@ -401,7 +397,7 @@ function LoginPageContent() {
           {/* Registration Prompt Link */}
           <div className="mt-8 pt-6 border-t border-slate-100 text-center text-xs">
             <span className="text-slate-500">New to Mystic Fashion? </span>
-            <Link href="/register" className="font-black text-[#800020] hover:underline">
+            <Link href="/auth/register" className="font-black text-[#800020] hover:underline">
               Create an Account
             </Link>
           </div>

@@ -435,7 +435,7 @@ export default function CheckoutClient({
                       Sign in to checkout faster with saved addresses and track orders live.
                     </div>
                     <Link 
-                      href="/login?callbackUrl=/checkout" 
+                      href="/auth/login?callbackUrl=/checkout" 
                       className="px-4 py-2 border border-[#800020] text-[#800020] text-xs font-bold uppercase tracking-wider hover:bg-[#800020] hover:text-white transition-all whitespace-nowrap"
                     >
                       Sign In

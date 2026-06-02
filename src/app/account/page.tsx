@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 export default async function AccountPage() {
   const session = await getCustomerSession();
   if (!session) {
-    redirect("/login?callbackUrl=/account");
+    redirect("/auth/login?callbackUrl=/account");
   }
 
   // Fetch customer profile with order history and saved addresses
@@ -38,7 +38,7 @@ export default async function AccountPage() {
 
   if (!customer) {
     // Session is invalid if user has been deleted
-    redirect("/login?callbackUrl=/account");
+    redirect("/auth/login?callbackUrl=/account");
   }
 
   // Serialize models safely for client component hydration
