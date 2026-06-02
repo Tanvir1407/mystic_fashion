@@ -1,4 +1,5 @@
 import prisma from "../src/lib/prisma";
+import bcrypt from "bcryptjs";
 
 async function main() {
   console.log("Starting database clean and seed...");
@@ -49,6 +50,19 @@ async function main() {
     console.log("Clean complete! Seeding fresh test data...");
 
     // Step 2: Seed Fresh Test Data
+    // 0. Create Admin user for login
+    const adminPassword = await bcrypt.hash("admin123", 10);
+    const admin = await tx.admin.upsert({
+      where: { email: "admin@example.com" },
+      update: {},
+      create: {
+        email: "admin@example.com",
+        password: adminPassword,
+        role: "SUPERADMIN",
+      },
+    });
+    console.log(`- Created Admin: ${admin.email} (password: admin123)`);
+
     // 1. Create a Product
     const product = await tx.product.create({
       data: {
