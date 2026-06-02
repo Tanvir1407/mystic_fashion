@@ -36,5 +36,15 @@ export default async function EditCouponPage({ params }: { params: { id: string 
     notFound();
   }
 
-  return <CouponForm coupon={coupon} />;
+  const products = await prisma.product.findMany({
+    select: { id: true, name: true },
+    orderBy: { name: 'asc' }
+  });
+
+  const categories = await prisma.category.findMany({
+    select: { id: true, name: true },
+    orderBy: { name: 'asc' }
+  });
+
+  return <CouponForm coupon={coupon} products={products} categories={categories} />;
 }

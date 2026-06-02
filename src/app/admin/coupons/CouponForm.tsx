@@ -6,12 +6,23 @@ import { createCoupon, updateCoupon } from "./actions";
 import { Loader2, ArrowLeft, Save, Percent, Banknote, Calendar, ShieldCheck, Tag, Info } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { CustomMultiSelect } from "@/app/admin/components/CustomMultiSelect";
+
+const toDateTimeLocalString = (date: Date | string | null | undefined) => {
+  if (!date) return "";
+  const d = new Date(date);
+  if (isNaN(d.getTime())) return "";
+  const pad = (num: number) => String(num).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+};
 
 interface CouponFormProps {
   coupon?: any;
+  products?: { id: string; name: string }[];
+  categories?: { id: string; name: string }[];
 }
 
-export function CouponForm({ coupon }: CouponFormProps) {
+export function CouponForm({ coupon, products = [], categories = [] }: CouponFormProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -20,8 +31,8 @@ export function CouponForm({ coupon }: CouponFormProps) {
     code: coupon?.code || "",
     type: (coupon?.type as CouponType) || "FLAT",
     value: coupon?.value || 0,
-    startDate: coupon?.startDate ? new Date(coupon.startDate).toISOString().split("T")[0] : "",
-    endDate: coupon?.endDate ? new Date(coupon.endDate).toISOString().split("T")[0] : "",
+    startDate: toDateTimeLocalString(coupon?.startDate),
+    endDate: toDateTimeLocalString(coupon?.endDate),
     isActive: coupon?.isActive ?? true,
     minCartValue: coupon?.minCartValue !== undefined && coupon?.minCartValue !== null ? coupon.minCartValue : "",
     maxCartValue: coupon?.maxCartValue !== undefined && coupon?.maxCartValue !== null ? coupon.maxCartValue : "",
@@ -30,22 +41,16 @@ export function CouponForm({ coupon }: CouponFormProps) {
     usageLimitTotal: coupon?.usageLimitTotal !== undefined && coupon?.usageLimitTotal !== null ? coupon.usageLimitTotal : "",
     usageLimitPerUser: coupon?.usageLimitPerUser ?? 1,
     customerSegment: coupon?.customerSegment || "ALL",
-    includedProductIds: coupon?.includedProductIds ? coupon.includedProductIds.join(", ") : "",
-    excludedProductIds: coupon?.excludedProductIds ? coupon.excludedProductIds.join(", ") : "",
-    includedCategoryIds: coupon?.includedCategoryIds ? coupon.includedCategoryIds.join(", ") : "",
-    excludedCategoryIds: coupon?.excludedCategoryIds ? coupon.excludedCategoryIds.join(", ") : "",
+    includedProductIds: coupon?.includedProductIds || [],
+    excludedProductIds: coupon?.excludedProductIds || [],
+    includedCategoryIds: coupon?.includedCategoryIds || [],
+    excludedCategoryIds: coupon?.excludedCategoryIds || [],
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError("");
-
-    const parseStringArray = (str: string) => {
-      return str.split(",")
-        .map(s => s.trim())
-        .filter(s => s.length > 0);
-    };
 
     const parseNumber = (val: any) => {
       const parsed = parseFloat(val);
@@ -68,10 +73,10 @@ export function CouponForm({ coupon }: CouponFormProps) {
       usageLimitTotal: parseIntNumber(formData.usageLimitTotal),
       usageLimitPerUser: parseInt(formData.usageLimitPerUser as any) || 1,
       customerSegment: formData.customerSegment === "ALL" ? null : formData.customerSegment,
-      includedProductIds: parseStringArray(formData.includedProductIds),
-      excludedProductIds: parseStringArray(formData.excludedProductIds),
-      includedCategoryIds: parseStringArray(formData.includedCategoryIds),
-      excludedCategoryIds: parseStringArray(formData.excludedCategoryIds),
+      includedProductIds: formData.includedProductIds,
+      excludedProductIds: formData.excludedProductIds,
+      includedCategoryIds: formData.includedCategoryIds,
+      excludedCategoryIds: formData.excludedCategoryIds,
     };
 
     const res = coupon
@@ -86,6 +91,9 @@ export function CouponForm({ coupon }: CouponFormProps) {
       setLoading(false);
     }
   };
+
+  const productOptions = (products || []).map(p => ({ value: p.id, label: p.name }));
+  const categoryOptions = (categories || []).map(c => ({ value: c.id, label: c.name }));
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-6 w-full pb-12 px-4 max-w-[1600px] mx-auto">
@@ -230,7 +238,7 @@ export function CouponForm({ coupon }: CouponFormProps) {
                     Start Date
                   </label>
                   <input
-                    type="date"
+                    type="datetime-local"
                     value={formData.startDate}
                     onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
                     className="w-full px-4 py-2.5 border border-slate-300 rounded-none focus:outline-none focus:border-slate-900 text-sm font-medium bg-slate-50 focus:bg-white"
@@ -242,7 +250,7 @@ export function CouponForm({ coupon }: CouponFormProps) {
                     End Date
                   </label>
                   <input
-                    type="date"
+                    type="datetime-local"
                     value={formData.endDate}
                     onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
                     className="w-full px-4 py-2.5 border border-slate-300 rounded-none focus:outline-none focus:border-slate-900 text-sm font-medium bg-slate-50 focus:bg-white"
@@ -259,52 +267,48 @@ export function CouponForm({ coupon }: CouponFormProps) {
             </h2>
             <p className="text-[11px] text-slate-400 flex items-center gap-1 bg-slate-50 p-2.5 rounded-none border border-slate-200/50 mb-6">
               <Info className="w-4 h-4 flex-shrink-0 text-slate-500" />
-              Provide comma-separated UUIDs (e.g. `uuid-1, uuid-2`). Leave empty to apply cart-wide.
+              Search and select products and categories to restrict this coupon's applicability. Leave empty to apply cart-wide.
             </p>
 
             <div className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-500 mb-2">Included Product IDs</label>
-                  <textarea
-                    rows={3}
+                  <CustomMultiSelect
+                    label="Included Product IDs"
+                    options={productOptions}
                     value={formData.includedProductIds}
-                    onChange={(e) => setFormData({ ...formData, includedProductIds: e.target.value })}
-                    placeholder="prod-uuid-1, prod-uuid-2"
-                    className="w-full px-4 py-2.5 border border-slate-300 rounded-none focus:outline-none focus:border-slate-900 text-xs font-mono resize-none bg-slate-50 focus:bg-white placeholder:font-normal placeholder:text-slate-400"
+                    onChange={(val) => setFormData({ ...formData, includedProductIds: val })}
+                    placeholder="Search and select products..."
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-slate-500 mb-2">Excluded Product IDs</label>
-                  <textarea
-                    rows={3}
+                  <CustomMultiSelect
+                    label="Excluded Product IDs"
+                    options={productOptions}
                     value={formData.excludedProductIds}
-                    onChange={(e) => setFormData({ ...formData, excludedProductIds: e.target.value })}
-                    placeholder="prod-uuid-3, prod-uuid-4"
-                    className="w-full px-4 py-2.5 border border-slate-300 rounded-none focus:outline-none focus:border-slate-900 text-xs font-mono resize-none bg-slate-50 focus:bg-white placeholder:font-normal placeholder:text-slate-400"
+                    onChange={(val) => setFormData({ ...formData, excludedProductIds: val })}
+                    placeholder="Search and select products..."
                   />
                 </div>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-500 mb-2">Included Category IDs</label>
-                  <textarea
-                    rows={3}
+                  <CustomMultiSelect
+                    label="Included Category IDs"
+                    options={categoryOptions}
                     value={formData.includedCategoryIds}
-                    onChange={(e) => setFormData({ ...formData, includedCategoryIds: e.target.value })}
-                    placeholder="cat-uuid-1, cat-uuid-2"
-                    className="w-full px-4 py-2.5 border border-slate-300 rounded-none focus:outline-none focus:border-slate-900 text-xs font-mono resize-none bg-slate-50 focus:bg-white placeholder:font-normal placeholder:text-slate-400"
+                    onChange={(val) => setFormData({ ...formData, includedCategoryIds: val })}
+                    placeholder="Search and select categories..."
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-slate-500 mb-2">Excluded Category IDs</label>
-                  <textarea
-                    rows={3}
+                  <CustomMultiSelect
+                    label="Excluded Category IDs"
+                    options={categoryOptions}
                     value={formData.excludedCategoryIds}
-                    onChange={(e) => setFormData({ ...formData, excludedCategoryIds: e.target.value })}
-                    placeholder="cat-uuid-3, cat-uuid-4"
-                    className="w-full px-4 py-2.5 border border-slate-300 rounded-none focus:outline-none focus:border-slate-900 text-xs font-mono resize-none bg-slate-50 focus:bg-white placeholder:font-normal placeholder:text-slate-400"
+                    onChange={(val) => setFormData({ ...formData, excludedCategoryIds: val })}
+                    placeholder="Search and select categories..."
                   />
                 </div>
               </div>

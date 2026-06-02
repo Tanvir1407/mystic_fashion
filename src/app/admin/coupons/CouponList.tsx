@@ -1,9 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { Ticket, Plus, Trash2, Edit2, CheckCircle2, XCircle, Search, Filter } from "lucide-react";
+import { Ticket, Plus, Trash2, Edit2, CheckCircle2, XCircle, Search, Filter, Eye } from "lucide-react";
 import { deleteCoupon, toggleCouponStatus } from "./actions";
 import Link from "next/link";
+import { formatDateTime } from "@/utils/formatDate";
 
 export function CouponList({ 
   initialCoupons,
@@ -90,9 +91,7 @@ export function CouponList({
                 <th className="px-4 py-3 font-semibold text-xs text-slate-500 uppercase tracking-wider">Usage Stats</th>
                 <th className="px-4 py-3 font-semibold text-xs text-slate-500 uppercase tracking-wider">Validity Period</th>
                 <th className="px-4 py-3 font-semibold text-xs text-slate-500 uppercase tracking-wider">Status</th>
-                {(canEdit || canDelete) && (
-                  <th className="px-4 py-3 font-semibold text-xs text-slate-500 uppercase tracking-wider text-right">Actions</th>
-                )}
+                <th className="px-4 py-3 font-semibold text-xs text-slate-500 uppercase tracking-wider text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
@@ -119,7 +118,12 @@ export function CouponList({
                           <Ticket className="w-4 h-4 text-slate-500" />
                         </div>
                         <div className="flex flex-col">
-                          <span className="font-bold text-sm text-slate-900">{coupon.code}</span>
+                          <Link 
+                            href={`/admin/coupons/${coupon.id}`}
+                            className="font-bold text-sm text-indigo-600 hover:text-indigo-800 hover:underline transition-colors font-mono"
+                          >
+                            {coupon.code}
+                          </Link>
                           {coupon.customerSegment && (
                             <span className="text-[9px] font-black text-indigo-600 uppercase tracking-wider mt-0.5">
                               Segment: {coupon.customerSegment}
@@ -182,9 +186,9 @@ export function CouponList({
                       <div className="flex flex-col gap-1">
                         <div className="flex items-center gap-1.5">
                           <span className="text-xs text-slate-600 font-medium">
-                            {start ? start.toLocaleDateString('en-GB') : "No start"}
+                            {coupon.startDate ? formatDateTime(coupon.startDate) : "No start"}
                             <span className="mx-1 text-slate-400">-</span>
-                            {end ? end.toLocaleDateString('en-GB') : "Infinite"}
+                            {coupon.endDate ? formatDateTime(coupon.endDate) : "Infinite"}
                           </span>
                         </div>
                         {isExpired && <span className="text-[9px] font-bold text-rose-600 bg-rose-50 px-1.5 py-0.5 rounded border border-rose-100/50 w-max">Expired</span>}
@@ -215,36 +219,41 @@ export function CouponList({
                         </span>
                       )}
                     </td>
-                    {(canEdit || canDelete) && (
-                      <td className="px-4 py-4 text-right">
-                        <div className="flex items-center justify-end gap-2 outline-none">
-                          {canEdit && (
-                            <Link
-                              href={`/admin/coupons/edit/${coupon.id}`}
-                              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-indigo-600 bg-indigo-50 border border-indigo-200 rounded-md hover:bg-indigo-100 hover:border-indigo-300 transition-colors"
-                            >
-                              <Edit2 className="w-3.5 h-3.5" />
-                              Edit
-                            </Link>
-                          )}
-                          {canDelete && (
-                            <button
-                              onClick={() => handleDelete(coupon.id)}
-                              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-red-600 bg-red-50 border border-red-200 rounded-md hover:bg-red-100 hover:border-red-300 transition-colors"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                              Delete
-                            </button>
-                          )}
-                        </div>
-                      </td>
-                    )}
+                    <td className="px-4 py-4 text-right">
+                      <div className="flex items-center justify-end gap-2 outline-none">
+                        <Link
+                          href={`/admin/coupons/${coupon.id}`}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-700 bg-slate-50 border border-slate-200 rounded-md hover:bg-slate-100 hover:border-slate-300 transition-colors"
+                        >
+                          <Eye className="w-3.5 h-3.5" />
+                          View
+                        </Link>
+                        {canEdit && (
+                          <Link
+                            href={`/admin/coupons/edit/${coupon.id}`}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-indigo-600 bg-indigo-50 border border-indigo-200 rounded-md hover:bg-indigo-100 hover:border-indigo-300 transition-colors"
+                          >
+                            <Edit2 className="w-3.5 h-3.5" />
+                            Edit
+                          </Link>
+                        )}
+                        {canDelete && (
+                          <button
+                            onClick={() => handleDelete(coupon.id)}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-red-600 bg-red-50 border border-red-200 rounded-md hover:bg-red-100 hover:border-red-300 transition-colors"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                            Delete
+                          </button>
+                        )}
+                      </div>
+                    </td>
                   </tr>
                 );
               })}
               {filteredCoupons.length === 0 && (
                 <tr>
-                  <td colSpan={canEdit || canDelete ? 7 : 6} className="px-6 py-20 text-center">
+                  <td colSpan={7} className="px-6 py-20 text-center">
                     <div className="flex flex-col items-center gap-3">
                       <div className="w-16 h-16 rounded-full bg-slate-50 flex items-center justify-center">
                         <Ticket className="w-8 h-8 text-slate-200" />

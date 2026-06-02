@@ -1,5 +1,6 @@
 import { getSession } from "@/lib/auth";
 import { hasPermission } from "@/lib/permissions";
+import prisma from "@/lib/prisma";
 import { CouponForm } from "../CouponForm";
 
 export const dynamic = "force-dynamic";
@@ -26,5 +27,15 @@ export default async function NewCouponPage() {
     );
   }
 
-  return <CouponForm />;
+  const products = await prisma.product.findMany({
+    select: { id: true, name: true },
+    orderBy: { name: 'asc' }
+  });
+
+  const categories = await prisma.category.findMany({
+    select: { id: true, name: true },
+    orderBy: { name: 'asc' }
+  });
+
+  return <CouponForm products={products} categories={categories} />;
 }
