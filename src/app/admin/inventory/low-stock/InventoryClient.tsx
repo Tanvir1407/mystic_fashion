@@ -20,7 +20,9 @@ import { updateInventorySettings } from "../../actions";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 
-export default function InventoryClient({ initialSettings, products }: { initialSettings: any, products: any[] }) {
+import { AdminPagination } from "@/components/AdminPagination";
+
+export default function InventoryClient({ initialSettings, products, currentPage, totalPages }: { initialSettings: any, products: any[], currentPage: number, totalPages: number }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [threshold, setThreshold] = useState(initialSettings.lowStockThreshold);
@@ -234,6 +236,8 @@ export default function InventoryClient({ initialSettings, products }: { initial
                   </table>
                 </div>
               </div>
+
+              <AdminPagination currentPage={currentPage} totalPages={totalPages} />
 
               {/* Print View (unchanged logic, clean styling) */}
               <div className="hidden print:block">

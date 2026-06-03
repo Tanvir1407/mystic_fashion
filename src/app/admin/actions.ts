@@ -102,7 +102,7 @@ export async function getDeliverySettings() {
     update: {},
     create: { id: "default", insideDhaka: 70, outsideDhaka: 120 },
   });
-}
+} 
 
 async function _updateDeliverySettings(insideDhaka: number, outsideDhaka: number) {
   try {
@@ -133,6 +133,16 @@ export const updateDeliverySettings = withAuditLog(_updateDeliverySettings, {
   fetchAfter: (id) => prisma.deliverySetting.findUnique({ where: { id } }),
   describe: (args) => `Updated delivery settings (Inside: ৳${args[0]}, Outside: ৳${args[1]})`,
 });
+
+
+export async function getLowStockProductsCount() {
+  const setting = await getInventorySettings();
+  const threshold = setting.lowStockThreshold;
+
+  return await prisma.product.count({
+    where: { variants: { some: { stock: { lte: threshold } } } },
+  });
+}
 
 // ─── INVENTORY SETTINGS ───────────────────────────────────────────────────────
 
