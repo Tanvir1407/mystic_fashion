@@ -348,3 +348,53 @@ export async function getCurrentCustomerSessionAction() {
     return null;
   }
 }
+
+// ─── CHANGE PASSWORD ─────────────────────────────────────────────────────────
+export async function changeCustomerPasswordAction(payload: {
+  currentPassword?: string;
+  newPassword: string;
+}): Promise<{ success: boolean; error?: string }> {
+  try {
+    const session = await getCustomerSession();
+    if (!session || !session.customerId) {
+      return { success: false, error: "Unauthorized." };
+    }
+
+    const customer = await prisma.customer.findUnique({
+      where: { id: session.customerId }
+    });
+
+    if (!customer) {
+      return { success: false, error: "Customer not found." };
+    }
+
+    // If they already have a password set, we MUST verify the current password first
+    if (customer.passwordHash) {
+      if (!payload.currentPassword) {
+        return { success: false, error: "Please enter your current password." };
+      }
+      const matches = await bcrypt.compare(payload.currentPassword, customer.passwordHash);
+      if (!matches) {
+        return { success: false, error: "Current password is incorrect." };
+      }
+    }
+
+    if (payload.newPassword.length < 6) {
+      return { success: false, error: "New password must be at least 6 characters long." };
+    }
+
+    const newPasswordHash = await bcrypt.hash(payload.newPassword, 10);
+
+    await prisma.customer.update({
+      where: { id: customer.id },
+      data: {
+        passwordHash: newPasswordHash
+      }
+    });
+
+    return { success: true };
+  } catch (error: any) {
+    console.error("[changeCustomerPasswordAction] Error:", error);
+    return { success: false, error: error.message || "An unexpected error occurred." };
+  }
+}
