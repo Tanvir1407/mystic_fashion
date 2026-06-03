@@ -1,10 +1,11 @@
 "use client";
 
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import Barcode from "react-barcode";
 import { formatBDT } from "@/utils/formatPrice";
 import { Printer, ArrowLeft } from "lucide-react";
 import Link from "next/link";
+import Image from "next/image";
 
 interface OrderItem {
   id: string;
@@ -49,13 +50,22 @@ export default function InvoiceClient({
   discount: number;
   deliveryCharge: number;
 }) {
-  // Auto trigger browser print dialog on load
+  const [isMounted, setIsMounted] = useState(false);
+
+  // Set mounted state on client load
   useEffect(() => {
-    const timer = setTimeout(() => {
-      window.print();
-    }, 500);
-    return () => clearTimeout(timer);
+    setIsMounted(true);
   }, []);
+
+  // Auto trigger browser print dialog only when fully mounted and rendered
+  useEffect(() => {
+    if (isMounted) {
+      const timer = setTimeout(() => {
+        window.print();
+      }, 600);
+      return () => clearTimeout(timer);
+    }
+  }, [isMounted]);
 
   const formatDate = (isoString: string) => {
     return new Date(isoString).toLocaleDateString("en-US", {
@@ -66,33 +76,33 @@ export default function InvoiceClient({
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 py-8 print:py-0 text-slate-800 flex flex-col items-center">
+    <div className="min-h-screen bg-[#fafafa] py-12 print:py-0 text-[#1e293b] flex flex-col items-center font-sans antialiased">
       {/* Control Bar (Hidden on print) */}
-      <div className="w-full max-w-[210mm] bg-white border border-slate-200 px-6 py-4 flex items-center justify-between shadow-sm mb-6 print:hidden">
+      <div className="w-full max-w-[210mm] bg-white border border-slate-100 rounded-lg px-6 py-4 flex items-center justify-between shadow-xs mb-8 print:hidden">
         <Link 
           href="/account" 
-          className="text-xs font-bold text-slate-600 hover:text-slate-900 flex items-center gap-1.5 transition-colors"
+          className="text-xs font-semibold text-slate-500 hover:text-slate-900 flex items-center gap-2 transition-colors duration-200"
         >
           <ArrowLeft className="w-4 h-4" /> Back to Account
         </Link>
         <button
           onClick={() => window.print()}
-          className="px-4 py-2 bg-[#800020] hover:bg-[#600018] text-white text-xs font-bold uppercase tracking-wider transition-colors flex items-center gap-2"
+          className="px-5 py-2.5 bg-[#800020] hover:bg-[#600018] text-white text-xs font-semibold uppercase tracking-wider transition-all duration-200 flex items-center gap-2 rounded shadow-xs"
         >
           <Printer className="w-4 h-4" /> Print / Save PDF
         </button>
       </div>
 
       {/* Invoice Sheet */}
-      <div className="invoice-container w-full max-w-[210mm] bg-white border border-slate-200 shadow-lg p-10 print:shadow-none print:border-none print:p-0 flex flex-col justify-between">
+      <div className="invoice-container w-full max-w-[210mm] bg-white border border-slate-200/50 shadow-md p-16 print:shadow-none print:border-none print:p-0 flex flex-col justify-between min-h-[297mm]">
         <style dangerouslySetInnerHTML={{
           __html: `
           @media print {
             body {
               background: white !important;
-              color: black !important;
-              margin: 0;
-              padding: 10mm !important;
+              color: #0f172a !important;
+              margin: 0 !important;
+              padding: 15mm 20mm !important;
               -webkit-print-color-adjust: exact;
               print-color-adjust: exact;
             }
@@ -102,21 +112,66 @@ export default function InvoiceClient({
               box-shadow: none !important;
               border: none !important;
               padding: 0 !important;
+              min-height: auto !important;
             }
           }
           @page {
-            size: A4;
+            size: A4 portrait;
             margin: 0;
           }
         `}} />
 
         <div>
           {/* Top Section */}
-          <div className="flex justify-between items-start mb-8">
-            {/* Invoice Meta */}
+          <div className="flex justify-between items-start border-b border-slate-200 pb-8 mb-8">
+            {/* Brand Logo & Address */}
             <div>
-              <h1 className="text-3xl font-serif font-black tracking-tight text-slate-900 mb-2 print:text-black">INVOICE</h1>
-              <div className="mb-4">
+              <div className="mb-4 relative w-44 h-11">
+                <Image
+                  src="/images/logo.png"
+                  alt="Mystic Fashion"
+                  fill
+                  priority
+                  className="object-contain object-left"
+                />
+              </div>
+              <div className="text-xs text-slate-400 font-light space-y-1">
+                <p>Dhaka, Bangladesh</p>
+                <p>support@mysticfashion.com</p>
+                <p>01700-MYSTIC (697842)</p>
+              </div>
+            </div>
+
+            {/* Invoice Info */}
+            <div className="text-right">
+              <h1 className="text-3xl font-extralight tracking-[0.2em] text-slate-900 uppercase mb-4">INVOICE</h1>
+              <div className="grid grid-cols-[auto_auto] gap-x-4 gap-y-1.5 text-xs text-slate-500 font-light justify-end">
+                <span className="font-medium text-slate-600 text-left uppercase tracking-wider text-[10px]">Invoice No:</span>
+                <span className="text-right text-slate-950 font-semibold">#{order.id.substring(0, 8).toUpperCase()}</span>
+
+                <span className="font-medium text-slate-600 text-left uppercase tracking-wider text-[10px]">Date:</span>
+                <span className="text-right text-slate-900">{formatDate(order.createdAt)}</span>
+
+                <span className="font-medium text-slate-600 text-left uppercase tracking-wider text-[10px]">Payment Method:</span>
+                <span className="text-right text-slate-900 uppercase">Cash on Delivery</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Billing Info */}
+          <div className="grid grid-cols-2 gap-8 mb-10">
+            <div>
+              <p className="text-[10px] font-semibold tracking-widest text-slate-400 uppercase mb-3">BILL TO</p>
+              <h3 className="text-sm font-semibold text-slate-900 mb-1">{order.customerName}</h3>
+              <div className="text-xs text-slate-500 font-light space-y-1 leading-relaxed">
+                <p>{order.address}</p>
+                <p>{order.district}, Bangladesh</p>
+                <p className="font-medium text-slate-800 mt-2">Phone: {order.phone}</p>
+              </div>
+            </div>
+            {isMounted && order.id ? (
+              <div className="flex flex-col items-end justify-start">
+                <p className="text-[10px] font-semibold tracking-widest text-slate-400 uppercase mb-3">SCAN ORDER</p>
                 <Barcode
                   value={order.id.toUpperCase()}
                   width={1.2}
@@ -126,63 +181,48 @@ export default function InvoiceClient({
                   background="transparent"
                 />
               </div>
-              
-              <div className="space-y-0.5 text-xs text-slate-600 print:text-black">
-                <p className="font-bold text-slate-800 uppercase tracking-wide mb-1">BILL TO</p>
-                <p><span className="font-semibold">Name:</span> {order.customerName}</p>
-                <p className="max-w-[400px] break-words"><span className="font-semibold">Address:</span> {order.address}, {order.district}</p>
-                <p><span className="font-semibold">Phone:</span> {order.phone}</p>
+            ) : (
+              <div className="flex flex-col items-end justify-start">
+                <p className="text-[10px] font-semibold tracking-widest text-slate-400 uppercase mb-3">SCAN ORDER</p>
+                <div className="w-[140px] h-[40px] bg-slate-50 border border-dashed border-slate-200 rounded flex items-center justify-center text-[9px] text-slate-400">
+                  Loading barcode...
+                </div>
               </div>
-            </div>
-
-            {/* Brand Logo & Order Details */}
-            <div className="text-right flex flex-col items-end">
-              <div className="mb-6 text-right">
-                <h2 className="text-3xl text-[#800020] font-serif font-bold tracking-[0.1em] leading-none mb-1 print:text-black">MYSTIC</h2>
-                <p className="text-[8px] tracking-[0.3em] text-slate-500 uppercase">The Art Of Presence</p>
-              </div>
-
-              <div className="grid grid-cols-[auto_auto] gap-x-6 gap-y-1.5 text-xs text-slate-600 print:text-black">
-                <span className="font-bold text-left">Invoice Date:</span>
-                <span className="text-right">{formatDate(order.createdAt)}</span>
-
-                <span className="font-bold text-left">Order No:</span>
-                <span className="text-right font-semibold text-slate-800">{order.id.toUpperCase()}</span>
-
-                <span className="font-bold text-left">Payment Mode:</span>
-                <span className="text-right uppercase">COD (Cash on Delivery)</span>
-              </div>
-            </div>
+            )}
           </div>
 
           {/* Items Table */}
-          <div className="w-full mb-8">
-            <table className="w-full text-xs text-slate-800 print:text-black border-collapse">
+          <div className="w-full mb-10">
+            <table className="w-full text-xs text-slate-700 print:text-slate-800 border-collapse">
               <thead>
-                <tr className="bg-slate-100 border-b border-slate-200">
-                  <th className="py-2.5 px-3 text-center font-bold w-[8%] uppercase">SL</th>
-                  <th className="py-2.5 px-3 text-left font-bold w-[47%] uppercase">Item Description</th>
-                  <th className="py-2.5 px-3 text-center font-bold w-[15%] uppercase">Qty</th>
-                  <th className="py-2.5 px-3 text-center font-bold w-[15%] uppercase">Unit Price</th>
-                  <th className="py-2.5 px-3 text-right font-bold w-[15%] uppercase">Total Price</th>
+                <tr className="border-b border-slate-300 text-[10px] font-semibold tracking-widest text-slate-400 uppercase text-left">
+                  <th className="py-2.5 w-[8%] text-center">SL</th>
+                  <th className="py-2.5 w-[47%]">Description</th>
+                  <th className="py-2.5 w-[12%] text-center">Size</th>
+                  <th className="py-2.5 w-[10%] text-center">Qty</th>
+                  <th className="py-2.5 w-[11%] text-right">Unit Price</th>
+                  <th className="py-2.5 w-[12%] text-right">Total</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {order.items.map((item, idx) => (
-                  <tr key={idx} className="border-b border-slate-100/50">
-                    <td className="py-3 px-3 text-center align-top">{idx + 1}</td>
-                    <td className="py-3 px-3 align-top">
-                      <p className="font-bold text-slate-900 leading-tight print:text-black">{item.product.name}</p>
-                      {item.size && <p className="text-[10px] text-slate-500 mt-0.5">Size: {item.size}</p>}
+                  <tr key={item.id || idx} className="align-middle border-b border-slate-100/50">
+                    <td className="py-4 text-center font-light text-slate-400">{idx + 1}</td>
+                    <td className="py-4 pr-4">
+                      <p className="font-semibold text-slate-900 print:text-black">{item.product.name}</p>
                       {item.requiresPrint && (
-                        <div className="mt-1.5 text-[9px] font-bold text-amber-800 bg-amber-50 border border-amber-100/80 px-2 py-1 inline-block">
-                          CUSTOM PRINTING: {item.printName} (# {item.printNumber})
+                        <div className="mt-1.5 text-[10px] text-slate-500 font-light flex flex-wrap items-center gap-1.5 leading-none">
+                          <span className="font-medium text-[#800020] uppercase text-[9px] tracking-wider border border-[#800020]/20 px-1.5 py-0.5 rounded-sm">Jersey Print</span>
+                          <span>Name: <strong className="font-medium text-slate-800">"{item.printName}"</strong></span>
+                          <span className="text-slate-300">|</span>
+                          <span>Number: <strong className="font-medium text-slate-800">#{item.printNumber}</strong></span>
                         </div>
                       )}
                     </td>
-                    <td className="py-3 px-3 text-center align-top">{item.quantity}</td>
-                    <td className="py-3 px-3 text-center align-top">{formatBDT(item.price)}</td>
-                    <td className="py-3 px-3 text-right align-top font-semibold text-slate-900 print:text-black">
+                    <td className="py-4 text-center font-light uppercase text-slate-600">{item.size || "N/A"}</td>
+                    <td className="py-4 text-center font-light text-slate-600">{item.quantity}</td>
+                    <td className="py-4 text-right font-light text-slate-600">{formatBDT(item.price)}</td>
+                    <td className="py-4 text-right font-semibold text-slate-900 print:text-black">
                       {formatBDT(item.price * item.quantity)}
                     </td>
                   </tr>
@@ -193,52 +233,68 @@ export default function InvoiceClient({
         </div>
 
         {/* Bottom Section */}
-        <div className="flex flex-col sm:flex-row justify-between gap-6 pt-6 border-t border-slate-200">
-          {/* Notes / Instructions */}
-          <div className="flex-1 max-w-[60%]">
-            {order.remarks && order.remarks.trim() !== "" && (
-              <div className="text-slate-600 text-xs">
-                <p className="font-bold text-slate-800 mb-1">Customer Note:</p>
-                <p className="italic whitespace-pre-wrap">"{order.remarks}"</p>
+        <div>
+          <div className="flex flex-col sm:flex-row justify-between gap-8 pt-8 border-t border-slate-200">
+            {/* Notes / Instructions */}
+            <div className="flex-1 max-w-[55%] space-y-4">
+              {order.remarks && order.remarks.trim() !== "" && (
+                <div className="text-slate-500 text-xs leading-relaxed bg-slate-50/50 p-4 border border-slate-100/50 rounded-lg">
+                  <p className="text-[10px] font-semibold tracking-wider text-slate-400 uppercase mb-1.5">Remarks / Notes</p>
+                  <p className="italic font-light">"{order.remarks}"</p>
+                </div>
+              )}
+              
+              <div className="text-[10px] text-slate-400 font-light space-y-1 print:text-slate-500 leading-relaxed">
+                <p className="font-medium text-slate-700">Thank you for your purchase with Mystic Fashion!</p>
+                <p>For exchange inquiries, please contact support within 3 days of delivery with the tags intact.</p>
               </div>
-            )}
-            
-            <div className="mt-6 text-[10px] text-slate-400 space-y-0.5 print:text-slate-500">
-              <p className="font-bold">Thank you for shopping with Mystic Fashion!</p>
-              <p>For return or exchange inquiries, please contact our support.</p>
+            </div>
+
+            {/* Invoice Summary */}
+            <div className="w-full sm:w-[260px] text-xs space-y-2.5 text-slate-500 font-light">
+              <div className="flex justify-between">
+                <span>Subtotal:</span>
+                <span className="font-medium text-slate-900">{formatBDT(baseSubtotal)}</span>
+              </div>
+              {dtfTotal > 0 && (
+                <div className="flex justify-between">
+                  <span>Printing Charge:</span>
+                  <span className="font-medium text-slate-900">{formatBDT(dtfTotal)}</span>
+                </div>
+              )}
+              {discount > 0 && (
+                <div className="flex justify-between text-emerald-600">
+                  <span>Discount {order.couponCode && `(${order.couponCode})`}:</span>
+                  <span>-{formatBDT(discount)}</span>
+                </div>
+              )}
+              <div className="flex justify-between">
+                <span>Delivery Fee:</span>
+                <span className="font-medium text-slate-900">{formatBDT(deliveryCharge)}</span>
+              </div>
+              {order.advancePaid > 0 && (
+                <div className="flex justify-between text-slate-600">
+                  <span>Advance Paid:</span>
+                  <span className="font-medium">-{formatBDT(order.advancePaid)}</span>
+                </div>
+              )}
+              
+              <div className="flex justify-between font-semibold text-sm text-slate-900 print:text-black border-t border-slate-200 pt-3.5 mt-2">
+                <span className="tracking-wide uppercase text-[10px]">Balance Due:</span>
+                <span className="text-[#800020] font-bold text-base">{formatBDT(order.totalAmount - order.advancePaid)}</span>
+              </div>
             </div>
           </div>
 
-          {/* Invoice Summary */}
-          <div className="w-full sm:w-[240px] text-xs space-y-2 text-slate-600 print:text-black">
-            <div className="flex justify-between">
-              <span>Subtotal:</span>
-              <span className="font-semibold text-slate-900">{formatBDT(baseSubtotal)}</span>
+          {/* Signature / Document Footer Block */}
+          <div className="flex justify-between items-end mt-16 pt-8 border-t border-slate-100/50">
+            <div className="text-[9px] text-slate-400 font-light">
+              <p>Generated by Mystic Fashion Customer Portal</p>
+              <p>This is a computer generated invoice and requires no physical signature.</p>
             </div>
-            {dtfTotal > 0 && (
-              <div className="flex justify-between">
-                <span>Printing Charge:</span>
-                <span className="font-semibold text-slate-900">{formatBDT(dtfTotal)}</span>
-              </div>
-            )}
-            {discount > 0 && (
-              <div className="flex justify-between text-emerald-600">
-                <span>Discount {order.couponCode && `(${order.couponCode})`}:</span>
-                <span>-{formatBDT(discount)}</span>
-              </div>
-            )}
-            <div className="flex justify-between">
-              <span>Delivery Fee:</span>
-              <span className="font-semibold text-slate-900">{formatBDT(deliveryCharge)}</span>
-            </div>
-            <div className="flex justify-between">
-              <span>Advance Paid:</span>
-              <span className="font-semibold text-[#800020]">{formatBDT(order.advancePaid)}</span>
-            </div>
-            
-            <div className="flex justify-between font-black text-sm text-slate-900 print:text-black border-t border-slate-100 pt-2 mt-1">
-              <span>Balance Due:</span>
-              <span className="text-[#800020] font-black">{formatBDT(order.totalAmount - order.advancePaid)}</span>
+            <div className="text-center w-[160px]">
+              <div className="border-b border-slate-300 w-full mb-1"></div>
+              <p className="text-[9px] text-slate-400 font-medium uppercase tracking-wider">Authorized Seal</p>
             </div>
           </div>
         </div>

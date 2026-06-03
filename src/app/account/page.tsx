@@ -17,6 +17,7 @@ export default async function AccountPage() {
     where: { id: session.customerId },
     include: {
       orders: {
+        where: { deletedAt: null },
         orderBy: { createdAt: "desc" },
         include: {
           items: {
