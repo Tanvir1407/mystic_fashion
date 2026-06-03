@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
 export const revalidate = 0;
 
-export default async function AdminOrdersPage({ searchParams }: { searchParams: { page?: string, limit?: string, filter?: string, search?: string, source?: string, tab?: string } }) {
+export default async function AdminOrdersPage({ searchParams }: { searchParams: { page?: string, limit?: string, filter?: string, search?: string, source?: string, tab?: string, tag?: string } }) {
   const session = await getSession();
   const canView = hasPermission(session, "VIEW", "ORDERS");
   const canCreate = hasPermission(session, "CREATE", "ORDERS");
@@ -39,6 +39,7 @@ export default async function AdminOrdersPage({ searchParams }: { searchParams: 
   const source = searchParams?.source || "ALL";
   const search = searchParams?.search || "";
   const tab = searchParams?.tab || "active";
+  const selectedTag = searchParams?.tag || "";
   const PER_PAGE = [10, 20, 50, 100].includes(limit) ? limit : 10;
 
   const whereClause: any = tab === "trash" ? { deletedAt: { not: null } as any } : {};
@@ -47,6 +48,9 @@ export default async function AdminOrdersPage({ searchParams }: { searchParams: 
   }
   if (source !== "ALL") {
     whereClause.orderSource = source as any;
+  }
+  if (selectedTag) {
+    whereClause.tags = { has: selectedTag };
   }
   if (search) {
     whereClause.OR = [
@@ -60,9 +64,10 @@ export default async function AdminOrdersPage({ searchParams }: { searchParams: 
   let totalCount = 0;
   let storePhone = "01920240230";
   let storeAddress = "H# 68, R# 12, Sector 10, Uttara, Dhaka - 1230, Bangladesh";
+  let uniqueTags: string[] = [];
 
   try {
-    const [fetchedOrders, fetchedCount, footerConfig] = await Promise.all([
+    const [fetchedOrders, fetchedCount, footerConfig, ordersWithTags] = await Promise.all([
       prisma.order.findMany({
         where: whereClause,
         skip: (page - 1) * PER_PAGE,
@@ -80,10 +85,15 @@ export default async function AdminOrdersPage({ searchParams }: { searchParams: 
         },
       }),
       prisma.order.count({ where: whereClause }),
-      getFooterData()
+      getFooterData(),
+      prisma.order.findMany({
+        select: { tags: true }
+      })
     ]);
     orders = fetchedOrders;
     totalCount = fetchedCount;
+
+    uniqueTags = Array.from(new Set(ordersWithTags.flatMap(o => o.tags || []).filter(Boolean)));
 
     if (footerConfig) {
       if (footerConfig.contactPhone && footerConfig.contactPhone !== "01700-MYSTIC" && footerConfig.contactPhone.trim() !== "") {
@@ -108,6 +118,8 @@ export default async function AdminOrdersPage({ searchParams }: { searchParams: 
       currentSource={source}
       currentSearch={search}
       currentTab={tab}
+      currentTag={selectedTag}
+      availableTags={uniqueTags}
       storePhone={storePhone}
       storeAddress={storeAddress}
       canCreate={canCreate}

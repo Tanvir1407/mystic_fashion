@@ -218,6 +218,7 @@ model Order {
   isExchange         Boolean @default(false)
   exchangeRefOrderId String?
   exchangeItemNote   String?
+  tags               String[]      @default([])
   createdById         String?
   customerId          String?
   commissionRate      Float?

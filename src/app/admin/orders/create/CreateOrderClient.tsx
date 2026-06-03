@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo, useTransition, useEffect } from "react";
-import { Search, Plus, Trash2, User, Phone, MapPin, ShoppingBag, CheckCircle, ArrowLeft, Loader2 } from "lucide-react";
+import { Search, Plus, Trash2, User, Phone, MapPin, ShoppingBag, CheckCircle, ArrowLeft, Loader2, X } from "lucide-react";
 import Link from "next/link";
 import { createAdminOrder, createExchangeOrder } from "../actions";
 import { useRouter } from "next/navigation";
@@ -58,6 +58,22 @@ export default function CreateOrderClient({
   const [manualDiscountType, setManualDiscountType] = useState<"FLAT" | "PERCENTAGE">("FLAT");
   const [isStorePickup, setIsStorePickup] = useState(false);
   const [deliveryCharge, setDeliveryCharge] = useState(0);
+
+  // Tags State & Helpers
+  const [tags, setTags] = useState<string[]>([]);
+  const [tagInput, setTagInput] = useState("");
+
+  const addTag = (inputVal: string) => {
+    const trimmed = inputVal.replace(/,/g, "").trim();
+    if (trimmed && !tags.includes(trimmed)) {
+      setTags([...tags, trimmed]);
+    }
+    setTagInput("");
+  };
+
+  const removeTag = (indexToRemove: number) => {
+    setTags(tags.filter((_, idx) => idx !== indexToRemove));
+  };
 
   // Exchange states
   const [isExchange, setIsExchange] = useState(false);
@@ -327,6 +343,7 @@ export default function CreateOrderClient({
             })),
             exchangeRefOrderId: exchangeRefOrderId.trim(),
             exchangeItemNote: exchangeItemNote.trim(),
+            tags,
           })
           : await (orderAction ?? createAdminOrder)({
             customerName,
@@ -352,6 +369,7 @@ export default function CreateOrderClient({
               printDetails: item.printDetails
             })),
             hasBackorderItems,
+            tags,
           });
 
         if (res.success) {
@@ -589,6 +607,39 @@ export default function CreateOrderClient({
                 rows={3}
                 className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all resize-none"
               />
+            </div>
+            <div className="space-y-1.5 md:col-span-2">
+              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Order Tags (Administrative)</label>
+              <div className="flex flex-wrap items-center gap-2 p-2 bg-slate-50 border border-slate-200 rounded-lg focus-within:bg-white focus-within:ring-2 focus-within:ring-indigo-500/20 focus-within:border-indigo-500 transition-all min-h-[42px]">
+                {tags.map((tag, idx) => (
+                  <span
+                    key={tag}
+                    className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-100 uppercase tracking-wide"
+                  >
+                    {tag}
+                    <button
+                      type="button"
+                      onClick={() => removeTag(idx)}
+                      className="text-indigo-400 hover:text-indigo-600 focus:outline-none transition-colors"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </span>
+                ))}
+                <input
+                  type="text"
+                  value={tagInput}
+                  onChange={e => setTagInput(e.target.value)}
+                  onKeyDown={e => {
+                    if (e.key === "Enter" || e.key === ",") {
+                      e.preventDefault();
+                      addTag(tagInput);
+                    }
+                  }}
+                  placeholder={tags.length === 0 ? "Type tag name and press Enter or comma..." : "Add tag..."}
+                  className="flex-1 bg-transparent border-0 p-0 text-sm focus:ring-0 outline-none placeholder:text-slate-400 min-w-[120px]"
+                />
+              </div>
             </div>
           </div>
         </div>

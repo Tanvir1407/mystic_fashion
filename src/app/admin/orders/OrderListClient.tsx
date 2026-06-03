@@ -21,6 +21,8 @@ export default function OrderListClient({
   currentSource = "ALL",
   currentSearch = "",
   currentTab = "active",
+  currentTag = "",
+  availableTags = [],
   storePhone = "01920240230",
   storeAddress = "H# 68, R# 12, Sector 10, Uttara, Dhaka - 1230, Bangladesh",
   canCreate,
@@ -34,6 +36,8 @@ export default function OrderListClient({
   currentSource?: string;
   currentSearch?: string;
   currentTab?: string;
+  currentTag?: string;
+  availableTags?: string[];
   storePhone?: string;
   storeAddress?: string;
   canCreate: boolean;
@@ -349,6 +353,29 @@ export default function OrderListClient({
                     ].map((opt) => (
                       <option key={opt.value} value={opt.value}>
                         {opt.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="flex flex-col">
+                  <select
+                    value={currentTag}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      const params = new URLSearchParams(window.location.search);
+                      if (val) params.set("tag", val);
+                      else params.delete("tag");
+                      params.set("page", "1");
+                      setSelectedIds(new Set());
+                      router.push(`/admin/orders?${params.toString()}`);
+                    }}
+                    className="w-40 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm font-semibold focus:ring-4 focus:ring-slate-500/10 focus:border-slate-300 outline-none transition-all cursor-pointer text-slate-700"
+                  >
+                    <option value="">All Tags</option>
+                    {availableTags.map((t) => (
+                      <option key={t} value={t}>
+                        {t}
                       </option>
                     ))}
                   </select>

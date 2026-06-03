@@ -31,6 +31,9 @@ export default function OrderDetailsClient({
   const [remarks, setRemarks] = useState(order.remarks || "");
   const [copied, setCopied] = useState(false);
   const [isAddingProduct, setIsAddingProduct] = useState(false);
+  const [tagInput, setTagInput] = useState("");
+  const [isEditingTags, setIsEditingTags] = useState(false);
+  const [tagsFormData, setTagsFormData] = useState<string[]>(order.tags || []);
 
   const [formData, setFormData] = useState({
     customerName: order.customerName,
@@ -41,6 +44,7 @@ export default function OrderDetailsClient({
     discountAmount: order.discountAmount || 0,
     items: order.items || [],
     deliveryCharge: order.deliveryCharge || 0,
+    tags: order.tags || [],
   });
 
   const [newProductData, setNewProductData] = useState({
@@ -70,6 +74,7 @@ export default function OrderDetailsClient({
       discountAmount: formData.discountAmount,
       deliveryCharge: formData.deliveryCharge,
       isStorePickup: order.isStorePickup,
+      tags: formData.tags,
       items: formData.items.map((i: any) => ({
         id: i.id,
         productId: i.productId,
@@ -92,6 +97,28 @@ export default function OrderDetailsClient({
     setLoading(false);
   };
 
+  const handleSaveTags = async () => {
+    setLoading(true);
+    const result = await updateOrderDetails(order.id, {
+      customerName: order.customerName,
+      phone: order.phone,
+      district: order.district,
+      address: order.address,
+      advancePaid: order.advancePaid || 0,
+      discountAmount: order.discountAmount || 0,
+      deliveryCharge: order.deliveryCharge || 0,
+      isStorePickup: order.isStorePickup,
+      tags: tagsFormData,
+    });
+    if (result.success) {
+      setIsEditingTags(false);
+      router.refresh();
+    } else {
+      alert(result.error || "Failed to update tags");
+    }
+    setLoading(false);
+  };
+
   const handleCancelEdit = () => {
     setIsEditing(false);
     setIsAddingProduct(false);
@@ -104,6 +131,7 @@ export default function OrderDetailsClient({
       discountAmount: order.discountAmount || 0,
       items: order.items || [],
       deliveryCharge: order.deliveryCharge || 0,
+      tags: order.tags || [],
     });
   };
 
@@ -592,6 +620,120 @@ export default function OrderDetailsClient({
                 <p className="text-xs text-slate-400 italic cursor-pointer hover:text-slate-500" onClick={() => setIsEditingRemark(true)}>
                   No internal notes. Click to add...
                 </p>
+              )}
+            </div>
+          </div>
+
+          {/* Tags Card */}
+          <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
+            <div className="px-4 py-3.5 border-b border-slate-100 flex items-center justify-between">
+              <h3 className="text-sm font-semibold text-slate-900">Tags</h3>
+              {!isEditing && !isEditingTags && (
+                <button
+                  onClick={() => {
+                    setIsEditingTags(true);
+                    setTagsFormData(order.tags || []);
+                  }}
+                  className="text-xs font-semibold text-indigo-600 hover:text-indigo-800 transition-colors flex items-center gap-1"
+                >
+                  <Edit2 className="w-3 h-3" /> Edit
+                </button>
+              )}
+              {isEditingTags && (
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={handleSaveTags}
+                    disabled={loading}
+                    className="text-xs font-bold text-white bg-slate-900 px-2.5 py-1 rounded-lg hover:bg-slate-800 disabled:opacity-50 flex items-center gap-1 transition-colors"
+                  >
+                    {loading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />}
+                    Save
+                  </button>
+                  <button
+                    onClick={() => {
+                      setIsEditingTags(false);
+                    }}
+                    disabled={loading}
+                    className="text-xs font-bold text-slate-500 hover:text-slate-700 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              )}
+            </div>
+            <div className="p-4">
+              {(isEditing || isEditingTags) ? (
+                <div className="space-y-3">
+                  <div className="flex flex-wrap items-center gap-2 p-2 bg-slate-50 border border-slate-200 rounded-lg focus-within:bg-white focus-within:ring-2 focus-within:ring-indigo-500/20 focus-within:border-indigo-500 transition-all min-h-[42px]">
+                    {(isEditing ? formData.tags : tagsFormData).map((tag: string, idx: number) => (
+                      <span
+                        key={tag}
+                        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-100 uppercase tracking-wide"
+                      >
+                        {tag}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (isEditing) {
+                              setFormData({
+                                ...formData,
+                                tags: formData.tags.filter((_, i) => i !== idx),
+                              });
+                            } else {
+                              setTagsFormData(tagsFormData.filter((_, i) => i !== idx));
+                            }
+                          }}
+                          className="text-indigo-400 hover:text-indigo-600 focus:outline-none transition-colors"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      </span>
+                    ))}
+                    <input
+                      type="text"
+                      value={tagInput}
+                      onChange={e => setTagInput(e.target.value)}
+                      onKeyDown={e => {
+                        if (e.key === "Enter" || e.key === ",") {
+                          e.preventDefault();
+                          const val = tagInput.replace(/,/g, "").trim();
+                          if (val) {
+                            if (isEditing) {
+                              if (!formData.tags.includes(val)) {
+                                setFormData({
+                                  ...formData,
+                                  tags: [...formData.tags, val],
+                                });
+                              }
+                            } else {
+                              if (!tagsFormData.includes(val)) {
+                                setTagsFormData([...tagsFormData, val]);
+                              }
+                            }
+                          }
+                          setTagInput("");
+                        }
+                      }}
+                      placeholder={(isEditing ? formData.tags : tagsFormData).length === 0 ? "Type tag name and press Enter..." : "Add tag..."}
+                      className="flex-1 bg-transparent border-none p-0 text-sm focus:ring-0 outline-none placeholder:text-slate-400 min-w-[100px]"
+                    />
+                  </div>
+                </div>
+              ) : (
+                <div className="flex flex-wrap gap-1.5">
+                  {order.tags && order.tags.length > 0 ? (
+                    order.tags.map((tag: string) => (
+                      <span
+                        key={tag}
+                        className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-bold uppercase tracking-wider bg-slate-50 text-slate-600 border border-slate-200/60"
+                      >
+                        {tag}
+                      </span>
+                    ))
+                  ) : (
+                    <span className="text-xs text-slate-400 italic">No tags associated with this order.</span>
+                  )}
+                </div>
               )}
             </div>
           </div>
