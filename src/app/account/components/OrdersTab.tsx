@@ -4,7 +4,7 @@ import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { Calendar, Truck, AlertCircle, ChevronDown, Download, Loader2, Package } from "lucide-react";
+import { Calendar, Truck, AlertCircle, ChevronDown, Download, Loader2, Package, Check, CheckCircle2, Printer, PackageCheck, Compass } from "lucide-react";
 import { trackCustomerOrder } from "../../actions/pathao";
 import { formatBDT } from "@/utils/formatPrice";
 import { AdminPagination } from "@/components/AdminPagination";
@@ -72,23 +72,51 @@ export default function OrdersTab({ orders }: OrdersTabProps) {
     });
   };
 
-  // Map order status to visual indicators
+  // Map order status to user-facing labels matching admin page
+  const getStatusLabel = (status: string) => {
+    switch (status.toUpperCase()) {
+      case "PENDING":
+        return "Placed";
+      case "CONFIRMED":
+        return "Confirmed";
+      case "PRINTING":
+        return "Printing";
+      case "PACKAGING":
+        return "Packaged";
+      case "SHIPPED":
+        return "Shipped";
+      case "DELIVERED":
+        return "Delivered";
+      case "CANCELLED":
+        return "Cancelled";
+      case "RETURNED":
+        return "Returned";
+      default:
+        return status;
+    }
+  };
+
+  // Map order status to visual indicators matching admin page colors
   const getStatusColor = (status: string) => {
     switch (status.toUpperCase()) {
       case "PENDING":
-        return "bg-amber-50/60 text-amber-700 border border-amber-200/50";
-      case "PROCESSING":
+        return "bg-amber-50/70 text-amber-700 border border-amber-200/60";
+      case "CONFIRMED":
+        return "bg-blue-50/70 text-blue-700 border border-blue-200/60";
       case "PRINTING":
-        return "bg-blue-50/60 text-blue-700 border border-blue-200/50";
+        return "bg-cyan-50/70 text-cyan-700 border border-cyan-200/60";
+      case "PACKAGING":
+        return "bg-purple-50/70 text-purple-700 border border-purple-200/60";
       case "SHIPPED":
-        return "bg-indigo-50/60 text-indigo-700 border border-indigo-200/50";
+        return "bg-indigo-50/70 text-indigo-700 border border-indigo-200/60";
       case "DELIVERED":
-      case "COMPLETED":
-        return "bg-emerald-50/60 text-emerald-700 border border-emerald-200/50";
+        return "bg-green-50/70 text-green-700 border border-green-200/60";
+      case "RETURNED":
+        return "bg-rose-50/70 text-rose-700 border border-rose-200/60";
       case "CANCELLED":
-        return "bg-rose-50/60 text-rose-700 border border-rose-200/50";
+        return "bg-slate-50/70 text-slate-700 border border-slate-200/60";
       default:
-        return "bg-slate-50/60 text-slate-700 border border-slate-200/50";
+        return "bg-slate-50/70 text-slate-700 border border-slate-200/60";
     }
   };
 
@@ -133,14 +161,47 @@ export default function OrdersTab({ orders }: OrdersTabProps) {
           </Link>
         </div>
       ) : (
-        <div className="space-y-2">
-          <div className="divide-y divide-slate-100 max-h-[390px] overflow-y-auto">
-            {paginatedOrders.map((order) => (
-              <div key={order.id} className="py-1 first:pt-0">
+        <div className="space-y-4">
+          <div className="max-h-[650px] overflow-y-auto pr-1">
+            {paginatedOrders.map((order) => {
+              const STATUS_STEPS = [
+                { statusKey: "PENDING", title: "Placed", icon: Package },
+                { statusKey: "CONFIRMED", title: "Confirmed", icon: CheckCircle2 },
+                { statusKey: "PRINTING", title: "Printing", icon: Printer },
+                { statusKey: "PACKAGING", title: "Packaged", icon: PackageCheck },
+                { statusKey: "SHIPPED", title: "Shipped", icon: Truck },
+                { statusKey: "DELIVERED", title: "Delivered", icon: Check },
+              ];
+
+              const STATUS_ORDER = ["PENDING", "CONFIRMED", "PRINTING", "PACKAGING", "SHIPPED", "DELIVERED"];
+              const isSpecialStatus = order.status === "CANCELLED" || order.status === "RETURNED";
+              const currentIndex = STATUS_ORDER.indexOf(order.status.toUpperCase());
+              const hasPrint = order.items?.some((i: any) => i.requiresPrint);
+              const filteredSteps = STATUS_STEPS.filter(
+                (s) => s.statusKey !== "PRINTING" || hasPrint || order.status.toUpperCase() === "PRINTING"
+              );
+
+              // Calculate safe current index for timeline matching filteredSteps
+              const timelineIndex = filteredSteps.findIndex(s => s.statusKey === order.status.toUpperCase());
+              const safeCurrentIndex = timelineIndex !== -1 ? timelineIndex : 0;
+              const halfStepWidth = 100 / (filteredSteps.length * 2);
+              const activeWidth = (safeCurrentIndex / (filteredSteps.length - 1)) * (100 - 2 * halfStepWidth);
+
+              return (
+                <div
+                  key={order.id}
+                  className={`transition-all duration-300 ${expandedOrderId === order.id
+                      ? "bg-[#800020]/[0.015] border border-[#800020]/15 rounded-xl  shadow-sm"
+                      : "border-b border-slate-100/70 hover:bg-slate-50/20"
+                    }`}
+                >
                 {/* Order Header Summary */}
                 <div
                   onClick={() => handleOrderExpand(order.id, order.pathaoConsignmentId)}
-                  className="py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-4 cursor-pointer hover:bg-slate-50/50 px-3 rounded-lg transition-colors select-none"
+                  className={`flex flex-col sm:flex-row sm:items-center justify-between gap-4 cursor-pointer select-none transition-colors px-4 py-4 ${expandedOrderId === order.id
+                      ? "border-b border-slate-100 bg-[#800020]/[0.02] rounded-t-xl"
+                      : "hover:bg-slate-50/40 rounded-xl"
+                    }`}
                 >
                   <div className="space-y-1.5">
                     <div className="flex items-center gap-3">
@@ -152,7 +213,7 @@ export default function OrdersTab({ orders }: OrdersTabProps) {
                           order.status
                         )}`}
                       >
-                        {order.status}
+                        {getStatusLabel(order.status)}
                       </span>
                     </div>
                     <div className="flex items-center gap-3 text-xs text-slate-400 font-light">
@@ -169,7 +230,7 @@ export default function OrdersTab({ orders }: OrdersTabProps) {
                       <span className="text-[10px] text-slate-400 font-light">Total Amount</span>
                     </div>
                     <ChevronDown
-                      className={`w-4 h-4 text-slate-400 transition-transform duration-300 ${expandedOrderId === order.id ? "rotate-180" : ""
+                      className={`w-4 h-4 text-slate-400 transition-transform duration-300 ${expandedOrderId === order.id ? "rotate-180 text-primary" : ""
                         }`}
                     />
                   </div>
@@ -177,15 +238,15 @@ export default function OrdersTab({ orders }: OrdersTabProps) {
 
                 {/* Order Expansion Detail */}
                 {expandedOrderId === order.id && (
-                  <div className="mt-4 px-3 pb-6 pt-3 space-y-6 border-t border-slate-100/60 animate-slideDown">
+                  <div className="px-5 pb-6 pt-5 space-y-6 animate-slideDown">
                     {/* Product List */}
-                    <div className="space-y-3">
-                      <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">
+                    <div className="space-y-3.5">
+                      <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
                         Items Ordered
                       </p>
                       <div className="divide-y divide-slate-100">
                         {order.items.map((item) => (
-                          <div key={item.id} className="py-3.5 flex gap-4 items-center first:pt-0 last:pb-0">
+                          <div key={item.id} className="py-4 flex gap-4 items-center first:pt-0 last:pb-0">
                             <div className="relative w-12 h-16 bg-slate-50 overflow-hidden border border-slate-100 rounded flex-shrink-0">
                               {item.product.image && (
                                 <Image
@@ -211,8 +272,8 @@ export default function OrdersTab({ orders }: OrdersTabProps) {
                               </div>
 
                               {item.requiresPrint && (
-                                <div className="mt-2 text-[10px] bg-amber-50/50 border border-amber-100/50 text-amber-800 px-2 py-0.5 rounded inline-flex items-center gap-1.5 font-medium">
-                                  <span className="text-amber-600">DTF Custom:</span>
+                                <div className="mt-2.5 text-[10px] bg-[#800020]/5 border border-[#800020]/10 text-primary px-2.5 py-0.5 rounded inline-flex items-center gap-1.5 font-medium">
+                                  <span className="text-[#800020]/75">Jersey Print:</span>
                                   <span className="font-semibold">"{item.printName}"</span>
                                   <span>&bull;</span>
                                   <span className="font-semibold">#{item.printNumber}</span>
@@ -227,18 +288,164 @@ export default function OrdersTab({ orders }: OrdersTabProps) {
                       </div>
                     </div>
 
+                    {/* Order Progress Stepper */}
+                    <div className="space-y-3">
+                      <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+                        <Compass className="w-3.5 h-3.5 text-slate-500" /> Order Shipment Status
+                      </p>
+
+                      <div className="bg-slate-50/40 border border-slate-100/80 p-5 rounded-md">
+                        {isSpecialStatus ? (
+                          <div className={`flex items-center gap-3 px-4 py-3 rounded-lg text-xs font-bold ${
+                            order.status === "CANCELLED" 
+                              ? "bg-rose-50 text-rose-700 border border-rose-100/60" 
+                              : "bg-slate-50 text-slate-700 border border-slate-200"
+                          }`}>
+                            <AlertCircle className="w-4 h-4 shrink-0 text-rose-500" />
+                            <div>
+                              <p className="font-semibold uppercase tracking-wider text-[10px]">Order {getStatusLabel(order.status)}</p>
+                              <p className="font-normal text-slate-500 mt-0.5">
+                                {order.status === "CANCELLED"
+                                  ? "This order has been cancelled. Please contact support if you have any questions."
+                                  : "This order has been returned. Please contact support for details."}
+                              </p>
+                            </div>
+                          </div>
+                        ) : (
+                          <>
+                            {/* Desktop Horizontal Stepper */}
+                            <div className="hidden sm:block relative">
+                              {/* Horizontal progress bar background */}
+                              <div 
+                                className="absolute top-4 h-[2px] bg-slate-200" 
+                                style={{ 
+                                  zIndex: 0,
+                                  left: `${halfStepWidth}%`,
+                                  right: `${halfStepWidth}%`
+                                }} 
+                              />
+                              
+                              {/* Horizontal progress bar active fill */}
+                              <div 
+                                className="absolute top-4 h-[2px] bg-emerald-500 transition-all duration-500" 
+                                style={{ 
+                                  zIndex: 0,
+                                  left: `${halfStepWidth}%`,
+                                  width: `${activeWidth}%`
+                                }} 
+                              />
+
+                              <div className="flex w-full relative z-10">
+                                {filteredSteps.map((step, idx) => {
+                                  const stepIdx = STATUS_ORDER.indexOf(step.statusKey);
+                                  const isCompleted = stepIdx < currentIndex;
+                                  const isActive = stepIdx === currentIndex;
+                                  const Icon = step.icon;
+
+                                  return (
+                                    <div key={step.statusKey} className="flex flex-col items-center flex-1 min-w-0">
+                                      <div 
+                                        className={`w-8 h-8 rounded-full border-2 flex items-center justify-center shrink-0 transition-all duration-300 ${
+                                          isActive 
+                                            ? "bg-[#800020] border-[#800020] text-white ring-4 ring-[#800020]/10 shadow-md scale-110" 
+                                            : isCompleted 
+                                              ? "bg-emerald-500 border-emerald-500 text-white shadow-sm" 
+                                              : "bg-white border-slate-200 text-slate-400"
+                                        }`}
+                                      >
+                                        {isCompleted ? (
+                                          <Check className="w-3.5 h-3.5 stroke-[3px]" />
+                                        ) : (
+                                          <Icon className="w-3.5 h-3.5 stroke-[2.5px]" />
+                                        )}
+                                      </div>
+                                      <span 
+                                        className={`mt-2 text-[10px] font-bold text-center leading-tight px-0.5 uppercase tracking-wide transition-colors ${
+                                          isActive 
+                                            ? "text-[#800020] font-extrabold" 
+                                            : isCompleted 
+                                              ? "text-emerald-600" 
+                                              : "text-slate-400"
+                                        }`}
+                                      >
+                                        {step.title}
+                                      </span>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+
+                            {/* Mobile Vertical Stepper */}
+                            <div className="sm:hidden relative pl-8 space-y-6">
+                              {/* Vertical progress line */}
+                              <div 
+                                className="absolute left-[15px] top-4 bottom-4 w-[2px] bg-slate-200" 
+                                style={{ zIndex: 0 }}
+                              />
+                              
+                              {/* Vertical progress active fill */}
+                              <div 
+                                className="absolute left-[15px] top-4 w-[2px] bg-emerald-500 transition-all duration-500" 
+                                style={{ 
+                                  zIndex: 0,
+                                  height: `${(safeCurrentIndex / (filteredSteps.length - 1)) * 100}%`,
+                                  maxHeight: "calc(100% - 32px)"
+                                }}
+                              />
+
+                              {filteredSteps.map((step, idx) => {
+                                const stepIdx = STATUS_ORDER.indexOf(step.statusKey);
+                                const isCompleted = stepIdx < currentIndex;
+                                const isActive = stepIdx === currentIndex;
+                                const Icon = step.icon;
+
+                                return (
+                                  <div key={step.statusKey} className="relative flex gap-4 items-start">
+                                    <div 
+                                      className={`w-8 h-8 rounded-full border-2 flex items-center justify-center shrink-0 transition-all duration-300 relative z-10 ${
+                                        isActive
+                                          ? "bg-[#800020] border-[#800020] text-white ring-4 ring-[#800020]/10 shadow"
+                                          : isCompleted
+                                            ? "bg-emerald-500 border-emerald-500 text-white shadow-sm"
+                                            : "bg-white border-slate-200 text-slate-400"
+                                      }`}
+                                    >
+                                      {isCompleted ? (
+                                        <Check className="w-3.5 h-3.5 stroke-[3px]" />
+                                      ) : (
+                                        <Icon className="w-3.5 h-3.5 stroke-[2.5px]" />
+                                      )}
+                                    </div>
+                                    <div className="pt-1.5">
+                                      <p 
+                                        className={`text-xs font-bold uppercase tracking-wider ${
+                                          isActive ? "text-[#800020] font-extrabold" : isCompleted ? "text-emerald-700" : "text-slate-400"
+                                        }`}
+                                      >
+                                        {step.title}
+                                      </p>
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    </div>
+
                     {/* Live Pathao Courier Tracking Timeline */}
                     {order.pathaoConsignmentId && (
                       <div className="space-y-3">
-                        <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+                        <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
                           <Truck className="w-3.5 h-3.5 text-slate-500" /> Live Delivery Status (Pathao Courier)
                         </p>
 
-                        <div className="bg-slate-50/60 border border-slate-100 p-4 rounded-md">
+                        <div className="bg-slate-50/40 border border-slate-100/80 p-4 rounded-md">
                           {loadingTracking ? (
-                            <div className="flex items-center gap-2 text-xs text-slate-400 py-1 justify-center">
-                              <Loader2 className="w-3.5 h-3.5 animate-spin text-slate-400" /> Fetching live
-                              tracking...
+                            <div className="flex items-center gap-2 text-xs text-slate-400 py-2 justify-center">
+                              <Loader2 className="w-3.5 h-3.5 animate-spin text-slate-400" /> Fetching live tracking...
                             </div>
                           ) : liveTrackingInfo ? (
                             <div className="space-y-3.5">
@@ -279,8 +486,7 @@ export default function OrdersTab({ orders }: OrdersTabProps) {
                             </div>
                           ) : (
                             <p className="text-xs text-slate-400 italic py-1 text-center font-light">
-                              Tracking data is temporarily unavailable. Consignment ID:{" "}
-                              {order.pathaoConsignmentId}
+                              Tracking data is temporarily unavailable. Consignment ID: {order.pathaoConsignmentId}
                             </p>
                           )}
                         </div>
@@ -291,8 +497,7 @@ export default function OrdersTab({ orders }: OrdersTabProps) {
                     <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pt-4 border-t border-slate-100">
                       <div className="text-xs text-slate-400 font-light space-y-1">
                         <p>
-                          Shipping Address:{" "}
-                          <span className="font-medium text-slate-700">{order.address}</span>
+                          Shipping Address: <span className="font-medium text-slate-700">{order.address}</span>
                         </p>
                         {order.remarks && (
                           <p>
@@ -314,7 +519,7 @@ export default function OrdersTab({ orders }: OrdersTabProps) {
                   </div>
                 )}
               </div>
-            ))}
+            );})}
           </div>
 
           <AdminPagination totalPages={totalPages} currentPage={currentPage} />

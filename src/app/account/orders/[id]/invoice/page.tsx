@@ -2,6 +2,7 @@ import { getCustomerSession } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { redirect, notFound } from "next/navigation";
 import InvoiceClient from "./InvoiceClient";
+import { getFooterData } from "@/lib/footer";
 
 export const dynamic = "force-dynamic";
 
@@ -75,6 +76,8 @@ export default async function CustomerInvoicePage({
     }))
   };
 
+  const footerData = await getFooterData();
+
   return (
     <InvoiceClient
       order={serializedOrder}
@@ -82,6 +85,7 @@ export default async function CustomerInvoicePage({
       dtfTotal={dtfTotal}
       discount={discount}
       deliveryCharge={deliveryCharge}
+      footerData={footerData}
     />
   );
 }
