@@ -180,6 +180,18 @@ export const updateInventorySettings = withAuditLog(_updateInventorySettings, {
   fetchAfter: (id) => prisma.inventorySetting.findUnique({ where: { id } }),
   describe: (args) => `Updated inventory low stock threshold to ${args[0]}`,
 });
+// ─── CSV SETTINGS ───────────────────────────────────────────────────────
+export async function getAllLowStockProducts() {
+  const setting = await getInventorySettings();
+  const threshold = setting.lowStockThreshold;
+
+  return await prisma.product.findMany({
+    where: { variants: { some: { stock: { lte: threshold } } } },
+    include: { variants: true },  
+    orderBy: { name: "asc" },
+  });
+}
+
 
 // ─── DTF PRINT SETTINGS ───────────────────────────────────────────────────────
 

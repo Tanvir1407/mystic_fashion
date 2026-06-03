@@ -16,7 +16,7 @@ import {
   TrendingDown,
   Box
 } from "lucide-react";
-import { updateInventorySettings } from "../../actions";
+import { updateInventorySettings ,getAllLowStockProducts } from "../../actions";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 
@@ -35,11 +35,35 @@ export default function InventoryClient({ initialSettings, products, currentPage
     });
   };
 
-  const handleExportExcel = () => {
-    const allSizes = Array.from(new Set(products.flatMap(p => p.variants.map((v: any) => v.size))));
-    const sortedSizes = ["S", "M", "L", "XL", "2XL", "3XL", ...allSizes.filter(s => !["S", "M", "L", "XL", "2XL", "3XL"].includes(s))];
+ // src/app/admin/inventory/low-stock/InventoryClient.tsx
+
+
+const handleExportExcel = async () => {
+  try {
+    
+    const allProducts = await getAllLowStockProducts();
+
+    if (!allProducts || allProducts.length === 0) {
+      alert("No low stock products to export!");
+      return;
+    }
+
+    
+    const allSizes = Array.from(
+      new Set(allProducts.flatMap((p: any) => p.variants.map((v: any) => v.size)))
+    );
+
+     
+    const sortedSizes = [
+      "S", "M", "L", "XL", "2XL", "3XL",
+      ...allSizes.filter(s => !["S", "M", "L", "XL", "2XL", "3XL"].includes(s))
+    ];
+
+    
     let csv = "Product," + sortedSizes.join(",") + "\n";
-    products.forEach(product => {
+
+    
+    allProducts.forEach((product: any) => {
       let row = `"${product.name}"`;
       sortedSizes.forEach(size => {
         const variant = product.variants.find((v: any) => v.size === size);
@@ -47,6 +71,8 @@ export default function InventoryClient({ initialSettings, products, currentPage
       });
       csv += row + "\n";
     });
+
+    
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
     const link = document.createElement("a");
     const url = URL.createObjectURL(blob);
@@ -56,7 +82,12 @@ export default function InventoryClient({ initialSettings, products, currentPage
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-  };
+    
+  } catch (error) {
+    console.error("Export failed:", error);
+    alert("Something went wrong during export!");
+  }
+};
 
   const handlePrint = () => window.print();
 
