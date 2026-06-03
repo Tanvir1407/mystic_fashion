@@ -359,6 +359,7 @@ async function _updateOrderDetails(
     pathaoCityId?: number;
     pathaoZoneId?: number;
     pathaoAreaId?: number;
+    tags?: string[];
     items?: {
       id: string;
       productId: string;
@@ -510,6 +511,7 @@ async function _updateOrderDetails(
           pathaoCityId: data.pathaoCityId,
           pathaoZoneId: data.pathaoZoneId,
           pathaoAreaId: data.pathaoAreaId,
+          tags: data.tags,
         },
       });
 
@@ -609,6 +611,7 @@ async function _createAdminOrder(data: {
   isExchange?: boolean;
   exchangeRefOrderId?: string;
   exchangeItemNote?: string;
+  tags?: string[];
 }) {
   try {
     const session = await getSession();
@@ -679,6 +682,7 @@ async function _createAdminOrder(data: {
           createdById,
           commissionRate,
           customerId,
+          tags: data.tags || [],
           items: {
             create: data.items.flatMap((item) => {
               if (item.requiresPrint && item.printDetails && item.printDetails.length > 0) {
@@ -765,6 +769,7 @@ async function _createExchangeOrder(data: {
   items: any[];
   exchangeRefOrderId: string;
   exchangeItemNote: string;
+  tags?: string[];
 }) {
   if (data.exchangeRefOrderId) {
     const refOrder = await prisma.order.findUnique({

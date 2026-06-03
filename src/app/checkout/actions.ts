@@ -277,11 +277,22 @@ export async function placeOrderAction(payload: {
               size: item.size,
               color: item.color || "Default"
             }
+          },
+          include: {
+            product: {
+              select: {
+                trackStock: true
+              }
+            }
           }
         });
 
         if (!variant) {
           throw new Error(`Variant not found for ${item.name} (${item.size})`);
+        }
+
+        if (variant.product.trackStock && variant.stock < item.quantity) {
+          throw new Error(`Variant "${item.name} (${item.size})" does not have enough stock (Available: ${variant.stock}).`);
         }
       }
 

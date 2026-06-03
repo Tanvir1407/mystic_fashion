@@ -12,6 +12,7 @@ import PathaoReviewModal from "./PathaoReviewModal";
 import { useRouter } from "next/navigation";
 import { AdminPagination } from "@/components/AdminPagination";
 import { StatusAlertModal } from "@/components/StatusAlertModal";
+import { CustomSelect } from "@/components/CustomSelect";
 
 export default function OrderListClient({
   initialOrders,
@@ -21,6 +22,8 @@ export default function OrderListClient({
   currentSource = "ALL",
   currentSearch = "",
   currentTab = "active",
+  currentTag = "",
+  availableTags = [],
   storePhone = "01920240230",
   storeAddress = "H# 68, R# 12, Sector 10, Uttara, Dhaka - 1230, Bangladesh",
   canCreate,
@@ -34,6 +37,8 @@ export default function OrderListClient({
   currentSource?: string;
   currentSearch?: string;
   currentTab?: string;
+  currentTag?: string;
+  availableTags?: string[];
   storePhone?: string;
   storeAddress?: string;
   canCreate: boolean;
@@ -241,7 +246,7 @@ export default function OrderListClient({
         </div>
 
         {/* Toolbar, Search & Bulk Actions */}
-        <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
+        <div className="bg-white border border-slate-200 rounded-xl shadow-sm">
           <div className="p-4 flex flex-col xl:flex-row xl:items-center gap-4 justify-between">
 
             {/* Left Side: Search & Filter */}
@@ -296,63 +301,66 @@ export default function OrderListClient({
 
               {/* Filter Block */}
               <div className="flex items-center gap-3">
+                <CustomSelect
+                  options={[
+                    { value: "ALL", label: "All Statuses" },
+                    { value: "PENDING", label: "Placed" },
+                    { value: "CONFIRMED", label: "Confirmed" },
+                    { value: "PRINTING", label: "Printing" },
+                    { value: "PACKAGING", label: "Packaged" },
+                    { value: "SHIPPED", label: "Shipped" },
+                    { value: "DELIVERED", label: "Delivered" },
+                    { value: "CANCELLED", label: "Cancelled" },
+                    { value: "RETURNED", label: "Returned" },
+                  ]}
+                  value={currentFilter}
+                  onChange={(val) => {
+                    const params = new URLSearchParams(window.location.search);
+                    params.set("filter", val);
+                    params.set("page", "1");
+                    setSelectedIds(new Set());
+                    router.push(`/admin/orders?${params.toString()}`);
+                  }}
+                  heightClass="h-[38px]"
+                  className="w-40"
+                />
 
-                <div className="flex flex-col">
+                <CustomSelect
+                  options={[
+                    { value: "ALL", label: "All Channels" },
+                    { value: "eCommerce", label: "eCommerce" },
+                    { value: "Salesman", label: "Salesman" },
+                  ]}
+                  value={currentSource}
+                  onChange={(val) => {
+                    const params = new URLSearchParams(window.location.search);
+                    params.set("source", val);
+                    params.set("page", "1");
+                    setSelectedIds(new Set());
+                    router.push(`/admin/orders?${params.toString()}`);
+                  }}
+                  heightClass="h-[38px]"
+                  className="w-40"
+                />
 
-                  <select
-                    value={currentFilter}
-                    onChange={(e) => {
-                      const val = e.target.value;
-                      const params = new URLSearchParams(window.location.search);
-                      params.set("filter", val);
-                      params.set("page", "1");
-                      setSelectedIds(new Set());
-                      router.push(`/admin/orders?${params.toString()}`);
-                    }}
-                    className="w-40 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm font-semibold focus:ring-4 focus:ring-slate-500/10 focus:border-slate-300 outline-none transition-all cursor-pointer text-slate-700"
-                  >
-                    {[
-                      { value: "ALL", label: "All Statuses" },
-                      { value: "PENDING", label: "Placed" },
-                      { value: "CONFIRMED", label: "Confirmed" },
-                      { value: "PRINTING", label: "Printing" },
-                      { value: "PACKAGING", label: "Packaged" },
-                      { value: "SHIPPED", label: "Shipped" },
-                      { value: "DELIVERED", label: "Delivered" },
-                      { value: "CANCELLED", label: "Cancelled" },
-                      { value: "RETURNED", label: "Returned" },
-                    ].map((opt) => (
-                      <option key={opt.value} value={opt.value}>
-                        {opt.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="flex flex-col">
-                  <select
-                    value={currentSource}
-                    onChange={(e) => {
-                      const val = e.target.value;
-                      const params = new URLSearchParams(window.location.search);
-                      params.set("source", val);
-                      params.set("page", "1");
-                      setSelectedIds(new Set());
-                      router.push(`/admin/orders?${params.toString()}`);
-                    }}
-                    className="w-40 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm font-semibold focus:ring-4 focus:ring-slate-500/10 focus:border-slate-300 outline-none transition-all cursor-pointer text-slate-700"
-                  >
-                    {[
-                      { value: "ALL", label: "All Channels" },
-                      { value: "eCommerce", label: "eCommerce" },
-                      { value: "Salesman", label: "Salesman" },
-                    ].map((opt) => (
-                      <option key={opt.value} value={opt.value}>
-                        {opt.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                <CustomSelect
+                  options={[
+                    { value: "ALL", label: "All Tags" },
+                    ...availableTags.map((t) => ({ value: t, label: t })),
+                  ]}
+                  value={currentTag || "ALL"}
+                  onChange={(val) => {
+                    const params = new URLSearchParams(window.location.search);
+                    if (val && val !== "ALL") params.set("tag", val);
+                    else params.delete("tag");
+                    params.set("page", "1");
+                    setSelectedIds(new Set());
+                    router.push(`/admin/orders?${params.toString()}`);
+                  }}
+                  heightClass="h-[38px]"
+                  className="w-40"
+                  searchable={availableTags.length > 5}
+                />
               </div>
             </div>
 
@@ -361,7 +369,7 @@ export default function OrderListClient({
 
           {/* Dedicated Bulk Actions Section below the Search and Filter section */}
           {selectedIds.size > 0 && (
-            <div className="border-t border-slate-100 bg-indigo-50/20 px-4 py-3.5 flex flex-col lg:flex-row lg:items-center justify-between gap-4 animate-fade-in transition-all">
+            <div className="border-t border-slate-100 bg-indigo-50/20 px-4 py-3.5 flex flex-col lg:flex-row lg:items-center justify-between gap-4 animate-fade-in transition-all rounded-b-xl">
               <div className="flex items-center gap-2">
                 <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-indigo-600 text-white font-bold text-[10px]">
                   {selectedIds.size}

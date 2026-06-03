@@ -19,6 +19,7 @@ interface Product {
   team: string;
   category: string;
   isCustomize?: boolean | null;
+  trackStock?: boolean;
   variants: { size: string, stock: number }[];
   discount?: {
     active: boolean;
@@ -90,6 +91,12 @@ export default function ProductClient({ product, sizeChartData, deliveryData }: 
   };
 
   const incrementQuantity = () => {
+    if (product.trackStock && selectedSize) {
+      const maxStock = product.variants.find(v => v.size === selectedSize)?.stock || 0;
+      if (quantity >= maxStock) {
+        return;
+      }
+    }
     setQuantity(q => q + 1);
   };
 
@@ -193,21 +200,33 @@ export default function ProductClient({ product, sizeChartData, deliveryData }: 
                 <p className="text-red-500 font-medium text-sm">Size map not configured yet.</p>
               ) : (
                 <div className="flex flex-wrap gap-2">
-                  {product.variants.map((v) => (
-                    <button
-                      key={v.size}
-                      onClick={() => {
-                        setSelectedSize(v.size);
-                        setQuantity(1);
-                      }}
-                      className={`h-12 px-6 flex items-center justify-center font-semibold text-sm transition-colors border ${selectedSize === v.size
-                        ? 'bg-primary text-white border-primary'
-                        : 'bg-white text-zinc-900 border-zinc-200 hover:border-primary hover:text-primary'
-                        }`}
-                    >
-                      <span>{v.size}</span>
-                    </button>
-                  ))}
+                  {product.variants.map((v) => {
+                    const isOutOfStock = product.trackStock && v.stock <= 0;
+                    return (
+                      <button
+                        key={v.size}
+                        onClick={() => {
+                          if (isOutOfStock) return;
+                          setSelectedSize(v.size);
+                          setQuantity(1);
+                        }}
+                        disabled={isOutOfStock}
+                        className={`h-12 px-6 flex items-center justify-center font-semibold text-sm transition-colors border ${isOutOfStock
+                          ? 'border-dashed border-slate-300 text-slate-400 bg-slate-50/50 cursor-not-allowed select-none'
+                          : selectedSize === v.size
+                            ? 'bg-primary text-white border-primary'
+                            : 'bg-white text-zinc-900 border-zinc-200 hover:border-primary hover:text-primary'
+                          }`}
+                        style={{
+                          background: isOutOfStock
+                            ? 'linear-gradient(135deg, transparent 50%, #cbd5e1 50%, #cbd5e1 52%, transparent 52%)'
+                            : undefined
+                        }}
+                      >
+                        <span>{v.size}</span>
+                      </button>
+                    );
+                  })}
                 </div>
               )}
             </div>
@@ -240,8 +259,8 @@ export default function ProductClient({ product, sizeChartData, deliveryData }: 
                   {/* Add to Cart Button */}
                   <button
                     onClick={handleAddToCart}
-                    disabled={!selectedSize}
-                    className={`flex-1 h-14 font-bold text-sm transition-all flex items-center justify-center ${(!selectedSize)
+                    disabled={!selectedSize || (product.trackStock && selectedVariantStock <= 0)}
+                    className={`flex-1 h-14 font-bold text-sm transition-all flex items-center justify-center ${(!selectedSize || (product.trackStock && selectedVariantStock <= 0))
                       ? 'bg-zinc-100 text-zinc-400 cursor-not-allowed'
                       : addedEffect
                         ? 'bg-green-600 text-white'
@@ -255,8 +274,8 @@ export default function ProductClient({ product, sizeChartData, deliveryData }: 
                 {/* Buy Now Button */}
                 <button
                   onClick={handleBuyNow}
-                  disabled={!selectedSize}
-                  className={`w-full h-14 font-bold text-sm transition-all flex items-center justify-center ${(!selectedSize)
+                  disabled={!selectedSize || (product.trackStock && selectedVariantStock <= 0)}
+                  className={`w-full h-14 font-bold text-sm transition-all flex items-center justify-center ${(!selectedSize || (product.trackStock && selectedVariantStock <= 0))
                     ? 'bg-zinc-100 text-zinc-400 cursor-not-allowed'
                     : 'bg-primary text-white hover:opacity-95 active:scale-[0.98]'
                     }`}

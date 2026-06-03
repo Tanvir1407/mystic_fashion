@@ -178,6 +178,18 @@ export default function OrderRowClient({
         <div className="flex flex-col">
           <span className="font-medium text-sm text-slate-900">{order.customerName}</span>
           <span className="text-xs text-slate-500 mt-0.5">{order.phone}</span>
+          {order.tags && order.tags.length > 0 && (
+            <div className="flex flex-wrap gap-1 mt-1.5">
+              {order.tags.map((tag: string) => (
+                <span
+                  key={tag}
+                  className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider bg-slate-50 text-slate-600 border border-slate-200/60"
+                >
+                  {tag}
+                </span>
+              ))}
+            </div>
+          )}
         </div>
       </td>
       <td className="px-2 py-4">
