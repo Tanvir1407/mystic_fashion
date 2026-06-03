@@ -139,11 +139,10 @@ export async function verifyCustomerOtpAction(email: string, code: string): Prom
 export async function registerCustomerAction(payload: {
   name: string;
   phone: string;
-  email: string;
+  email?: string;
   password?: string;
 }): Promise<{ success: boolean; error?: string }> {
   try {
-    const cleanEmail = payload.email.toLowerCase().trim();
     const normalized = normalizePhone(payload.phone);
 
     if (!payload.name || payload.name.trim().length < 2) {
@@ -152,16 +151,21 @@ export async function registerCustomerAction(payload: {
     if (!normalized) {
       return { success: false, error: "Invalid phone number." };
     }
-    if (!isValidEmail(cleanEmail)) {
-      return { success: false, error: "Invalid email format." };
-    }
 
-    // Check if email already associated with an account
-    const existingByEmail = await prisma.customer.findUnique({
-      where: { email: cleanEmail }
-    });
-    if (existingByEmail) {
-      return { success: false, error: "Email address is already registered." };
+    let cleanEmail: string | null = null;
+    if (payload.email && payload.email.trim()) {
+      cleanEmail = payload.email.toLowerCase().trim();
+      if (!isValidEmail(cleanEmail)) {
+        return { success: false, error: "Invalid email format." };
+      }
+
+      // Check if email already associated with an account
+      const existingByEmail = await prisma.customer.findUnique({
+        where: { email: cleanEmail }
+      });
+      if (existingByEmail) {
+        return { success: false, error: "Email address is already registered." };
+      }
     }
 
     const passwordHash = payload.password ? await bcrypt.hash(payload.password, 10) : null;
@@ -174,7 +178,8 @@ export async function registerCustomerAction(payload: {
     let customer;
 
     if (existingByPhone) {
-      if (existingByPhone.email) {
+      // If it exists and already has a password set, prevent takeover
+      if (existingByPhone.passwordHash) {
         return { success: false, error: "Phone number is already associated with an account." };
       }
 
@@ -182,7 +187,7 @@ export async function registerCustomerAction(payload: {
       customer = await prisma.customer.update({
         where: { id: existingByPhone.id },
         data: {
-          email: cleanEmail,
+          email: cleanEmail || undefined,
           passwordHash,
           name: payload.name.trim()
         }

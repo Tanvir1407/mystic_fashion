@@ -15,6 +15,7 @@ export default function CustomerRegisterPage() {
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
 
   // Error/Success status
   const [errorMsg, setErrorMsg] = useState("");
@@ -35,12 +36,16 @@ export default function CustomerRegisterPage() {
       setErrorMsg("Please provide your phone number.");
       return;
     }
-    if (!email.trim()) {
-      setErrorMsg("Please provide your email address.");
+    if (!password) {
+      setErrorMsg("Please provide a password.");
       return;
     }
-    if (password && password.length < 6) {
+    if (password.length < 6) {
       setErrorMsg("Password must be at least 6 characters long.");
+      return;
+    }
+    if (password !== confirmPassword) {
+      setErrorMsg("Passwords do not match.");
       return;
     }
 
@@ -48,8 +53,8 @@ export default function CustomerRegisterPage() {
       const res = await registerCustomerAction({
         name: name.trim(),
         phone: phone.trim(),
-        email: email.trim(),
-        password: password || undefined,
+        email: email.trim() || undefined,
+        password: password,
       });
 
       if (res.success) {
@@ -85,7 +90,7 @@ export default function CustomerRegisterPage() {
           <div className="flex items-center gap-3">
             <Link href="/" className="flex items-center gap-2 group">
               <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center shadow-lg transition-transform group-hover:scale-105">
-                <span className="text-xl font-black text-[#800020] font-serif">M</span>
+                <span className="text-xl  font-semibold text-[#800020] font-serif">M</span>
               </div>
               <span className="text-2xl font-bold tracking-widest uppercase font-serif text-white">Mystic Fashion</span>
             </Link>
@@ -95,7 +100,7 @@ export default function CustomerRegisterPage() {
             <div className="inline-flex items-center gap-2 px-3 py-1 bg-white/10 backdrop-blur-md rounded-full text-xs font-semibold tracking-wide border border-white/20">
               <Sparkles className="w-3 h-3 text-amber-300" /> Premium Customer Portal
             </div>
-            <h2 className="text-4xl font-black tracking-tight leading-none text-white">
+            <h2 className="text-4xl  font-semibold tracking-tight leading-none text-white">
               Join the <br />
               <span className="text-rose-200">Mystic Club.</span>
             </h2>
@@ -118,7 +123,7 @@ export default function CustomerRegisterPage() {
           <div className="mb-10 lg:hidden flex justify-center">
             <Link href="/" className="flex items-center gap-2.5">
               <div className="w-9 h-9 bg-[#800020] rounded-lg flex items-center justify-center shadow-sm">
-                <span className="text-lg font-black text-white font-serif">M</span>
+                <span className="text-lg  font-semibold text-white font-serif">M</span>
               </div>
               <span className="text-lg font-bold text-[#800020] tracking-wider uppercase font-serif">Mystic Fashion</span>
             </Link>
@@ -126,7 +131,7 @@ export default function CustomerRegisterPage() {
 
           {/* Heading */}
           <div className="text-center sm:text-left">
-            <h1 className="text-2xl font-black text-slate-900 tracking-tight">Create Account</h1>
+            <h1 className="text-2xl  font-semibold text-slate-900 tracking-tight">Create Account</h1>
             <p className="text-sm text-slate-500 mt-1.5 mb-8">Fill in your details below to set up your customer account.</p>
           </div>
 
@@ -146,7 +151,7 @@ export default function CustomerRegisterPage() {
 
           <form onSubmit={handleSubmit} className="space-y-5">
             <div className="space-y-1.5">
-              <label className="text-xs font-black uppercase tracking-wider text-slate-700 block">Full Name</label>
+              <label className="text-xs  font-semibold text-slate-700 block">Full Name</label>
               <div className="relative">
                 <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
                   <User className="w-4 h-4" />
@@ -163,7 +168,7 @@ export default function CustomerRegisterPage() {
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-xs font-black uppercase tracking-wider text-slate-700 block">Phone Number</label>
+              <label className="text-xs  font-semibold text-slate-700 block">Phone Number</label>
               <div className="relative">
                 <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
                   <Phone className="w-4 h-4" />
@@ -180,7 +185,7 @@ export default function CustomerRegisterPage() {
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-xs font-black uppercase tracking-wider text-slate-700 block">Email Address</label>
+              <label className="text-xs  font-semibold text-slate-700 block">Email Address (Optional)</label>
               <div className="relative">
                 <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
                   <Mail className="w-4 h-4" />
@@ -191,13 +196,12 @@ export default function CustomerRegisterPage() {
                   onChange={(e) => setEmail(e.target.value)}
                   className="w-full pl-10 pr-4 h-11 bg-slate-50/50 border border-slate-200 rounded-none text-sm text-slate-950 focus:outline-none focus:bg-white focus:border-slate-950 transition-colors"
                   placeholder="e.g. john@example.com"
-                  required
                 />
               </div>
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-xs font-black uppercase tracking-wider text-slate-700 block">Password (Optional)</label>
+              <label className="text-xs  font-semibold text-slate-700 block">Password</label>
               <div className="relative">
                 <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
                   <Lock className="w-4 h-4" />
@@ -208,6 +212,24 @@ export default function CustomerRegisterPage() {
                   onChange={(e) => setPassword(e.target.value)}
                   className="w-full pl-10 pr-4 h-11 bg-slate-50/50 border border-slate-200 rounded-none text-sm text-slate-950 focus:outline-none focus:bg-white focus:border-slate-950 transition-colors"
                   placeholder="••••••••"
+                  required
+                />
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs  font-semibold text-slate-700 block">Confirm Password</label>
+              <div className="relative">
+                <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                  <Lock className="w-4 h-4" />
+                </span>
+                <input
+                  type="password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  className="w-full pl-10 pr-4 h-11 bg-slate-50/50 border border-slate-200 rounded-none text-sm text-slate-950 focus:outline-none focus:bg-white focus:border-slate-950 transition-colors"
+                  placeholder="••••••••"
+                  required
                 />
               </div>
             </div>
@@ -215,7 +237,7 @@ export default function CustomerRegisterPage() {
             <button
               type="submit"
               disabled={isPending}
-              className="w-full h-12 bg-[#800020] text-white text-xs font-black uppercase tracking-widest hover:bg-[#600018] transition-colors disabled:opacity-70 flex items-center justify-center gap-2 group pt-1"
+              className="w-full h-12 bg-[#800020] text-white text-xs  font-semibold uppercase tracking-widest hover:bg-[#600018] transition-colors disabled:opacity-70 flex items-center justify-center gap-2 group pt-1"
             >
               {isPending ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
@@ -231,7 +253,7 @@ export default function CustomerRegisterPage() {
           {/* Login Prompt Link */}
           <div className="mt-8 pt-6 border-t border-slate-100 text-center text-xs">
             <span className="text-slate-500">Already have an account? </span>
-            <Link href="/auth/login" className="font-black text-[#800020] hover:underline">
+            <Link href="/auth/login" className=" font-semibold text-[#800020] hover:underline">
               Log In Instead
             </Link>
           </div>

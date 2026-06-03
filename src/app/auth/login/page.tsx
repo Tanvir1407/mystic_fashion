@@ -181,36 +181,6 @@ function LoginPageContent() {
             <p className="text-sm text-slate-500 mt-1.5 mb-8">Access your account to manage your shopping experience.</p>
           </div>
 
-          {/* Tab Selector */}
-          <div className="flex border-b border-slate-100 mb-8 p-0.5 bg-slate-50/80">
-            <button
-              onClick={() => {
-                setMode("password");
-                setErrorMsg("");
-                setSuccessMsg("");
-              }}
-              className={`flex-1 py-2.5 text-xs font-bold uppercase tracking-wider transition-all border-b-2 ${mode === "password"
-                ? "border-[#800020] text-[#800020] bg-white shadow-sm"
-                : "border-transparent text-slate-500 hover:text-slate-900"
-                }`}
-            >
-              Password Login
-            </button>
-            <button
-              onClick={() => {
-                setMode("otp");
-                setErrorMsg("");
-                setSuccessMsg("");
-              }}
-              className={`flex-1 py-2.5 text-xs font-bold uppercase tracking-wider transition-all border-b-2 ${mode === "otp"
-                ? "border-[#800020] text-[#800020] bg-white shadow-sm"
-                : "border-transparent text-slate-500 hover:text-slate-900"
-                }`}
-            >
-              Email OTP Login
-            </button>
-          </div>
-
           {/* Status Messages */}
           {errorMsg && (
             <div className="mb-6 p-4 bg-red-50 border-l-4 border-red-500 text-red-700 text-xs font-semibold rounded-none flex items-center gap-2.5 animate-fadeIn">
@@ -225,174 +195,61 @@ function LoginPageContent() {
             </div>
           )}
 
-          {/* Mode 1: Traditional Password Form */}
-          {mode === "password" && (
-            <form onSubmit={handlePasswordLogin} className="space-y-6">
-              <div className="space-y-2">
-                <label className="text-xs font-black uppercase tracking-wider text-slate-700 block">Email Address or Phone</label>
-                <div className="relative">
-                  <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
-                    <Mail className="w-4 h-4" />
-                  </span>
-                  <input
-                    type="text"
-                    value={emailOrPhone}
-                    onChange={(e) => setEmailOrPhone(e.target.value)}
-                    className="w-full pl-10 pr-4 h-12 bg-slate-50/50 border border-slate-200 rounded-none text-sm text-slate-950 focus:outline-none focus:bg-white focus:border-slate-950 transition-colors"
-                    placeholder="Enter email or phone"
-                    required
-                  />
-                </div>
+          <form onSubmit={handlePasswordLogin} className="space-y-6">
+            <div className="space-y-2">
+              <label className="text-xs  font-semibold text-slate-700 block">Phone Number or Email</label>
+              <div className="relative">
+                <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                  <Phone className="w-4 h-4" />
+                </span>
+                <input
+                  type="text"
+                  value={emailOrPhone}
+                  onChange={(e) => setEmailOrPhone(e.target.value)}
+                  className="w-full pl-10 pr-4 h-12 bg-slate-50/50 border border-slate-200 rounded-none text-sm text-slate-950 focus:outline-none focus:bg-white focus:border-slate-950 transition-colors"
+                  placeholder="Phone Number or email"
+                  required
+                />
               </div>
-
-              <div className="space-y-2">
-                <div className="flex justify-between items-center">
-                  <label className="text-xs font-black uppercase tracking-wider text-slate-700">Password</label>
-                  <Link href="/auth/forgot-password" className="text-xs font-bold text-[#800020] hover:underline">
-                    Forgot password?
-                  </Link>
-                </div>
-                <div className="relative">
-                  <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
-                    <Lock className="w-4 h-4" />
-                  </span>
-                  <input
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="w-full pl-10 pr-4 h-12 bg-slate-50/50 border border-slate-200 rounded-none text-sm text-slate-950 focus:outline-none focus:bg-white focus:border-slate-950 transition-colors"
-                    placeholder="••••••••"
-                    required
-                  />
-                </div>
-              </div>
-
-              <button
-                type="submit"
-                disabled={isPending}
-                className="w-full h-12 bg-[#800020] text-white text-xs font-black uppercase tracking-widest hover:bg-[#600018] transition-colors disabled:opacity-70 flex items-center justify-center gap-2 group"
-              >
-                {isPending ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  <>
-                    Sign In Securely
-                    <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-                  </>
-                )}
-              </button>
-            </form>
-          )}
-
-          {/* Mode 2: Email OTP Verification Form */}
-          {mode === "otp" && (
-            <div className="space-y-6">
-              {!otpSent ? (
-                <form onSubmit={handleSendOtp} className="space-y-6">
-                  <div className="space-y-2">
-                    <label className="text-xs font-black uppercase tracking-wider text-slate-700 block">Registered Email Address</label>
-                    <div className="relative">
-                      <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
-                        <Mail className="w-4 h-4" />
-                      </span>
-                      <input
-                        type="email"
-                        value={otpEmail}
-                        onChange={(e) => setOtpEmail(e.target.value)}
-                        className="w-full pl-10 pr-4 h-12 bg-slate-50/50 border border-slate-200 rounded-none text-sm text-slate-950 focus:outline-none focus:bg-white focus:border-slate-950 transition-colors"
-                        placeholder="customer@example.com"
-                        required
-                      />
-                    </div>
-                  </div>
-
-                  <button
-                    type="submit"
-                    disabled={isPending}
-                    className="w-full h-12 bg-[#800020] text-white text-xs font-black uppercase tracking-widest hover:bg-[#600018] transition-colors disabled:opacity-70 flex items-center justify-center gap-2 group"
-                  >
-                    {isPending ? (
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                    ) : (
-                      <>
-                        Send Verification Code
-                        <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-                      </>
-                    )}
-                  </button>
-                </form>
-              ) : (
-                <form onSubmit={handleVerifyOtp} className="space-y-6">
-                  <div className="text-center bg-slate-50 p-4 border border-slate-100">
-                    <p className="text-xs text-slate-600">Verification code sent to:</p>
-                    <p className="text-xs font-black text-slate-800 mt-0.5">{otpEmail}</p>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setOtpSent(false);
-                        setOtpCode("");
-                        setErrorMsg("");
-                        setSuccessMsg("");
-                      }}
-                      className="text-[11px] font-bold text-[#800020] hover:underline mt-2"
-                    >
-                      Change email address
-                    </button>
-                  </div>
-
-                  <div className="space-y-2">
-                    <label className="text-xs font-black uppercase tracking-wider text-slate-700 block">6-Digit Verification Code</label>
-                    <div className="relative">
-                      <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
-                        <Key className="w-4 h-4" />
-                      </span>
-                      <input
-                        type="text"
-                        maxLength={6}
-                        value={otpCode}
-                        onChange={(e) => setOtpCode(e.target.value.replace(/[^0-9]/g, ""))}
-                        className="w-full pl-10 pr-4 h-12 bg-slate-50/50 border border-slate-200 rounded-none text-sm text-center tracking-[0.4em] font-black text-slate-950 focus:outline-none focus:bg-white focus:border-slate-950 transition-colors"
-                        placeholder="000000"
-                        required
-                      />
-                    </div>
-                  </div>
-
-                  <button
-                    type="submit"
-                    disabled={isPending}
-                    className="w-full h-12 bg-[#800020] text-white text-xs font-black uppercase tracking-widest hover:bg-[#600018] transition-colors disabled:opacity-70 flex items-center justify-center gap-2 group"
-                  >
-                    {isPending ? (
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                    ) : (
-                      <>
-                        Verify & Login
-                        <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-                      </>
-                    )}
-                  </button>
-
-                  {/* Resend OTP Link with cooldown */}
-                  <div className="text-center">
-                    {cooldown > 0 ? (
-                      <p className="text-xs text-slate-400">
-                        Resend code in <span className="font-bold text-slate-600">{cooldown}s</span>
-                      </p>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={handleSendOtp}
-                        className="text-xs font-black text-[#800020] hover:underline"
-                      >
-                        Resend Code
-                      </button>
-                    )}
-                  </div>
-                </form>
-              )}
             </div>
-          )}
+
+            <div className="space-y-2">
+              <div className="flex justify-between items-center">
+                <label className="text-xs  font-semibold text-slate-700">Password</label>
+                <Link href="/auth/forgot-password" className="text-xs font-bold text-[#800020] hover:underline">
+                  Forgot password?
+                </Link>
+              </div>
+              <div className="relative">
+                <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                  <Lock className="w-4 h-4" />
+                </span>
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full pl-10 pr-4 h-12 bg-slate-50/50 border border-slate-200 rounded-none text-sm text-slate-950 focus:outline-none focus:bg-white focus:border-slate-950 transition-colors"
+                  placeholder="••••••••"
+                  required
+                />
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              disabled={isPending}
+              className="w-full h-12 bg-[#800020] text-white text-xs font-black uppercase tracking-widest hover:bg-[#600018] transition-colors disabled:opacity-70 flex items-center justify-center gap-2 group"
+            >
+              {isPending ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <>
+                  Sign In Securely
+                  <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                </>
+              )}
+            </button>
+          </form>
 
           {/* Registration Prompt Link */}
           <div className="mt-8 pt-6 border-t border-slate-100 text-center text-xs">

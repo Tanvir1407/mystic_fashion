@@ -94,7 +94,7 @@ export default function CustomerForgotPasswordPage() {
         <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff08_1px,transparent_1px),linear-gradient(to_bottom,#ffffff08_1px,transparent_1px)] bg-[size:40px_40px] pointer-events-none" />
         <div className="absolute top-1/4 -left-20 w-80 h-80 rounded-full bg-red-800/30 blur-3xl pointer-events-none" />
         <div className="absolute bottom-1/4 -right-20 w-96 h-96 rounded-full bg-rose-950/40 blur-3xl pointer-events-none" />
-        
+
         {/* Cover Image backdrop */}
         <div
           className="absolute inset-0 bg-cover bg-center opacity-25 mix-blend-luminosity"
@@ -169,7 +169,7 @@ export default function CustomerForgotPasswordPage() {
           {!otpSent ? (
             <form onSubmit={handleSendOtp} className="space-y-6">
               <div className="space-y-2">
-                <label className="text-xs font-black uppercase tracking-wider text-slate-700 block">Registered Email Address</label>
+                <label className="text-xs  font-semibold text-slate-700 block">Registered Email Address</label>
                 <div className="relative">
                   <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
                     <Mail className="w-4 h-4" />
@@ -208,7 +208,7 @@ export default function CustomerForgotPasswordPage() {
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-xs font-black uppercase tracking-wider text-slate-700 block">6-Digit Verification Code</label>
+                <label className="text-xs  font-semibold text-slate-700 block">6-Digit Verification Code</label>
                 <div className="relative">
                   <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
                     <Key className="w-4 h-4" />
@@ -226,7 +226,7 @@ export default function CustomerForgotPasswordPage() {
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-xs font-black uppercase tracking-wider text-slate-700 block">New Password</label>
+                <label className="text-xs  font-semibold text-slate-700 block">New Password</label>
                 <div className="relative">
                   <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
                     <Lock className="w-4 h-4" />
