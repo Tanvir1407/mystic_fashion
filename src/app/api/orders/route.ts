@@ -152,7 +152,7 @@ export async function POST(req: NextRequest) {
         calculatedSubtotal - validatedDiscountAmount + calculatedAdvance + finalDeliveryCharge
       );
 
-      // Validate variants exist
+      // Validate variants exist and check stock
       for (const item of items) {
         if (!item.size) throw new Error(`Size not selected for ${item.name || item.id}`);
         const variant = await tx.productVariant.findUnique({
@@ -163,8 +163,19 @@ export async function POST(req: NextRequest) {
               color: item.color || "Default",
             },
           },
+          include: {
+            product: {
+              select: {
+                trackStock: true
+              }
+            }
+          }
         });
         if (!variant) throw new Error(`Variant not found for product ${item.name || item.id} (${item.size})`);
+
+        if (variant.product.trackStock && variant.stock < item.quantity) {
+          throw new Error(`Variant for product "${item.name || item.id}" (${item.size}) does not have enough stock (Available: ${variant.stock}).`);
+        }
       }
 
       // Create order

@@ -31,6 +31,7 @@ export default function ProductFormClient({
   const [isFeatured, setIsFeatured] = useState(initialData?.isFeatured || false);
   const [isPublished, setIsPublished] = useState(initialData?.isPublished ?? true);
   const [isCustomize, setIsCustomize] = useState(initialData?.isCustomize || false);
+  const [trackStock, setTrackStock] = useState(initialData?.trackStock || false);
   const [slug, setSlug] = useState(initialData?.slug || "");
   const [isSlugEdited, setIsSlugEdited] = useState(!!initialData?.slug);
 
@@ -277,6 +278,7 @@ export default function ProductFormClient({
       isFeatured,
       isPublished,
       isCustomize,
+      trackStock,
       variants: variants.map(({ size, sku, stock }) => ({
         size: size.trim(),
         color: "Default",
@@ -493,6 +495,20 @@ export default function ProductFormClient({
                 <label htmlFor="isCustomize" className="flex flex-col cursor-pointer select-none">
                   <span className="text-sm font-bold text-[#800020]">Offer Customization (DTF Print)</span>
                   <span className="text-[10px] text-zinc-500 font-medium">Allow customers to add their custom Info on product.</span>
+                </label>
+              </div>
+
+              <div className="flex items-center gap-3 p-2 rounded-none">
+                <input
+                  type="checkbox"
+                  id="trackStock"
+                  checked={trackStock}
+                  onChange={(e) => setTrackStock(e.target.checked)}
+                  className="w-5 h-5 text-indigo-600 border-indigo-300 rounded focus:ring-indigo-500 cursor-pointer shrink-0"
+                />
+                <label htmlFor="trackStock" className="flex flex-col cursor-pointer select-none">
+                  <span className="text-sm font-bold text-indigo-900">Track Stock</span>
+                  <span className="text-[10px] text-zinc-500 font-medium">Validate stock availability on storefront and during checkout.</span>
                 </label>
               </div>
             </div>

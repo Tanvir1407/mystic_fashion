@@ -25,6 +25,7 @@ async function _createProduct(data: {
   isFeatured: boolean;
   isPublished: boolean;
   isCustomize?: boolean | null;
+  trackStock: boolean;
   variants: { size: string; color: string; colorCode?: string; sku?: string; stock: number }[];
 }) {
   try {
@@ -62,6 +63,7 @@ async function _createProduct(data: {
         isFeatured: data.isFeatured,
         isPublished: data.isPublished,
         isCustomize: data.isCustomize ?? false,
+        trackStock: data.trackStock,
         sizeChartId: data.sizeChartId || null,
         discountId: data.discountId || null,
         variants: {
@@ -123,6 +125,7 @@ async function _updateProduct(
     isFeatured: boolean;
     isPublished: boolean;
     isCustomize?: boolean | null;
+    trackStock: boolean;
     variants: { size: string; color: string; colorCode?: string; sku?: string; stock: number }[];
   }
 ) {
@@ -164,6 +167,7 @@ async function _updateProduct(
         isFeatured: data.isFeatured,
         isPublished: data.isPublished,
         isCustomize: data.isCustomize ?? false,
+        trackStock: data.trackStock,
         sizeChartId: data.sizeChartId || null,
         discountId: data.discountId || null,
       },
