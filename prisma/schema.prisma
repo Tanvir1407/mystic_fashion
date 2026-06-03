@@ -644,12 +644,37 @@ enum AuditAction {
 }
 
 model Customer {
-  id           String   @id @default(uuid())
+  id           String            @id @default(uuid())
   name         String
-  phone        String   @unique
+  phone        String            @unique
   address      String?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  email        String?           @unique
+  passwordHash String?
+  isActive     Boolean           @default(true)
+  otpCode      String?
+  otpExpiresAt DateTime?
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
   orders       Order[]
+  addresses    CustomerAddress[]
   couponUsages CouponUsage[]
+}
+
+model CustomerAddress {
+  id           String   @id @default(uuid())
+  customerId   String
+  label        String   // e.g., 'Home', 'Office'
+  fullName     String
+  phone        String
+  district     String
+  address      String
+  pathaoCityId Int?
+  pathaoZoneId Int?
+  pathaoAreaId Int?
+  isDefault    Boolean  @default(false)
+  createdAt    DateTime @default(now())
+
+  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@index([customerId])
 }

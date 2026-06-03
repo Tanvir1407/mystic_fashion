@@ -35,6 +35,23 @@ export async function middleware(request: NextRequest) {
     }
   }
 
+  // ── Customer portal routes ────────────────────────────────────────────────
+  if (pathname.startsWith('/account')) {
+    const sessionCookie = request.cookies.get('customer-session');
+    if (!sessionCookie) {
+      const loginUrl = new URL('/auth/login', request.url);
+      loginUrl.searchParams.set('callbackUrl', pathname);
+      return NextResponse.redirect(loginUrl);
+    }
+    try {
+      await jwtVerify(sessionCookie.value, encodedSecret, { algorithms: ['HS256'] });
+    } catch {
+      const loginUrl = new URL('/auth/login', request.url);
+      loginUrl.searchParams.set('callbackUrl', pathname);
+      return NextResponse.redirect(loginUrl);
+    }
+  }
+
   // ── Staff portal routes ───────────────────────────────────────────────────
   if (pathname.startsWith('/staff') && !pathname.startsWith('/staff/login')) {
     const sessionCookie = request.cookies.get('staff-session');
@@ -64,5 +81,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/admin/:path*', '/staff/:path*'],
+  matcher: ['/admin/:path*', '/staff/:path*', '/account/:path*'],
 };
