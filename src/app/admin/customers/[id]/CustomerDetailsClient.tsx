@@ -74,7 +74,7 @@ export default function CustomerDetailsClient({
   failedCount,
 }: CustomerDetailsClientProps) {
   const router = useRouter();
-  
+
   // Account Status Toggle State
   const [isPending, startTransition] = useTransition();
   const [errorMsg, setErrorMsg] = useState("");
@@ -220,8 +220,8 @@ export default function CustomerDetailsClient({
               <h3 className="text-sm font-semibold text-slate-900 tracking-tight">Profile Details</h3>
               <span
                 className={`inline-block px-2.5 py-0.5 rounded text-[10px] font-bold tracking-wider uppercase border ${customer.isActive
-                    ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                    : "bg-rose-50 text-rose-700 border-rose-200"
+                  ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                  : "bg-rose-50 text-rose-700 border-rose-200"
                   }`}
               >
                 {customer.isActive ? "Active" : "Suspended"}
@@ -272,8 +272,8 @@ export default function CustomerDetailsClient({
                 onClick={handleStatusToggle}
                 disabled={isPending}
                 className={`w-full py-2 px-4 text-xs font-semibold uppercase tracking-wider transition-colors border flex items-center justify-center gap-2 rounded shadow-2xs ${customer.isActive
-                    ? "border-rose-200 text-rose-700 bg-white hover:bg-rose-50"
-                    : "border-emerald-200 text-emerald-700 bg-white hover:bg-emerald-50"
+                  ? "border-rose-200 text-rose-700 bg-white hover:bg-rose-50"
+                  : "border-emerald-200 text-emerald-700 bg-white hover:bg-emerald-50"
                   }`}
               >
                 {isPending ? (
@@ -298,13 +298,13 @@ export default function CustomerDetailsClient({
             <div className="border-b border-slate-100 pb-3">
               <h3 className="text-sm font-semibold text-slate-900 tracking-tight">Reset Password</h3>
             </div>
-            
+
             {passwordSuccessMsg && (
               <div className="p-3 bg-emerald-50 border-l-4 border-emerald-500 text-emerald-700 text-xs font-semibold flex items-center gap-2">
                 <p className="flex-1">{passwordSuccessMsg}</p>
               </div>
             )}
-            
+
             {passwordErrorMsg && (
               <div className="p-3 bg-rose-50 border-l-4 border-rose-500 text-rose-700 text-xs font-semibold flex items-center gap-2">
                 <p className="flex-1">{passwordErrorMsg}</p>
@@ -415,7 +415,7 @@ export default function CustomerDetailsClient({
                   {orders.map((order) => (
                     <tr key={order.id} className="hover:bg-slate-50 transition-colors">
                       <td className="px-5 py-4 font-mono font-semibold text-[#800020]">
-                        #{order.id.slice(-6).toUpperCase()}
+                        {order.id}
                       </td>
                       <td className="px-5 py-4 text-slate-600">
                         {new Date(order.createdAt).toLocaleDateString("en-GB", {
