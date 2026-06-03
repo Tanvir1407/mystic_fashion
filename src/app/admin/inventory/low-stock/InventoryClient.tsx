@@ -62,8 +62,8 @@ export default function InventoryClient({ initialSettings, products }: { initial
   const sortedSizes = ["S", "M", "L", "XL", "2XL", "3XL", ...allSizes.filter(s => !["S", "M", "L", "XL", "2XL", "3XL"].includes(s))];
 
   const filteredProducts = products.filter(p => 
-    p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    p.team.toLowerCase().includes(searchQuery.toLowerCase())
+    p.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    p.team?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   return (

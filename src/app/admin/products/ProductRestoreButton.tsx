@@ -1,5 +1,4 @@
 "use client";
-
 import { useTransition } from "react";
 import { restoreProduct } from "@/app/admin/products/actions";
 import { RotateCcw } from "lucide-react";
@@ -19,7 +18,6 @@ export function ProductRestoreButton({ productId }: { productId: string }) {
       }
     });
   };
-
   return (
     <button
       onClick={handleRestore}
