@@ -17,54 +17,90 @@ export default async function ProductPage({ params }: { params: { slug: string }
   // Match UUID pattern (standard Prisma UUID format)
   const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(identifier);
 
-  let product = null;
+  let productRes = null;
 
   if (isUuid) {
-    product = await prisma.product.findUnique({
+    productRes = await prisma.product.findUnique({
       where: { id: identifier },
       include: {
-        variants: true,
+        variants: {
+          include: {
+            pricingMatrix: true,
+            stocks: { where: { warehouse: { code: "WH-MAIN" } } }
+          }
+        },
         sizeChart: true,
         discount: true,
+        mediaAssets: { orderBy: { sortOrder: "asc" } },
       }
     });
 
     // If found by ID and has a slug, do a 301 redirect to the slug-based URL!
-    if (product && product.slug) {
-      redirect(`/product/${product.slug}`);
+    if (productRes && productRes.slug) {
+      redirect(`/product/${productRes.slug}`);
     }
   } else {
-    product = await prisma.product.findUnique({
+    productRes = await prisma.product.findUnique({
       where: { slug: identifier },
       include: {
-        variants: true,
+        variants: {
+          include: {
+            pricingMatrix: true,
+            stocks: { where: { warehouse: { code: "WH-MAIN" } } }
+          }
+        },
         sizeChart: true,
         discount: true,
+        mediaAssets: { orderBy: { sortOrder: "asc" } },
       }
     });
   }
 
-  // Fallback: If not found by slug, maybe check if it's an ID (non-standard format fallback)
-  if (!product) {
-    product = await prisma.product.findUnique({
+  // Fallback: If not found by slug, check ID
+  if (!productRes) {
+    productRes = await prisma.product.findUnique({
       where: { id: identifier },
       include: {
-        variants: true,
+        variants: {
+          include: {
+            pricingMatrix: true,
+            stocks: { where: { warehouse: { code: "WH-MAIN" } } }
+          }
+        },
         sizeChart: true,
         discount: true,
+        mediaAssets: { orderBy: { sortOrder: "asc" } },
       }
     });
-    if (product && product.slug) {
-      redirect(`/product/${product.slug}`);
+    if (productRes && productRes.slug) {
+      redirect(`/product/${productRes.slug}`);
     }
   }
 
-  if (!product || (!product.isPublished && !isAdmin)) {
+  if (!productRes || (!productRes.isPublished && !isAdmin)) {
     notFound();
   }
 
-  // Sort variants in-memory to prevent Prisma Client caching issues
-  product.variants.sort((a, b) => (a.order || 0) - (b.order || 0));
+  // Sort variants in-memory
+  productRes.variants.sort((a: any, b: any) => (a.order || 0) - (b.order || 0));
+
+  const basePrice = productRes.variants?.[0]?.pricingMatrix?.basePrice
+    ? Number(productRes.variants[0].pricingMatrix.basePrice)
+    : productRes.price;
+
+  const displayImages = (productRes.mediaAssets && productRes.mediaAssets.length > 0)
+    ? productRes.mediaAssets.map((asset: any) => asset.url)
+    : ((productRes as any).images || []);
+
+  const product = {
+    ...productRes,
+    price: basePrice,
+    images: displayImages,
+    variants: productRes.variants.map((v: any) => ({
+      ...v,
+      stock: v.stocks?.[0]?.availableQuantity ?? v.stock ?? 0
+    }))
+  };
 
   const [delivery, footerData] = await Promise.all([
     prisma.deliverySetting.findUnique({
@@ -79,7 +115,7 @@ export default async function ProductPage({ params }: { params: { slug: string }
     <div className="min-h-screen bg-white">
       <Header />
       <main className="w-full">
-        <ProductClient product={product} sizeChartData={product.sizeChart || null} deliveryData={deliveryData} />
+        <ProductClient product={product as any} sizeChartData={product.sizeChart || null} deliveryData={deliveryData} />
       </main>
       <Footer config={footerData} />
       <SidebarCart />

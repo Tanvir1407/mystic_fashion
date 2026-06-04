@@ -17,7 +17,14 @@ export async function GET(_req: NextRequest, { params }: { params: { slug: strin
         categoryRel: { select: { id: true, name: true } },
         subcategory: { select: { id: true, name: true } },
         sizeChart: { select: { id: true, category: true, data: true } },
-        variants: { orderBy: { order: "asc" } },
+        mediaAssets: { orderBy: { sortOrder: "asc" } },
+        variants: {
+          orderBy: { order: "asc" },
+          include: {
+            pricingMatrix: true,
+            stocks: { where: { warehouse: { code: "WH-MAIN" } } }
+          }
+        },
       },
     });
 
@@ -25,12 +32,20 @@ export async function GET(_req: NextRequest, { params }: { params: { slug: strin
       return NextResponse.json({ success: false, error: "Product not found" }, { status: 404 });
     }
 
-    let finalPrice = product.price;
+    const basePrice = product.variants?.[0]?.pricingMatrix?.basePrice
+      ? Number(product.variants[0].pricingMatrix.basePrice)
+      : product.price;
+
+    const displayImages = (product.mediaAssets && product.mediaAssets.length > 0)
+      ? product.mediaAssets.map((asset: any) => asset.url)
+      : ((product as any).images || []);
+
+    let finalPrice = basePrice;
     if (product.discount?.active) {
       if (product.discount.discountType === "PERCENTAGE") {
-        finalPrice = product.price - product.price * (product.discount.value / 100);
+        finalPrice = basePrice - basePrice * (product.discount.value / 100);
       } else {
-        finalPrice = Math.max(0, product.price - product.discount.value);
+        finalPrice = Math.max(0, basePrice - product.discount.value);
       }
       finalPrice = Math.round(finalPrice);
     }
@@ -42,9 +57,9 @@ export async function GET(_req: NextRequest, { params }: { params: { slug: strin
         name: product.name,
         slug: product.slug,
         description: product.description,
-        price: product.price,
+        price: basePrice,
         finalPrice,
-        images: product.images,
+        images: displayImages,
         isFeatured: product.isFeatured,
         isCustomize: product.isCustomize,
         brand: product.brand,
@@ -60,7 +75,7 @@ export async function GET(_req: NextRequest, { params }: { params: { slug: strin
           color: v.color,
           colorCode: v.colorCode,
           sku: v.sku,
-          stock: v.stock,
+          stock: v.stocks?.[0]?.availableQuantity ?? v.stock ?? 0,
         })),
       },
     });

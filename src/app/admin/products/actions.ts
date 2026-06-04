@@ -1,6 +1,7 @@
 "use server";
 
 import prisma from "@/lib/prisma";
+import { Prisma } from "@/generated/prisma/client";
 import { withAuditLog } from "@/lib/audit";
 import { revalidatePath } from "next/cache";
 import { writeFile, mkdir } from "fs/promises";
@@ -48,35 +49,106 @@ async function _createProduct(data: {
       };
     }
 
-    const product = await prisma.product.create({
-      data: {
-        name: data.name,
-        slug: finalSlug,
-        description: data.description,
-        price: data.price,
-        images: data.images,
-        team: data.team,
-        category: data.category,
-        brandId: data.brandId || null,
-        categoryId: data.categoryId || null,
-        subcategoryId: data.subcategoryId || null,
-        isFeatured: data.isFeatured,
-        isPublished: data.isPublished,
-        isCustomize: data.isCustomize ?? false,
-        trackStock: data.trackStock,
-        sizeChartId: data.sizeChartId || null,
-        discountId: data.discountId || null,
-        variants: {
-          create: data.variants.map((v, idx) => ({
-            size: v.size,
-            color: v.color,
-            colorCode: v.colorCode,
-            sku: v.sku,
-            stock: v.stock,
-            order: idx,
-          })),
+    const product = await prisma.$transaction(async (tx) => {
+      const warehouseCode = "WH-MAIN";
+      let warehouse = await tx.warehouse.findUnique({ where: { code: warehouseCode } });
+      if (!warehouse) {
+        warehouse = await tx.warehouse.create({
+          data: {
+            code: warehouseCode,
+            name: "Main Warehouse Hub",
+            address: "Central fulfillment Center",
+            isActive: true,
+          },
+        });
+      }
+
+      const prod = await tx.product.create({
+        data: {
+          name: data.name,
+          slug: finalSlug,
+          description: data.description,
+          price: data.price,
+          images: data.images,
+          team: data.team,
+          category: data.category,
+          brandId: data.brandId || null,
+          categoryId: data.categoryId || null,
+          subcategoryId: data.subcategoryId || null,
+          isFeatured: data.isFeatured,
+          isPublished: data.isPublished,
+          isCustomize: data.isCustomize ?? false,
+          trackStock: data.trackStock,
+          sizeChartId: data.sizeChartId || null,
+          discountId: data.discountId || null,
+          variants: {
+            create: data.variants.map((v, idx) => ({
+              size: v.size,
+              color: v.color,
+              colorCode: v.colorCode,
+              sku: v.sku,
+              order: idx,
+            })),
+          },
         },
-      },
+        include: { variants: true },
+      });
+
+      for (let idx = 0; idx < data.images.length; idx++) {
+        await tx.mediaAsset.create({
+          data: {
+            productId: prod.id,
+            url: data.images[idx],
+            sortOrder: idx,
+            boundAttributes: {},
+          },
+        });
+      }
+
+      for (const variant of prod.variants) {
+        const inputVariant = data.variants.find(
+          v => v.size === variant.size && v.color === variant.color
+        );
+        const stockQty = inputVariant?.stock ?? 0;
+
+        await tx.variantPricingMatrix.create({
+          data: {
+            variantId: variant.id,
+            basePrice: new Prisma.Decimal(data.price),
+            costPrice: null,
+            tierPrices: {},
+          },
+        });
+
+        const stock = await tx.stock.create({
+          data: {
+            variantId: variant.id,
+            warehouseId: warehouse.id,
+            physicalQuantity: stockQty,
+            availableQuantity: stockQty,
+            reservedQuantity: 0,
+            version: 0,
+          },
+        });
+
+        if (stockQty > 0) {
+          await tx.stockLedgerEntry.create({
+            data: {
+              stockId: stock.id,
+              movementType: "RECEIPT",
+              quantity: stockQty,
+              previousPhysicalQuantity: 0,
+              previousAvailableQuantity: 0,
+              newPhysicalQuantity: stockQty,
+              newAvailableQuantity: stockQty,
+              referenceId: prod.id,
+              referenceType: "PRODUCT_CREATE",
+            },
+          });
+        }
+      }
+
+      return prod;
     });
 
     revalidatePath("/admin/products");
@@ -151,49 +223,152 @@ async function _updateProduct(
       };
     }
 
-    const product = await prisma.product.update({
-      where: { id },
-      data: {
-        name: data.name,
-        slug: finalSlug,
-        description: data.description,
-        price: data.price,
-        images: data.images,
-        team: data.team,
-        category: data.category,
-        brandId: data.brandId || null,
-        categoryId: data.categoryId || null,
-        subcategoryId: data.subcategoryId || null,
-        isFeatured: data.isFeatured,
-        isPublished: data.isPublished,
-        isCustomize: data.isCustomize ?? false,
-        trackStock: data.trackStock,
-        sizeChartId: data.sizeChartId || null,
-        discountId: data.discountId || null,
-      },
-    });
+    const product = await prisma.$transaction(async (tx) => {
+      const warehouseCode = "WH-MAIN";
+      let warehouse = await tx.warehouse.findUnique({ where: { code: warehouseCode } });
+      if (!warehouse) {
+        warehouse = await tx.warehouse.create({
+          data: {
+            code: warehouseCode,
+            name: "Main Warehouse Hub",
+            address: "Central fulfillment Center",
+            isActive: true,
+          },
+        });
+      }
 
-    const upsertedVariants = await prisma.$transaction(
-      data.variants.map((v, idx) =>
-        prisma.productVariant.upsert({
+      const prod = await tx.product.update({
+        where: { id },
+        data: {
+          name: data.name,
+          slug: finalSlug,
+          description: data.description,
+          price: data.price,
+          images: data.images,
+          team: data.team,
+          category: data.category,
+          brandId: data.brandId || null,
+          categoryId: data.categoryId || null,
+          subcategoryId: data.subcategoryId || null,
+          isFeatured: data.isFeatured,
+          isPublished: data.isPublished,
+          isCustomize: data.isCustomize ?? false,
+          trackStock: data.trackStock,
+          sizeChartId: data.sizeChartId || null,
+          discountId: data.discountId || null,
+        },
+      });
+
+      await tx.mediaAsset.deleteMany({ where: { productId: id } });
+      for (let idx = 0; idx < data.images.length; idx++) {
+        await tx.mediaAsset.create({
+          data: {
+            productId: id,
+            url: data.images[idx],
+            sortOrder: idx,
+            boundAttributes: {},
+          },
+        });
+      }
+
+      const upserted = [];
+      for (let idx = 0; idx < data.variants.length; idx++) {
+        const v = data.variants[idx];
+        const variant = await tx.productVariant.upsert({
           where: { productId_size_color: { productId: id, size: v.size, color: v.color } },
-          update: { sku: v.sku, stock: v.stock, order: idx, colorCode: v.colorCode },
+          update: { sku: v.sku, order: idx, colorCode: v.colorCode },
           create: {
             productId: id,
             size: v.size,
             color: v.color,
             colorCode: v.colorCode,
             sku: v.sku,
-            stock: v.stock,
             order: idx,
           },
-        })
-      )
-    );
+        });
+        upserted.push(variant);
 
-    const keptVariantIds = upsertedVariants.map((v) => v.id);
-    await prisma.productVariant.deleteMany({
-      where: { productId: id, id: { notIn: keptVariantIds } },
+        await tx.variantPricingMatrix.upsert({
+          where: { variantId: variant.id },
+          update: { basePrice: new Prisma.Decimal(data.price) },
+          create: {
+            variantId: variant.id,
+            basePrice: new Prisma.Decimal(data.price),
+            tierPrices: {},
+          },
+        });
+
+        const existingStock = await tx.stock.findUnique({
+          where: {
+            variantId_warehouseId: {
+              variantId: variant.id,
+              warehouseId: warehouse.id,
+            },
+          },
+        });
+
+        if (existingStock) {
+          const diff = v.stock - existingStock.physicalQuantity;
+          if (diff !== 0) {
+            await tx.stock.update({
+              where: { id: existingStock.id },
+              data: {
+                physicalQuantity: v.stock,
+                availableQuantity: v.stock,
+                version: { increment: 1 },
+              },
+            });
+
+            await tx.stockLedgerEntry.create({
+              data: {
+                stockId: existingStock.id,
+                movementType: "ADJUSTMENT",
+                quantity: diff,
+                previousPhysicalQuantity: existingStock.physicalQuantity,
+                previousAvailableQuantity: existingStock.availableQuantity,
+                newPhysicalQuantity: v.stock,
+                newAvailableQuantity: v.stock,
+                referenceId: prod.id,
+                referenceType: "PRODUCT_UPDATE",
+              },
+            });
+          }
+        } else {
+          const stock = await tx.stock.create({
+            data: {
+              variantId: variant.id,
+              warehouseId: warehouse.id,
+              physicalQuantity: v.stock,
+              availableQuantity: v.stock,
+              reservedQuantity: 0,
+              version: 0,
+            },
+          });
+
+          if (v.stock > 0) {
+            await tx.stockLedgerEntry.create({
+              data: {
+                stockId: stock.id,
+                movementType: "RECEIPT",
+                quantity: v.stock,
+                previousPhysicalQuantity: 0,
+                previousAvailableQuantity: 0,
+                newPhysicalQuantity: v.stock,
+                newAvailableQuantity: v.stock,
+                referenceId: prod.id,
+                referenceType: "PRODUCT_UPDATE",
+              },
+            });
+          }
+        }
+      }
+
+      const keptVariantIds = upserted.map((v) => v.id);
+      await tx.productVariant.deleteMany({
+        where: { productId: id, id: { notIn: keptVariantIds } },
+      });
+
+      return prod;
     });
 
     revalidatePath("/admin/products");
@@ -294,9 +469,40 @@ export async function uploadImage(formData: FormData) {
 // ─── PRODUCT QUERIES ──────────────────────────────────────────────────────────
 
 export async function getProductsForOrder() {
-  return await prisma.product.findMany({
-    include: { variants: true, discount: true },
+  const products = await prisma.product.findMany({
+    include: {
+      mediaAssets: { orderBy: { sortOrder: "asc" } },
+      discount: true,
+      variants: {
+        include: {
+          pricingMatrix: true,
+          stocks: {
+            where: { warehouse: { code: "WH-MAIN" } }
+          }
+        }
+      }
+    },
     orderBy: { name: "asc" },
+  });
+
+  return products.map(p => {
+    const basePrice = p.variants?.[0]?.pricingMatrix?.basePrice
+      ? Number(p.variants[0].pricingMatrix.basePrice)
+      : p.price;
+
+    const displayImages = (p.mediaAssets && p.mediaAssets.length > 0)
+      ? p.mediaAssets.map((asset: any) => asset.url)
+      : ((p as any).images || []);
+
+    return {
+      ...p,
+      price: basePrice,
+      images: displayImages,
+      variants: p.variants.map(v => ({
+        ...v,
+        stock: v.stocks?.[0]?.availableQuantity ?? v.stock ?? 0
+      }))
+    };
   });
 }
 

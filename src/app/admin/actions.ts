@@ -8,6 +8,7 @@ import { getAuditContext } from "@/lib/audit";
 import { revalidatePath } from "next/cache";
 import bcrypt from "bcryptjs";
 import { createSession, destroySession } from "@/lib/auth";
+import { updateStockDualWrite } from "@/lib/inventory";
 import { getRedirectUrlForSession } from "@/lib/permissions";
 
 // ─── LOGIN RATE LIMITER ───────────────────────────────────────────────────────
@@ -217,13 +218,42 @@ export async function getLowStockProducts(options?: { limit?: number; page?: num
   const limit = options?.limit ?? 100;
   const skip = ((options?.page ?? 1) - 1) * limit;
 
-  return await prisma.product.findMany({
-    where: { variants: { some: { stock: { lte: threshold } } } },
-    include: { variants: true },
+  const products = await prisma.product.findMany({
+    where: {
+      variants: {
+        some: {
+          stocks: {
+            some: {
+              warehouse: { code: "WH-MAIN" },
+              availableQuantity: { lte: threshold }
+            }
+          }
+        }
+      }
+    },
+    include: {
+      mediaAssets: { orderBy: { sortOrder: "asc" } },
+      variants: {
+        include: {
+          stocks: {
+            where: { warehouse: { code: "WH-MAIN" } }
+          }
+        }
+      }
+    },
     orderBy: { updatedAt: "desc" },
     take: limit,
     skip,
   });
+
+  return products.map(p => ({
+    ...p,
+    images: p.mediaAssets.length > 0 ? p.mediaAssets.map(m => m.url) : ((p as any).images || []),
+    variants: p.variants.map(v => ({
+      ...v,
+      stock: v.stocks?.[0]?.availableQuantity ?? v.stock ?? 0
+    }))
+  }));
 }
 
 async function _adjustStock(data: {
@@ -253,9 +283,11 @@ async function _adjustStock(data: {
         throw new Error("Stock cannot go below zero");
       }
 
-      await tx.productVariant.update({
-        where: { id: variantId },
-        data: { stock: newQuantity },
+      await updateStockDualWrite(tx, {
+        variantId,
+        absoluteQuantity: newQuantity,
+        movementType: "ADJUSTMENT",
+        referenceType: "ADJUSTMENT",
       });
 
       const adjustment = await tx.stockAdjustment.create({
@@ -316,9 +348,11 @@ export async function bulkAdjustStock(
           throw new Error(`Stock cannot go below zero for variant ${variantId}`);
         }
 
-        await tx.productVariant.update({
-          where: { id: variantId },
-          data: { stock: newQuantity },
+        await updateStockDualWrite(tx, {
+          variantId,
+          absoluteQuantity: newQuantity,
+          movementType: "ADJUSTMENT",
+          referenceType: "BULK_ADJUSTMENT",
         });
 
         const adjustment = await tx.stockAdjustment.create({

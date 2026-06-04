@@ -9,7 +9,7 @@ interface ProductCardProps {
     slug?: string | null;
     name: string;
     price: number;
-    images: string[];
+    images?: string[];
     team: string;
     variants: any[];
     discount?: {
@@ -25,6 +25,7 @@ interface ProductCardProps {
 export default function ProductCard({ product }: ProductCardProps) {
   let finalPrice = product.price;
   let isDiscounted = false;
+  const productImages = product.images || [];
 
   if (product.discount && product.discount.active) {
     isDiscounted = true;
@@ -50,9 +51,9 @@ export default function ProductCard({ product }: ProductCardProps) {
 
         {/* Image Section */}
         <div className="relative w-full aspect-[3/4] bg-[#F5F5F5] dark:bg-zinc-800 overflow-hidden">
-          {product.images[0] ? (
+          {productImages[0] ? (
             <Image
-              src={product.images[0]}
+              src={productImages[0]}
               alt={product.name}
               unoptimized={true}
               fill
@@ -91,7 +92,7 @@ export default function ProductCard({ product }: ProductCardProps) {
             price: finalPrice,
             originalPrice: isDiscounted ? product.price : undefined,
             team: product.team,
-            image: product.images[0] || "",
+            image: productImages[0] || "",
             variants: product.variants
           }} />
         </div> */}

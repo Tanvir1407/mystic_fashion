@@ -16,6 +16,27 @@ export default async function Home() {
     select: { id: true, name: true, image: true, sortOrder: true },
   }).catch((e) => { console.error(e); return []; });
 
+  const [productsRes, totalCountRes, heroSlidesRes, footerData] = await Promise.all([
+    prisma.product.findMany({
+      where: { isPublished: true },
+      take: limit,
+      orderBy: [
+        { isFeatured: "desc" },
+        { createdAt: "desc" }
+      ],
+      include: {
+        discount: true,
+        mediaAssets: { orderBy: { sortOrder: "asc" } },
+        variants: {
+          orderBy: { order: "asc" },
+          include: {
+            pricingMatrix: true,
+            stocks: { where: { warehouse: { code: "WH-MAIN" } } }
+          }
+        }
+      }
+    }).catch(e => { console.error(e); return []; }),
+    prisma.product.count({ where: { isPublished: true } }).catch(() => 0),
   // Build ordered category name list for product queries
   const categoriesList = dbCategories.map((c) => c.name);
 
@@ -85,6 +106,29 @@ export default async function Home() {
     getFooterData()
   ]);
 
+  const rawProducts = productsRes;
+  const heroSlides = heroSlidesRes;
+
+  const products = rawProducts.map((product: any) => {
+    const basePrice = product.variants?.[0]?.pricingMatrix?.basePrice
+      ? Number(product.variants[0].pricingMatrix.basePrice)
+      : product.price;
+
+    const displayImages = (product.mediaAssets && product.mediaAssets.length > 0)
+      ? product.mediaAssets.map((asset: any) => asset.url)
+      : (product.images || []);
+
+    const mappedVariants = product.variants?.map((v: any) => ({
+      ...v,
+      stock: v.stocks?.[0]?.availableQuantity ?? v.stock ?? 0
+    })) || [];
+
+    return {
+      ...product,
+      price: basePrice,
+      images: displayImages,
+      variants: mappedVariants
+    };
   const newArrivalsProducts = categoryRecentRes.flat();
   const showroomProducts = categoryShowroomRes.flat();
   const heroSlides = heroSlidesRes;

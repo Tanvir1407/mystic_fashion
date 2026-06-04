@@ -22,14 +22,17 @@ import UploadedImage from '@/components/UploadedImage';
 import { formatBDT } from '@/utils/formatPrice';
 
 export default async function ProductDetailView({ params }: { params: { id: string } }) {
-  const product = await prisma.product.findUnique({
+  const productRes = await prisma.product.findUnique({
     where: { id: params.id },
     include: {
       brand: true,
       categoryRel: true,
       subcategory: true,
+      mediaAssets: { orderBy: { sortOrder: 'asc' } },
       variants: {
         include: {
+          pricingMatrix: true,
+          stocks: { where: { warehouse: { code: 'WH-MAIN' } } },
           stockAdjustments: {
             orderBy: { createdAt: 'desc' },
             take: 10,
@@ -46,6 +49,33 @@ export default async function ProductDetailView({ params }: { params: { id: stri
       purchaseItems: true,
     },
   });
+
+  if (!productRes) {
+    notFound();
+  }
+
+  const basePrice = productRes.variants?.[0]?.pricingMatrix?.basePrice
+    ? Number(productRes.variants[0].pricingMatrix.basePrice)
+    : productRes.price;
+
+  const displayImages = (productRes.mediaAssets && productRes.mediaAssets.length > 0)
+    ? productRes.mediaAssets.map((asset: any) => asset.url)
+    : ((productRes as any).images || []);
+
+  const costPrice = productRes.variants?.[0]?.pricingMatrix?.costPrice
+    ? Number(productRes.variants[0].pricingMatrix.costPrice)
+    : 0;
+
+  const product = {
+    ...productRes,
+    price: basePrice,
+    purchasePrice: costPrice,
+    images: displayImages,
+    variants: productRes.variants.map((v: any) => ({
+      ...v,
+      stock: v.stocks?.[0]?.availableQuantity ?? v.stock ?? 0
+    }))
+  };
 
   if (!product) {
     notFound();

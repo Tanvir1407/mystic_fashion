@@ -8,7 +8,7 @@ export default async function ReturnsPage() {
   const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 
   // Fetch current month orders with their items and products
-  const orders = await prisma.order.findMany({
+  const ordersRes = await prisma.order.findMany({
     where: {
       createdAt: {
         gte: startOfMonth
@@ -17,8 +17,20 @@ export default async function ReturnsPage() {
     include: {
       items: {
         include: {
+          variant: {
+            select: {
+              pricingMatrix: {
+                select: {
+                  costPrice: true
+                }
+              }
+            }
+          },
           product: {
-            select: { name: true, price: true, purchasePrice: true, images: true }
+            select: {
+              name: true,
+              mediaAssets: { orderBy: { sortOrder: "asc" } }
+            }
           }
         }
       },
@@ -26,6 +38,23 @@ export default async function ReturnsPage() {
     },
     orderBy: { createdAt: "desc" },
   });
+
+  const orders = ordersRes.map((order: any) => ({
+    ...order,
+    items: order.items.map((item: any) => ({
+      ...item,
+      product: {
+        name: item.product?.name || "Unknown Product",
+        price: item.price,
+        purchasePrice: item.variant?.pricingMatrix?.costPrice
+          ? Number(item.variant.pricingMatrix.costPrice)
+          : 0,
+        images: item.product?.mediaAssets && item.product.mediaAssets.length > 0
+          ? item.product.mediaAssets.map((asset: any) => asset.url)
+          : []
+      }
+    }))
+  }));
 
   const recentReturns = await getRecentSalesReturns();
 

@@ -153,6 +153,7 @@ export async function POST(req: NextRequest) {
       );
 
       // Validate variants exist and check stock
+      const variantMap = new Map<string, string>();
       for (const item of items) {
         if (!item.size) throw new Error(`Size not selected for ${item.name || item.id}`);
         const variant = await tx.productVariant.findUnique({
@@ -168,14 +169,24 @@ export async function POST(req: NextRequest) {
               select: {
                 trackStock: true
               }
+            },
+            stocks: {
+              where: {
+                warehouse: {
+                  code: "WH-MAIN"
+                }
+              }
             }
           }
         });
         if (!variant) throw new Error(`Variant not found for product ${item.name || item.id} (${item.size})`);
 
-        if (variant.product.trackStock && variant.stock < item.quantity) {
-          throw new Error(`Variant for product "${item.name || item.id}" (${item.size}) does not have enough stock (Available: ${variant.stock}).`);
+        const availableStock = variant.stocks[0]?.availableQuantity ?? 0;
+        if (variant.product.trackStock && availableStock < item.quantity) {
+          throw new Error(`Variant for product "${item.name || item.id}" (${item.size}) does not have enough stock (Available: ${availableStock}).`);
         }
+
+        variantMap.set(`${item.id}_${item.size}_${item.color || "Default"}`, variant.id);
       }
 
       // Create order
@@ -201,9 +212,12 @@ export async function POST(req: NextRequest) {
           customerId,
           items: {
             create: items.flatMap((item: any) => {
+              const key = `${item.id}_${item.size}_${item.color || "Default"}`;
+              const variantId = variantMap.get(key) || null;
               if (item.requiresPrint && item.printDetails?.length > 0) {
                 const printed = item.printDetails.map((pd: any) => ({
                   productId: item.id,
+                  variantId,
                   size: item.size || "M",
                   quantity: 1,
                   price: item.price,
@@ -216,6 +230,7 @@ export async function POST(req: NextRequest) {
                 if (remaining > 0) {
                   printed.push({
                     productId: item.id,
+                    variantId,
                     size: item.size || "M",
                     quantity: remaining,
                     price: item.price,
@@ -230,6 +245,7 @@ export async function POST(req: NextRequest) {
               return [
                 {
                   productId: item.id,
+                  variantId,
                   size: item.size || "M",
                   quantity: item.quantity,
                   price: item.price,

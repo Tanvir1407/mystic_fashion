@@ -10,6 +10,7 @@ import { getSession } from "@/lib/auth";
 import { getOrCreateSystemAccount, createDoubleEntryJournal } from "@/lib/accounting";
 import { normalizePhone } from "@/lib/utils";
 import { getEffectiveCommissionRate } from "@/lib/commission";
+import { updateStockDualWrite } from "@/lib/inventory";
 
 // ─── INTERNAL HELPERS ────────────────────────────────────────────────────────
 
@@ -78,7 +79,7 @@ async function _updateOrderStatus(orderId: string, status: OrderStatus) {
 
       if (!oldIsHolding && newIsHolding) {
         for (const item of order.items) {
-          await tx.productVariant.update({
+          const variant = await tx.productVariant.findUnique({
             where: {
               productId_size_color: {
                 productId: item.productId,
@@ -86,14 +87,21 @@ async function _updateOrderStatus(orderId: string, status: OrderStatus) {
                 color: (item as any).color || "Default",
               },
             },
-            data: { stock: { decrement: item.quantity } },
+          });
+          if (!variant) throw new Error(`Variant not found for product ${item.productId} (${item.size})`);
+          await updateStockDualWrite(tx, {
+            variantId: variant.id,
+            quantityChange: -item.quantity,
+            movementType: "SALE",
+            referenceId: order.id,
+            referenceType: "ORDER",
           });
         }
       }
 
       if (oldIsHolding && !newIsHolding) {
         for (const item of order.items) {
-          await tx.productVariant.update({
+          const variant = await tx.productVariant.findUnique({
             where: {
               productId_size_color: {
                 productId: item.productId,
@@ -101,7 +109,14 @@ async function _updateOrderStatus(orderId: string, status: OrderStatus) {
                 color: (item as any).color || "Default",
               },
             },
-            data: { stock: { increment: item.quantity } },
+          });
+          if (!variant) throw new Error(`Variant not found for product ${item.productId} (${item.size})`);
+          await updateStockDualWrite(tx, {
+            variantId: variant.id,
+            quantityChange: item.quantity,
+            movementType: newStatus === "CANCELLED" || newStatus === "RETURNED" ? "RETURN" : "RECEIPT",
+            referenceId: order.id,
+            referenceType: "ORDER",
           });
         }
       }
@@ -199,7 +214,7 @@ async function _deleteOrder(id: string) {
         ];
         if (stockHoldingStatuses.includes(order.status)) {
           for (const item of order.items) {
-            await tx.productVariant.update({
+            const variant = await tx.productVariant.findUnique({
               where: {
                 productId_size_color: {
                   productId: item.productId,
@@ -207,8 +222,16 @@ async function _deleteOrder(id: string) {
                   color: (item as any).color || "Default",
                 },
               },
-              data: { stock: { increment: item.quantity } },
             });
+            if (variant) {
+              await updateStockDualWrite(tx, {
+                variantId: variant.id,
+                quantityChange: item.quantity,
+                movementType: "RETURN",
+                referenceId: order.id,
+                referenceType: "ORDER_DELETE",
+              });
+            }
           }
         }
       }
@@ -248,7 +271,7 @@ export async function bulkDeleteOrders(orderIds: string[]) {
       for (const order of orders) {
         if (stockHoldingStatuses.includes(order.status)) {
           for (const item of order.items) {
-            await tx.productVariant.update({
+            const variant = await tx.productVariant.findUnique({
               where: {
                 productId_size_color: {
                   productId: item.productId,
@@ -256,8 +279,16 @@ export async function bulkDeleteOrders(orderIds: string[]) {
                   color: (item as any).color || "Default",
                 },
               },
-              data: { stock: { increment: item.quantity } },
             });
+            if (variant) {
+              await updateStockDualWrite(tx, {
+                variantId: variant.id,
+                quantityChange: item.quantity,
+                movementType: "RETURN",
+                referenceId: order.id,
+                referenceType: "ORDER_DELETE",
+              });
+            }
           }
         }
       }
@@ -314,7 +345,7 @@ async function _restoreOrder(id: string) {
       ];
       if (stockHoldingStatuses.includes(order.status)) {
         for (const item of order.items) {
-          await tx.productVariant.update({
+          const variant = await tx.productVariant.findUnique({
             where: {
               productId_size_color: {
                 productId: item.productId,
@@ -322,7 +353,14 @@ async function _restoreOrder(id: string) {
                 color: (item as any).color || "Default",
               },
             },
-            data: { stock: { decrement: item.quantity } },
+          });
+          if (!variant) throw new Error(`Variant not found for product ${item.productId} (${item.size})`);
+          await updateStockDualWrite(tx, {
+            variantId: variant.id,
+            quantityChange: -item.quantity,
+            movementType: "SALE",
+            referenceId: order.id,
+            referenceType: "ORDER_RESTORE",
           });
         }
       }
@@ -405,7 +443,7 @@ async function _updateOrderDetails(
           if (oldItem) {
             const diff = newItem.quantity - oldItem.quantity;
             if (diff !== 0 && isStockHolding) {
-              await tx.productVariant.update({
+              const variant = await tx.productVariant.findUnique({
                 where: {
                   productId_size_color: {
                     productId: newItem.productId,
@@ -413,13 +451,21 @@ async function _updateOrderDetails(
                     color: (newItem as any).color || "Default",
                   },
                 },
-                data: { stock: { decrement: diff } },
               });
+              if (variant) {
+                await updateStockDualWrite(tx, {
+                  variantId: variant.id,
+                  quantityChange: -diff,
+                  movementType: diff > 0 ? "SALE" : "RETURN",
+                  referenceId: order.id,
+                  referenceType: "ORDER_UPDATE",
+                });
+              }
             }
             oldItemsMap.delete(newItem.id);
           } else {
             if (isStockHolding) {
-              await tx.productVariant.update({
+              const variant = await tx.productVariant.findUnique({
                 where: {
                   productId_size_color: {
                     productId: newItem.productId,
@@ -427,15 +473,23 @@ async function _updateOrderDetails(
                     color: (newItem as any).color || "Default",
                   },
                 },
-                data: { stock: { decrement: newItem.quantity } },
               });
+              if (variant) {
+                await updateStockDualWrite(tx, {
+                  variantId: variant.id,
+                  quantityChange: -newItem.quantity,
+                  movementType: "SALE",
+                  referenceId: order.id,
+                  referenceType: "ORDER_UPDATE",
+                });
+              }
             }
           }
         }
 
         if (isStockHolding) {
           for (const remainingOld of oldItemsMap.values()) {
-            await tx.productVariant.update({
+            const variant = await tx.productVariant.findUnique({
               where: {
                 productId_size_color: {
                   productId: remainingOld.productId,
@@ -443,18 +497,38 @@ async function _updateOrderDetails(
                   color: (remainingOld as any).color || "Default",
                 },
               },
-              data: { stock: { increment: remainingOld.quantity } },
             });
+            if (variant) {
+              await updateStockDualWrite(tx, {
+                variantId: variant.id,
+                quantityChange: remainingOld.quantity,
+                movementType: "RETURN",
+                referenceId: order.id,
+                referenceType: "ORDER_UPDATE",
+              });
+            }
           }
         }
 
         await tx.orderItem.deleteMany({ where: { orderId: id } });
 
         for (const newItem of data.items) {
+          const variant = await tx.productVariant.findUnique({
+            where: {
+              productId_size_color: {
+                productId: newItem.productId,
+                size: newItem.size,
+                color: (newItem as any).color || "Default",
+              },
+            },
+            select: { id: true },
+          });
+
           await tx.orderItem.create({
             data: {
               orderId: id,
               productId: newItem.productId,
+              variantId: variant?.id || null,
               size: newItem.size,
               quantity: newItem.quantity,
               price: newItem.price,
@@ -658,6 +732,25 @@ async function _createAdminOrder(data: {
         customerId = customer.id;
       }
 
+      // Match variants for all items
+      const itemsWithVariants = [];
+      for (const item of data.items) {
+        const variant = await tx.productVariant.findUnique({
+          where: {
+            productId_size_color: {
+              productId: item.productId,
+              size: item.size,
+              color: (item as any).color || "Default",
+            },
+          },
+          select: { id: true },
+        });
+        itemsWithVariants.push({
+          ...item,
+          variantId: variant?.id || null,
+        });
+      }
+
       const newOrder = await tx.order.create({
         data: {
           id: customId,
@@ -684,10 +777,11 @@ async function _createAdminOrder(data: {
           customerId,
           tags: data.tags || [],
           items: {
-            create: data.items.flatMap((item) => {
+            create: itemsWithVariants.flatMap((item) => {
               if (item.requiresPrint && item.printDetails && item.printDetails.length > 0) {
                 const printedItems = item.printDetails.map((pd) => ({
                   productId: item.productId,
+                  variantId: item.variantId,
                   size: item.size,
                   quantity: 1,
                   price: item.price,
@@ -700,6 +794,7 @@ async function _createAdminOrder(data: {
                 if (remainingQty > 0) {
                   printedItems.push({
                     productId: item.productId,
+                    variantId: item.variantId,
                     size: item.size,
                     quantity: remainingQty,
                     price: item.price,
@@ -714,6 +809,7 @@ async function _createAdminOrder(data: {
                 return [
                   {
                     productId: item.productId,
+                    variantId: item.variantId,
                     size: item.size,
                     quantity: item.quantity,
                     price: item.price,
@@ -1034,7 +1130,14 @@ async function _processSalesReturn(data: {
 
       const orderItem = await tx.orderItem.findUnique({
         where: { id: orderItemId },
-        include: { product: true },
+        include: {
+          product: true,
+          variant: {
+            include: {
+              pricingMatrix: true
+            }
+          }
+        },
       });
       if (!orderItem) throw new Error("Order item not found");
       if (orderItem.orderId !== orderId) {
@@ -1054,15 +1157,7 @@ async function _processSalesReturn(data: {
         throw new Error(`Cannot return ${returnQty} items. Only ${remainingQty} remaining.`);
       }
 
-      const variant = await tx.productVariant.findUnique({
-        where: {
-          productId_size_color: {
-            productId: orderItem.productId,
-            size: orderItem.size,
-            color: (orderItem as any).color || "Default",
-          },
-        },
-      });
+      const variant = orderItem.variant;
       if (!variant) throw new Error("Product variant not found");
 
       const status: ReturnStatus = returnActionType;
@@ -1071,27 +1166,30 @@ async function _processSalesReturn(data: {
       let printingLoss = 0;
 
       if (status === "WASTAGE") {
-        const purchasePrice = orderItem.product.purchasePrice ?? orderItem.product.price;
-        productLoss = purchasePrice * returnQty;
+        const costPrice = orderItem.variant?.pricingMatrix?.costPrice
+          ? Number(orderItem.variant.pricingMatrix.costPrice)
+          : orderItem.price;
+        productLoss = costPrice * returnQty;
         printingLoss = orderItem.printCost * returnQty;
       }
 
       const totalLoss = deliveryLoss + productLoss + printingLoss;
 
       if (status === "RESTOCKED") {
-        const previousQuantity = variant.stock;
-        const newQuantity = previousQuantity + returnQty;
-        await tx.productVariant.update({
-          where: { id: variant.id },
-          data: { stock: newQuantity },
+        const stockResult = await updateStockDualWrite(tx, {
+          variantId: variant.id,
+          quantityChange: returnQty,
+          movementType: "RETURN",
+          referenceId: orderId,
+          referenceType: "SALES_RETURN",
         });
         await tx.stockAdjustment.create({
           data: {
             variantId: variant.id,
             adjustmentType: "ADDITION",
             quantity: returnQty,
-            previousQuantity,
-            newQuantity,
+            previousQuantity: stockResult.previousPhysical,
+            newQuantity: stockResult.newPhysical,
             reason: `Sales Return Restock (Order: ${orderId})`,
           },
         });
@@ -1189,7 +1287,18 @@ async function _processFullSalesReturn(data: {
     await prisma.$transaction(async (tx) => {
       const order = await tx.order.findUnique({
         where: { id: orderId },
-        include: { items: { include: { product: true } } },
+        include: {
+          items: {
+            include: {
+              product: true,
+              variant: {
+                include: {
+                  pricingMatrix: true
+                }
+              }
+            }
+          }
+        },
       });
       if (!order) throw new Error("Order not found");
       if (order.items.length === 0) throw new Error("Order has no items");
@@ -1199,15 +1308,7 @@ async function _processFullSalesReturn(data: {
       let totalAccountingLoss = 0;
 
       for (const orderItem of order.items) {
-        const variant = await tx.productVariant.findUnique({
-          where: {
-            productId_size_color: {
-              productId: orderItem.productId,
-              size: orderItem.size,
-              color: (orderItem as any).color || "Default",
-            },
-          },
-        });
+        const variant = orderItem.variant;
         if (!variant) continue;
 
         const status: ReturnStatus = orderItem.requiresPrint ? "WASTAGE" : "RESTOCKED";
@@ -1216,8 +1317,10 @@ async function _processFullSalesReturn(data: {
         let printingLoss = 0;
 
         if (status === "WASTAGE") {
-          const purchasePrice = orderItem.product.purchasePrice ?? orderItem.product.price;
-          productLoss = purchasePrice * orderItem.quantity;
+          const costPrice = orderItem.variant?.pricingMatrix?.costPrice
+            ? Number(orderItem.variant.pricingMatrix.costPrice)
+            : orderItem.price;
+          productLoss = costPrice * orderItem.quantity;
           printingLoss = orderItem.printCost * orderItem.quantity;
         }
 
@@ -1225,19 +1328,20 @@ async function _processFullSalesReturn(data: {
         totalAccountingLoss += itemLoss;
 
         if (status === "RESTOCKED") {
-          const previousQuantity = variant.stock;
-          const newQuantity = previousQuantity + orderItem.quantity;
-          await tx.productVariant.update({
-            where: { id: variant.id },
-            data: { stock: newQuantity },
+          const stockResult = await updateStockDualWrite(tx, {
+            variantId: variant.id,
+            quantityChange: orderItem.quantity,
+            movementType: "RETURN",
+            referenceId: orderId,
+            referenceType: "SALES_RETURN",
           });
           await tx.stockAdjustment.create({
             data: {
               variantId: variant.id,
               adjustmentType: "ADDITION",
               quantity: orderItem.quantity,
-              previousQuantity,
-              newQuantity,
+              previousQuantity: stockResult.previousPhysical,
+              newQuantity: stockResult.newPhysical,
               reason: `Full Sales Return Restock (Order: ${orderId})`,
             },
           });
@@ -1319,16 +1423,47 @@ export async function getOrderById(id: string) {
       include: {
         items: {
           include: {
-            product: {
-              select: { name: true, price: true, purchasePrice: true, images: true },
+            variant: {
+              select: {
+                pricingMatrix: {
+                  select: {
+                    costPrice: true
+                  }
+                }
+              }
             },
-          },
+            product: {
+              select: {
+                name: true,
+                mediaAssets: { orderBy: { sortOrder: "asc" } }
+              }
+            }
+          }
         },
         salesReturns: { select: { orderItemId: true, quantity: true } },
         exchangeOrders: { select: { id: true } },
       },
     });
-    return { success: true, data: order };
+
+    if (!order) return { success: true, data: null };
+
+    const mappedOrder = {
+      ...order,
+      items: order.items.map((item: any) => ({
+        ...item,
+        product: {
+          name: item.product?.name || "Unknown Product",
+          price: item.price,
+          purchasePrice: item.variant?.pricingMatrix?.costPrice
+            ? Number(item.variant.pricingMatrix.costPrice)
+            : 0,
+          images: item.product?.mediaAssets && item.product.mediaAssets.length > 0
+            ? item.product.mediaAssets.map((asset: any) => asset.url)
+            : []
+        }
+      }))
+    };
+    return { success: true, data: mappedOrder };
   } catch (error: any) {
     console.error("Get order by ID error:", error);
     return { success: false, error: error.message || "Failed to fetch order." };
@@ -1351,10 +1486,22 @@ export async function searchOrdersForReturn(searchQuery: string) {
       include: {
         items: {
           include: {
-            product: {
-              select: { name: true, price: true, purchasePrice: true, images: true },
+            variant: {
+              select: {
+                pricingMatrix: {
+                  select: {
+                    costPrice: true
+                  }
+                }
+              }
             },
-          },
+            product: {
+              select: {
+                name: true,
+                mediaAssets: { orderBy: { sortOrder: "asc" } }
+              }
+            }
+          }
         },
         salesReturns: { select: { orderItemId: true, quantity: true } },
         exchangeOrders: { select: { id: true } },
@@ -1362,7 +1509,24 @@ export async function searchOrdersForReturn(searchQuery: string) {
       take: 10,
     });
 
-    return { success: true, data: orders };
+    const mappedOrders = orders.map((order: any) => ({
+      ...order,
+      items: order.items.map((item: any) => ({
+        ...item,
+        product: {
+          name: item.product?.name || "Unknown Product",
+          price: item.price,
+          purchasePrice: item.variant?.pricingMatrix?.costPrice
+            ? Number(item.variant.pricingMatrix.costPrice)
+            : 0,
+          images: item.product?.mediaAssets && item.product.mediaAssets.length > 0
+            ? item.product.mediaAssets.map((asset: any) => asset.url)
+            : []
+        }
+      }))
+    }));
+
+    return { success: true, data: mappedOrders };
   } catch (error: any) {
     console.error("Search orders for return error:", error);
     return { success: false, error: error.message || "Failed to search orders." };
