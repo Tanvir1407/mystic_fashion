@@ -208,12 +208,12 @@ export default function HomepageMain({
             <div className="w-12 h-[1px] bg-[#800020] mx-auto mt-4"></div>
           </div>
 
-          <div className="space-y-28">
+          <div className="space-y-12 md:space-y-28">
             {categories.map((cat, idx) => {
-              // Get top 3 products for this category
+              // Get top 4 products — 3 for desktop, 4 for mobile
               const catProducts = showroomProducts
                 .filter((p) => p.category?.toLowerCase() === cat.name.toLowerCase())
-                .slice(0, 3);
+                .slice(0, 4);
 
               if (catProducts.length === 0) return null;
 
@@ -221,13 +221,9 @@ export default function HomepageMain({
               const catImage = cat.image || FALLBACK_IMAGES[cat.name] || "/images/placeholder.png";
               const catLabel = getCategoryLabel(cat.name);
 
-              const bannerCard = (
-                <div
-                  key={`banner-${cat.name}`}
-                  className={`col-span-2 md:col-span-1 lg:col-span-1 relative overflow-hidden bg-neutral-950 shadow-xs h-full min-h-[360px] flex flex-col justify-end p-6 group/banner ${
-                    !isEven ? "md:order-last lg:order-last" : ""
-                  }`}
-                >
+              // Shared banner inner content
+              const bannerInner = (
+                <>
                   <Image
                     src={catImage}
                     alt={catLabel}
@@ -236,7 +232,6 @@ export default function HomepageMain({
                     className="object-cover opacity-65 transition-transform duration-700 ease-out group-hover/banner:scale-105"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-neutral-950 via-neutral-900/35 to-transparent z-10"></div>
-
                   <div className="relative z-20 flex flex-col">
                     <span className="text-[9px] uppercase tracking-widest text-[#FFD700] font-bold mb-1">
                       Exclusive Release
@@ -247,7 +242,6 @@ export default function HomepageMain({
                     <p className="text-[10px] text-neutral-300 font-sans tracking-wide mt-2">
                       {SUBTITLES[cat.name] || "Premium Collection"}
                     </p>
-
                     <Link
                       href={`/products?category=${cat.name}`}
                       className="mt-6 bg-[#800020] hover:bg-[#990026] text-white text-[10px] font-bold tracking-widest uppercase py-3 px-4 text-center transition-all active:scale-95 shadow-md shadow-black/20"
@@ -255,38 +249,57 @@ export default function HomepageMain({
                       Shop Collection
                     </Link>
                   </div>
-                </div>
+                </>
               );
 
-              const productCards = catProducts.map((product) => (
-                <div key={product.id} className="col-span-1 h-full">
-                  <ProductCard product={product} />
-                </div>
-              ));
-
               return (
-                <div key={cat.name} className="border-b border-neutral-100 pb-20 last:border-0 last:pb-0">
-                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 items-stretch">
+                <div key={cat.name} className="border-b border-neutral-100 pb-12 md:pb-20 last:border-0 last:pb-0">
+
+                  {/* ── MOBILE LAYOUT: banner always on top, 4 products below ── */}
+                  <div className="md:hidden space-y-4">
+                    {/* Banner — full width, fixed height on mobile */}
+                    <div className="relative w-full h-56 overflow-hidden bg-neutral-950 group/banner">
+                      {bannerInner}
+                    </div>
+                    {/* 4 products in 2-col grid */}
+                    <div className="grid grid-cols-2 gap-4">
+                      {catProducts.map((product) => (
+                        <ProductCard key={product.id} product={product} />
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* ── DESKTOP LAYOUT: alternating banner + 3 products ── */}
+                  <div className="hidden md:grid md:grid-cols-3 lg:grid-cols-4 gap-6 items-stretch">
                     {isEven ? (
                       <>
-                        {bannerCard}
-                        {productCards.map((card, cardIdx) => (
-                          <div key={cardIdx} className={`h-full ${cardIdx === 2 ? "hidden lg:block" : ""}`}>
-                            {card}
+                        {/* Banner left */}
+                        <div className="relative overflow-hidden bg-neutral-950 shadow-xs h-full min-h-[360px] flex flex-col justify-end p-6 group/banner">
+                          {bannerInner}
+                        </div>
+                        {/* 3 products right */}
+                        {catProducts.slice(0, 3).map((product, i) => (
+                          <div key={product.id} className={`h-full ${i === 2 ? "hidden lg:block" : ""}`}>
+                            <ProductCard product={product} />
                           </div>
                         ))}
                       </>
                     ) : (
                       <>
-                        {productCards.map((card, cardIdx) => (
-                          <div key={cardIdx} className={`h-full ${cardIdx === 2 ? "hidden lg:block" : "order-first"}`}>
-                            {card}
+                        {/* 3 products left */}
+                        {catProducts.slice(0, 3).map((product, i) => (
+                          <div key={product.id} className={`h-full ${i === 2 ? "hidden lg:block" : ""}`}>
+                            <ProductCard product={product} />
                           </div>
                         ))}
-                        {bannerCard}
+                        {/* Banner right */}
+                        <div className="relative overflow-hidden bg-neutral-950 shadow-xs h-full min-h-[360px] flex flex-col justify-end p-6 group/banner">
+                          {bannerInner}
+                        </div>
                       </>
                     )}
                   </div>
+
                 </div>
               );
             })}

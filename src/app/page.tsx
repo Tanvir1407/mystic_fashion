@@ -34,26 +34,26 @@ export default async function Home() {
         }).catch(e => { console.error(e); return []; })
       )
     ),
-    // 2. Showrooms: top 3 products (isFeatured: true first, then top sold)
+    // 2. Showrooms: top 4 products (isFeatured: true first, then top sold)
     Promise.all(
       categoriesList.map(async (catName) => {
         try {
-          // Fetch featured products (up to 3)
+          // Fetch featured products (up to 4)
           const featured = await prisma.product.findMany({
             where: {
               isPublished: true,
               category: { equals: catName, mode: "insensitive" },
               isFeatured: true
             },
-            take: 3,
+            take: 4,
             include: { discount: true, variants: true }
           });
 
           let finalProducts = [...featured];
 
-          // If less than 3, fill with top sold items
-          if (finalProducts.length < 3) {
-            const remainingCount = 3 - finalProducts.length;
+          // If less than 4, fill with top sold items
+          if (finalProducts.length < 4) {
+            const remainingCount = 4 - finalProducts.length;
             const topSold = await prisma.product.findMany({
               where: {
                 isPublished: true,
