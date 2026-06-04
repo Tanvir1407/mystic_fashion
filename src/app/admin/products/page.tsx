@@ -67,7 +67,15 @@ export default async function AdminProductsPage({ searchParams }: { searchParams
         skip: (page - 1) * PER_PAGE,
         take: PER_PAGE,
         orderBy: { createdAt: "desc" },
-        include: { variants: true, brand: true }
+        include: {
+          brand: true,
+          variants: {
+            include: {
+              pricingMatrix: true,
+              stocks: { where: { warehouse: { code: "WH-MAIN" } } }
+            }
+          }
+        }
       }),
       prisma.product.count({ where: whereClause }),
       prisma.category.findMany({
@@ -76,7 +84,20 @@ export default async function AdminProductsPage({ searchParams }: { searchParams
         orderBy: { name: "asc" }
       }),
     ]);
-    products = fetchedProducts;
+    products = fetchedProducts.map(p => {
+      const basePrice = p.variants?.[0]?.pricingMatrix?.basePrice
+        ? Number(p.variants[0].pricingMatrix.basePrice)
+        : p.price;
+
+      return {
+        ...p,
+        price: basePrice,
+        variants: p.variants.map((v: any) => ({
+          ...v,
+          stock: v.stocks?.[0]?.availableQuantity ?? v.stock ?? 0
+        }))
+      };
+    });
     totalCount = fetchedCount;
     fetchedCategories = activeCategories;
   } catch (error) {

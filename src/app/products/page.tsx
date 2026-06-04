@@ -108,6 +108,7 @@ export default async function ProductsPage({
         categoryRel: true,
         subcategory: true,
         discount: true,
+        mediaAssets: { orderBy: { sortOrder: "asc" } },
         variants: {
           select: {
             id: true,
@@ -117,6 +118,8 @@ export default async function ProductsPage({
             sku: true,
             stock: true,
             order: true,
+            pricingMatrix: true,
+            stocks: { where: { warehouse: { code: "WH-MAIN" } } }
           }
         }
       },
@@ -151,12 +154,30 @@ export default async function ProductsPage({
     }),
   ]);
 
-  // Sort product variants by the order field in place
-  const rawProducts = productsRes || [];
-  rawProducts.forEach((product) => {
-    if (product.variants) {
-      product.variants.sort((a, b) => (a.order || 0) - (b.order || 0));
-    }
+  // Map products to legacy structure so the client page remains unaffected
+  const rawProducts = (productsRes || []).map((product: any) => {
+    const basePrice = product.variants?.[0]?.pricingMatrix?.basePrice
+      ? Number(product.variants[0].pricingMatrix.basePrice)
+      : product.price;
+
+    const displayImages = (product.mediaAssets && product.mediaAssets.length > 0)
+      ? product.mediaAssets.map((asset: any) => asset.url)
+      : (product.images || []);
+
+    const mappedVariants = product.variants?.map((v: any) => ({
+      ...v,
+      stock: v.stocks?.[0]?.availableQuantity ?? v.stock ?? 0
+    })) || [];
+
+    // Sort variants by order field in-place
+    mappedVariants.sort((a: any, b: any) => (a.order || 0) - (b.order || 0));
+
+    return {
+      ...product,
+      price: basePrice,
+      images: displayImages,
+      variants: mappedVariants
+    };
   });
 
   // Apply Price Range filtering in-memory on the server side (to fully support active dynamic discounts in Prisma without RAW SQL)

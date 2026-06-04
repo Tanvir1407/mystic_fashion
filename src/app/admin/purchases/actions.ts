@@ -4,6 +4,7 @@ import prisma from "@/lib/prisma";
 import { withAuditLog } from "@/lib/audit";
 import { revalidatePath } from "next/cache";
 import { getOrCreateSystemAccount, createDoubleEntryJournal } from "@/lib/accounting";
+import { updateStockDualWrite } from "@/lib/inventory";
 
 // ─── PURCHASE CRUD ────────────────────────────────────────────────────────────
 
@@ -69,9 +70,12 @@ async function _createPurchase(
           );
           const oldAvgPrice = productBefore.purchasePrice || 0;
 
-          await tx.productVariant.update({
-            where: { id: item.variantId },
-            data: { stock: { increment: item.quantity } },
+          await updateStockDualWrite(tx, {
+            variantId: item.variantId,
+            quantityChange: item.quantity,
+            movementType: "RECEIPT",
+            referenceId: purchase.id,
+            referenceType: "PURCHASE",
           });
 
           let newAvgPrice = item.unitPrice;
@@ -147,9 +151,12 @@ async function _updatePurchase(
       if (!existingPurchase) throw new Error("Purchase not found");
 
       for (const oldItem of existingPurchase.items) {
-        await tx.productVariant.update({
-          where: { id: oldItem.variantId },
-          data: { stock: { decrement: oldItem.quantity } },
+        await updateStockDualWrite(tx, {
+          variantId: oldItem.variantId,
+          quantityChange: -oldItem.quantity,
+          movementType: "ADJUSTMENT",
+          referenceId: purchaseId,
+          referenceType: "PURCHASE_UPDATE_RESET",
         });
       }
 
@@ -197,9 +204,12 @@ async function _updatePurchase(
           );
           const oldAvgPrice = productBefore.purchasePrice || 0;
 
-          await tx.productVariant.update({
-            where: { id: item.variantId },
-            data: { stock: { increment: item.quantity } },
+          await updateStockDualWrite(tx, {
+            variantId: item.variantId,
+            quantityChange: item.quantity,
+            movementType: "RECEIPT",
+            referenceId: purchaseId,
+            referenceType: "PURCHASE_UPDATE",
           });
 
           let newAvgPrice = item.unitPrice;
@@ -289,9 +299,12 @@ async function _deletePurchase(id: string) {
       if (!purchase) throw new Error("Purchase not found");
 
       for (const item of purchase.items) {
-        await tx.productVariant.update({
-          where: { id: item.variantId },
-          data: { stock: { decrement: item.quantity } },
+        await updateStockDualWrite(tx, {
+          variantId: item.variantId,
+          quantityChange: -item.quantity,
+          movementType: "ADJUSTMENT",
+          referenceId: id,
+          referenceType: "PURCHASE_DELETE",
         });
       }
 
@@ -343,18 +356,24 @@ async function _updatePurchaseStatus(id: string, newStatus: string) {
 
       if (oldStatus === "COMPLETED" && newStatus !== "COMPLETED") {
         for (const item of purchase.items) {
-          await tx.productVariant.update({
-            where: { id: item.variantId },
-            data: { stock: { decrement: item.quantity } },
+          await updateStockDualWrite(tx, {
+            variantId: item.variantId,
+            quantityChange: -item.quantity,
+            movementType: "ADJUSTMENT",
+            referenceId: id,
+            referenceType: "PURCHASE_STATUS_CHANGE",
           });
         }
       }
 
       if (oldStatus !== "COMPLETED" && newStatus === "COMPLETED") {
         for (const item of purchase.items) {
-          await tx.productVariant.update({
-            where: { id: item.variantId },
-            data: { stock: { increment: item.quantity } },
+          await updateStockDualWrite(tx, {
+            variantId: item.variantId,
+            quantityChange: item.quantity,
+            movementType: "RECEIPT",
+            referenceId: id,
+            referenceType: "PURCHASE_STATUS_CHANGE",
           });
         }
       }
@@ -398,9 +417,12 @@ async function _restorePurchase(id: string) {
       if (!purchase) throw new Error("Purchase not found after restore");
 
       for (const item of purchase.items) {
-        await tx.productVariant.update({
-          where: { id: item.variantId },
-          data: { stock: { increment: item.quantity } },
+        await updateStockDualWrite(tx, {
+          variantId: item.variantId,
+          quantityChange: item.quantity,
+          movementType: "RECEIPT",
+          referenceId: id,
+          referenceType: "PURCHASE_RESTORE",
         });
       }
 

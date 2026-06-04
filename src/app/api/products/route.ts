@@ -83,34 +83,51 @@ export async function GET(req: NextRequest) {
           brand: { select: { id: true, name: true } },
           categoryRel: { select: { id: true, name: true } },
           subcategory: { select: { id: true, name: true } },
-          variants: { orderBy: { order: "asc" } },
+          mediaAssets: { orderBy: { sortOrder: "asc" } },
+          variants: {
+            orderBy: { order: "asc" },
+            include: {
+              pricingMatrix: true,
+              stocks: { where: { warehouse: { code: "WH-MAIN" } } }
+            }
+          },
         },
       }),
     ]);
 
-    const data = products.map((p) => ({
-      id: p.id,
-      name: p.name,
-      slug: p.slug,
-      price: p.price,
-      finalPrice: calcFinalPrice(p),
-      images: p.images,
-      isFeatured: p.isFeatured,
-      isCustomize: p.isCustomize,
-      brand: p.brand,
-      category: p.categoryRel,
-      subcategory: p.subcategory,
-      discount: p.discount
-        ? { type: p.discount.discountType, value: p.discount.value }
-        : null,
-      variants: p.variants.map((v) => ({
-        id: v.id,
-        size: v.size,
-        color: v.color,
-        colorCode: v.colorCode,
-        stock: v.stock,
-      })),
-    }));
+    const data = products.map((p) => {
+      const basePrice = p.variants?.[0]?.pricingMatrix?.basePrice
+        ? Number(p.variants[0].pricingMatrix.basePrice)
+        : p.price;
+
+      const displayImages = (p.mediaAssets && p.mediaAssets.length > 0)
+        ? p.mediaAssets.map((asset: any) => asset.url)
+        : ((p as any).images || []);
+
+      return {
+        id: p.id,
+        name: p.name,
+        slug: p.slug,
+        price: basePrice,
+        finalPrice: calcFinalPrice({ ...p, price: basePrice }),
+        images: displayImages,
+        isFeatured: p.isFeatured,
+        isCustomize: p.isCustomize,
+        brand: p.brand,
+        category: p.categoryRel,
+        subcategory: p.subcategory,
+        discount: p.discount
+          ? { type: p.discount.discountType, value: p.discount.value }
+          : null,
+        variants: p.variants.map((v) => ({
+          id: v.id,
+          size: v.size,
+          color: v.color,
+          colorCode: v.colorCode,
+          stock: v.stocks?.[0]?.availableQuantity ?? v.stock ?? 0,
+        })),
+      };
+    });
 
     return NextResponse.json({
       success: true,

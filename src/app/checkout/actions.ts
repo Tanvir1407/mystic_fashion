@@ -174,7 +174,59 @@ export async function placeOrderAction(payload: {
       }
       const customId = `${datePrefix}${nextNum.toString().padStart(2, '0')}`;
 
-      // 1. Create the order & items
+      // 1. Validate stock availability and resolve variant IDs first
+      const variantMap = new Map<string, { id: string; availableStock: number; trackStock: boolean }>();
+      for (const item of payload.items) {
+        if (!item.size) {
+          throw new Error(`Size not selected for ${item.name}`);
+        }
+
+        const variant = await tx.productVariant.findUnique({
+          where: {
+            productId_size_color: {
+              productId: item.id,
+              size: item.size,
+              color: item.color || "Default"
+            }
+          },
+          include: {
+            product: {
+              select: {
+                trackStock: true
+              }
+            },
+            stocks: {
+              where: {
+                warehouse: {
+                  code: "WH-MAIN"
+                }
+              }
+            }
+          }
+        });
+
+        if (!variant) {
+          throw new Error(`Variant not found for ${item.name} (${item.size})`);
+        }
+
+        const availableStock = variant.stocks[0]?.availableQuantity ?? 0;
+        variantMap.set(`${item.id}_${item.size}_${item.color || "Default"}`, {
+          id: variant.id,
+          availableStock,
+          trackStock: variant.product.trackStock ?? false
+        });
+      }
+
+      // Check stock limits
+      for (const item of payload.items) {
+        const key = `${item.id}_${item.size}_${item.color || "Default"}`;
+        const vInfo = variantMap.get(key);
+        if (vInfo && vInfo.trackStock && vInfo.availableStock < item.quantity) {
+          throw new Error(`Variant "${item.name} (${item.size})" does not have enough stock (Available: ${vInfo.availableStock}).`);
+        }
+      }
+
+      // 2. Create the order & items
       const order = await tx.order.create({
         data: {
           id: customId,
@@ -197,9 +249,13 @@ export async function placeOrderAction(payload: {
           customerId: customerId,
           items: {
             create: payload.items.flatMap((item) => {
+              const key = `${item.id}_${item.size}_${item.color || "Default"}`;
+              const variantId = variantMap.get(key)?.id || null;
+
               if (item.requiresPrint && item.printDetails && item.printDetails.length > 0) {
                 const printedItems = item.printDetails.map((pd: any) => ({
                   productId: item.id,
+                  variantId,
                   size: item.size || "M",
                   quantity: 1,
                   price: item.price,
@@ -212,6 +268,7 @@ export async function placeOrderAction(payload: {
                 if (remainingQty > 0) {
                   printedItems.push({
                     productId: item.id,
+                    variantId,
                     size: item.size || "M",
                     quantity: remainingQty,
                     price: item.price,
@@ -225,6 +282,7 @@ export async function placeOrderAction(payload: {
               } else {
                 return [{
                   productId: item.id,
+                  variantId,
                   size: item.size || "M",
                   quantity: item.quantity,
                   price: item.price,
@@ -239,7 +297,7 @@ export async function placeOrderAction(payload: {
         },
       });
 
-      // 2. Log Coupon Usage and delete lock
+      // 3. Log Coupon Usage and delete lock
       if (sanitizedCoupon && couponIdToLog) {
         await tx.couponUsage.create({
           data: {
@@ -262,38 +320,6 @@ export async function placeOrderAction(payload: {
             ]
           }
         });
-      }
-
-      // 3. Validate stock availability but don't decrement yet
-      for (const item of payload.items) {
-        if (!item.size) {
-          throw new Error(`Size not selected for ${item.name}`);
-        }
-
-        const variant = await tx.productVariant.findUnique({
-          where: {
-            productId_size_color: {
-              productId: item.id,
-              size: item.size,
-              color: item.color || "Default"
-            }
-          },
-          include: {
-            product: {
-              select: {
-                trackStock: true
-              }
-            }
-          }
-        });
-
-        if (!variant) {
-          throw new Error(`Variant not found for ${item.name} (${item.size})`);
-        }
-
-        if (variant.product.trackStock && variant.stock < item.quantity) {
-          throw new Error(`Variant "${item.name} (${item.size})" does not have enough stock (Available: ${variant.stock}).`);
-        }
       }
 
       revalidatePath("/admin/products");
@@ -366,16 +392,26 @@ export async function syncCartPrices(productIds: string[]) {
         id: { in: productIds },
         isPublished: true
       },
-      include: { discount: true }
+      include: {
+        discount: true,
+        variants: {
+          orderBy: { order: "asc" },
+          include: { pricingMatrix: true }
+        }
+      }
     });
 
     return products.map(product => {
-      let finalPrice = product.price;
+      const basePrice = product.variants?.[0]?.pricingMatrix?.basePrice
+        ? Number(product.variants[0].pricingMatrix.basePrice)
+        : product.price;
+
+      let finalPrice = basePrice;
       if (product.discount && product.discount.active) {
         if (product.discount.discountType === "PERCENTAGE") {
-          finalPrice = finalPrice - (finalPrice * (product.discount.value / 100));
+          finalPrice = basePrice - (basePrice * (product.discount.value / 100));
         } else {
-          finalPrice = finalPrice - product.discount.value;
+          finalPrice = basePrice - product.discount.value;
         }
       }
       return { id: product.id, price: roundPrice(finalPrice) };

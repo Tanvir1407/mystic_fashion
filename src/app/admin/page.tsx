@@ -32,8 +32,9 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
     staffPerformance,
     recentOrders
   ] = await Promise.all([
-    prisma.productVariant.aggregate({
-      _sum: { stock: true }
+    prisma.stock.aggregate({
+      where: { warehouse: { code: "WH-MAIN" } },
+      _sum: { availableQuantity: true }
     }),
     prisma.orderItem.aggregate({
       where: {
@@ -138,7 +139,7 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
   ]);
 
   // Extract Quantity-based metrics
-  const currentStockCount = stockSum._sum.stock || 0;
+  const currentStockCount = stockSum._sum.availableQuantity || 0;
   const pendingOrderQty = pendingQtySum._sum.quantity || 0;
   const deliveredProductQty = deliveredQtySum._sum.quantity || 0;
   const cancelProductQty = cancelledQtySum._sum.quantity || 0;
