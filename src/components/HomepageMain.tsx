@@ -6,38 +6,54 @@ import Image from "next/image";
 import ProductCard from "./ProductCard";
 
 interface HomepageMainProps {
-  products: any[];
+  initialNewArrivalsProducts: any[];
+  showroomProducts: any[];
 }
 
 const CATEGORIES = [
   { name: "Jersey", image: "/images/jersey_category.png", label: "JERSEYS" },
-  { name: "T-shirt", image: "/images/tshirt_category.png", label: "T-SHIRTS" },
-  { name: "Perfume", image: "/images/perfume_category.png", label: "PERFUMES" },
-  { name: "Polo", image: "/images/polo_category.png", label: "POLOS" },
   { name: "Shoes", image: "/images/shoes_category.png", label: "SHOES" },
+  { name: "Perfume", image: "/images/perfume_category.png", label: "PERFUMES" },
+  { name: "T-shirt", image: "/images/tshirt_category.png", label: "T-SHIRTS" },
+  { name: "Polo", image: "/images/polo_category.png", label: "POLOS" },
   { name: "Watch", image: "/images/watch_category.png", label: "WATCHES" },
 ];
 
-const TABS = ["All", "Jersey", "T-shirt", "Perfume", "Polo", "Shoes", "Watch"];
+const TABS = ["All", "Jersey", "Shoes", "Perfume", "T-shirt", "Polo", "Watch"];
 
-export default function HomepageMain({ products }: HomepageMainProps) {
+export default function HomepageMain({ initialNewArrivalsProducts, showroomProducts }: HomepageMainProps) {
   const [selectedTab, setSelectedTab] = useState("All");
 
-  // Filter products for the New Arrivals section (limit to 4 products)
-  const newArrivalsProducts = products
-    .filter((product) => {
-      if (selectedTab === "All") return true;
-      return product.category?.toLowerCase() === selectedTab.toLowerCase();
-    })
-    .slice(0, 4);
+  // Filter products for the New Arrivals section dynamically
+  const getNewArrivals = () => {
+    // Sort all products strictly by creation date (newest first)
+    const sortedByRecent = [...initialNewArrivalsProducts].sort(
+      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    );
 
-  // Filter products for Trending Collections (Shoes and Watches)
-  const trendingProducts = products
-    .filter((product) => {
-      const cat = product.category?.toLowerCase();
-      return cat === "shoes" || cat === "watch";
-    })
-    .slice(0, 8); // Top 8 items for a balanced grid
+    if (selectedTab === "All") {
+      // 'All' tab: 4 recent products, each from a unique category
+      const selected: any[] = [];
+      const seenCategories = new Set<string>();
+
+      for (const p of sortedByRecent) {
+        if (selected.length >= 4) break;
+        const cat = (p.category || "Uncategorized").toLowerCase();
+        if (!seenCategories.has(cat)) {
+          seenCategories.add(cat);
+          selected.push(p);
+        }
+      }
+      return selected;
+    } else {
+      // Category tab: 4 recent products from the selected category
+      return sortedByRecent
+        .filter((p) => p.category?.toLowerCase() === selectedTab.toLowerCase())
+        .slice(0, 4);
+    }
+  };
+
+  const newArrivalsProducts = getNewArrivals();
 
   return (
     <div className="bg-[#FAFAFA] min-h-screen text-neutral-800 antialiased font-sans">
@@ -144,72 +160,109 @@ export default function HomepageMain({ products }: HomepageMainProps) {
         </div>
       </section>
 
-      {/* 3. PREMIUM EDITORIAL BANNER SECTION */}
-      <section className="relative w-full h-[50vh] min-h-[400px] md:h-[65vh] flex items-center justify-center overflow-hidden">
-        {/* Background Image */}
-        <Image
-          src="/images/editorial_banner.png"
-          alt="Luxury Editorial Lookbook"
-          unoptimized={true}
-          fill
-          className="object-cover"
-          priority
-        />
-        
-        {/* Dark aesthetic contrast overlay */}
-        <div className="absolute inset-0 bg-black/55 backdrop-blur-[2px]"></div>
-
-        {/* Content Box */}
-        <div className="relative z-10 text-center px-6 max-w-3xl">
-          <span className="text-[10px] md:text-xs uppercase tracking-widest text-[#FFD700] font-bold block mb-4">
-            Mystic Lookbook 2026
-          </span>
-          <h2 className="font-serif text-2xl sm:text-3xl md:text-5xl text-white tracking-wide leading-tight uppercase mb-8">
-            Precision in Every Thread.<br />Elegance in Every Note.
-          </h2>
-          
-          <Link
-            href="/products"
-            className="inline-block bg-[#800020] hover:bg-[#990026] text-white font-bold text-xs uppercase tracking-widest py-4 px-10 transition-all duration-300 active:scale-95 shadow-lg shadow-black/30 rounded-full"
-          >
-            ORDER NOW
-          </Link>
-        </div>
-      </section>
-
-      {/* 4. TRENDING COLLECTIONS SECTION */}
-      <section className="py-24 px-4 bg-white">
+      {/* 3. DYNAMIC CATEGORY SHOWCASE SHOWROOMS */}
+      <section className="py-24 px-4 bg-white border-t border-neutral-100">
         <div className="container mx-auto">
-          <div className="text-center mb-16">
+          <div className="text-center mb-20">
+            <span className="text-[10px] md:text-xs uppercase tracking-widest text-[#800020] font-bold block mb-3">
+              The Curated Showrooms
+            </span>
             <h2 className="font-serif text-3xl md:text-4xl text-neutral-900 tracking-widest font-light uppercase">
-              Trending Collections
+              The Collection Editorial
             </h2>
-            <p className="text-[10px] md:text-xs tracking-widest text-neutral-400 uppercase mt-3 font-medium">
-              Curated luxury timepieces and designer sneakers.
-            </p>
             <div className="w-12 h-[1px] bg-[#800020] mx-auto mt-4"></div>
           </div>
 
-          {/* Product Grid: 4 columns on desktop, 2 columns on mobile */}
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6 lg:gap-8">
-            {trendingProducts.map((product) => (
-              <ProductCard key={product.id} product={product} />
-            ))}
+          <div className="space-y-28">
+            {CATEGORIES.map((cat, idx) => {
+              // Get top 3 products for this category to align inside our grid
+              const catProducts = showroomProducts
+                .filter((p) => p.category?.toLowerCase() === cat.name.toLowerCase())
+                .slice(0, 3);
 
-            {trendingProducts.length === 0 && (
-              <div className="col-span-full py-24 text-center text-neutral-400 font-serif text-sm tracking-widest italic">
-                Trending items will be featured here.
-              </div>
-            )}
-          </div>
+              if (catProducts.length === 0) return null;
 
-          <div className="flex justify-center mt-16">
-            <Link
-              href="/products?sort=popular"
-              className="inline-flex items-center gap-2 border border-neutral-300 hover:border-neutral-800 text-neutral-800 hover:text-neutral-950 transition-colors px-8 py-3.5 text-xs font-bold uppercase tracking-widest bg-white"
-            >
-              Explore Trending
-            </Link>
+              const isEven = idx % 2 === 0;
+
+              // Tailored luxury subtitles for the banners
+              const subtitles: Record<string, string> = {
+                "Jersey": "Pitch Pride & Premium Wear",
+                "T-shirt": "Everyday Luxury Cotton Essentials",
+                "Perfume": "Olfactory Art & Timeless Scents",
+                "Polo": "Refined Comfort & Classic Detailing",
+                "Shoes": "Step in Premium Designer Sneakers",
+                "Watch": "Timeless Precision & Masterful Craft",
+              };
+
+              const bannerCard = (
+                <div
+                  key={`banner-${cat.name}`}
+                  className={`col-span-2 md:col-span-1 lg:col-span-1 relative overflow-hidden bg-neutral-950 shadow-xs aspect-[3/4] flex flex-col justify-end p-6 group/banner ${
+                    !isEven ? "md:order-last lg:order-last" : ""
+                  }`}
+                >
+                  <Image
+                    src={cat.image}
+                    alt={cat.label}
+                    unoptimized={true}
+                    fill
+                    className="object-cover opacity-65 transition-transform duration-700 ease-out group-hover/banner:scale-105"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-neutral-950 via-neutral-900/35 to-transparent z-10"></div>
+
+                  <div className="relative z-20 flex flex-col">
+                    <span className="text-[9px] uppercase tracking-widest text-[#FFD700] font-bold mb-1">
+                      Exclusive Release
+                    </span>
+                    <h3 className="font-serif text-2xl text-white tracking-widest uppercase font-light leading-tight">
+                      {cat.label}
+                    </h3>
+                    <p className="text-[10px] text-neutral-300 font-sans tracking-wide mt-2">
+                      {subtitles[cat.name] || "Premium Apparel Selection"}
+                    </p>
+
+                    <Link
+                      href={`/products?category=${cat.name}`}
+                      className="mt-6 bg-[#800020] hover:bg-[#990026] text-white text-[10px] font-bold tracking-widest uppercase py-3 px-4 text-center transition-all active:scale-95 shadow-md shadow-black/20"
+                    >
+                      Shop Collection
+                    </Link>
+                  </div>
+                </div>
+              );
+
+              const productCards = catProducts.map((product) => (
+                <div key={product.id} className="col-span-1">
+                  <ProductCard product={product} />
+                </div>
+              ));
+
+              return (
+                <div key={cat.name} className="border-b border-neutral-100 pb-20 last:border-0 last:pb-0">
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+                    {isEven ? (
+                      <>
+                        {bannerCard}
+                        {productCards.map((card, cardIdx) => (
+                          <div key={cardIdx} className={cardIdx === 2 ? "hidden lg:block" : ""}>
+                            {card}
+                          </div>
+                        ))}
+                      </>
+                    ) : (
+                      <>
+                        {productCards.map((card, cardIdx) => (
+                          <div key={cardIdx} className={cardIdx === 2 ? "hidden lg:block" : "order-first"}>
+                            {card}
+                          </div>
+                        ))}
+                        {bannerCard}
+                      </>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
       </section>

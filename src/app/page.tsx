@@ -9,16 +9,67 @@ import { getFooterData } from "@/lib/footer";
 export const dynamic = "force-dynamic";
 
 export default async function Home() {
-  const [productsRes, heroSlidesRes, footerData] = await Promise.all([
-    prisma.product.findMany({
-      where: { isPublished: true },
-      take: 80,
-      orderBy: [
-        { isFeatured: "desc" },
-        { createdAt: "desc" }
-      ],
-      include: { discount: true, variants: true }
-    }).catch(e => { console.error(e); return []; }),
+  const categoriesList = ["Jersey", "Shoes", "Perfume", "T-shirt", "Polo", "Watch"];
+
+  const [categoryRecentRes, categoryShowroomRes, heroSlidesRes, footerData] = await Promise.all([
+    // 1. New Arrivals: top 4 recent products per category
+    Promise.all(
+      categoriesList.map((cat) =>
+        prisma.product.findMany({
+          where: {
+            isPublished: true,
+            category: { equals: cat, mode: "insensitive" }
+          },
+          take: 4,
+          orderBy: { createdAt: "desc" },
+          include: { discount: true, variants: true }
+        }).catch(e => { console.error(e); return []; })
+      )
+    ),
+    // 2. Showrooms: top 3 products (isFeatured: true first, then top sold)
+    Promise.all(
+      categoriesList.map(async (catName) => {
+        try {
+          // Fetch featured products (up to 3)
+          const featured = await prisma.product.findMany({
+            where: {
+              isPublished: true,
+              category: { equals: catName, mode: "insensitive" },
+              isFeatured: true
+            },
+            take: 3,
+            include: { discount: true, variants: true }
+          });
+
+          let finalProducts = [...featured];
+
+          // If less than 3, fill with top sold items
+          if (finalProducts.length < 3) {
+            const remainingCount = 3 - finalProducts.length;
+            const topSold = await prisma.product.findMany({
+              where: {
+                isPublished: true,
+                category: { equals: catName, mode: "insensitive" },
+                id: { notIn: finalProducts.map(p => p.id) }
+              },
+              orderBy: {
+                orderItems: {
+                  _count: "desc"
+                }
+              },
+              take: remainingCount,
+              include: { discount: true, variants: true }
+            });
+            finalProducts = [...finalProducts, ...topSold];
+          }
+
+          return finalProducts;
+        } catch (e) {
+          console.error(`Failed to fetch showroom products for ${catName}:`, e);
+          return [];
+        }
+      })
+    ),
     prisma.heroSlide.findMany({
       where: { active: true },
       orderBy: { sortOrder: "asc" }
@@ -26,10 +77,18 @@ export default async function Home() {
     getFooterData()
   ]);
 
-  const products = productsRes;
+  const newArrivalsProducts = categoryRecentRes.flat();
+  const showroomProducts = categoryShowroomRes.flat();
   const heroSlides = heroSlidesRes;
 
-  products.forEach(product => {
+  // Sort variants by order in place
+  newArrivalsProducts.forEach(product => {
+    if (product.variants) {
+      product.variants.sort((a, b) => (a.order || 0) - (b.order || 0));
+    }
+  });
+
+  showroomProducts.forEach(product => {
     if (product.variants) {
       product.variants.sort((a, b) => (a.order || 0) - (b.order || 0));
     }
@@ -40,7 +99,10 @@ export default async function Home() {
       <Header />
       <HeroCarousel slides={heroSlides} />
 
-      <HomepageMain products={products} />
+      <HomepageMain 
+        initialNewArrivalsProducts={newArrivalsProducts} 
+        showroomProducts={showroomProducts} 
+      />
 
       <Footer config={footerData} />
       <SidebarCart />
