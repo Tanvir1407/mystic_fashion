@@ -29,6 +29,9 @@ const config: Config = {
         primary: "#800020",
         gold: "#FFD700",
       },
+      fontFamily: {
+        serif: ["var(--font-serif)", "serif"],
+      },
     },
   },
   plugins: [
