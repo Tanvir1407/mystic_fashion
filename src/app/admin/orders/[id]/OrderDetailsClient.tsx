@@ -256,7 +256,7 @@ export default function OrderDetailsClient({
               )}
             </div>
 
-            <div className="divide-y divide-slate-100">
+            <div className="divide-y divide-slate-100 max-h-[400px] overflow-y-auto">
               {formData.items.map((item: any, index: number) => (
                 <div key={item.id} className="flex items-start gap-4 px-5 py-4 hover:bg-slate-50/50 transition-colors">
                   {/* Product Image */}
