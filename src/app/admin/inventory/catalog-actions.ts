@@ -109,17 +109,20 @@ export const createCategory = withAuditLog(_createCategory, {
   describe: (args) => `Created category "${args[0].name.trim()}"`,
 });
 
-async function _updateCategory(id: string, data: { name: string; active?: boolean }) {
+async function _updateCategory(id: string, data: { name: string; active?: boolean; image?: string | null; sortOrder?: number }) {
   try {
     const category = await prisma.category.update({
       where: { id },
       data: { 
         name: data.name.trim(),
-        active: data.active !== undefined ? data.active : true
+        active: data.active !== undefined ? data.active : true,
+        ...(data.image !== undefined && { image: data.image }),
+        ...(data.sortOrder !== undefined && { sortOrder: data.sortOrder }),
       }
     });
     revalidatePath("/admin/inventory/categories");
     revalidatePath("/admin/products/new");
+    revalidatePath("/");
     return { success: true, category };
   } catch (error: any) {
     if (error.code === 'P2002') return { success: false, error: "Category name already exists." };
@@ -134,6 +137,34 @@ export const updateCategory = withAuditLog(_updateCategory, {
   fetchBefore: (id) => prisma.category.findUnique({ where: { id } }),
   fetchAfter: (id) => prisma.category.findUnique({ where: { id } }),
   describe: (args) => `Updated category ${args[0]}`,
+});
+
+// ─── CATEGORY DISPLAY SETTINGS (image + sortOrder only) ──────────────────────
+
+async function _updateCategoryDisplay(id: string, data: { image?: string | null; sortOrder?: number }) {
+  try {
+    const category = await prisma.category.update({
+      where: { id },
+      data: {
+        ...(data.image !== undefined && { image: data.image }),
+        ...(data.sortOrder !== undefined && { sortOrder: data.sortOrder }),
+      }
+    });
+    revalidatePath("/admin/inventory/categories");
+    revalidatePath("/");
+    return { success: true, category };
+  } catch (error: any) {
+    return { success: false, error: error.message || "Failed to update category display settings" };
+  }
+}
+
+export const updateCategoryDisplay = withAuditLog(_updateCategoryDisplay, {
+  entityType: "Category",
+  action: "UPDATE",
+  getEntityId: (args) => args[0],
+  fetchBefore: (id) => prisma.category.findUnique({ where: { id } }),
+  fetchAfter: (id) => prisma.category.findUnique({ where: { id } }),
+  describe: (args) => `Updated category display settings for ${args[0]}`,
 });
 
 async function _deleteCategory(id: string) {
