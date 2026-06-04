@@ -108,17 +108,19 @@ model Brand {
 }
 
 model Category {
-  id                String                     @id @default(uuid())
-  name              String                     @unique
-  active            Boolean                    @default(true)
-  createdAt         DateTime                   @default(now())
-  updatedAt         DateTime                   @updatedAt
-  deletedAt         DateTime?
-  products          Product[]
-  subcategories     Subcategory[]
+  id            String        @id @default(uuid())
+  name          String        @unique
+  active        Boolean       @default(true)
+  image         String?       // Custom homepage image URL (uploaded via admin)
+  sortOrder     Int           @default(0) // Homepage display order (lower = first)
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  deletedAt     DateTime?
+  products      Product[]
+  subcategories Subcategory[]
   attributeMappings CategoryAttributeMapping[]
-
   @@index([deletedAt])
+  @@index([sortOrder])
 }
 
 model Subcategory {

@@ -17,6 +17,7 @@ body {
 }
 
 @layer components {
+
   /* Modern Swiper Pagination */
   .swiper-pagination-custom .swiper-pagination-bullet {
     background-color: rgba(255, 255, 255, 0.7);
@@ -26,6 +27,7 @@ body {
     border-radius: 4px;
     transition: all 0.3s ease;
   }
+
   .swiper-pagination-custom .swiper-pagination-bullet-active {
     background-color: var(--primary);
     width: 48px;
@@ -51,6 +53,7 @@ body {
    normal desktop/mobile UI.
    ========================================================================== */
 @media print {
+
   /* --- Layer 1: html & body root reset --- */
   html,
   body {
@@ -80,13 +83,13 @@ body {
 
   /* --- Layer 3: Every div / main / section / aside directly under body --- */
   /* This covers the admin layout's root flex wrapper and main content wrapper */
-  body > div,
-  body > main,
-  body > section,
-  body > aside,
+  body>div,
+  body>main,
+  body>section,
+  body>aside,
   /* Next.js wraps children one level deeper */
-  body > div > div,
-  body > div > main {
+  body>div>div,
+  body>div>main {
     height: auto !important;
     min-height: 0 !important;
     max-height: none !important;
@@ -99,12 +102,29 @@ body {
 
   /* --- Layer 4: Surgical override for Tailwind utility classes --- */
   /* These target the exact classes used by the admin layout */
-  .h-screen      { height: auto !important; }
-  .overflow-hidden { overflow: visible !important; }
-  .overflow-x-hidden { overflow-x: visible !important; }
-  .overflow-y-auto  { overflow: visible !important; }
-  .overflow-clip    { overflow: visible !important; }
-  .flex-1          { flex: none !important; }
+  .h-screen {
+    height: auto !important;
+  }
+
+  .overflow-hidden {
+    overflow: visible !important;
+  }
+
+  .overflow-x-hidden {
+    overflow-x: visible !important;
+  }
+
+  .overflow-y-auto {
+    overflow: visible !important;
+  }
+
+  .overflow-clip {
+    overflow: visible !important;
+  }
+
+  .flex-1 {
+    flex: none !important;
+  }
 
   /* --- Layer 5: Hide all chrome and non-invoice UI during print --- */
   aside,

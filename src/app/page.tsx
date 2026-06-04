@@ -2,15 +2,19 @@ import Header from "@/components/Header";
 import HeroCarousel from "@/components/HeroCarousel";
 import Footer from "@/components/Footer";
 import SidebarCart from "@/components/SidebarCart";
-import ProductCard from "@/components/ProductCard";
-import Link from "next/link";
+import HomepageMain from "@/components/HomepageMain";
 import prisma from "@/lib/prisma";
 import { getFooterData } from "@/lib/footer";
 
 export const dynamic = "force-dynamic";
 
-export default async function Home({ searchParams }: { searchParams?: { limit?: string } }) {
-  const limit = searchParams?.limit ? parseInt(searchParams.limit) : 12;
+export default async function Home() {
+  // Fetch active categories from DB, sorted by sortOrder set in admin
+  const dbCategories = await prisma.category.findMany({
+    where: { active: true, deletedAt: null },
+    orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+    select: { id: true, name: true, image: true, sortOrder: true },
+  }).catch((e) => { console.error(e); return []; });
 
   const [productsRes, totalCountRes, heroSlidesRes, footerData] = await Promise.all([
     prisma.product.findMany({
@@ -33,6 +37,68 @@ export default async function Home({ searchParams }: { searchParams?: { limit?: 
       }
     }).catch(e => { console.error(e); return []; }),
     prisma.product.count({ where: { isPublished: true } }).catch(() => 0),
+  // Build ordered category name list for product queries
+  const categoriesList = dbCategories.map((c) => c.name);
+
+  const [categoryRecentRes, categoryShowroomRes, heroSlidesRes, footerData] = await Promise.all([
+    // 1. New Arrivals: top 4 recent products per category
+    Promise.all(
+      categoriesList.map((cat) =>
+        prisma.product.findMany({
+          where: {
+            isPublished: true,
+            category: { equals: cat, mode: "insensitive" }
+          },
+          take: 4,
+          orderBy: { createdAt: "desc" },
+          include: { discount: true, variants: true }
+        }).catch(e => { console.error(e); return []; })
+      )
+    ),
+    // 2. Showrooms: top 4 products (isFeatured: true first, then top sold)
+    Promise.all(
+      categoriesList.map(async (catName) => {
+        try {
+          // Fetch featured products (up to 4)
+          const featured = await prisma.product.findMany({
+            where: {
+              isPublished: true,
+              category: { equals: catName, mode: "insensitive" },
+              isFeatured: true
+            },
+            take: 4,
+            include: { discount: true, variants: true }
+          });
+
+          let finalProducts = [...featured];
+
+          // If less than 4, fill with top sold items
+          if (finalProducts.length < 4) {
+            const remainingCount = 4 - finalProducts.length;
+            const topSold = await prisma.product.findMany({
+              where: {
+                isPublished: true,
+                category: { equals: catName, mode: "insensitive" },
+                id: { notIn: finalProducts.map(p => p.id) }
+              },
+              orderBy: {
+                orderItems: {
+                  _count: "desc"
+                }
+              },
+              take: remainingCount,
+              include: { discount: true, variants: true }
+            });
+            finalProducts = [...finalProducts, ...topSold];
+          }
+
+          return finalProducts;
+        } catch (e) {
+          console.error(`Failed to fetch showroom products for ${catName}:`, e);
+          return [];
+        }
+      })
+    ),
     prisma.heroSlide.findMany({
       where: { active: true },
       orderBy: { sortOrder: "asc" }
@@ -63,6 +129,21 @@ export default async function Home({ searchParams }: { searchParams?: { limit?: 
       images: displayImages,
       variants: mappedVariants
     };
+  const newArrivalsProducts = categoryRecentRes.flat();
+  const showroomProducts = categoryShowroomRes.flat();
+  const heroSlides = heroSlidesRes;
+
+  // Sort variants by order in place
+  newArrivalsProducts.forEach(product => {
+    if (product.variants) {
+      product.variants.sort((a, b) => (a.order || 0) - (b.order || 0));
+    }
+  });
+
+  showroomProducts.forEach(product => {
+    if (product.variants) {
+      product.variants.sort((a, b) => (a.order || 0) - (b.order || 0));
+    }
   });
 
   return (
@@ -70,31 +151,12 @@ export default async function Home({ searchParams }: { searchParams?: { limit?: 
       <Header />
       <HeroCarousel slides={heroSlides} />
 
-      <section className="container mx-auto py-20 px-4 md:px-0">
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4 md:gap-6">
-          {products.map((product) => (
-            <ProductCard key={product.id} product={product} />
-          ))}
+      <HomepageMain 
+        initialNewArrivalsProducts={newArrivalsProducts} 
+        showroomProducts={showroomProducts}
+        categories={dbCategories}
+      />
 
-          {products.length === 0 && (
-            <div className="col-span-2 lg:col-span-4 py-20 text-center text-slate-500 font-medium">
-              No products found in the database. Please add items via the admin console!
-            </div>
-          )}
-        </div>
-
-        {products.length < totalCountRes && (
-          <div className="flex justify-center mt-12">
-            <Link
-              href={`/?limit=${limit + 12}`}
-              scroll={false}
-              className="border-2 border-primary hover:border-primary/80 text-primary hover:text-primary/80 transition-colors px-10 py-3.5  font-bold uppercase text-sm"
-            >
-              View More Products
-            </Link>
-          </div>
-        )}
-      </section>
       <Footer config={footerData} />
       <SidebarCart />
     </main>

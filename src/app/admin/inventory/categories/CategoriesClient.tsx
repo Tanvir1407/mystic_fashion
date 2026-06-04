@@ -1,37 +1,75 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { deleteCategory, restoreCategory } from "../catalog-actions";
-import { Plus, Trash2, Edit2, RotateCcw } from "lucide-react";
+import Image from "next/image";
+import {
+  deleteCategory,
+  restoreCategory,
+  updateCategoryDisplay,
+} from "../catalog-actions";
+import {
+  Plus,
+  Trash2,
+  Edit2,
+  RotateCcw,
+  ImagePlus,
+  RefreshCw,
+  Save,
+  X,
+  Hash,
+  Image as ImageIcon,
+  GripVertical,
+} from "lucide-react";
 import { AdminPagination } from "@/components/AdminPagination";
 import { CategoryForm } from "./CategoryForm";
+import { uploadImage } from "@/app/admin/products/actions";
 import { useRouter } from "next/navigation";
 
-export default function CategoriesClient({ 
-  categories, 
-  currentPage, 
+// Fallback images when no custom image is uploaded
+const FALLBACK_IMAGES: Record<string, string> = {
+  Jersey: "/images/jersey_category.png",
+  Shoes: "/images/shoes_category.png",
+  Perfume: "/images/perfume_category.png",
+  "T-shirt": "/images/tshirt_category.png",
+  Polo: "/images/polo_category.png",
+  Watch: "/images/watch_category.png",
+};
+
+export default function CategoriesClient({
+  categories,
+  currentPage,
   totalPages,
   currentTab = "active",
   canCreate,
   canEdit,
-  canDelete
-}: { 
-  categories: any[], 
-  currentPage: number, 
-  totalPages: number,
-  currentTab?: string,
-  canCreate: boolean,
-  canEdit: boolean,
-  canDelete: boolean
+  canDelete,
+}: {
+  categories: any[];
+  currentPage: number;
+  totalPages: number;
+  currentTab?: string;
+  canCreate: boolean;
+  canEdit: boolean;
+  canDelete: boolean;
 }) {
   const [showForm, setShowForm] = useState(false);
   const [editingCategory, setEditingCategory] = useState<any>(null);
+  // Inline display editing moved to the modal. Keep editing in modal only.
+  const [localCategories, setLocalCategories] = useState<any[]>(categories);
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
+  const [isSavingDisplay, startSaveDisplayTransition] = useTransition();
+
+  // Keep local state in sync if server re-renders
+  // (only needed for optimistic updates)
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this category? All subcategories will also be soft-deleted. Continue?")) return;
-
+    if (
+      !confirm(
+        "Are you sure you want to delete this category? All subcategories will also be soft-deleted. Continue?"
+      )
+    )
+      return;
     startTransition(async () => {
       const res = await deleteCategory(id);
       if (!res.success) {
@@ -53,12 +91,21 @@ export default function CategoriesClient({
     });
   };
 
+  // Display edits (image + sortOrder) are handled inside `CategoryForm` modal now.
+
+  // Sort by sortOrder for display
+  const sortedCategories = [...localCategories].sort(
+    (a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0)
+  );
+
   return (
     <div className="max-w-8xl mx-auto space-y-6">
       <div className="flex items-start sm:items-center justify-between flex-col sm:flex-row gap-4 border-b border-slate-200 pb-4">
         <div>
           <h1 className="text-xl font-bold text-slate-900">Categories</h1>
-          <p className="text-sm text-slate-500 mt-1">Manage your product catalog categories.</p>
+          <p className="text-sm text-slate-500 mt-1">
+            Manage product categories — set homepage images and display order.
+          </p>
         </div>
         {canCreate && currentTab === "active" && (
           <button
@@ -108,38 +155,80 @@ export default function CategoriesClient({
         </button>
       </div>
 
-      <div className="bg-white border border-slate-200 rounded-none overflow-hidden">
-        <table className="w-full text-left border-collapse">
-          <thead>
-            <tr className="bg-slate-50 border-b border-slate-200">
-              <th className="px-6 py-3 text-xs font-bold text-slate-500 uppercase tracking-wider w-2/3">Category Name</th>
-              <th className="px-6 py-3 text-xs font-bold text-slate-500 uppercase tracking-wider w-1/3 text-center">Status</th>
-              <th className="px-6 py-3 text-xs font-bold text-slate-500 uppercase tracking-wider w-32 text-center">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-100">
-            {categories.length === 0 ? (
-              <tr>
-                <td colSpan={3} className="px-6 py-12 text-center text-sm text-slate-500 font-medium">
-                  No {currentTab === "trash" ? "deleted" : ""} categories found.
-                </td>
-              </tr>
-            ) : (
-              categories.map((category) => (
-                <tr key={category.id} className="hover:bg-slate-50 transition-colors">
-                  <td className="px-6 py-4 text-sm font-medium text-slate-900">{category.name}</td>
-                  <td className="px-6 py-4 text-center">
-                    <span className={`inline-flex items-center px-2.5 py-0.5 text-xs font-bold ${category.active && !category.deletedAt ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-slate-50 text-slate-500 border border-slate-200'}`}>
-                      {category.deletedAt ? "Deleted" : category.active ? "Active" : "Inactive"}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 text-center">
-                    <div className="flex items-center justify-center gap-2">
+      {/* Category Cards Grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        {sortedCategories.length === 0 ? (
+          <div className="col-span-full bg-white border border-slate-200 py-16 text-center text-sm text-slate-500 font-medium">
+            No {currentTab === "trash" ? "deleted" : ""} categories found.
+          </div>
+        ) : (
+          sortedCategories.map((category) => {
+            const resolvedImage = category.image || FALLBACK_IMAGES[category.name] || null;
+
+            return (
+              <div
+                key={category.id}
+                className={`bg-white border rounded-lg overflow-hidden shadow-sm transition-all border-slate-200 hover:border-slate-300`}
+              >
+                {/* Card Header - Image Thumbnail */}
+                <div className="relative w-full aspect-[3/2] bg-slate-100 overflow-hidden">
+                  {resolvedImage ? (
+                    <Image
+                      src={resolvedImage}
+                      alt={category.name}
+                      fill
+                      unoptimized={true}
+                      className="object-cover"
+                    />
+                  ) : (
+                    <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-slate-300">
+                      <ImageIcon className="w-8 h-8" />
+                      <span className="text-xs font-medium">No Image</span>
+                    </div>
+                  )}
+
+                  {/* Sort order badge */}
+                  <div className="absolute top-2 left-2 bg-black/60 text-white text-[10px] font-black px-2 py-0.5 rounded flex items-center gap-1">
+                    <GripVertical className="w-2.5 h-2.5" />
+                    Order: {category.sortOrder ?? 0}
+                  </div>
+
+                  {/* Custom image indicator */}
+                  {category.image && (
+                    <div className="absolute top-2 right-2 bg-emerald-500 text-white text-[9px] font-black px-2 py-0.5 rounded uppercase tracking-wider">
+                      Custom Image
+                    </div>
+                  )}
+                </div>
+
+                {/* Card Body */}
+                <div className="p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <div>
+                      <h3 className="text-sm font-bold text-slate-900">
+                        {category.name}
+                      </h3>
+                      <span
+                        className={`inline-flex items-center px-2 py-0.5 text-[10px] font-bold mt-1 ${
+                          category.active && !category.deletedAt
+                            ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                            : "bg-slate-50 text-slate-500 border border-slate-200"
+                        }`}
+                      >
+                        {category.deletedAt
+                          ? "Deleted"
+                          : category.active
+                          ? "Active"
+                          : "Inactive"}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-1.5">
                       {currentTab === "trash" ? (
                         <button
                           onClick={() => handleRestore(category.id)}
                           disabled={isPending}
-                          className="inline-flex items-center gap-1 px-3 py-1 bg-indigo-50 border border-indigo-200 text-indigo-700 hover:bg-indigo-100 text-xs font-bold transition-all disabled:opacity-50"
+                          className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-indigo-50 border border-indigo-200 text-indigo-700 hover:bg-indigo-100 text-xs font-bold transition-all disabled:opacity-50 rounded"
                         >
                           <RotateCcw className="w-3 h-3" />
                           Restore
@@ -147,38 +236,43 @@ export default function CategoriesClient({
                       ) : (
                         <>
                           {canEdit && (
-                            <button
-                              onClick={() => {
-                                setEditingCategory(category);
-                                setShowForm(true);
-                              }}
-                              className="text-slate-400 hover:text-indigo-600 transition-colors p-1"
-                              title="Edit Category"
-                            >
-                              <Edit2 className="w-4 h-4" />
-                            </button>
+                            <>
+                              <button
+                                onClick={() => {
+                                  setEditingCategory(category);
+                                  setShowForm(true);
+                                }}
+                                title="Edit Category"
+                                className="p-1.5 rounded border bg-slate-50 border-slate-200 text-slate-400 hover:text-indigo-600 hover:border-indigo-300 hover:bg-indigo-50 transition-all"
+                              >
+                                <Edit2 className="w-3.5 h-3.5" />
+                              </button>
+                            </>
                           )}
                           {canDelete && (
                             <button
                               onClick={() => handleDelete(category.id)}
                               disabled={isPending}
-                              className="text-slate-400 hover:text-red-600 transition-colors p-1 disabled:opacity-50"
+                              className="p-1.5 rounded border bg-slate-50 border-slate-200 text-slate-400 hover:text-red-600 hover:border-red-200 hover:bg-red-50 transition-all disabled:opacity-50"
                               title="Delete Category"
                             >
-                              <Trash2 className="w-4 h-4" />
+                              <Trash2 className="w-3.5 h-3.5" />
                             </button>
                           )}
                         </>
                       )}
                     </div>
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-        <AdminPagination currentPage={currentPage} totalPages={totalPages} />
+                  </div>
+
+                  {/* Display editing moved into modal; no inline panel here anymore */}
+                </div>
+              </div>
+            );
+          })
+        )}
       </div>
+
+      <AdminPagination currentPage={currentPage} totalPages={totalPages} />
 
       {showForm && (
         <CategoryForm
