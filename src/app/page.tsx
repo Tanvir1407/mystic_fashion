@@ -9,7 +9,15 @@ import { getFooterData } from "@/lib/footer";
 export const dynamic = "force-dynamic";
 
 export default async function Home() {
-  const categoriesList = ["Jersey", "Shoes", "Perfume", "T-shirt", "Polo", "Watch"];
+  // Fetch active categories from DB, sorted by sortOrder set in admin
+  const dbCategories = await prisma.category.findMany({
+    where: { active: true, deletedAt: null },
+    orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+    select: { id: true, name: true, image: true, sortOrder: true },
+  }).catch((e) => { console.error(e); return []; });
+
+  // Build ordered category name list for product queries
+  const categoriesList = dbCategories.map((c) => c.name);
 
   const [categoryRecentRes, categoryShowroomRes, heroSlidesRes, footerData] = await Promise.all([
     // 1. New Arrivals: top 4 recent products per category
@@ -101,7 +109,8 @@ export default async function Home() {
 
       <HomepageMain 
         initialNewArrivalsProducts={newArrivalsProducts} 
-        showroomProducts={showroomProducts} 
+        showroomProducts={showroomProducts}
+        categories={dbCategories}
       />
 
       <Footer config={footerData} />

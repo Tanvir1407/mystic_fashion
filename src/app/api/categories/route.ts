@@ -5,7 +5,7 @@ export async function GET() {
   try {
     const categories = await prisma.category.findMany({
       where: { active: true, deletedAt: null },
-      orderBy: { name: "asc" },
+      orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
       include: {
         subcategories: {
           where: { active: true, deletedAt: null },
@@ -20,6 +20,8 @@ export async function GET() {
       data: categories.map((c) => ({
         id: c.id,
         name: c.name,
+        image: c.image,
+        sortOrder: c.sortOrder,
         subcategories: c.subcategories,
       })),
     });

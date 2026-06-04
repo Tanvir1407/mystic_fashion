@@ -5,28 +5,64 @@ import Link from "next/link";
 import Image from "next/image";
 import ProductCard from "./ProductCard";
 
+// DB category type passed from the server
+interface CategoryData {
+  id: string;
+  name: string;
+  image: string | null;
+  sortOrder: number;
+}
+
 interface HomepageMainProps {
   initialNewArrivalsProducts: any[];
   showroomProducts: any[];
+  categories: CategoryData[];
 }
 
-const CATEGORIES = [
-  { name: "Jersey", image: "/images/jersey_category.png", label: "JERSEYS" },
-  { name: "Shoes", image: "/images/shoes_category.png", label: "SHOES" },
-  { name: "Perfume", image: "/images/perfume_category.png", label: "PERFUMES" },
-  { name: "T-shirt", image: "/images/tshirt_category.png", label: "T-SHIRTS" },
-  { name: "Polo", image: "/images/polo_category.png", label: "POLOS" },
-  { name: "Watch", image: "/images/watch_category.png", label: "WATCHES" },
-];
+// Fallback images for categories that don't have a custom image uploaded
+const FALLBACK_IMAGES: Record<string, string> = {
+  Jersey: "/images/jersey_category.png",
+  Shoes: "/images/shoes_category.png",
+  Perfume: "/images/perfume_category.png",
+  "T-shirt": "/images/tshirt_category.png",
+  Polo: "/images/polo_category.png",
+  Watch: "/images/watch_category.png",
+};
 
-const TABS = ["All", "Jersey", "Shoes", "Perfume", "T-shirt", "Polo", "Watch"];
+// Tailored luxury subtitles per category for the editorial banner
+const SUBTITLES: Record<string, string> = {
+  Jersey: "Pitch Pride & Premium Wear",
+  "T-shirt": "Everyday Luxury Cotton Essentials",
+  Perfume: "Olfactory Art & Timeless Scents",
+  Polo: "Refined Comfort & Classic Detailing",
+  Shoes: "Step in Premium Designer Sneakers",
+  Watch: "Timeless Precision & Masterful Craft",
+};
 
-export default function HomepageMain({ initialNewArrivalsProducts, showroomProducts }: HomepageMainProps) {
+// Convert a category name to a plural display label
+function getCategoryLabel(name: string): string {
+  const labels: Record<string, string> = {
+    Jersey: "JERSEYS",
+    Shoes: "SHOES",
+    Perfume: "PERFUMES",
+    "T-shirt": "T-SHIRTS",
+    Polo: "POLOS",
+    Watch: "WATCHES",
+  };
+  return labels[name] || name.toUpperCase() + "S";
+}
+
+export default function HomepageMain({
+  initialNewArrivalsProducts,
+  showroomProducts,
+  categories,
+}: HomepageMainProps) {
+  // Tabs: "All" + each category name in DB sort order
+  const tabNames = ["All", ...categories.map((c) => c.name)];
   const [selectedTab, setSelectedTab] = useState("All");
 
   // Filter products for the New Arrivals section dynamically
   const getNewArrivals = () => {
-    // Sort all products strictly by creation date (newest first)
     const sortedByRecent = [...initialNewArrivalsProducts].sort(
       (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
     );
@@ -35,7 +71,6 @@ export default function HomepageMain({ initialNewArrivalsProducts, showroomProdu
       // 'All' tab: 4 recent products, each from a unique category
       const selected: any[] = [];
       const seenCategories = new Set<string>();
-
       for (const p of sortedByRecent) {
         if (selected.length >= 4) break;
         const cat = (p.category || "Uncategorized").toLowerCase();
@@ -46,7 +81,6 @@ export default function HomepageMain({ initialNewArrivalsProducts, showroomProdu
       }
       return selected;
     } else {
-      // Category tab: 4 recent products from the selected category
       return sortedByRecent
         .filter((p) => p.category?.toLowerCase() === selectedTab.toLowerCase())
         .slice(0, 4);
@@ -68,34 +102,39 @@ export default function HomepageMain({ initialNewArrivalsProducts, showroomProdu
             <div className="w-12 h-[1px] bg-[#800020] mx-auto mt-4"></div>
           </div>
 
-          {/* Categories Grid: 6-column on desktop, 3x2 on mobile */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 md:gap-6">
-            {CATEGORIES.map((cat) => (
-              <Link
-                key={cat.name}
-                href={`/products?category=${cat.name}`}
-                className="group relative block aspect-square overflow-hidden bg-neutral-100 shadow-xs hover:shadow-md transition-all duration-300"
-              >
-                {/* Backdrop image */}
-                <Image
-                  src={cat.image}
-                  alt={cat.label}
-                  unoptimized={true}
-                  fill
-                  className="object-cover transition-transform duration-700 ease-out group-hover:scale-110"
-                />
-
-                {/* Subtle soft backdrop overlay for depth */}
-                <div className="absolute inset-0 bg-black/10 group-hover:bg-black/20 transition-colors duration-300"></div>
-
-                {/* Flat design overlay text at bottom */}
-                <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/60 to-transparent flex flex-col justify-end">
-                  <span className="text-white text-xs md:text-sm font-bold tracking-widest text-center uppercase block group-hover:text-amber-100 transition-colors">
-                    {cat.label}
-                  </span>
-                </div>
-              </Link>
-            ))}
+          {/* Categories Flex: DB-driven, sorted by sortOrder, always centered */}
+          <div className="flex flex-wrap justify-center gap-4 md:gap-6">
+            {categories.map((cat) => {
+              const image = cat.image || FALLBACK_IMAGES[cat.name] || null;
+              const label = getCategoryLabel(cat.name);
+              return (
+                <Link
+                  key={cat.name}
+                  href={`/products?category=${cat.name}`}
+                  className="group relative block aspect-square overflow-hidden bg-neutral-100 shadow-xs hover:shadow-md transition-all duration-300 w-[calc(50%-8px)] sm:w-[calc(33.333%-11px)] lg:w-44 flex-none"
+                >
+                  {image ? (
+                    <Image
+                      src={image}
+                      alt={label}
+                      unoptimized={true}
+                      fill
+                      className="object-cover transition-transform duration-700 ease-out group-hover:scale-110"
+                    />
+                  ) : (
+                    <div className="absolute inset-0 bg-neutral-200 flex items-center justify-center">
+                      <span className="text-neutral-400 text-xs font-medium">{cat.name}</span>
+                    </div>
+                  )}
+                  <div className="absolute inset-0 bg-black/10 group-hover:bg-black/20 transition-colors duration-300"></div>
+                  <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/60 to-transparent flex flex-col justify-end">
+                    <span className="text-white text-xs md:text-sm font-bold tracking-widest text-center uppercase block group-hover:text-amber-100 transition-colors">
+                      {label}
+                    </span>
+                  </div>
+                </Link>
+              );
+            })}
           </div>
         </div>
       </section>
@@ -113,16 +152,17 @@ export default function HomepageMain({ initialNewArrivalsProducts, showroomProdu
             <div className="w-12 h-[1px] bg-[#800020] mx-auto mt-4"></div>
           </div>
 
-          {/* Interactive Editorial Tabs */}
+          {/* Interactive Editorial Tabs — DB-driven order */}
           <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-3 mb-12 border-b border-neutral-200/60 pb-4 max-w-2xl mx-auto">
-            {TABS.map((tab) => (
+            {tabNames.map((tab) => (
               <button
                 key={tab}
                 onClick={() => setSelectedTab(tab)}
-                className={`pb-2 text-[11px] md:text-xs uppercase tracking-widest font-medium transition-all duration-300 relative ${selectedTab === tab
+                className={`pb-2 text-[11px] md:text-xs uppercase tracking-widest font-medium transition-all duration-300 relative ${
+                  selectedTab === tab
                     ? "text-[#800020]"
                     : "text-neutral-400 hover:text-neutral-950"
-                  }`}
+                }`}
               >
                 {tab}
                 {selectedTab === tab && (
@@ -132,12 +172,11 @@ export default function HomepageMain({ initialNewArrivalsProducts, showroomProdu
             ))}
           </div>
 
-          {/* Product Grid: 4 columns on desktop, 2 columns on mobile */}
+          {/* Product Grid */}
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6 lg:gap-8">
             {newArrivalsProducts.map((product) => (
               <ProductCard key={product.id} product={product} />
             ))}
-
             {newArrivalsProducts.length === 0 && (
               <div className="col-span-full py-24 text-center text-neutral-400 font-serif text-sm tracking-widest italic">
                 No items currently available in {selectedTab}.
@@ -163,7 +202,6 @@ export default function HomepageMain({ initialNewArrivalsProducts, showroomProdu
       <section className="py-24 px-4 bg-white border-t border-neutral-100">
         <div className="container mx-auto">
           <div className="text-center mb-20">
-
             <h2 className="font-serif text-3xl md:text-4xl text-neutral-900 tracking-widest font-light uppercase">
               The Collection Editorial
             </h2>
@@ -171,8 +209,8 @@ export default function HomepageMain({ initialNewArrivalsProducts, showroomProdu
           </div>
 
           <div className="space-y-28">
-            {CATEGORIES.map((cat, idx) => {
-              // Get top 3 products for this category to align inside our grid
+            {categories.map((cat, idx) => {
+              // Get top 3 products for this category
               const catProducts = showroomProducts
                 .filter((p) => p.category?.toLowerCase() === cat.name.toLowerCase())
                 .slice(0, 3);
@@ -180,26 +218,19 @@ export default function HomepageMain({ initialNewArrivalsProducts, showroomProdu
               if (catProducts.length === 0) return null;
 
               const isEven = idx % 2 === 0;
-
-              // Tailored luxury subtitles for the banners
-              const subtitles: Record<string, string> = {
-                "Jersey": "Pitch Pride & Premium Wear",
-                "T-shirt": "Everyday Luxury Cotton Essentials",
-                "Perfume": "Olfactory Art & Timeless Scents",
-                "Polo": "Refined Comfort & Classic Detailing",
-                "Shoes": "Step in Premium Designer Sneakers",
-                "Watch": "Timeless Precision & Masterful Craft",
-              };
+              const catImage = cat.image || FALLBACK_IMAGES[cat.name] || "/images/placeholder.png";
+              const catLabel = getCategoryLabel(cat.name);
 
               const bannerCard = (
                 <div
                   key={`banner-${cat.name}`}
-                  className={`col-span-2 md:col-span-1 lg:col-span-1 relative overflow-hidden bg-neutral-950 shadow-xs h-full min-h-[360px] flex flex-col justify-end p-6 group/banner ${!isEven ? "md:order-last lg:order-last" : ""
-                    }`}
+                  className={`col-span-2 md:col-span-1 lg:col-span-1 relative overflow-hidden bg-neutral-950 shadow-xs h-full min-h-[360px] flex flex-col justify-end p-6 group/banner ${
+                    !isEven ? "md:order-last lg:order-last" : ""
+                  }`}
                 >
                   <Image
-                    src={cat.image}
-                    alt={cat.label}
+                    src={catImage}
+                    alt={catLabel}
                     unoptimized={true}
                     fill
                     className="object-cover opacity-65 transition-transform duration-700 ease-out group-hover/banner:scale-105"
@@ -211,10 +242,10 @@ export default function HomepageMain({ initialNewArrivalsProducts, showroomProdu
                       Exclusive Release
                     </span>
                     <h3 className="font-serif text-2xl text-white tracking-widest uppercase font-light leading-tight">
-                      {cat.label}
+                      {catLabel}
                     </h3>
                     <p className="text-[10px] text-neutral-300 font-sans tracking-wide mt-2">
-                      {subtitles[cat.name] || "Premium Apparel Selection"}
+                      {SUBTITLES[cat.name] || "Premium Collection"}
                     </p>
 
                     <Link

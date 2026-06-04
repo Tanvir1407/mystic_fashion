@@ -43,7 +43,7 @@ export default async function CategoriesPage({ searchParams }: { searchParams: {
   const [categories, totalCount] = await Promise.all([
     prisma.category.findMany({
       where: whereClause,
-      orderBy: { name: "asc" },
+      orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
       skip: (page - 1) * PER_PAGE,
       take: PER_PAGE,
     }),
