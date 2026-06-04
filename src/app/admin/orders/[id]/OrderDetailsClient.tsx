@@ -277,15 +277,60 @@ export default function OrderDetailsClient({
                       <span className="text-[10px] font-black bg-slate-900 text-white px-1.5 py-0.5 rounded tracking-widest">{item.size}</span>
                       <span className="text-xs text-slate-500">@ {formatBDT(item.price)}</span>
                       {item.requiresPrint && (
-                        <span className="text-[9px] font-bold bg-indigo-50 text-indigo-600 border border-indigo-100 px-1.5 py-0.5 rounded uppercase tracking-wider">
-                          Print: {item.printName} #{item.printNumber}
-                        </span>
+                        isEditing ? (
+                          <span className="inline-flex items-center gap-1">
+                            <input
+                              type="text"
+                              value={item.printName}
+                              onChange={(e) => {
+                                const newItems = [...formData.items];
+                                newItems[index] = { ...newItems[index], printName: e.target.value };
+                                setFormData({ ...formData, items: newItems });
+                              }}
+                              placeholder="Name"
+                              className="text-xs px-2 py-1 border border-slate-200 rounded w-20 focus:outline-none focus:border-slate-400"
+                            />
+                            <span className="text-[10px] text-indigo-400 font-bold">#</span>
+                            <input
+                              type="text"
+                              value={item.printNumber}
+                              onChange={(e) => {
+                                const newItems = [...formData.items];
+                                newItems[index] = { ...newItems[index], printNumber: e.target.value };
+                                setFormData({ ...formData, items: newItems });
+                              }}
+                              placeholder="No."
+                              className="text-xs px-2 py-1 border border-slate-200 rounded w-16 focus:outline-none focus:border-slate-400"
+                            />
+                          </span>
+                        ) : (
+                          <span className="text-[9px] font-bold bg-indigo-50 text-indigo-600 border border-indigo-100 px-1.5 py-0.5 rounded uppercase tracking-wider">
+                            Print: {item.printName} #{item.printNumber}
+                          </span>
+                        )
                       )}
                     </div>
                     {item.requiresPrint && (
-                      <p className="text-[10px] text-indigo-500 font-medium mt-0.5">
-                        + {formatBDT(item.printCost * item.quantity)} DTF cost
-                      </p>
+                      isEditing ? (
+                        <div className="flex items-center gap-1.5 mt-0.5">
+                          <span className="text-[10px] text-indigo-500 font-medium">+ DTF cost:</span>
+                          <input
+                            type="number"
+                            value={item.printCost}
+                            onChange={(e) => {
+                              const newItems = [...formData.items];
+                              newItems[index] = { ...newItems[index], printCost: parseFloat(e.target.value) || 0 };
+                              setFormData({ ...formData, items: newItems });
+                            }}
+                            className="text-xs px-2 py-1 border border-slate-200 rounded w-20 focus:outline-none focus:border-slate-400 font-medium text-indigo-600"
+                          />
+                          <span className="text-[10px] text-indigo-500 font-medium">× {item.quantity}</span>
+                        </div>
+                      ) : (
+                        <p className="text-[10px] text-indigo-500 font-medium mt-0.5">
+                          + {formatBDT(item.printCost * item.quantity)} DTF cost
+                        </p>
+                      )
                     )}
                   </div>
 
