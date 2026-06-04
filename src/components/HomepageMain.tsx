@@ -57,7 +57,7 @@ export default function HomepageMain({ initialNewArrivalsProducts, showroomProdu
 
   return (
     <div className="bg-[#FAFAFA] min-h-screen text-neutral-800 antialiased font-sans">
-      
+
       {/* 1. SHOP BY CATEGORY SECTION */}
       <section className="py-24 px-4 bg-white border-b border-neutral-100">
         <div className="container mx-auto">
@@ -84,7 +84,7 @@ export default function HomepageMain({ initialNewArrivalsProducts, showroomProdu
                   fill
                   className="object-cover transition-transform duration-700 ease-out group-hover:scale-110"
                 />
-                
+
                 {/* Subtle soft backdrop overlay for depth */}
                 <div className="absolute inset-0 bg-black/10 group-hover:bg-black/20 transition-colors duration-300"></div>
 
@@ -119,11 +119,10 @@ export default function HomepageMain({ initialNewArrivalsProducts, showroomProdu
               <button
                 key={tab}
                 onClick={() => setSelectedTab(tab)}
-                className={`pb-2 text-[11px] md:text-xs uppercase tracking-widest font-medium transition-all duration-300 relative ${
-                  selectedTab === tab
+                className={`pb-2 text-[11px] md:text-xs uppercase tracking-widest font-medium transition-all duration-300 relative ${selectedTab === tab
                     ? "text-[#800020]"
                     : "text-neutral-400 hover:text-neutral-950"
-                }`}
+                  }`}
               >
                 {tab}
                 {selectedTab === tab && (
@@ -164,9 +163,7 @@ export default function HomepageMain({ initialNewArrivalsProducts, showroomProdu
       <section className="py-24 px-4 bg-white border-t border-neutral-100">
         <div className="container mx-auto">
           <div className="text-center mb-20">
-            <span className="text-[10px] md:text-xs uppercase tracking-widest text-[#800020] font-bold block mb-3">
-              The Curated Showrooms
-            </span>
+
             <h2 className="font-serif text-3xl md:text-4xl text-neutral-900 tracking-widest font-light uppercase">
               The Collection Editorial
             </h2>
@@ -197,9 +194,8 @@ export default function HomepageMain({ initialNewArrivalsProducts, showroomProdu
               const bannerCard = (
                 <div
                   key={`banner-${cat.name}`}
-                  className={`col-span-2 md:col-span-1 lg:col-span-1 relative overflow-hidden bg-neutral-950 shadow-xs aspect-[3/4] flex flex-col justify-end p-6 group/banner ${
-                    !isEven ? "md:order-last lg:order-last" : ""
-                  }`}
+                  className={`col-span-2 md:col-span-1 lg:col-span-1 relative overflow-hidden bg-neutral-950 shadow-xs h-full min-h-[360px] flex flex-col justify-end p-6 group/banner ${!isEven ? "md:order-last lg:order-last" : ""
+                    }`}
                 >
                   <Image
                     src={cat.image}
@@ -232,19 +228,19 @@ export default function HomepageMain({ initialNewArrivalsProducts, showroomProdu
               );
 
               const productCards = catProducts.map((product) => (
-                <div key={product.id} className="col-span-1">
+                <div key={product.id} className="col-span-1 h-full">
                   <ProductCard product={product} />
                 </div>
               ));
 
               return (
                 <div key={cat.name} className="border-b border-neutral-100 pb-20 last:border-0 last:pb-0">
-                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 items-stretch">
                     {isEven ? (
                       <>
                         {bannerCard}
                         {productCards.map((card, cardIdx) => (
-                          <div key={cardIdx} className={cardIdx === 2 ? "hidden lg:block" : ""}>
+                          <div key={cardIdx} className={`h-full ${cardIdx === 2 ? "hidden lg:block" : ""}`}>
                             {card}
                           </div>
                         ))}
@@ -252,7 +248,7 @@ export default function HomepageMain({ initialNewArrivalsProducts, showroomProdu
                     ) : (
                       <>
                         {productCards.map((card, cardIdx) => (
-                          <div key={cardIdx} className={cardIdx === 2 ? "hidden lg:block" : "order-first"}>
+                          <div key={cardIdx} className={`h-full ${cardIdx === 2 ? "hidden lg:block" : "order-first"}`}>
                             {card}
                           </div>
                         ))}
