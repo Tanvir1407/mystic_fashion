@@ -63,7 +63,7 @@ export function CategoryForm({ category, onClose, onSuccess }: CategoryFormProps
 
   return (
     <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
-      <div className="bg-white rounded-none w-full max-w-2xl overflow-hidden border border-slate-200 animate-in zoom-in-95 duration-200">
+      <div className="bg-white rounded-none w-full max-w-4xl overflow-hidden border border-slate-200 animate-in zoom-in-95 duration-200">
         <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50">
           <div>
             <h2 className="text-xl font-bold text-slate-900">{category ? "Edit Category" : "Create New Category"}</h2>
@@ -85,7 +85,7 @@ export function CategoryForm({ category, onClose, onSuccess }: CategoryFormProps
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div className="lg:col-span-1">
               <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2 block">Homepage Image</label>
-              <div className="relative w-full aspect-[3/2] bg-slate-100 rounded overflow-hidden border border-slate-200 mb-3">
+              <div className="relative w-full aspect-[3/4] bg-slate-100 rounded overflow-hidden border border-slate-200 mb-3">
                 {image ? (
                   <>
                     <Image src={image} alt="Preview" fill unoptimized className="object-cover" />
@@ -142,7 +142,7 @@ export function CategoryForm({ category, onClose, onSuccess }: CategoryFormProps
                   className="w-full px-4 py-3 bg-white border border-slate-300 rounded-none text-sm focus:outline-none focus:border-slate-900 transition-colors mb-4"
                 />
 
-                <div className="grid grid-cols-2 gap-4 items-start">
+                <div className="grid grid-cols-1 gap-4 items-start">
                   <div>
                     <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1 block">Display Order</label>
                     <input
@@ -156,7 +156,7 @@ export function CategoryForm({ category, onClose, onSuccess }: CategoryFormProps
                   </div>
 
                   <div>
-                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1 block">Active</label>
+                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1 block"></label>
                     <div className="flex items-center gap-3">
                       <button
                         type="button"
