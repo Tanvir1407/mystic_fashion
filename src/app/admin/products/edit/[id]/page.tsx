@@ -5,15 +5,36 @@ import { notFound } from "next/navigation";
 export const dynamic = "force-dynamic";
 
 export default async function EditProductPage({ params }: { params: { id: string } }) {
-  const product = await prisma.product.findUnique({
+  const productRes = await prisma.product.findUnique({
     where: { id: params.id },
-    include: { variants: true }
+    include: {
+      variants: {
+        include: {
+          pricingMatrix: true
+        }
+      },
+      mediaAssets: true
+    }
   });
 
-  if (!product) notFound();
+  if (!productRes) notFound();
 
   // Sort variants in-memory to prevent Prisma Client caching issues
-  product.variants.sort((a, b) => (a.order || 0) - (b.order || 0));
+  productRes.variants.sort((a, b) => (a.order || 0) - (b.order || 0));
+
+  const basePrice = productRes.variants?.[0]?.pricingMatrix?.basePrice
+    ? Number(productRes.variants[0].pricingMatrix.basePrice)
+    : 0;
+
+  const displayImages = productRes.mediaAssets && productRes.mediaAssets.length > 0
+    ? productRes.mediaAssets.map((asset: any) => asset.url)
+    : [];
+
+  const product = {
+    ...productRes,
+    price: basePrice,
+    images: displayImages
+  };
 
   const sizeCharts = await prisma.sizeChart.findMany();
   const discounts = await prisma.discount.findMany({ where: { active: true } });

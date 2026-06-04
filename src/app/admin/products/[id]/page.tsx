@@ -62,9 +62,14 @@ export default async function ProductDetailView({ params }: { params: { id: stri
     ? productRes.mediaAssets.map((asset: any) => asset.url)
     : ((productRes as any).images || []);
 
+  const costPrice = productRes.variants?.[0]?.pricingMatrix?.costPrice
+    ? Number(productRes.variants[0].pricingMatrix.costPrice)
+    : 0;
+
   const product = {
     ...productRes,
     price: basePrice,
+    purchasePrice: costPrice,
     images: displayImages,
     variants: productRes.variants.map((v: any) => ({
       ...v,

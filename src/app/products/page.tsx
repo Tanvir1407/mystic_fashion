@@ -93,9 +93,6 @@ export default async function ProductsPage({
         slug: true,
         name: true,
         description: true,
-        price: true,
-        purchasePrice: true,
-        images: true,
         team: true,
         category: true,
         brandId: true,
@@ -116,7 +113,6 @@ export default async function ProductsPage({
             color: true,
             colorCode: true,
             sku: true,
-            stock: true,
             order: true,
             pricingMatrix: true,
             stocks: { where: { warehouse: { code: "WH-MAIN" } } }
@@ -175,6 +171,9 @@ export default async function ProductsPage({
     return {
       ...product,
       price: basePrice,
+      purchasePrice: product.variants?.[0]?.pricingMatrix?.costPrice
+        ? Number(product.variants[0].pricingMatrix.costPrice)
+        : 0,
       images: displayImages,
       variants: mappedVariants
     };

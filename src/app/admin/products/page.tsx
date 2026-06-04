@@ -87,11 +87,16 @@ export default async function AdminProductsPage({ searchParams }: { searchParams
     products = fetchedProducts.map(p => {
       const basePrice = p.variants?.[0]?.pricingMatrix?.basePrice
         ? Number(p.variants[0].pricingMatrix.basePrice)
-        : p.price;
+        : 0;
+
+      const costPrice = p.variants?.[0]?.pricingMatrix?.costPrice
+        ? Number(p.variants[0].pricingMatrix.costPrice)
+        : 0;
 
       return {
         ...p,
         price: basePrice,
+        purchasePrice: costPrice,
         variants: p.variants.map((v: any) => ({
           ...v,
           stock: v.stocks?.[0]?.availableQuantity ?? v.stock ?? 0

@@ -58,39 +58,53 @@ async function _createPurchase(
       });
 
       for (const item of items) {
-        const productBefore = await tx.product.findUnique({
-          where: { id: item.productId },
-          include: { variants: true },
+        const warehouse = await tx.warehouse.findUnique({
+          where: { code: "WH-MAIN" },
+        });
+        if (!warehouse) throw new Error("Default warehouse not found");
+
+        const stockRecord = await tx.stock.findUnique({
+          where: {
+            variantId_warehouseId: {
+              variantId: item.variantId,
+              warehouseId: warehouse.id,
+            },
+          },
+        });
+        const oldStockQty = stockRecord?.availableQuantity ?? 0;
+
+        const pricingMatrix = await tx.variantPricingMatrix.findUnique({
+          where: { variantId: item.variantId },
+        });
+        const oldCostPrice = pricingMatrix?.costPrice ? Number(pricingMatrix.costPrice) : 0;
+
+        await updateStockDualWrite(tx, {
+          variantId: item.variantId,
+          quantityChange: item.quantity,
+          movementType: "RECEIPT",
+          referenceId: purchase.id,
+          referenceType: "PURCHASE",
         });
 
-        if (productBefore) {
-          const oldTotalStock = productBefore.variants.reduce(
-            (sum: number, v: any) => sum + v.stock,
-            0
-          );
-          const oldAvgPrice = productBefore.purchasePrice || 0;
-
-          await updateStockDualWrite(tx, {
-            variantId: item.variantId,
-            quantityChange: item.quantity,
-            movementType: "RECEIPT",
-            referenceId: purchase.id,
-            referenceType: "PURCHASE",
-          });
-
-          let newAvgPrice = item.unitPrice;
-          if (oldTotalStock > 0) {
-            const oldTotalValue = oldTotalStock * oldAvgPrice;
-            const newValueAdded = item.quantity * item.unitPrice;
-            const newTotalStock = oldTotalStock + item.quantity;
-            newAvgPrice = (oldTotalValue + newValueAdded) / newTotalStock;
-          }
-
-          await tx.product.update({
-            where: { id: item.productId },
-            data: { purchasePrice: newAvgPrice },
-          });
+        let newCostPrice = item.unitPrice;
+        if (oldStockQty > 0) {
+          const oldTotalValue = oldStockQty * oldCostPrice;
+          const newValueAdded = item.quantity * item.unitPrice;
+          const newTotalStock = oldStockQty + item.quantity;
+          newCostPrice = (oldTotalValue + newValueAdded) / newTotalStock;
         }
+
+        await tx.variantPricingMatrix.upsert({
+          where: { variantId: item.variantId },
+          create: {
+            variantId: item.variantId,
+            costPrice: newCostPrice,
+            basePrice: item.unitPrice * 1.5,
+          },
+          update: {
+            costPrice: newCostPrice,
+          },
+        });
       }
 
       const account = await getOrCreateSystemAccount(tx, "Inventory Purchases", "EXPENSE");
@@ -192,39 +206,53 @@ async function _updatePurchase(
       });
 
       for (const item of items) {
-        const productBefore = await tx.product.findUnique({
-          where: { id: item.productId },
-          include: { variants: true },
+        const warehouse = await tx.warehouse.findUnique({
+          where: { code: "WH-MAIN" },
+        });
+        if (!warehouse) throw new Error("Default warehouse not found");
+
+        const stockRecord = await tx.stock.findUnique({
+          where: {
+            variantId_warehouseId: {
+              variantId: item.variantId,
+              warehouseId: warehouse.id,
+            },
+          },
+        });
+        const oldStockQty = stockRecord?.availableQuantity ?? 0;
+
+        const pricingMatrix = await tx.variantPricingMatrix.findUnique({
+          where: { variantId: item.variantId },
+        });
+        const oldCostPrice = pricingMatrix?.costPrice ? Number(pricingMatrix.costPrice) : 0;
+
+        await updateStockDualWrite(tx, {
+          variantId: item.variantId,
+          quantityChange: item.quantity,
+          movementType: "RECEIPT",
+          referenceId: purchaseId,
+          referenceType: "PURCHASE_UPDATE",
         });
 
-        if (productBefore) {
-          const oldTotalStock = productBefore.variants.reduce(
-            (sum: number, v: any) => sum + v.stock,
-            0
-          );
-          const oldAvgPrice = productBefore.purchasePrice || 0;
-
-          await updateStockDualWrite(tx, {
-            variantId: item.variantId,
-            quantityChange: item.quantity,
-            movementType: "RECEIPT",
-            referenceId: purchaseId,
-            referenceType: "PURCHASE_UPDATE",
-          });
-
-          let newAvgPrice = item.unitPrice;
-          if (oldTotalStock > 0) {
-            const oldTotalValue = oldTotalStock * oldAvgPrice;
-            const newValueAdded = item.quantity * item.unitPrice;
-            const newTotalStock = oldTotalStock + item.quantity;
-            newAvgPrice = (oldTotalValue + newValueAdded) / newTotalStock;
-          }
-
-          await tx.product.update({
-            where: { id: item.productId },
-            data: { purchasePrice: newAvgPrice },
-          });
+        let newCostPrice = item.unitPrice;
+        if (oldStockQty > 0) {
+          const oldTotalValue = oldStockQty * oldCostPrice;
+          const newValueAdded = item.quantity * item.unitPrice;
+          const newTotalStock = oldStockQty + item.quantity;
+          newCostPrice = (oldTotalValue + newValueAdded) / newTotalStock;
         }
+
+        await tx.variantPricingMatrix.upsert({
+          where: { variantId: item.variantId },
+          create: {
+            variantId: item.variantId,
+            costPrice: newCostPrice,
+            basePrice: item.unitPrice * 1.5,
+          },
+          update: {
+            costPrice: newCostPrice,
+          },
+        });
       }
 
       const existingTransaction = await tx.transaction.findFirst({

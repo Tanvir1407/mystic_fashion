@@ -79,11 +79,22 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
             productId: true,
             price: true,
             quantity: true,
+            variant: {
+              select: {
+                pricingMatrix: {
+                  select: {
+                    costPrice: true
+                  }
+                }
+              }
+            },
             product: {
               select: {
                 name: true,
-                purchasePrice: true,
-                images: true
+                mediaAssets: {
+                  orderBy: { sortOrder: "asc" },
+                  take: 1
+                }
               }
             }
           }
@@ -150,9 +161,12 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
   const productSalesMap = new Map<string, {name: string, sold: number, revenue: number, image: string}>();
 
   deliveredOrders.forEach((order) => {
-    order.items.forEach((item) => {
+    order.items.forEach((item: any) => {
       const sale = item.price * item.quantity;
-      const cost = (item.product?.purchasePrice || 0) * item.quantity;
+      const costPrice = item.variant?.pricingMatrix?.costPrice
+        ? Number(item.variant.pricingMatrix.costPrice)
+        : 0;
+      const cost = costPrice * item.quantity;
       totalSaleAmount += sale;
       totalProfit += (sale - cost);
 
@@ -161,11 +175,12 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
         existing.sold += item.quantity;
         existing.revenue += sale;
       } else {
+        const imageUrl = item.product?.mediaAssets?.[0]?.url || "";
         productSalesMap.set(item.productId, {
           name: item.product?.name || "Unknown Product",
           sold: item.quantity,
           revenue: sale,
-          image: item.product?.images?.[0] || ""
+          image: imageUrl
         });
       }
     });
@@ -213,7 +228,12 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
       const key = o.createdAt.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
       const b = buckets.get(key) || { revenue: 0, purchases: 0 };
       const itemsTotal = o.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-      const itemsCost = o.items.reduce((sum, item) => sum + ((item.product?.purchasePrice || 0) * item.quantity), 0);
+      const itemsCost = o.items.reduce((sum, item: any) => {
+        const costPrice = item.variant?.pricingMatrix?.costPrice
+          ? Number(item.variant.pricingMatrix.costPrice)
+          : 0;
+        return sum + (costPrice * item.quantity);
+      }, 0);
       b.revenue += (itemsTotal - itemsCost);
       buckets.set(key, b);
     });
@@ -239,7 +259,12 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
       const key = o.createdAt.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
       const b = buckets.get(key) || { revenue: 0, purchases: 0 };
       const itemsTotal = o.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-      const itemsCost = o.items.reduce((sum, item) => sum + ((item.product?.purchasePrice || 0) * item.quantity), 0);
+      const itemsCost = o.items.reduce((sum, item: any) => {
+        const costPrice = item.variant?.pricingMatrix?.costPrice
+          ? Number(item.variant.pricingMatrix.costPrice)
+          : 0;
+        return sum + (costPrice * item.quantity);
+      }, 0);
       b.revenue += (itemsTotal - itemsCost);
       buckets.set(key, b);
     });
