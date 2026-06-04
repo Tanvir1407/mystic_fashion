@@ -1,6 +1,10 @@
-    
- import{getInventorySettings, getLowStockProducts, getLowStockProductsCount} from "../../actions";
- import InventoryClient from "./InventoryClient"; 
+import {
+  getInventorySettings,
+  getLowStockProducts,
+  getLowStockProductsCount,
+  getAllLowStockProducts,
+} from "../../actions";
+import InventoryClient from "./InventoryClient";
 
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
@@ -15,10 +19,11 @@ export default async function InventoryPage({
   const limit = Number(searchParams?.limit) || 10;
   const PER_PAGE = [10, 20, 50, 100].includes(limit) ? limit : 10;
 
-  const [settings, lowStockProducts, totalCount] = await Promise.all([
+  const [settings, lowStockProducts, totalCount, csvData] = await Promise.all([
     getInventorySettings(),
     getLowStockProducts({ page, limit: PER_PAGE }),
     getLowStockProductsCount(),
+    getAllLowStockProducts(),
   ]);
 
   const totalPages = Math.ceil(totalCount / PER_PAGE);
@@ -30,6 +35,7 @@ export default async function InventoryPage({
         products={lowStockProducts}
         currentPage={page}
         totalPages={totalPages}
+        csvData={csvData}
       />
     </div>
   );

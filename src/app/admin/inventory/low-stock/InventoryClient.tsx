@@ -22,7 +22,7 @@ import Link from "next/link";
 
 import { AdminPagination } from "@/components/AdminPagination";
 
-export default function InventoryClient({ initialSettings, products, currentPage, totalPages }: { initialSettings: any, products: any[], currentPage: number, totalPages: number }) {
+export default function InventoryClient({ initialSettings, products, currentPage, totalPages  ,csvData}: { initialSettings: any, products: any[], currentPage: number, totalPages: number, csvData: any }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [threshold, setThreshold] = useState(initialSettings.lowStockThreshold);
@@ -34,36 +34,34 @@ export default function InventoryClient({ initialSettings, products, currentPage
       router.refresh();
     });
   };
-
- // src/app/admin/inventory/low-stock/InventoryClient.tsx
-
+  //////////////////////////// Export to Excel Logic ///////////////////////////
 
 const handleExportExcel = async () => {
   try {
     
-    const allProducts = await getAllLowStockProducts();
+    //const allProducts = await getAllLowStockProducts();
 
-    if (!allProducts || allProducts.length === 0) {
+    if (!csvData || csvData.length === 0) {
       alert("No low stock products to export!");
       return;
     }
 
     
     const allSizes = Array.from(
-      new Set(allProducts.flatMap((p: any) => p.variants.map((v: any) => v.size)))
+      new Set(csvData.flatMap((p: any) => p.variants.map((v: any) => v.size)))
     );
 
      
     const sortedSizes = [
       "S", "M", "L", "XL", "2XL", "3XL",
-      ...allSizes.filter(s => !["S", "M", "L", "XL", "2XL", "3XL"].includes(s))
+      ...allSizes.filter(s => !["S", "M", "L", "XL", "2XL", "3XL"].includes(s as string ))
     ];
 
     
     let csv = "Product," + sortedSizes.join(",") + "\n";
 
     
-    allProducts.forEach((product: any) => {
+    csvData.forEach((product: any) => {
       let row = `"${product.name}"`;
       sortedSizes.forEach(size => {
         const variant = product.variants.find((v: any) => v.size === size);
