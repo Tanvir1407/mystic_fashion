@@ -552,7 +552,27 @@ export default function OrderDetailsClient({
         </div>
 
         {/* ── Right Sidebar ── */}
-        <div className="space-y-4">
+        <div className="space-y-4"> 
+          
+          {/* Order Source / Exchange Tag Card (if applicable) */}
+          {(order.isExchange || order.exchangeRefOrderId) && (
+            <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
+              <div className="px-4 py-3.5 border-b border-slate-100">
+                <h3 className="text-sm font-semibold text-slate-900">Exchange Order</h3>
+              </div>
+              <div className="p-4">
+                {order.exchangeRefOrderId && (
+                  <div className="text-xs text-slate-600 space-y-1">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Reference Order</span>
+                    <span className="font-mono font-bold text-slate-800">{order.exchangeRefOrderId}</span>
+                  </div>
+                )}
+                {order.exchangeItemNote && (
+                  <p className="text-xs text-slate-600 mt-2 leading-relaxed">{order.exchangeItemNote}</p>
+                )}
+              </div>
+            </div>
+          )}
 
           {/* Notes / Remarks Card */}
           <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
@@ -698,25 +718,6 @@ export default function OrderDetailsClient({
             </div>
           </div>
 
-          {/* Order Source / Exchange Tag Card (if applicable) */}
-          {(order.isExchange || order.exchangeRefOrderId) && (
-            <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
-              <div className="px-4 py-3.5 border-b border-slate-100">
-                <h3 className="text-sm font-semibold text-slate-900">Exchange Order</h3>
-              </div>
-              <div className="p-4">
-                {order.exchangeRefOrderId && (
-                  <div className="text-xs text-slate-600 space-y-1">
-                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Reference Order</span>
-                    <span className="font-mono font-bold text-slate-800">{order.exchangeRefOrderId}</span>
-                  </div>
-                )}
-                {order.exchangeItemNote && (
-                  <p className="text-xs text-slate-600 mt-2 leading-relaxed">{order.exchangeItemNote}</p>
-                )}
-              </div>
-            </div>
-          )}
         </div>
       </div>
     </div>
