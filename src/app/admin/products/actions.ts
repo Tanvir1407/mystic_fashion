@@ -8,6 +8,50 @@ import { writeFile, mkdir } from "fs/promises";
 import { join } from "path";
 import { slugify } from "@/utils/slugify";
 
+function formatPrismaError(error: any): string {
+  if (!(error instanceof Error)) {
+    return "An unexpected error occurred.";
+  }
+
+  // Handle Prisma Client Validation Error (e.g. invalid arguments/types)
+  if (error.name === "PrismaClientValidationError") {
+    const lines = error.message.split("\n");
+    const details = lines
+      .map((line) => line.trim())
+      .filter((line) =>
+        line.startsWith("Argument") ||
+        line.startsWith("Unknown arg") ||
+        line.includes("is missing") ||
+        line.includes("must be") ||
+        line.includes("Expected ") ||
+        line.includes("Required field")
+      );
+
+    if (details.length > 0) {
+      const cleanDetails = details.map((d) => d.replace(/`/g, "'")).join(". ");
+      return `Database validation error: ${cleanDetails}`;
+    }
+
+    return "Database validation error: One or more fields have invalid values or types. Please check your inputs.";
+  }
+
+  // Handle Prisma Client Known Request Error (e.g. constraints)
+  if (error.name === "PrismaClientKnownRequestError") {
+    const code = (error as any).code;
+    const meta = (error as any).meta;
+    if (code === "P2002") {
+      const target = Array.isArray(meta?.target) ? meta.target.join(", ") : String(meta?.target || "unique field");
+      return `Database constraint error: A record already exists with this ${target.replace(/`/g, "'")}. Please use a unique value.`;
+    }
+    if (code === "P2025") {
+      return "Database error: The requested record could not be found.";
+    }
+    return `Database error (${code}): ${error.message.replace(/`/g, "'")}`;
+  }
+
+  return error.message.replace(/`/g, "'");
+}
+
 // ─── PRODUCT CRUD ─────────────────────────────────────────────────────────────
 
 async function _createProduct(data: {
@@ -84,7 +128,7 @@ async function _createProduct(data: {
           name: data.name,
           slug: finalSlug,
           description: data.description,
-          team: data.team,
+          team: data.team || null,
           category: data.category,
           brandId: data.brandId || null,
           categoryId: data.categoryId || null,
@@ -186,7 +230,7 @@ async function _createProduct(data: {
     console.error("Error in createProduct:", error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : "An unexpected error occurred.",
+      error: formatPrismaError(error),
     };
   }
 }
@@ -283,7 +327,7 @@ async function _updateProduct(
           name: data.name,
           slug: finalSlug,
           description: data.description,
-          team: data.team,
+          team: data.team || null,
           category: data.category,
           brandId: data.brandId || null,
           categoryId: data.categoryId || null,
@@ -433,7 +477,7 @@ async function _updateProduct(
     console.error("Error in updateProduct:", error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : "An unexpected error occurred.",
+      error: formatPrismaError(error),
     };
   }
 }
