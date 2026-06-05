@@ -20,14 +20,14 @@ export default function SidebarCart() {
 
 
 
-  useEffect(() => {
+   useEffect(() => {
     if (isOpen && items.length > 0) {
       const productIds = items.map((i: any) => i.id);
       syncCartPrices(productIds).then((updatedPrices) => {
         updatedPrices.forEach((updated: any) => {
           items.forEach((item: any) => {
             if (item.id === updated.id && item.price !== updated.price) {
-              updateItem(item.id, item.size, { price: updated.price });
+              updateItem(item.id, item.size, item.color, { price: updated.price });
             }
           });
         });
@@ -106,7 +106,7 @@ export default function SidebarCart() {
                 </div>
               ) : (
                 items.map((item) => (
-                  <div key={`${item.id}-${item.size}`} className="flex gap-4 group ">
+                  <div key={`${item.id}-${item.size}-${item.color || "Default"}`} className="flex gap-4 group ">
                     <div className="relative w-24 h-28 bg-slate-100 dark:bg-zinc-900 rounded-lg overflow-hidden flex-shrink-0">
                       {item.image ? (
                         <Image
@@ -128,7 +128,7 @@ export default function SidebarCart() {
                             {item.name}
                           </h3>
                           <button
-                            onClick={() => removeItem(item.id, item.size)}
+                            onClick={() => removeItem(item.id, item.size, item.color)}
                             className="p-1 text-slate-400 hover:text-red-500 transition-colors"
                           >
                             <Trash2 className="w-4 h-4" />
@@ -137,10 +137,15 @@ export default function SidebarCart() {
 
 
                       </div>
-                      <div>
+                      <div className="flex flex-wrap gap-2">
                         {item.size && (
-                          <span className="text-[14px] font-semibold bg-slate-100 dark:bg-zinc-900 px-2 py-1 text-slate-600 dark:text-slate-400">
+                          <span className="text-[11px] font-semibold bg-slate-100 dark:bg-zinc-900 px-2 py-0.5 text-slate-600 dark:text-slate-400">
                             Size: {item.size}
+                          </span>
+                        )}
+                        {item.color && item.color !== "Default" && (
+                          <span className="text-[11px] font-semibold bg-slate-100 dark:bg-zinc-900 px-2 py-0.5 text-slate-600 dark:text-slate-400">
+                            Color: {item.color}
                           </span>
                         )}
                       </div>
@@ -155,14 +160,14 @@ export default function SidebarCart() {
                           </div>
                           <div className="flex items-center border border-slate-200 dark:border-zinc-800 ">
                             <button
-                              onClick={() => updateQuantity(item.id, item.quantity - 1, item.size)}
+                              onClick={() => updateQuantity(item.id, item.quantity - 1, item.size, item.color)}
                               className="p-2 px-3 hover:bg-slate-50 border-r dark:hover:bg-zinc-900 transition-colors"
                             >
                               <Minus className="w-4 h-4" />
                             </button>
                             <span className="w-10 text-center text-xs font-bold">{item.quantity}</span>
                             <button
-                              onClick={() => updateQuantity(item.id, item.quantity + 1, item.size)}
+                              onClick={() => updateQuantity(item.id, item.quantity + 1, item.size, item.color)}
                               className="p-2 px-3 border-l hover:bg-slate-50 dark:hover:bg-zinc-900 transition-colors"
                             >
                               <Plus className="w-4 h-4" />

@@ -15,7 +15,7 @@ async function _createProduct(data: {
   slug?: string | null;
   description: string;
   price: number;
-  images: string[];
+  images: (string | { url: string; boundAttributes?: any })[];
   team?: string;
   category: string;
   brandId?: string | null;
@@ -27,7 +27,7 @@ async function _createProduct(data: {
   isPublished: boolean;
   isCustomize?: boolean | null;
   trackStock: boolean;
-  variants: { size: string; color: string; colorCode?: string; sku?: string; stock: number }[];
+  variants: { size: string; color: string; colorCode?: string; sku?: string; stock: number; price?: number; attributes?: any }[];
 }) {
   try {
     if (data.images.length > 6) {
@@ -49,6 +49,22 @@ async function _createProduct(data: {
       };
     }
 
+    // Proactive SKU uniqueness validation check
+    const incomingSkus = data.variants.map(v => v.sku).filter(Boolean) as string[];
+    if (incomingSkus.length > 0) {
+      const duplicateSkuVariant = await prisma.productVariant.findFirst({
+        where: { sku: { in: incomingSkus } },
+        include: { product: true }
+      });
+
+      if (duplicateSkuVariant) {
+        return {
+          success: false,
+          error: `SKU "${duplicateSkuVariant.sku}" is already in use by product "${duplicateSkuVariant.product.name}". Please ensure all SKUs are unique.`
+        };
+      }
+    }
+
     const product = await prisma.$transaction(async (tx) => {
       const warehouseCode = "WH-MAIN";
       let warehouse = await tx.warehouse.findUnique({ where: { code: warehouseCode } });
@@ -68,8 +84,6 @@ async function _createProduct(data: {
           name: data.name,
           slug: finalSlug,
           description: data.description,
-          price: data.price,
-          images: data.images,
           team: data.team,
           category: data.category,
           brandId: data.brandId || null,
@@ -88,6 +102,7 @@ async function _createProduct(data: {
               colorCode: v.colorCode,
               sku: v.sku,
               order: idx,
+              attributes: v.attributes || {},
             })),
           },
         },
@@ -95,12 +110,15 @@ async function _createProduct(data: {
       });
 
       for (let idx = 0; idx < data.images.length; idx++) {
+        const img = data.images[idx];
+        const imageUrl = typeof img === "string" ? img : img.url;
+        const boundAttrs = typeof img === "string" ? {} : (img.boundAttributes || {});
         await tx.mediaAsset.create({
           data: {
             productId: prod.id,
-            url: data.images[idx],
+            url: imageUrl,
             sortOrder: idx,
-            boundAttributes: {},
+            boundAttributes: boundAttrs,
           },
         });
       }
@@ -110,11 +128,14 @@ async function _createProduct(data: {
           v => v.size === variant.size && v.color === variant.color
         );
         const stockQty = inputVariant?.stock ?? 0;
+        const variantPrice = inputVariant?.price !== undefined && inputVariant.price > 0
+          ? inputVariant.price
+          : data.price;
 
         await tx.variantPricingMatrix.create({
           data: {
             variantId: variant.id,
-            basePrice: new Prisma.Decimal(data.price),
+            basePrice: new Prisma.Decimal(variantPrice),
             costPrice: null,
             tierPrices: {},
           },
@@ -186,7 +207,7 @@ async function _updateProduct(
     slug?: string | null;
     description: string;
     price: number;
-    images: string[];
+    images: (string | { url: string; boundAttributes?: any })[];
     team?: string;
     category: string;
     brandId?: string | null;
@@ -198,7 +219,7 @@ async function _updateProduct(
     isPublished: boolean;
     isCustomize?: boolean | null;
     trackStock: boolean;
-    variants: { size: string; color: string; colorCode?: string; sku?: string; stock: number }[];
+    variants: { size: string; color: string; colorCode?: string; sku?: string; stock: number; price?: number; attributes?: any }[];
   }
 ) {
   try {
@@ -223,6 +244,25 @@ async function _updateProduct(
       };
     }
 
+    // Proactive SKU uniqueness validation check (excluding current product being updated)
+    const incomingSkus = data.variants.map(v => v.sku).filter(Boolean) as string[];
+    if (incomingSkus.length > 0) {
+      const duplicateSkuVariant = await prisma.productVariant.findFirst({
+        where: {
+          sku: { in: incomingSkus },
+          productId: { not: id }
+        },
+        include: { product: true }
+      });
+
+      if (duplicateSkuVariant) {
+        return {
+          success: false,
+          error: `SKU "${duplicateSkuVariant.sku}" is already in use by product "${duplicateSkuVariant.product.name}". Please ensure all SKUs are unique.`
+        };
+      }
+    }
+
     const product = await prisma.$transaction(async (tx) => {
       const warehouseCode = "WH-MAIN";
       let warehouse = await tx.warehouse.findUnique({ where: { code: warehouseCode } });
@@ -243,8 +283,6 @@ async function _updateProduct(
           name: data.name,
           slug: finalSlug,
           description: data.description,
-          price: data.price,
-          images: data.images,
           team: data.team,
           category: data.category,
           brandId: data.brandId || null,
@@ -261,12 +299,15 @@ async function _updateProduct(
 
       await tx.mediaAsset.deleteMany({ where: { productId: id } });
       for (let idx = 0; idx < data.images.length; idx++) {
+        const img = data.images[idx];
+        const imageUrl = typeof img === "string" ? img : img.url;
+        const boundAttrs = typeof img === "string" ? {} : (img.boundAttributes || {});
         await tx.mediaAsset.create({
           data: {
             productId: id,
-            url: data.images[idx],
+            url: imageUrl,
             sortOrder: idx,
-            boundAttributes: {},
+            boundAttributes: boundAttrs,
           },
         });
       }
@@ -276,7 +317,7 @@ async function _updateProduct(
         const v = data.variants[idx];
         const variant = await tx.productVariant.upsert({
           where: { productId_size_color: { productId: id, size: v.size, color: v.color } },
-          update: { sku: v.sku, order: idx, colorCode: v.colorCode },
+          update: { sku: v.sku, order: idx, colorCode: v.colorCode, attributes: v.attributes || {} },
           create: {
             productId: id,
             size: v.size,
@@ -284,16 +325,21 @@ async function _updateProduct(
             colorCode: v.colorCode,
             sku: v.sku,
             order: idx,
+            attributes: v.attributes || {},
           },
         });
         upserted.push(variant);
 
+        const variantPrice = v.price !== undefined && v.price > 0
+          ? v.price
+          : data.price;
+
         await tx.variantPricingMatrix.upsert({
           where: { variantId: variant.id },
-          update: { basePrice: new Prisma.Decimal(data.price) },
+          update: { basePrice: new Prisma.Decimal(variantPrice) },
           create: {
             variantId: variant.id,
-            basePrice: new Prisma.Decimal(data.price),
+            basePrice: new Prisma.Decimal(variantPrice),
             tierPrices: {},
           },
         });
@@ -458,7 +504,7 @@ export async function uploadImage(formData: FormData) {
   const publicUploadsDir = join(process.cwd(), "public", "uploads");
   try {
     await mkdir(publicUploadsDir, { recursive: true });
-  } catch (e) {}
+  } catch (e) { }
 
   const filePath = join(publicUploadsDir, uniqueName);
   await writeFile(filePath, buffer);
@@ -488,7 +534,7 @@ export async function getProductsForOrder() {
   return products.map(p => {
     const basePrice = p.variants?.[0]?.pricingMatrix?.basePrice
       ? Number(p.variants[0].pricingMatrix.basePrice)
-      : p.price;
+      : 0;
 
     const displayImages = (p.mediaAssets && p.mediaAssets.length > 0)
       ? p.mediaAssets.map((asset: any) => asset.url)
@@ -500,7 +546,7 @@ export async function getProductsForOrder() {
       images: displayImages,
       variants: p.variants.map(v => ({
         ...v,
-        stock: v.stocks?.[0]?.availableQuantity ?? v.stock ?? 0
+        stock: v.stocks?.[0]?.availableQuantity ?? 0
       }))
     };
   });

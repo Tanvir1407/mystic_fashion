@@ -175,7 +175,7 @@ async function main() {
       for (const item of orderItems) {
         // Fetch variants for this product and size
         const variants = await tx.productVariant.findMany({
-          where: { productId: item.productId, size: item.size },
+          where: { productId: item.productId, size: (item as any).size },
         });
 
         if (variants.length > 0) {
@@ -190,7 +190,7 @@ async function main() {
           }
           linkedOrderItemsCount++;
         } else {
-          console.warn(`[WARNING] No variant found for Product ID ${item.productId} and Size ${item.size} (OrderItem ID: ${item.id})`);
+          console.warn(`[WARNING] No variant found for Product ID ${item.productId} and Size ${(item as any).size} (OrderItem ID: ${item.id})`);
           missingVariantsCount++;
         }
       }

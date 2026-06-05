@@ -44,7 +44,7 @@ export default async function ProductDetailView({ params }: { params: { id: stri
         },
       },
       orderItems: {
-        include: { order: true },
+        include: { order: true, variant: true },
       },
       purchaseItems: true,
     },
@@ -56,7 +56,7 @@ export default async function ProductDetailView({ params }: { params: { id: stri
 
   const basePrice = productRes.variants?.[0]?.pricingMatrix?.basePrice
     ? Number(productRes.variants[0].pricingMatrix.basePrice)
-    : productRes.price;
+    : 0;
 
   const displayImages = (productRes.mediaAssets && productRes.mediaAssets.length > 0)
     ? productRes.mediaAssets.map((asset: any) => asset.url)
@@ -102,7 +102,7 @@ export default async function ProductDetailView({ params }: { params: { id: stri
       id: oi.id,
       type: 'Order',
       date: oi.order.createdAt,
-      description: `Sold ${oi.quantity}x ${oi.size}`,
+      description: `Sold ${oi.quantity}x ${oi.variant?.size || "Default"}`,
       status: oi.order.status,
     })),
     ...product.variants.flatMap(v =>

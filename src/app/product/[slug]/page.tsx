@@ -98,7 +98,8 @@ export default async function ProductPage({ params }: { params: { slug: string }
     images: displayImages,
     variants: productRes.variants.map((v: any) => ({
       ...v,
-      stock: v.stocks?.[0]?.availableQuantity ?? v.stock ?? 0
+      stock: v.stocks?.[0]?.availableQuantity ?? v.stock ?? 0,
+      price: v.pricingMatrix?.basePrice ? Number(v.pricingMatrix.basePrice) : basePrice
     }))
   };
 

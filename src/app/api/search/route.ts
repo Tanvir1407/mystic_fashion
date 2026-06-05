@@ -63,7 +63,7 @@ export async function GET(req: NextRequest) {
     const data = products.map((p) => {
       const basePrice = p.variants?.[0]?.pricingMatrix?.basePrice
         ? Number(p.variants[0].pricingMatrix.basePrice)
-        : p.price;
+        : 0;
 
       const displayImages = (p.mediaAssets && p.mediaAssets.length > 0)
         ? p.mediaAssets.map((asset: any) => asset.url)
@@ -83,7 +83,7 @@ export async function GET(req: NextRequest) {
           id: v.id,
           size: v.size,
           color: v.color,
-          stock: v.stocks?.[0]?.availableQuantity ?? v.stock ?? 0,
+          stock: v.stocks?.[0]?.availableQuantity ?? 0,
         })),
       };
     });

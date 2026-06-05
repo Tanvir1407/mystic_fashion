@@ -75,6 +75,31 @@ export async function createStaffOrder(data: {
         customerId = customer.id;
       }
 
+      // Resolve variant ID for each item
+      const resolvedItems = [];
+      for (const item of data.items) {
+        let variant = await tx.productVariant.findFirst({
+          where: {
+            productId: item.productId,
+            size: item.size,
+          }
+        });
+        if (!variant) {
+          variant = await tx.productVariant.findFirst({
+            where: {
+              productId: item.productId,
+            }
+          });
+        }
+        if (!variant) {
+          throw new Error(`No variant found for product ID ${item.productId}`);
+        }
+        resolvedItems.push({
+          ...item,
+          variantId: variant.id
+        });
+      }
+
       return tx.order.create({
         data: {
           id: customId,
@@ -97,11 +122,11 @@ export async function createStaffOrder(data: {
           commissionRate: rate,
           customerId,
           items: {
-            create: data.items.flatMap((item) => {
+            create: resolvedItems.flatMap((item) => {
               if (item.requiresPrint && item.printDetails?.length) {
                 const printed = item.printDetails.map((pd) => ({
                   productId: item.productId,
-                  size: item.size,
+                  variantId: item.variantId,
                   quantity: 1,
                   price: item.price,
                   requiresPrint: true,
@@ -111,11 +136,11 @@ export async function createStaffOrder(data: {
                 }));
                 const remaining = item.quantity - item.printDetails.length;
                 if (remaining > 0) {
-                  printed.push({ productId: item.productId, size: item.size, quantity: remaining, price: item.price, requiresPrint: false, printName: null, printNumber: null, printCost: 0 });
+                  printed.push({ productId: item.productId, variantId: item.variantId, quantity: remaining, price: item.price, requiresPrint: false, printName: null, printNumber: null, printCost: 0 });
                 }
                 return printed;
               }
-              return [{ productId: item.productId, size: item.size, quantity: item.quantity, price: item.price, requiresPrint: item.requiresPrint || false, printName: item.printName || null, printNumber: item.printNumber || null, printCost: item.printCost || 0 }];
+              return [{ productId: item.productId, variantId: item.variantId, quantity: item.quantity, price: item.price, requiresPrint: item.requiresPrint || false, printName: item.printName || null, printNumber: item.printNumber || null, printCost: item.printCost || 0 }];
             }),
           },
         },

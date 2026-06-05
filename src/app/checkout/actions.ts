@@ -75,27 +75,77 @@ export async function placeOrderAction(payload: {
         }
       }
 
-      // Recalculate subtotal securely from DB
-      const productIds = payload.items.map(item => item.id);
-      const dbProducts = await tx.product.findMany({
-        where: { id: { in: productIds } },
-        include: { discount: true }
-      });
-      const dbProductMap = new Map(dbProducts.map(p => [p.id, p]));
-
+      // 1. Resolve variant IDs, validate stock availability, and recalculate subtotal securely from DB
       let calculatedSubtotal = 0;
+      const variantMap = new Map<string, { id: string; availableStock: number; trackStock: boolean }>();
+
       for (const item of payload.items) {
-        const dbProd = dbProductMap.get(item.id);
-        if (!dbProd) throw new Error(`Product not found: ${item.name}`);
-        let finalPrice = dbProd.price;
-        if (dbProd.discount && dbProd.discount.active) {
-          if (dbProd.discount.discountType === "PERCENTAGE") {
-            finalPrice = finalPrice - (finalPrice * (dbProd.discount.value / 100));
+        if (!item.size) {
+          throw new Error(`Size not selected for ${item.name}`);
+        }
+
+        const variant = await tx.productVariant.findUnique({
+          where: {
+            productId_size_color: {
+              productId: item.id,
+              size: item.size,
+              color: item.color || "Default"
+            }
+          },
+          include: {
+            pricingMatrix: true,
+            product: {
+              include: {
+                discount: true
+              }
+            },
+            stocks: {
+              where: {
+                warehouse: {
+                  code: "WH-MAIN"
+                }
+              }
+            }
+          }
+        });
+
+        if (!variant) {
+          throw new Error(`Variant not found for ${item.name} (${item.size})`);
+        }
+
+        const availableStock = variant.stocks[0]?.availableQuantity ?? 0;
+        
+        // Determine the base price of this variant (fallback to product level price if matrix basePrice is not set)
+        const basePriceVal = variant.pricingMatrix?.basePrice 
+          ? Number(variant.pricingMatrix.basePrice) 
+          : (variant.product as any).price; // fallback if any database constraint is missing
+
+        let finalPrice = basePriceVal;
+        const discount = variant.product.discount;
+        if (discount && discount.active) {
+          if (discount.discountType === "PERCENTAGE") {
+            finalPrice = finalPrice - (finalPrice * (discount.value / 100));
           } else {
-            finalPrice = finalPrice - dbProd.discount.value;
+            finalPrice = finalPrice - discount.value;
           }
         }
+
         calculatedSubtotal += roundPrice(finalPrice) * item.quantity;
+
+        variantMap.set(`${item.id}_${item.size}_${item.color || "Default"}`, {
+          id: variant.id,
+          availableStock,
+          trackStock: variant.product.trackStock ?? false
+        });
+      }
+
+      // Check stock limits
+      for (const item of payload.items) {
+        const key = `${item.id}_${item.size}_${item.color || "Default"}`;
+        const vInfo = variantMap.get(key);
+        if (vInfo && vInfo.trackStock && vInfo.availableStock < item.quantity) {
+          throw new Error(`Variant "${item.name} (${item.size})" does not have enough stock (Available: ${vInfo.availableStock}).`);
+        }
       }
 
       // Calculate DTF Cost
@@ -173,58 +223,6 @@ export async function placeOrderAction(payload: {
         nextNum = parseInt(lastNumStr) + 1;
       }
       const customId = `${datePrefix}${nextNum.toString().padStart(2, '0')}`;
-
-      // 1. Validate stock availability and resolve variant IDs first
-      const variantMap = new Map<string, { id: string; availableStock: number; trackStock: boolean }>();
-      for (const item of payload.items) {
-        if (!item.size) {
-          throw new Error(`Size not selected for ${item.name}`);
-        }
-
-        const variant = await tx.productVariant.findUnique({
-          where: {
-            productId_size_color: {
-              productId: item.id,
-              size: item.size,
-              color: item.color || "Default"
-            }
-          },
-          include: {
-            product: {
-              select: {
-                trackStock: true
-              }
-            },
-            stocks: {
-              where: {
-                warehouse: {
-                  code: "WH-MAIN"
-                }
-              }
-            }
-          }
-        });
-
-        if (!variant) {
-          throw new Error(`Variant not found for ${item.name} (${item.size})`);
-        }
-
-        const availableStock = variant.stocks[0]?.availableQuantity ?? 0;
-        variantMap.set(`${item.id}_${item.size}_${item.color || "Default"}`, {
-          id: variant.id,
-          availableStock,
-          trackStock: variant.product.trackStock ?? false
-        });
-      }
-
-      // Check stock limits
-      for (const item of payload.items) {
-        const key = `${item.id}_${item.size}_${item.color || "Default"}`;
-        const vInfo = variantMap.get(key);
-        if (vInfo && vInfo.trackStock && vInfo.availableStock < item.quantity) {
-          throw new Error(`Variant "${item.name} (${item.size})" does not have enough stock (Available: ${vInfo.availableStock}).`);
-        }
-      }
 
       // 2. Create the order & items
       const order = await tx.order.create({
@@ -404,7 +402,7 @@ export async function syncCartPrices(productIds: string[]) {
     return products.map(product => {
       const basePrice = product.variants?.[0]?.pricingMatrix?.basePrice
         ? Number(product.variants[0].pricingMatrix.basePrice)
-        : product.price;
+        : 0;
 
       let finalPrice = basePrice;
       if (product.discount && product.discount.active) {

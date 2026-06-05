@@ -4,6 +4,7 @@ async function main() {
   console.log("Starting database clean and seed...");
 
   await prisma.$transaction(async (tx) => {
+    const Prisma = require("@/generated/prisma/client").Prisma;
     // Step 1: Deep Clean (Deletion order matters to prevent FK constraint violations)
     console.log("Cleaning database tables...");
 
@@ -27,6 +28,10 @@ async function main() {
 
     await tx.order.deleteMany();
     console.log("- Deleted Orders");
+
+    await tx.variantPricingMatrix.deleteMany();
+    await tx.stock.deleteMany();
+    await tx.mediaAsset.deleteMany();
 
     await tx.productVariant.deleteMany();
     console.log("- Deleted ProductVariants");
@@ -55,10 +60,7 @@ async function main() {
         name: "Argentina 2024 Home Kit",
         category: "Jersey",
         description: "Premium Quality Authentics",
-        price: 1200,
-        purchasePrice: 800,
         team: "Argentina",
-        images: [],
       },
     });
     console.log(`- Created Product: ${product.name}`);
@@ -68,10 +70,43 @@ async function main() {
       data: {
         productId: product.id,
         size: "XL",
-        stock: 10,
+        sku: "ARG-2024-HOME-XL",
       },
     });
-    console.log(`- Created Variant: Size ${variant.size}, Stock ${variant.stock}`);
+    console.log(`- Created Variant: Size ${variant.size}`);
+
+    const warehouseCode = "WH-MAIN";
+    let warehouse = await tx.warehouse.findUnique({ where: { code: warehouseCode } });
+    if (!warehouse) {
+      warehouse = await tx.warehouse.create({
+        data: {
+          code: warehouseCode,
+          name: "Main Warehouse Hub",
+          address: "Central fulfillment Center",
+          isActive: true,
+        },
+      });
+    }
+
+    await tx.variantPricingMatrix.create({
+      data: {
+        variantId: variant.id,
+        basePrice: new Prisma.Decimal(1200),
+        costPrice: new Prisma.Decimal(800),
+        tierPrices: {},
+      },
+    });
+
+    await tx.stock.create({
+      data: {
+        variantId: variant.id,
+        warehouseId: warehouse.id,
+        physicalQuantity: 10,
+        availableQuantity: 10,
+        reservedQuantity: 0,
+        version: 0,
+      },
+    });
 
     // 3. Create a Purchase Record
     const purchase = await tx.purchase.create({

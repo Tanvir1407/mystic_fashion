@@ -16,29 +16,21 @@ export default async function Home() {
     select: { id: true, name: true, image: true, sortOrder: true },
   }).catch((e) => { console.error(e); return []; });
 
-  const [productsRes, totalCountRes, heroSlidesRes, footerData] = await Promise.all([
-    prisma.product.findMany({
-      where: { isPublished: true },
-      take: limit,
-      orderBy: [
-        { isFeatured: "desc" },
-        { createdAt: "desc" }
-      ],
-      include: {
-        discount: true,
-        mediaAssets: { orderBy: { sortOrder: "asc" } },
-        variants: {
-          orderBy: { order: "asc" },
-          include: {
-            pricingMatrix: true,
-            stocks: { where: { warehouse: { code: "WH-MAIN" } } }
-          }
-        }
-      }
-    }).catch(e => { console.error(e); return []; }),
-    prisma.product.count({ where: { isPublished: true } }).catch(() => 0),
   // Build ordered category name list for product queries
   const categoriesList = dbCategories.map((c) => c.name);
+
+  // Common select include block for products in enterprise schema
+  const productIncludeBlock = {
+    discount: true,
+    mediaAssets: { orderBy: { sortOrder: "asc" } as const },
+    variants: {
+      orderBy: { order: "asc" } as const,
+      include: {
+        pricingMatrix: true,
+        stocks: { where: { warehouse: { code: "WH-MAIN" } } }
+      }
+    }
+  };
 
   const [categoryRecentRes, categoryShowroomRes, heroSlidesRes, footerData] = await Promise.all([
     // 1. New Arrivals: top 4 recent products per category
@@ -51,7 +43,7 @@ export default async function Home() {
           },
           take: 4,
           orderBy: { createdAt: "desc" },
-          include: { discount: true, variants: true }
+          include: productIncludeBlock
         }).catch(e => { console.error(e); return []; })
       )
     ),
@@ -67,7 +59,7 @@ export default async function Home() {
               isFeatured: true
             },
             take: 4,
-            include: { discount: true, variants: true }
+            include: productIncludeBlock
           });
 
           let finalProducts = [...featured];
@@ -87,7 +79,7 @@ export default async function Home() {
                 }
               },
               take: remainingCount,
-              include: { discount: true, variants: true }
+              include: productIncludeBlock
             });
             finalProducts = [...finalProducts, ...topSold];
           }
@@ -106,21 +98,19 @@ export default async function Home() {
     getFooterData()
   ]);
 
-  const rawProducts = productsRes;
-  const heroSlides = heroSlidesRes;
-
-  const products = rawProducts.map((product: any) => {
+  // Map database product fields to match local frontend schema
+  const mapProduct = (product: any) => {
     const basePrice = product.variants?.[0]?.pricingMatrix?.basePrice
       ? Number(product.variants[0].pricingMatrix.basePrice)
-      : product.price;
+      : 0;
 
     const displayImages = (product.mediaAssets && product.mediaAssets.length > 0)
       ? product.mediaAssets.map((asset: any) => asset.url)
-      : (product.images || []);
+      : [];
 
     const mappedVariants = product.variants?.map((v: any) => ({
       ...v,
-      stock: v.stocks?.[0]?.availableQuantity ?? v.stock ?? 0
+      stock: v.stocks?.[0]?.availableQuantity ?? 0
     })) || [];
 
     return {
@@ -129,22 +119,11 @@ export default async function Home() {
       images: displayImages,
       variants: mappedVariants
     };
-  const newArrivalsProducts = categoryRecentRes.flat();
-  const showroomProducts = categoryShowroomRes.flat();
+  };
+
+  const newArrivalsProducts = categoryRecentRes.flat().map(mapProduct);
+  const showroomProducts = categoryShowroomRes.flat().map(mapProduct);
   const heroSlides = heroSlidesRes;
-
-  // Sort variants by order in place
-  newArrivalsProducts.forEach(product => {
-    if (product.variants) {
-      product.variants.sort((a, b) => (a.order || 0) - (b.order || 0));
-    }
-  });
-
-  showroomProducts.forEach(product => {
-    if (product.variants) {
-      product.variants.sort((a, b) => (a.order || 0) - (b.order || 0));
-    }
-  });
 
   return (
     <main className="min-h-screen bg-white dark:bg-zinc-950">

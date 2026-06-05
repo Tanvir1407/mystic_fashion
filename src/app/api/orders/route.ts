@@ -125,49 +125,28 @@ export async function POST(req: NextRequest) {
         }
       }
 
-      // Recalculate subtotal securely from DB
-      const productIds = items.map((item: any) => item.id);
-      const dbProducts = await tx.product.findMany({
-        where: { id: { in: productIds } },
-        include: { discount: true }
-      });
-      const dbProductMap = new Map(dbProducts.map(p => [p.id, p]));
-
+      // 1. Resolve variant IDs, validate stock availability, and recalculate subtotal securely from DB
       let calculatedSubtotal = 0;
-      for (const item of items) {
-        const dbProd = dbProductMap.get(item.id);
-        if (!dbProd) throw new Error(`Product not found: ${item.name || item.id}`);
-        let finalPrice = dbProd.price;
-        if (dbProd.discount && dbProd.discount.active) {
-          if (dbProd.discount.discountType === "PERCENTAGE") {
-            finalPrice = finalPrice - (finalPrice * (dbProd.discount.value / 100));
-          } else {
-            finalPrice = finalPrice - dbProd.discount.value;
-          }
-        }
-        calculatedSubtotal += roundPrice(finalPrice) * item.quantity;
-      }
-
-      const secureTotalAmount = roundPrice(
-        calculatedSubtotal - validatedDiscountAmount + calculatedAdvance + finalDeliveryCharge
-      );
-
-      // Validate variants exist and check stock
       const variantMap = new Map<string, string>();
+
       for (const item of items) {
-        if (!item.size) throw new Error(`Size not selected for ${item.name || item.id}`);
+        if (!item.size) {
+          throw new Error(`Size not selected for ${item.name || item.id}`);
+        }
+
         const variant = await tx.productVariant.findUnique({
           where: {
             productId_size_color: {
               productId: item.id,
               size: item.size,
-              color: item.color || "Default",
-            },
+              color: item.color || "Default"
+            }
           },
           include: {
+            pricingMatrix: true,
             product: {
-              select: {
-                trackStock: true
+              include: {
+                discount: true
               }
             },
             stocks: {
@@ -179,15 +158,39 @@ export async function POST(req: NextRequest) {
             }
           }
         });
-        if (!variant) throw new Error(`Variant not found for product ${item.name || item.id} (${item.size})`);
+
+        if (!variant) {
+          throw new Error(`Variant not found for product ${item.name || item.id} (${item.size})`);
+        }
 
         const availableStock = variant.stocks[0]?.availableQuantity ?? 0;
         if (variant.product.trackStock && availableStock < item.quantity) {
           throw new Error(`Variant for product "${item.name || item.id}" (${item.size}) does not have enough stock (Available: ${availableStock}).`);
         }
 
+        // Determine the base price of this variant (fallback to product level price if matrix basePrice is not set)
+        const basePriceVal = variant.pricingMatrix?.basePrice 
+          ? Number(variant.pricingMatrix.basePrice) 
+          : (variant.product as any).price; // fallback if any database constraint is missing
+
+        let finalPrice = basePriceVal;
+        const discount = variant.product.discount;
+        if (discount && discount.active) {
+          if (discount.discountType === "PERCENTAGE") {
+            finalPrice = finalPrice - (finalPrice * (discount.value / 100));
+          } else {
+            finalPrice = finalPrice - discount.value;
+          }
+        }
+
+        calculatedSubtotal += roundPrice(finalPrice) * item.quantity;
+
         variantMap.set(`${item.id}_${item.size}_${item.color || "Default"}`, variant.id);
       }
+
+      const secureTotalAmount = roundPrice(
+        calculatedSubtotal - validatedDiscountAmount + calculatedAdvance + finalDeliveryCharge
+      );
 
       // Create order
       const order = await tx.order.create({

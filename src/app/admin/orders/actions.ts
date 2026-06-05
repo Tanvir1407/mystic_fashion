@@ -79,18 +79,8 @@ async function _updateOrderStatus(orderId: string, status: OrderStatus) {
 
       if (!oldIsHolding && newIsHolding) {
         for (const item of order.items) {
-          const variant = await tx.productVariant.findUnique({
-            where: {
-              productId_size_color: {
-                productId: item.productId,
-                size: item.size,
-                color: (item as any).color || "Default",
-              },
-            },
-          });
-          if (!variant) throw new Error(`Variant not found for product ${item.productId} (${item.size})`);
           await updateStockDualWrite(tx, {
-            variantId: variant.id,
+            variantId: item.variantId,
             quantityChange: -item.quantity,
             movementType: "SALE",
             referenceId: order.id,
@@ -101,18 +91,8 @@ async function _updateOrderStatus(orderId: string, status: OrderStatus) {
 
       if (oldIsHolding && !newIsHolding) {
         for (const item of order.items) {
-          const variant = await tx.productVariant.findUnique({
-            where: {
-              productId_size_color: {
-                productId: item.productId,
-                size: item.size,
-                color: (item as any).color || "Default",
-              },
-            },
-          });
-          if (!variant) throw new Error(`Variant not found for product ${item.productId} (${item.size})`);
           await updateStockDualWrite(tx, {
-            variantId: variant.id,
+            variantId: item.variantId,
             quantityChange: item.quantity,
             movementType: newStatus === "CANCELLED" || newStatus === "RETURNED" ? "RETURN" : "RECEIPT",
             referenceId: order.id,
@@ -214,24 +194,13 @@ async function _deleteOrder(id: string) {
         ];
         if (stockHoldingStatuses.includes(order.status)) {
           for (const item of order.items) {
-            const variant = await tx.productVariant.findUnique({
-              where: {
-                productId_size_color: {
-                  productId: item.productId,
-                  size: item.size,
-                  color: (item as any).color || "Default",
-                },
-              },
+            await updateStockDualWrite(tx, {
+              variantId: item.variantId,
+              quantityChange: item.quantity,
+              movementType: "RETURN",
+              referenceId: order.id,
+              referenceType: "ORDER_DELETE",
             });
-            if (variant) {
-              await updateStockDualWrite(tx, {
-                variantId: variant.id,
-                quantityChange: item.quantity,
-                movementType: "RETURN",
-                referenceId: order.id,
-                referenceType: "ORDER_DELETE",
-              });
-            }
           }
         }
       }
@@ -271,24 +240,13 @@ export async function bulkDeleteOrders(orderIds: string[]) {
       for (const order of orders) {
         if (stockHoldingStatuses.includes(order.status)) {
           for (const item of order.items) {
-            const variant = await tx.productVariant.findUnique({
-              where: {
-                productId_size_color: {
-                  productId: item.productId,
-                  size: item.size,
-                  color: (item as any).color || "Default",
-                },
-              },
+            await updateStockDualWrite(tx, {
+              variantId: item.variantId,
+              quantityChange: item.quantity,
+              movementType: "RETURN",
+              referenceId: order.id,
+              referenceType: "ORDER_DELETE",
             });
-            if (variant) {
-              await updateStockDualWrite(tx, {
-                variantId: variant.id,
-                quantityChange: item.quantity,
-                movementType: "RETURN",
-                referenceId: order.id,
-                referenceType: "ORDER_DELETE",
-              });
-            }
           }
         }
       }
@@ -345,18 +303,8 @@ async function _restoreOrder(id: string) {
       ];
       if (stockHoldingStatuses.includes(order.status)) {
         for (const item of order.items) {
-          const variant = await tx.productVariant.findUnique({
-            where: {
-              productId_size_color: {
-                productId: item.productId,
-                size: item.size,
-                color: (item as any).color || "Default",
-              },
-            },
-          });
-          if (!variant) throw new Error(`Variant not found for product ${item.productId} (${item.size})`);
           await updateStockDualWrite(tx, {
-            variantId: variant.id,
+            variantId: item.variantId,
             quantityChange: -item.quantity,
             movementType: "SALE",
             referenceId: order.id,
@@ -443,24 +391,13 @@ async function _updateOrderDetails(
           if (oldItem) {
             const diff = newItem.quantity - oldItem.quantity;
             if (diff !== 0 && isStockHolding) {
-              const variant = await tx.productVariant.findUnique({
-                where: {
-                  productId_size_color: {
-                    productId: newItem.productId,
-                    size: newItem.size,
-                    color: (newItem as any).color || "Default",
-                  },
-                },
+              await updateStockDualWrite(tx, {
+                variantId: oldItem.variantId,
+                quantityChange: -diff,
+                movementType: diff > 0 ? "SALE" : "RETURN",
+                referenceId: order.id,
+                referenceType: "ORDER_UPDATE",
               });
-              if (variant) {
-                await updateStockDualWrite(tx, {
-                  variantId: variant.id,
-                  quantityChange: -diff,
-                  movementType: diff > 0 ? "SALE" : "RETURN",
-                  referenceId: order.id,
-                  referenceType: "ORDER_UPDATE",
-                });
-              }
             }
             oldItemsMap.delete(newItem.id);
           } else {
@@ -489,24 +426,13 @@ async function _updateOrderDetails(
 
         if (isStockHolding) {
           for (const remainingOld of oldItemsMap.values()) {
-            const variant = await tx.productVariant.findUnique({
-              where: {
-                productId_size_color: {
-                  productId: remainingOld.productId,
-                  size: remainingOld.size,
-                  color: (remainingOld as any).color || "Default",
-                },
-              },
+            await updateStockDualWrite(tx, {
+              variantId: remainingOld.variantId,
+              quantityChange: remainingOld.quantity,
+              movementType: "RETURN",
+              referenceId: order.id,
+              referenceType: "ORDER_UPDATE",
             });
-            if (variant) {
-              await updateStockDualWrite(tx, {
-                variantId: variant.id,
-                quantityChange: remainingOld.quantity,
-                movementType: "RETURN",
-                referenceId: order.id,
-                referenceType: "ORDER_UPDATE",
-              });
-            }
           }
         }
 
@@ -528,8 +454,7 @@ async function _updateOrderDetails(
             data: {
               orderId: id,
               productId: newItem.productId,
-              variantId: variant?.id || null,
-              size: newItem.size,
+              variantId: variant?.id || "",
               quantity: newItem.quantity,
               price: newItem.price,
               requiresPrint: newItem.requiresPrint,
@@ -745,9 +670,12 @@ async function _createAdminOrder(data: {
           },
           select: { id: true },
         });
+        if (!variant) {
+          throw new Error(`Variant not found for product ${item.productId} (Size: ${item.size}, Color: ${(item as any).color || "Default"})`);
+        }
         itemsWithVariants.push({
           ...item,
-          variantId: variant?.id || null,
+          variantId: variant.id,
         });
       }
 
@@ -782,7 +710,6 @@ async function _createAdminOrder(data: {
                 const printedItems = item.printDetails.map((pd) => ({
                   productId: item.productId,
                   variantId: item.variantId,
-                  size: item.size,
                   quantity: 1,
                   price: item.price,
                   requiresPrint: true,
@@ -795,7 +722,6 @@ async function _createAdminOrder(data: {
                   printedItems.push({
                     productId: item.productId,
                     variantId: item.variantId,
-                    size: item.size,
                     quantity: remainingQty,
                     price: item.price,
                     requiresPrint: false,
@@ -810,7 +736,6 @@ async function _createAdminOrder(data: {
                   {
                     productId: item.productId,
                     variantId: item.variantId,
-                    size: item.size,
                     quantity: item.quantity,
                     price: item.price,
                     requiresPrint: item.requiresPrint || false,
@@ -909,7 +834,7 @@ export async function bulkSendToPathaoAction(orderIds: string[]) {
 
     const orders = await prisma.order.findMany({
       where: { id: { in: orderIds } },
-      include: { items: { include: { product: true } } },
+      include: { items: { include: { product: true, variant: true } } },
     });
 
     let successCount = 0;
@@ -950,7 +875,7 @@ export async function bulkSendToPathaoAction(orderIds: string[]) {
           item_description: order.items
             .map(
               (i) =>
-                `• ${i.product.name} (Size: ${i.size}, Qty: ${i.quantity})`
+                `• ${i.product.name} (Size: ${i.variant?.size || "Default"}, Qty: ${i.quantity})`
             )
             .join("\n"),
         };
@@ -1044,7 +969,7 @@ export async function sendPathaoPickupManually(orderId: string) {
   try {
     const order = await prisma.order.findUnique({
       where: { id: orderId },
-      include: { items: { include: { product: true } } },
+      include: { items: { include: { product: true, variant: true } } },
     });
     if (!order) return { success: false, error: "Order not found" };
     if (order.pathaoConsignmentId)
@@ -1081,7 +1006,7 @@ export async function sendPathaoPickupManually(orderId: string) {
       item_weight: 0.5,
       amount_to_collect: collectionAmount,
       item_description: order.items
-        .map((i) => `${i.product?.name || "Item"} (Size: ${i.size}, Qty: ${i.quantity})`)
+        .map((i) => `${i.product?.name || "Item"} (Size: ${i.variant?.size || "Default"}, Qty: ${i.quantity})`)
         .join(", "),
     };
 

@@ -10,7 +10,7 @@ interface StockUpdateInput {
 }
 
 export async function updateStockDualWrite(
-  tx: Prisma.TransactionClient,
+  tx: any,
   input: StockUpdateInput
 ) {
   const { variantId, quantityChange, absoluteQuantity, movementType, referenceId, referenceType } = input;

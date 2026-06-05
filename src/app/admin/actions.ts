@@ -251,7 +251,7 @@ export async function getLowStockProducts(options?: { limit?: number; page?: num
     images: p.mediaAssets.length > 0 ? p.mediaAssets.map(m => m.url) : ((p as any).images || []),
     variants: p.variants.map(v => ({
       ...v,
-      stock: v.stocks?.[0]?.availableQuantity ?? v.stock ?? 0
+      stock: v.stocks?.[0]?.availableQuantity ?? 0
     }))
   }));
 }
@@ -266,13 +266,48 @@ async function _adjustStock(data: {
     const { variantId, adjustmentType, quantity, reason } = data;
 
     const result = await prisma.$transaction(async (tx) => {
+      const warehouseCode = "WH-MAIN";
+      let warehouse = await tx.warehouse.findUnique({ where: { code: warehouseCode } });
+      if (!warehouse) {
+        warehouse = await tx.warehouse.create({
+          data: {
+            code: warehouseCode,
+            name: "Main Warehouse Hub",
+            address: "Central fulfillment Center",
+            isActive: true,
+          },
+        });
+      }
+
       const variant = await tx.productVariant.findUnique({
         where: { id: variantId },
-        select: { stock: true, id: true },
+        select: { id: true },
       });
       if (!variant) throw new Error("Product variant not found");
 
-      const previousQuantity = variant.stock;
+      let stock = await tx.stock.findUnique({
+        where: {
+          variantId_warehouseId: {
+            variantId,
+            warehouseId: warehouse.id,
+          },
+        },
+      });
+
+      if (!stock) {
+        stock = await tx.stock.create({
+          data: {
+            variantId,
+            warehouseId: warehouse.id,
+            physicalQuantity: 0,
+            availableQuantity: 0,
+            reservedQuantity: 0,
+            version: 0,
+          },
+        });
+      }
+
+      const previousQuantity = stock.availableQuantity;
       let newQuantity = previousQuantity;
 
       if (adjustmentType === "ADDITION") newQuantity = previousQuantity + quantity;
@@ -331,13 +366,48 @@ export async function bulkAdjustStock(
       for (const adj of adjustments) {
         const { variantId, adjustmentType, quantity, reason } = adj;
 
+        const warehouseCode = "WH-MAIN";
+        let warehouse = await tx.warehouse.findUnique({ where: { code: warehouseCode } });
+        if (!warehouse) {
+          warehouse = await tx.warehouse.create({
+            data: {
+              code: warehouseCode,
+              name: "Main Warehouse Hub",
+              address: "Central fulfillment Center",
+              isActive: true,
+            },
+          });
+        }
+
         const variant = await tx.productVariant.findUnique({
           where: { id: variantId },
-          select: { stock: true, id: true },
+          select: { id: true },
         });
         if (!variant) throw new Error(`Product variant not found: ${variantId}`);
 
-        const previousQuantity = variant.stock;
+        let stock = await tx.stock.findUnique({
+          where: {
+            variantId_warehouseId: {
+              variantId,
+              warehouseId: warehouse.id,
+            },
+          },
+        });
+
+        if (!stock) {
+          stock = await tx.stock.create({
+            data: {
+              variantId,
+              warehouseId: warehouse.id,
+              physicalQuantity: 0,
+              availableQuantity: 0,
+              reservedQuantity: 0,
+              version: 0,
+            },
+          });
+        }
+
+        const previousQuantity = stock.availableQuantity;
         let newQuantity = previousQuantity;
 
         if (adjustmentType === "ADDITION") newQuantity = previousQuantity + quantity;

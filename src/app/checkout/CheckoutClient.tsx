@@ -47,7 +47,7 @@ export default function CheckoutClient({
   const [phone, setPhone] = useState("");
   // DTF Modal State
   const [showDTFModal, setShowDTFModal] = useState(false);
-  const [activeItem, setActiveItem] = useState<{ id: string, size: string | undefined, editIndex: number } | null>(null);
+  const [activeItem, setActiveItem] = useState<{ id: string, size: string | undefined, color: string | undefined, editIndex: number } | null>(null);
   const [dtfForm, setDtfForm] = useState({
     type: "messi" as "messi" | "ronaldo" | "neymar" | "custom",
     name: "",
@@ -76,7 +76,7 @@ export default function CheckoutClient({
         updatedPrices.forEach(updated => {
           items.forEach(item => {
             if (item.id === updated.id && item.price !== updated.price) {
-              updateItem(item.id, item.size, { price: updated.price });
+              updateItem(item.id, item.size, item.color, { price: updated.price });
             }
           });
         });
@@ -296,13 +296,13 @@ export default function CheckoutClient({
     });
   };
 
-  const handleDTFToggle = (id: string, size: string | undefined, checked: boolean) => {
+  const handleDTFToggle = (id: string, size: string | undefined, color: string | undefined, checked: boolean) => {
     if (checked) {
-      setActiveItem({ id, size, editIndex: -1 });
+      setActiveItem({ id, size, color, editIndex: -1 });
       setDtfForm({ type: "messi", name: "Messi", number: "10" });
       setShowDTFModal(true);
     } else {
-      updateItem(id, size, {
+      updateItem(id, size, color, {
         requiresPrint: false,
         printName: "",
         printNumber: "",
@@ -322,7 +322,7 @@ export default function CheckoutClient({
     if (type === "ronaldo") { finalName = "Ronaldo"; finalNumber = "7"; }
     if (type === "neymar") { finalName = "Neymar"; finalNumber = "10"; }
 
-    const currentItem = items.find(i => i.id === activeItem.id && i.size === activeItem.size);
+    const currentItem = items.find(i => i.id === activeItem.id && i.size === activeItem.size && i.color === activeItem.color);
     let newDetails = currentItem?.printDetails ? [...currentItem.printDetails] : [];
 
     if (activeItem.editIndex >= 0) {
@@ -331,7 +331,7 @@ export default function CheckoutClient({
       newDetails.push({ name: finalName, number: finalNumber });
     }
 
-    updateItem(activeItem.id, activeItem.size, {
+    updateItem(activeItem.id, activeItem.size, activeItem.color, {
       requiresPrint: true,
       printName: finalName,
       printNumber: finalNumber,
@@ -584,7 +584,7 @@ export default function CheckoutClient({
 
                 <div className="space-y-5 mb-8 max-h-[40vh] overflow-y-auto pr-2 custom-scrollbar">
                   {items.map((item) => (
-                    <div key={`${item.id}-${item.size}`} className="flex flex-col gap-3 pb-5 border-b border-slate-50 last:border-0 last:pb-0">
+                    <div key={`${item.id}-${item.size}-${item.color || "Default"}`} className="flex flex-col gap-3 pb-5 border-b border-slate-50 last:border-0 last:pb-0">
                       <div className="flex gap-4 group">
                         <div className="relative w-16 h-20 bg-slate-50 overflow-hidden flex-shrink-0 border border-slate-100 group-hover:border-slate-300 transition-colors">
                           {item.image && (
@@ -594,8 +594,9 @@ export default function CheckoutClient({
                         <div className="flex-1 flex flex-col justify-between py-0.5">
                           <div>
                             <h4 className="font-bold text-xs uppercase tracking-tight text-slate-800 line-clamp-1 group-hover:text-black transition-colors">{item.name}</h4>
-                            <div className="flex items-center gap-3 mt-1.5">
+                            <div className="flex flex-wrap items-center gap-2 mt-1.5">
                               {item.size && <span className="text-[10px] font-black uppercase bg-slate-100 px-1.5 py-0.5 text-slate-500">Size: {item.size}</span>}
+                              {item.color && item.color !== "Default" && <span className="text-[10px] font-black uppercase bg-slate-100 px-1.5 py-0.5 text-slate-500">Color: {item.color}</span>}
                               <span className="text-[10px] font-bold text-slate-400 uppercase">Qty: {item.quantity}</span>
                             </div>
                           </div>
@@ -615,7 +616,7 @@ export default function CheckoutClient({
                             <input
                               type="checkbox"
                               checked={item.requiresPrint}
-                              onChange={(e) => handleDTFToggle(item.id, item.size, e.target.checked)}
+                              onChange={(e) => handleDTFToggle(item.id, item.size, item.color, e.target.checked)}
                               className="w-4 h-4  border-slate-300 text-primary focus:ring-primary"
                             />
                             <span className="text-[10px] font-bold text-slate-600 uppercase">Add DTF Print (+৳{dtfCostPerItem})</span>
@@ -623,7 +624,7 @@ export default function CheckoutClient({
                           {item.requiresPrint && item.printDetails && item.printDetails.length > 0 && (
                             <div className="flex flex-col gap-2 mt-1">
                               {item.printDetails.map((detail, idx) => (
-                                <div key={idx} className="flex items-center gap-3 bg-slate-50 p-2 border border-slate-100">
+                                <div key={idx} className="flex items-center bg-slate-50 p-2 border border-slate-100">
                                   <div className="flex flex-col">
                                     <span className="text-[8px] font-bold text-slate-400 uppercase tracking-widest">Print {idx + 1}</span>
                                     <span className="text-[10px] font-black text-slate-900">{detail.name} ({detail.number})</span>
@@ -632,7 +633,7 @@ export default function CheckoutClient({
                                     <button
                                       onClick={(e) => {
                                         e.preventDefault();
-                                        setActiveItem({ id: item.id, size: item.size, editIndex: idx });
+                                        setActiveItem({ id: item.id, size: item.size, color: item.color, editIndex: idx });
                                         setDtfForm({ type: "custom", name: detail.name, number: detail.number });
                                         setShowDTFModal(true);
                                       }}
@@ -644,7 +645,7 @@ export default function CheckoutClient({
                                       onClick={(e) => {
                                         e.preventDefault();
                                         const newDetails = item.printDetails!.filter((_, i) => i !== idx);
-                                        updateItem(item.id, item.size, {
+                                        updateItem(item.id, item.size, item.color, {
                                           printDetails: newDetails,
                                           requiresPrint: newDetails.length > 0
                                         });
@@ -660,7 +661,7 @@ export default function CheckoutClient({
                                 <button
                                   onClick={(e) => {
                                     e.preventDefault();
-                                    setActiveItem({ id: item.id, size: item.size, editIndex: -1 });
+                                    setActiveItem({ id: item.id, size: item.size, color: item.color, editIndex: -1 });
                                     setDtfForm({ type: "custom", name: "", number: "" });
                                     setShowDTFModal(true);
                                   }}

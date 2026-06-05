@@ -26,6 +26,11 @@ export default async function CustomerInvoicePage({
             select: {
               name: true
             }
+          },
+          variant: {
+            select: {
+              size: true
+            }
           }
         }
       }
@@ -65,7 +70,7 @@ export default async function CustomerInvoicePage({
       id: item.id,
       quantity: item.quantity,
       price: item.price,
-      size: item.size,
+      size: item.variant?.size || "Default",
       product: {
         name: item.product?.name || "Product"
       },

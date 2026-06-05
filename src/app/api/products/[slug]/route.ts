@@ -34,7 +34,7 @@ export async function GET(_req: NextRequest, { params }: { params: { slug: strin
 
     const basePrice = product.variants?.[0]?.pricingMatrix?.basePrice
       ? Number(product.variants[0].pricingMatrix.basePrice)
-      : product.price;
+      : 0;
 
     const displayImages = (product.mediaAssets && product.mediaAssets.length > 0)
       ? product.mediaAssets.map((asset: any) => asset.url)
@@ -75,7 +75,7 @@ export async function GET(_req: NextRequest, { params }: { params: { slug: strin
           color: v.color,
           colorCode: v.colorCode,
           sku: v.sku,
-          stock: v.stocks?.[0]?.availableQuantity ?? v.stock ?? 0,
+          stock: v.stocks?.[0]?.availableQuantity ?? 0,
         })),
       },
     });

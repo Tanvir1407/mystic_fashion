@@ -69,7 +69,6 @@ async function main() {
           name: "Historic Deleted Product",
           slug: "historic-deleted-product",
           description: "Placeholder product for historic order items.",
-          price: 0,
           category: "System",
           isPublished: false
         }

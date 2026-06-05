@@ -93,7 +93,7 @@ export default function HomepageMain({
     <div className="bg-[#FAFAFA] min-h-screen text-neutral-800 antialiased font-sans">
 
       {/* 1. SHOP BY CATEGORY SECTION */}
-      <section className="py-24 px-4 bg-white border-b border-neutral-100">
+      <section className="py-24 px-0 md:px-4 bg-white border-b border-neutral-100">
         <div className="container mx-auto">
           <div className="text-center mb-16">
             <h2 className="font-serif text-3xl md:text-4xl text-neutral-900 tracking-widest font-light uppercase">
@@ -140,7 +140,7 @@ export default function HomepageMain({
       </section>
 
       {/* 2. THE NEW ARRIVALS SECTION */}
-      <section className="py-24 px-4 bg-[#FAFAFA]">
+      <section className="py-24 px-0 md:px-4 bg-[#FAFAFA]">
         <div className="container mx-auto">
           <div className="text-center mb-12">
             <h2 className="font-serif text-3xl md:text-4xl text-neutral-900 tracking-widest font-light uppercase">
@@ -158,11 +158,10 @@ export default function HomepageMain({
               <button
                 key={tab}
                 onClick={() => setSelectedTab(tab)}
-                className={`pb-2 text-[11px] md:text-xs uppercase tracking-widest font-medium transition-all duration-300 relative ${
-                  selectedTab === tab
+                className={`pb-2 text-[11px] md:text-xs uppercase tracking-widest font-medium transition-all duration-300 relative ${selectedTab === tab
                     ? "text-[#800020]"
                     : "text-neutral-400 hover:text-neutral-950"
-                }`}
+                  }`}
               >
                 {tab}
                 {selectedTab === tab && (
@@ -199,7 +198,7 @@ export default function HomepageMain({
       </section>
 
       {/* 3. DYNAMIC CATEGORY SHOWCASE SHOWROOMS */}
-      <section className="py-24 px-4 bg-white border-t border-neutral-100">
+      <section className="py-24 px-0 md:px-4 bg-white border-t border-neutral-100">
         <div className="container mx-auto">
           <div className="text-center mb-20">
             <h2 className="font-serif text-3xl md:text-4xl text-neutral-900 tracking-widest font-light uppercase">
@@ -257,8 +256,8 @@ export default function HomepageMain({
 
                   {/* ── MOBILE LAYOUT: banner always on top, 4 products below ── */}
                   <div className="md:hidden space-y-4">
-                    {/* Banner — full width, fixed height on mobile */}
-                    <div className="relative w-full h-56 overflow-hidden bg-neutral-950 group/banner">
+                    {/* Banner — full width, fixed height on mobile with flex layout and padding */}
+                    <div className="relative w-full h-64 overflow-hidden bg-neutral-950 group/banner flex flex-col justify-end p-6 shadow-sm">
                       {bannerInner}
                     </div>
                     {/* 4 products in 2-col grid */}

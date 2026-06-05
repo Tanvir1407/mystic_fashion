@@ -348,7 +348,7 @@ export default function ReturnsClient({
               </div>
 
               {/* Order Search Card */}
-              <div className="bg-white border border-slate-200 rounded-xl shadow-sm">
+              <div className="bg-white border border-slate-200 rounded-xl shadow-sm relative z-30">
                 <div className="px-5 py-3.5 border-b border-slate-100 rounded-t-xl">
                   <h2 className="text-sm font-semibold text-slate-900">Select Order</h2>
                 </div>
@@ -460,8 +460,8 @@ export default function ReturnsClient({
 
               {/* Partial — quantity & action selectors */}
               {returnMode === "PARTIAL" && selectedItem && (
-                <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden animate-in fade-in duration-200">
-                  <div className="px-5 py-3.5 border-b border-slate-100">
+                <div className="bg-white border border-slate-200 rounded-xl shadow-sm animate-in fade-in duration-200 relative z-20">
+                  <div className="px-5 py-3.5 border-b border-slate-100 rounded-t-xl">
                     <h2 className="text-sm font-semibold text-slate-900">Item Return Details</h2>
                   </div>
                   <div className="p-5 space-y-4">

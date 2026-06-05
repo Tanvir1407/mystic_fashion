@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import UploadedImage from "@/components/UploadedImage";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useCartStore } from "@/store/cartStore";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -20,7 +20,15 @@ interface Product {
   category: string;
   isCustomize?: boolean | null;
   trackStock?: boolean;
-  variants: { size: string, stock: number }[];
+  mediaAssets?: { url: string; boundAttributes?: any }[];
+  variants: {
+    id: string;
+    size: string;
+    color: string;
+    sku?: string;
+    stock: number;
+    price?: number;
+  }[];
   discount?: {
     active: boolean;
     discountType: "PERCENTAGE" | "FLAT";
@@ -33,6 +41,13 @@ export default function ProductClient({ product, sizeChartData, deliveryData }: 
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const selectedImage = product.images[selectedImageIndex] || "";
 
+  const [selectedSize, setSelectedSize] = useState<string | null>(null);
+  const [selectedColor, setSelectedColor] = useState<string | null>(null);
+  const [quantity, setQuantity] = useState(1);
+  const [addedEffect, setAddedEffect] = useState(false);
+
+  const addItem = useCartStore((state) => state.addItem);
+
   const handlePrevImage = () => {
     setSelectedImageIndex((prev) => (prev > 0 ? prev - 1 : product.images.length - 1));
   };
@@ -40,30 +55,142 @@ export default function ProductClient({ product, sizeChartData, deliveryData }: 
   const handleNextImage = () => {
     setSelectedImageIndex((prev) => (prev < product.images.length - 1 ? prev + 1 : 0));
   };
-  const [selectedSize, setSelectedSize] = useState<string | null>(null);
-  const [quantity, setQuantity] = useState(1);
 
-  const [addedEffect, setAddedEffect] = useState(false);
+  // Determine if product is size-less (e.g. only contains size "Default" or "-")
+  const isSizeLess = product.variants.length === 0 || 
+    (product.variants.length === 1 && 
+      (product.variants[0].size.toLowerCase() === "default" || 
+       product.variants[0].size === "-" || 
+       product.variants[0].size === ""));
 
-  const addItem = useCartStore((state) => state.addItem);
+  // Unique sizes list
+  const uniqueSizes = Array.from(new Set(product.variants.map((v) => v.size)));
 
+  // Auto-select size on mount if it's size-less
+  useEffect(() => {
+    if (product.variants.length > 0) {
+      if (isSizeLess) {
+        setSelectedSize(product.variants[0].size);
+      }
+    }
+  }, [product.variants, isSizeLess]);
 
+  // Unique colors list
+  const availableColors = Array.from(
+    new Set(
+      product.variants
+        .map((v) => v.color)
+        .filter((c) => c && c.toLowerCase() !== "default" && c.toLowerCase() !== "all" && c.toLowerCase() !== "")
+    )
+  );
+
+  // Auto-select color on mount if there's only one option
+  useEffect(() => {
+    if (availableColors.length === 1) {
+      setSelectedColor(availableColors[0]);
+    }
+  }, [availableColors]);
+
+  const syncImageFromAttributes = (color: string | null, size: string | null) => {
+    if (!product.mediaAssets) return;
+    // 1. Try to match both color and size (if both are selected and have tags)
+    if (color && size) {
+      const idx = product.mediaAssets.findIndex(
+        (asset) =>
+          asset.boundAttributes &&
+          typeof asset.boundAttributes === "object" &&
+          asset.boundAttributes.color === color &&
+          asset.boundAttributes.size === size
+      );
+      if (idx !== -1) {
+        setSelectedImageIndex(idx);
+        return;
+      }
+    }
+
+    // 2. Try to match color only
+    if (color) {
+      const idx = product.mediaAssets.findIndex(
+        (asset) =>
+          asset.boundAttributes &&
+          typeof asset.boundAttributes === "object" &&
+          asset.boundAttributes.color === color
+      );
+      if (idx !== -1) {
+        setSelectedImageIndex(idx);
+        return;
+      }
+    }
+
+    // 3. Try to match size only
+    if (size) {
+      const idx = product.mediaAssets.findIndex(
+        (asset) =>
+          asset.boundAttributes &&
+          typeof asset.boundAttributes === "object" &&
+          asset.boundAttributes.size === size
+      );
+      if (idx !== -1) {
+        setSelectedImageIndex(idx);
+        return;
+      }
+    }
+  };
+
+  const handleColorSelect = (color: string) => {
+    setSelectedColor(color);
+    syncImageFromAttributes(color, selectedSize);
+  };
+
+  const handleSizeSelect = (size: string) => {
+    setSelectedSize(size);
+    setQuantity(1);
+    syncImageFromAttributes(selectedColor, size);
+  };
+
+  const handleThumbnailClick = (idx: number) => {
+    setSelectedImageIndex(idx);
+    const asset = product.mediaAssets?.[idx];
+    if (asset && asset.boundAttributes && typeof asset.boundAttributes === "object") {
+      const colorTag = asset.boundAttributes.color;
+      const sizeTag = asset.boundAttributes.size;
+      if (colorTag && colorTag !== "All" && colorTag !== "Default") {
+        // If color exists in variants, select it
+        if (product.variants.some(v => v.color === colorTag)) {
+          setSelectedColor(colorTag);
+        }
+      }
+      if (sizeTag && sizeTag !== "All" && sizeTag !== "Default") {
+        // If size exists in variants, select it
+        if (product.variants.some(v => v.size === sizeTag)) {
+          setSelectedSize(sizeTag);
+        }
+      }
+    }
+  };
+
+  // Find active variant matching selected size and color
+  const activeVariant = product.variants.find((v) => {
+    const matchesSize = selectedSize ? v.size === selectedSize : true;
+    const matchesColor = selectedColor ? v.color === selectedColor : true;
+    return matchesSize && matchesColor;
+  }) || product.variants[0];
 
   const totalStock = product.variants.reduce((acc, v) => acc + v.stock, 0);
 
-  const selectedVariantStock = selectedSize
-    ? product.variants.find(v => v.size === selectedSize)?.stock || 0
-    : 0;
+  const selectedVariantStock = activeVariant?.stock || 0;
 
-  let finalPrice = product.price;
+  const variantPrice = activeVariant?.price ?? product.price;
+
+  let finalPrice = variantPrice;
   let isDiscounted = false;
 
   if (product.discount && product.discount.active) {
     isDiscounted = true;
     if (product.discount.discountType === "PERCENTAGE") {
-      finalPrice = roundPrice(product.price - (product.price * (product.discount.value / 100)));
+      finalPrice = roundPrice(variantPrice - (variantPrice * (product.discount.value / 100)));
     } else {
-      finalPrice = roundPrice(Math.max(0, product.price - product.discount.value));
+      finalPrice = roundPrice(Math.max(0, variantPrice - product.discount.value));
     }
   }
 
@@ -74,11 +201,11 @@ export default function ProductClient({ product, sizeChartData, deliveryData }: 
       id: product.id,
       name: product.name,
       price: finalPrice,
-      originalPrice: isDiscounted ? product.price : undefined,
-      image: product.images[0] || "",
+      originalPrice: isDiscounted ? variantPrice : undefined,
+      image: selectedImage || product.images[0] || "",
       category: product.team,
       isCustomize: product.isCustomize ?? false,
-    }, selectedSize, quantity);
+    }, selectedSize, quantity, selectedColor || undefined);
 
     setAddedEffect(true);
     setTimeout(() => setAddedEffect(false), 2000);
@@ -92,8 +219,7 @@ export default function ProductClient({ product, sizeChartData, deliveryData }: 
 
   const incrementQuantity = () => {
     if (product.trackStock && selectedSize) {
-      const maxStock = product.variants.find(v => v.size === selectedSize)?.stock || 0;
-      if (quantity >= maxStock) {
+      if (quantity >= selectedVariantStock) {
         return;
       }
     }
@@ -120,7 +246,7 @@ export default function ProductClient({ product, sizeChartData, deliveryData }: 
               {product.images.map((img, idx) => (
                 <button
                   key={idx}
-                  onClick={() => setSelectedImageIndex(idx)}
+                  onClick={() => handleThumbnailClick(idx)}
                   className={`relative w-20 h-24 lg:w-full lg:h-32 flex-shrink-0 bg-[#F9F9F9] overflow-hidden transition-all box-border ${selectedImageIndex === idx
                     ? 'opacity-100 border-[2px] border-[#800020] shadow-sm'
                     : 'opacity-70 hover:opacity-100 border border-slate-200 hover:border-[#FFD700]'
@@ -186,50 +312,91 @@ export default function ProductClient({ product, sizeChartData, deliveryData }: 
             <div className="flex items-end gap-4 mb-8">
               <p className="text-3xl md:text-4xl font-black text-[#800020]">{formatBDT(finalPrice)}</p>
               {isDiscounted ? (
-                <p className="text-lg font-bold text-zinc-400 line-through mb-1.5">{formatBDT(product.price)}</p>
+                <p className="text-lg font-bold text-zinc-400 line-through mb-1.5">{formatBDT(variantPrice)}</p>
               ) : null}
             </div>
 
-            {/* Size Selector */}
-            <div className="mb-8">
-              <div className="flex justify-between items-center mb-3">
-                <h3 className="font-semibold text-zinc-900 text-sm uppercase tracking-widest">Select Size</h3>
-              </div>
-
-              {product.variants.length === 0 ? (
-                <p className="text-red-500 font-medium text-sm">Size map not configured yet.</p>
-              ) : (
+            {/* Color Selector */}
+            {availableColors.length > 0 && (
+              <div className="mb-6">
+                <h3 className="font-semibold text-zinc-900 text-xs uppercase tracking-widest mb-3">Select Color</h3>
                 <div className="flex flex-wrap gap-2">
-                  {product.variants.map((v) => {
-                    const isOutOfStock = product.trackStock && v.stock <= 0;
+                  {availableColors.map((col) => {
+                    const isAvailableForSelectedSize = selectedSize
+                      ? product.variants.some(v => v.color === col && v.size === selectedSize && (!product.trackStock || v.stock > 0))
+                      : product.variants.some(v => v.color === col && (!product.trackStock || v.stock > 0));
+
                     return (
                       <button
-                        key={v.size}
-                        onClick={() => {
-                          if (isOutOfStock) return;
-                          setSelectedSize(v.size);
-                          setQuantity(1);
-                        }}
-                        disabled={isOutOfStock}
-                        className={`h-12 px-6 flex items-center justify-center font-semibold text-sm transition-colors border ${isOutOfStock
-                          ? 'border-dashed border-slate-300 text-slate-400 bg-slate-50/50 cursor-not-allowed select-none'
-                          : selectedSize === v.size
-                            ? 'bg-primary text-white border-primary'
-                            : 'bg-white text-zinc-900 border-zinc-200 hover:border-primary hover:text-primary'
-                          }`}
-                        style={{
-                          background: isOutOfStock
-                            ? 'linear-gradient(135deg, transparent 50%, #cbd5e1 50%, #cbd5e1 52%, transparent 52%)'
-                            : undefined
-                        }}
+                        key={col}
+                        type="button"
+                        onClick={() => handleColorSelect(col)}
+                        disabled={!isAvailableForSelectedSize}
+                        className={`h-12 px-6 flex items-center justify-center font-bold text-xs uppercase tracking-wider transition-colors border ${
+                          !isAvailableForSelectedSize
+                            ? 'opacity-20 border-slate-200 cursor-not-allowed select-none bg-slate-50 text-slate-400'
+                            : selectedColor === col
+                              ? 'bg-primary text-white border-primary'
+                              : 'bg-white text-zinc-900 border-zinc-200 hover:border-primary hover:text-primary'
+                        }`}
                       >
-                        <span>{v.size}</span>
+                        <span>{col}</span>
                       </button>
                     );
                   })}
                 </div>
-              )}
-            </div>
+              </div>
+            )}
+
+            {/* Size Selector */}
+            {!isSizeLess && (
+              <div className="mb-8">
+                <div className="flex justify-between items-center mb-3">
+                  <h3 className="font-semibold text-zinc-900 text-xs uppercase tracking-widest">Select Size</h3>
+                </div>
+
+                {product.variants.length === 0 ? (
+                  <p className="text-red-500 font-medium text-sm">Size map not configured yet.</p>
+                ) : (
+                  <div className="flex flex-wrap gap-2">
+                    {uniqueSizes.map((sz) => {
+                      const matchingVariants = product.variants.filter(v => v.size === sz);
+                      const isOutOfStock = product.trackStock && !matchingVariants.some(v => v.stock > 0);
+                      const isAvailableForSelectedColor = selectedColor
+                        ? matchingVariants.some(v => v.color === selectedColor)
+                        : true;
+
+                      return (
+                        <button
+                          key={sz}
+                          type="button"
+                          onClick={() => {
+                            if (isOutOfStock) return;
+                            handleSizeSelect(sz);
+                          }}
+                          disabled={isOutOfStock || !isAvailableForSelectedColor}
+                          className={`h-12 px-6 flex items-center justify-center font-semibold text-sm transition-colors border ${isOutOfStock
+                            ? 'border-dashed border-slate-300 text-slate-400 bg-slate-50/50 cursor-not-allowed select-none'
+                            : !isAvailableForSelectedColor
+                              ? 'opacity-20 border-slate-200 cursor-not-allowed text-slate-400 bg-slate-50'
+                              : selectedSize === sz
+                                ? 'bg-primary text-white border-primary'
+                                : 'bg-white text-zinc-900 border-zinc-200 hover:border-primary hover:text-primary'
+                            }`}
+                          style={{
+                            background: isOutOfStock
+                              ? 'linear-gradient(135deg, transparent 50%, #cbd5e1 50%, #cbd5e1 52%, transparent 52%)'
+                              : undefined
+                          }}
+                        >
+                          <span>{sz}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Quantity and Action Buttons */}
             <div className="mb-10">

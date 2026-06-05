@@ -5,12 +5,25 @@ import { notFound } from "next/navigation";
 export const dynamic = "force-dynamic";
 
 export default async function EditProductPage({ params }: { params: { id: string } }) {
+  const sizeCharts = await prisma.sizeChart.findMany();
+  const discounts = await prisma.discount.findMany({ where: { active: true } });
+  const brands = await prisma.brand.findMany({ orderBy: { name: 'asc' } });
+  const categories = await prisma.category.findMany({
+    orderBy: { name: 'asc' },
+    include: { subcategories: { orderBy: { name: 'asc' } } }
+  });
+
   const productRes = await prisma.product.findUnique({
     where: { id: params.id },
     include: {
       variants: {
         include: {
-          pricingMatrix: true
+          pricingMatrix: true,
+          stocks: {
+            where: {
+              warehouse: { code: "WH-MAIN" }
+            }
+          }
         }
       },
       mediaAssets: true
@@ -30,19 +43,27 @@ export default async function EditProductPage({ params }: { params: { id: string
     ? productRes.mediaAssets.map((asset: any) => asset.url)
     : [];
 
+  const mappedVariants = productRes.variants.map((v: any) => ({
+    ...v,
+    stock: v.stocks?.[0]?.availableQuantity ?? 0
+  }));
+
+  let resolvedCategoryId = productRes.categoryId;
+  if (!resolvedCategoryId && productRes.category) {
+    const matchedCat = categories.find(c => c.name.toLowerCase() === productRes.category.toLowerCase());
+    if (matchedCat) {
+      resolvedCategoryId = matchedCat.id;
+    }
+  }
+
   const product = {
     ...productRes,
     price: basePrice,
-    images: displayImages
+    images: displayImages,
+    variants: mappedVariants,
+    categoryId: resolvedCategoryId
   };
-
-  const sizeCharts = await prisma.sizeChart.findMany();
-  const discounts = await prisma.discount.findMany({ where: { active: true } });
-  const brands = await prisma.brand.findMany({ orderBy: { name: 'asc' } });
-  const categories = await prisma.category.findMany({
-    orderBy: { name: 'asc' },
-    include: { subcategories: { orderBy: { name: 'asc' } } }
-  });
 
   return <ProductFormClient initialData={product} sizeCharts={sizeCharts} discounts={discounts} brands={brands} categories={categories} />;
 }
+

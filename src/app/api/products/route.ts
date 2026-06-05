@@ -59,16 +59,19 @@ export async function GET(req: NextRequest) {
     }
 
     if (minPrice !== null || maxPrice !== null) {
-      where.price = {};
-      if (minPrice !== null) where.price.gte = minPrice;
-      if (maxPrice !== null) where.price.lte = maxPrice;
+      where.variants = {
+        some: {
+          pricingMatrix: {
+            basePrice: {}
+          }
+        }
+      };
+      if (minPrice !== null) where.variants.some.pricingMatrix.basePrice.gte = minPrice;
+      if (maxPrice !== null) where.variants.some.pricingMatrix.basePrice.lte = maxPrice;
     }
 
     const orderBy: any =
-      sort === "price_asc" ? { price: "asc" } :
-      sort === "price_desc" ? { price: "desc" } :
       sort === "oldest" ? { createdAt: "asc" } :
-      sort === "featured" ? [{ isFeatured: "desc" }, { createdAt: "desc" }] :
       [{ isFeatured: "desc" }, { createdAt: "desc" }]; // newest (default)
 
     const [total, products] = await Promise.all([
@@ -98,7 +101,7 @@ export async function GET(req: NextRequest) {
     const data = products.map((p) => {
       const basePrice = p.variants?.[0]?.pricingMatrix?.basePrice
         ? Number(p.variants[0].pricingMatrix.basePrice)
-        : p.price;
+        : 0;
 
       const displayImages = (p.mediaAssets && p.mediaAssets.length > 0)
         ? p.mediaAssets.map((asset: any) => asset.url)
@@ -124,10 +127,16 @@ export async function GET(req: NextRequest) {
           size: v.size,
           color: v.color,
           colorCode: v.colorCode,
-          stock: v.stocks?.[0]?.availableQuantity ?? v.stock ?? 0,
+          stock: v.stocks?.[0]?.availableQuantity ?? 0,
         })),
       };
     });
+
+    if (sort === "price_asc") {
+      data.sort((a, b) => a.price - b.price);
+    } else if (sort === "price_desc") {
+      data.sort((a, b) => b.price - a.price);
+    }
 
     return NextResponse.json({
       success: true,
