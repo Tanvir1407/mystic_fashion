@@ -117,22 +117,22 @@ export default function CheckoutClient({
       setSelectedZoneId(null);
       setSelectedAreaId(null);
       setSelectedDistrict(addr.district || "");
-      
+
       setLoadingZones(true);
       const zoneRes = await getPathaoZones(addr.pathaoCityId);
       if (zoneRes.success && zoneRes.data) {
         const mappedZones = zoneRes.data.map((z: any) => ({ value: z.zone_id.toString(), label: z.zone_name }));
         setZones(mappedZones);
-        
+
         if (addr.pathaoZoneId) {
           setSelectedZoneId(addr.pathaoZoneId);
-          
+
           setLoadingAreas(true);
           const areaRes = await getPathaoAreas(addr.pathaoZoneId);
           if (areaRes.success && areaRes.data) {
             const mappedAreas = areaRes.data.map((a: any) => ({ value: a.area_id.toString(), label: a.area_name }));
             setAreas(mappedAreas);
-            
+
             if (addr.pathaoAreaId) {
               setSelectedAreaId(addr.pathaoAreaId);
             }
@@ -434,8 +434,8 @@ export default function CheckoutClient({
                       <span className="font-bold text-[#800020]">Already have an account? </span>
                       Sign in to checkout faster with saved addresses and track orders live.
                     </div>
-                    <Link 
-                      href="/auth/login?callbackUrl=/checkout" 
+                    <Link
+                      href="/auth/login?callbackUrl=/checkout"
                       className="px-4 py-2 border border-[#800020] text-[#800020] text-xs font-bold uppercase tracking-wider hover:bg-[#800020] hover:text-white transition-all whitespace-nowrap"
                     >
                       Sign In
@@ -475,13 +475,13 @@ export default function CheckoutClient({
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <label className="text-sm font-bold text-zinc-700">Full Name *</label>
-                      <input 
-                        name="fullName" 
-                        type="text" 
+                      <input
+                        name="fullName"
+                        type="text"
                         value={fullName}
                         onChange={(e) => setFullName(e.target.value)}
-                        className="w-full bg-slate-50 border border-slate-200 px-4 py-3 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all font-medium" 
-                        placeholder="Enter your full name" 
+                        className="w-full bg-slate-50 border border-slate-200 px-4 py-3 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all font-medium"
+                        placeholder="Enter your full name"
                       />
                     </div>
                     <div className="space-y-2">
@@ -554,13 +554,13 @@ export default function CheckoutClient({
 
                     <div className="space-y-2">
                       <label className="text-sm font-bold text-zinc-700">House / Road / Flat No. / Landmark *</label>
-                      <textarea 
-                        name="address" 
-                        rows={3} 
+                      <textarea
+                        name="address"
+                        rows={3}
                         value={specificAddress}
                         onChange={(e) => setSpecificAddress(e.target.value)}
-                        className="w-full bg-slate-50 border border-slate-200 px-4 py-3 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all resize-none font-medium" 
-                        placeholder="e.g., House 12, Road 4, Block C, near the central mosque" 
+                        className="w-full bg-slate-50 border border-slate-200 px-4 py-3 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all resize-none font-medium"
+                        placeholder="e.g., House 12, Road 4, Block C, near the central mosque"
                       />
                     </div>
 
@@ -597,8 +597,10 @@ export default function CheckoutClient({
                             <div className="flex flex-wrap items-center gap-2 mt-1.5">
                               {item.size && item.size.toLowerCase() !== "default" && <span className="text-[10px] font-black uppercase bg-slate-100 px-1.5 py-0.5 text-slate-500">{item.sizeAttributeName || "Size"}: {item.size}</span>}
                               {item.color && item.color !== "Default" && <span className="text-[10px] font-black uppercase bg-slate-100 px-1.5 py-0.5 text-slate-500">{item.colorAttributeName || "Color"}: {item.color}</span>}
-                              <span className="text-[10px] font-bold text-slate-400 uppercase">Qty: {item.quantity}</span>
                             </div>
+                          </div>
+                          <div>
+                            <span className="text-[10px] font-bold text-slate-400 uppercase">Qty: {item.quantity}</span>
                           </div>
                           <div className="flex items-center gap-2">
                             {item.originalPrice && item.originalPrice > item.price && (
