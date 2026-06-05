@@ -96,6 +96,23 @@ export default function ProductClient({ product, sizeChartData, deliveryData }: 
     }
   }, [availableColors]);
 
+  const isColorSelectionRequired = availableColors.length > 0;
+  const isSelectionComplete = !!selectedSize && (!isColorSelectionRequired || !!selectedColor);
+
+  const getButtonText = () => {
+    if (addedEffect) return 'Added To Cart';
+    if (!selectedSize && isColorSelectionRequired && !selectedColor) {
+      return `Select ${sizeAttributeName} & ${colorAttributeName}`;
+    }
+    if (!selectedSize) {
+      return `Select ${sizeAttributeName}`;
+    }
+    if (isColorSelectionRequired && !selectedColor) {
+      return `Select ${colorAttributeName}`;
+    }
+    return 'Add To Cart';
+  };
+
   const syncImageFromAttributes = (color: string | null, size: string | null) => {
     if (!product.mediaAssets) return;
     // 1. Try to match both color and size (if both are selected and have tags)
@@ -200,7 +217,7 @@ export default function ProductClient({ product, sizeChartData, deliveryData }: 
   }
 
   const handleAddToCart = () => {
-    if (!selectedSize) return;
+    if (!isSelectionComplete) return;
 
     addItem({
       id: product.id,
@@ -210,20 +227,21 @@ export default function ProductClient({ product, sizeChartData, deliveryData }: 
       image: selectedImage || product.images[0] || "",
       category: product.team,
       isCustomize: product.isCustomize ?? false,
-    }, selectedSize, quantity, selectedColor || undefined);
+    }, selectedSize!, quantity, selectedColor || undefined);
 
     setAddedEffect(true);
     setTimeout(() => setAddedEffect(false), 2000);
   };
 
   const handleBuyNow = () => {
-    if (!selectedSize) return;
+    if (!isSelectionComplete) return;
     handleAddToCart();
     router.push('/checkout');
   };
 
   const incrementQuantity = () => {
-    if (product.trackStock && selectedSize) {
+    if (!isSelectionComplete) return;
+    if (product.trackStock) {
       if (quantity >= selectedVariantStock) {
         return;
       }
@@ -413,7 +431,8 @@ export default function ProductClient({ product, sizeChartData, deliveryData }: 
                   <div className="flex items-center bg-zinc-100 h-14 px-2 w-32 justify-between">
                     <button
                       onClick={decrementQuantity}
-                      className="w-10 h-full flex items-center justify-center text-zinc-600 hover:text-zinc-900 transition-colors"
+                      disabled={!isSelectionComplete}
+                      className="w-10 h-full flex items-center justify-center text-zinc-600 hover:text-zinc-900 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                     >
                       <Minus className="w-4 h-4" />
                     </button>
@@ -422,7 +441,8 @@ export default function ProductClient({ product, sizeChartData, deliveryData }: 
                     </div>
                     <button
                       onClick={incrementQuantity}
-                      className="w-10 h-full flex items-center justify-center text-zinc-600 hover:text-zinc-900 transition-colors"
+                      disabled={!isSelectionComplete}
+                      className="w-10 h-full flex items-center justify-center text-zinc-600 hover:text-zinc-900 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                     >
                       <Plus className="w-4 h-4" />
                     </button>
@@ -431,23 +451,23 @@ export default function ProductClient({ product, sizeChartData, deliveryData }: 
                   {/* Add to Cart Button */}
                   <button
                     onClick={handleAddToCart}
-                    disabled={!selectedSize || (product.trackStock && selectedVariantStock <= 0)}
-                    className={`flex-1 h-14 font-bold text-sm transition-all flex items-center justify-center ${(!selectedSize || (product.trackStock && selectedVariantStock <= 0))
+                    disabled={!isSelectionComplete || (product.trackStock && selectedVariantStock <= 0)}
+                    className={`flex-1 h-14 font-bold text-sm transition-all flex items-center justify-center ${(!isSelectionComplete || (product.trackStock && selectedVariantStock <= 0))
                       ? 'bg-zinc-100 text-zinc-400 cursor-not-allowed'
                       : addedEffect
                         ? 'bg-green-600 text-white'
                         : 'bg-primary text-white hover:opacity-95 active:scale-[0.98]'
                       }`}
                   >
-                    {addedEffect ? 'Added To Cart' : (selectedSize ? 'Add To Cart' : `Select ${sizeAttributeName}`)}
+                    {getButtonText()}
                   </button>
                 </div>
 
                 {/* Buy Now Button */}
                 <button
                   onClick={handleBuyNow}
-                  disabled={!selectedSize || (product.trackStock && selectedVariantStock <= 0)}
-                  className={`w-full h-14 font-bold text-sm transition-all flex items-center justify-center ${(!selectedSize || (product.trackStock && selectedVariantStock <= 0))
+                  disabled={!isSelectionComplete || (product.trackStock && selectedVariantStock <= 0)}
+                  className={`w-full h-14 font-bold text-sm transition-all flex items-center justify-center ${(!isSelectionComplete || (product.trackStock && selectedVariantStock <= 0))
                     ? 'bg-zinc-100 text-zinc-400 cursor-not-allowed'
                     : 'bg-primary text-white hover:opacity-95 active:scale-[0.98]'
                     }`}
@@ -456,7 +476,17 @@ export default function ProductClient({ product, sizeChartData, deliveryData }: 
                 </button>
               </div>
 
-              {!selectedSize && <p className="text-xs text-red-500 font-medium mt-3">Please select a {sizeAttributeName.toLowerCase()} to continue</p>}
+              {!isSelectionComplete && (
+                <p className="text-xs text-red-500 font-medium mt-3">
+                  Please select a {
+                    !selectedSize && isColorSelectionRequired && !selectedColor
+                      ? `${sizeAttributeName.toLowerCase()} and ${colorAttributeName.toLowerCase()}`
+                      : !selectedSize
+                        ? sizeAttributeName.toLowerCase()
+                        : colorAttributeName.toLowerCase()
+                  } to continue
+                </p>
+              )}
             </div>
 
             {/* Size Chart Data Table */}
