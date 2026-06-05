@@ -206,11 +206,26 @@ export default function OrderRowClient({
       </td>
       <td className="px-2 py-4">
         <div className="flex flex-col gap-0.5">
-          {items.map((item) => (
-            <div key={item.id} className="text-xs font-medium text-slate-600">
-              <span className="text-slate-400">{item.quantity}x</span> {item.product.name} <span className="font-bold text-[#800020]">({item.size})</span>
-            </div>
-          ))}
+        {items.map((item) => {
+            // Build variant label from PIM attributes JSON, falling back to legacy size/color fields
+            const attrValues: string[] = [];
+            if (item.variant?.attributes && typeof item.variant.attributes === 'object') {
+              const vals = Object.values(item.variant.attributes as Record<string, string>).filter(v => v && v !== 'Default');
+              attrValues.push(...vals);
+            }
+            if (attrValues.length === 0 && item.variant?.size && item.variant.size !== 'Default') {
+              attrValues.push(item.variant.size);
+            }
+            if (attrValues.length === 0 && item.variant?.color && item.variant.color !== 'Default') {
+              attrValues.push(item.variant.color);
+            }
+            const variantLabel = attrValues.join(' / ');
+            return (
+              <div key={item.id} className="text-xs font-medium text-slate-600">
+                <span className="text-slate-400">{item.quantity}x</span> {item.product.name}{variantLabel ? <span className="font-bold text-[#800020]"> ({variantLabel})</span> : null}
+              </div>
+            );
+          })}
         </div>
       </td>
       <td className="px-2 py-4 text-sm text-slate-900 font-mono font-medium">

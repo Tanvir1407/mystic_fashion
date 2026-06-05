@@ -302,7 +302,20 @@ export default function OrderDetailsClient({
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-semibold text-slate-900 truncate">{item.product?.name}</p>
                     <div className="flex flex-wrap items-center gap-2 mt-1">
-                      <span className="text-[10px] font-black bg-slate-900 text-white px-1.5 py-0.5 rounded tracking-widest">{item.size}</span>
+                      {(() => {
+                        const attrValues: string[] = [];
+                        if (item.variant?.attributes && typeof item.variant.attributes === 'object') {
+                          const vals = Object.values(item.variant.attributes as Record<string, string>).filter((v: string) => v && v !== 'Default');
+                          attrValues.push(...vals);
+                        }
+                        if (attrValues.length === 0 && item.variant?.size && item.variant.size !== 'Default') attrValues.push(item.variant.size);
+                        if (attrValues.length === 0 && item.variant?.color && item.variant.color !== 'Default') attrValues.push(item.variant.color);
+                        return attrValues.length > 0 ? (
+                          <span className="text-[10px] font-black bg-slate-900 text-white px-1.5 py-0.5 rounded tracking-widest">
+                            {attrValues.join(' / ')}
+                          </span>
+                        ) : null;
+                      })()}
                       <span className="text-xs text-slate-500">@ {formatBDT(item.price)}</span>
                       {item.requiresPrint && (
                         <span className="text-[9px] font-bold bg-indigo-50 text-indigo-600 border border-indigo-100 px-1.5 py-0.5 rounded uppercase tracking-wider">

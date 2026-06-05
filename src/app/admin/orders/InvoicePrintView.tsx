@@ -12,7 +12,12 @@ interface OrderItem {
   id: string;
   quantity: number;
   price: number;
-  size: string;
+  size?: string;
+  variant?: {
+    size?: string;
+    color?: string;
+    attributes?: Record<string, string>;
+  };
   product: {
     name: string;
   };
@@ -170,11 +175,21 @@ export default function InvoicePrintView({ orders }: { orders: Order[] }) {
                       </tr>
                     </thead>
                     <tbody>
-                      {order.items.map((item, idx) => (
+                      {order.items.map((item, idx) => {
+                        const attrValues: string[] = [];
+                        if (item.variant?.attributes && typeof item.variant.attributes === 'object') {
+                          const vals = Object.values(item.variant.attributes).filter(v => v && v !== 'Default');
+                          attrValues.push(...vals);
+                        }
+                        if (attrValues.length === 0 && item.variant?.size && item.variant.size !== 'Default') attrValues.push(item.variant.size);
+                        if (attrValues.length === 0 && item.variant?.color && item.variant.color !== 'Default') attrValues.push(item.variant.color);
+                        if (attrValues.length === 0 && item.size && item.size !== 'Default') attrValues.push(item.size);
+                        const variantLabel = attrValues.join(' / ');
+                        return (
                         <tr key={idx} className="border-b border-transparent">
                           <td className="py-1 px-2 text-center align-top">{idx + 1}</td>
                           <td className="py-1 px-2 align-top">
-                            <p className="font-bold leading-tight">{item.product.name} - Size {item.size}</p>
+                            <p className="font-bold leading-tight">{item.product.name}{variantLabel ? ` - ${variantLabel}` : ''}</p>
                             {item.requiresPrint && (
                               <div className="mt-1 text-[9px] font-bold text-gray-700 bg-gray-50 border border-gray-100 p-1 rounded-sm">
                                 CUSTOM PRINTING: {item.printName} (#{item.printNumber})
@@ -185,7 +200,8 @@ export default function InvoicePrintView({ orders }: { orders: Order[] }) {
                           <td className="py-1 px-2 text-center align-top">{formatBDT(item.price)}</td>
                           <td className="py-1 px-2 text-right align-top">{formatBDT(item.price * item.quantity)}</td>
                         </tr>
-                      ))}
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>

@@ -9,7 +9,12 @@ interface OrderItem {
   id: string;
   quantity: number;
   price: number;
-  size: string;
+  size?: string;
+  variant?: {
+    size?: string;
+    color?: string;
+    attributes?: Record<string, string>;
+  };
   product: {
     name: string;
   };
@@ -215,11 +220,21 @@ export default function ThermalPrintView({ orders, storePhone, storeAddress }: T
             <div className="">
               <table className="w-full text-[10px] text-black border-collapse">
                 <tbody>
-                  {order.items.map((item, idx) => (
+                  {order.items.map((item, idx) => {
+                    const attrValues: string[] = [];
+                    if (item.variant?.attributes && typeof item.variant.attributes === 'object') {
+                      const vals = Object.values(item.variant.attributes).filter(v => v && v !== 'Default');
+                      attrValues.push(...vals);
+                    }
+                    if (attrValues.length === 0 && item.variant?.size && item.variant.size !== 'Default') attrValues.push(item.variant.size);
+                    if (attrValues.length === 0 && item.variant?.color && item.variant.color !== 'Default') attrValues.push(item.variant.color);
+                    if (attrValues.length === 0 && item.size && item.size !== 'Default') attrValues.push(item.size);
+                    const variantLabel = attrValues.join(' / ');
+                    return (
                     <tr key={idx} className="align-top leading-tight">
                       <td className="font-normal py-1 text-left" style={{ width: "10%" }}>{item.quantity}x</td>
                       <td className="py-1 text-left pr-1" style={{ width: "70%" }}>
-                        <p className="font-normal">{item.product.name} - Size {item.size}</p>
+                        <p className="font-normal">{item.product.name}{variantLabel ? ` - ${variantLabel}` : ''}</p>
                         {item.requiresPrint && (
                           <div className="mt-0.5 text-[8.5px] font-black text-black/80 leading-normal italic">
                             Print Name: {item.printName} (#{item.printNumber})
@@ -230,7 +245,8 @@ export default function ThermalPrintView({ orders, storePhone, storeAddress }: T
                         {roundPrice(item.price * item.quantity).toLocaleString("en-IN")}
                       </td>
                     </tr>
-                  ))}
+                    );
+                  })}
                 </tbody>
               </table>
             </div>

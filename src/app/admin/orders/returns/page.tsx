@@ -19,6 +19,9 @@ export default async function ReturnsPage() {
         include: {
           variant: {
             select: {
+              size: true,
+              color: true,
+              attributes: true,
               pricingMatrix: {
                 select: {
                   costPrice: true

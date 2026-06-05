@@ -28,7 +28,12 @@ import { formatBDT } from "@/utils/formatPrice";
 interface OrderItem {
   id: string;
   productId: string;
-  size: string;
+  size?: string;
+  variant?: {
+    size?: string;
+    color?: string;
+    attributes?: Record<string, string>;
+  };
   quantity: number;
   price: number;
   requiresPrint: boolean;
@@ -65,7 +70,7 @@ interface SalesReturn {
   createdAt: Date;
   order: { customerName: string };
   orderItem: { product: { name: string } };
-  variant: { size: string };
+  variant: { size?: string; color?: string; attributes?: Record<string, string> };
 }
 
 export default function ReturnsClient({
@@ -423,7 +428,18 @@ export default function ReturnsClient({
                           <div className="flex-1 min-w-0">
                             <p className="text-sm font-semibold text-slate-900 truncate">{item.product.name}</p>
                             <div className="flex items-center gap-2 mt-1 flex-wrap">
-                              <span className="text-[10px] font-black bg-slate-900 text-white px-1.5 py-0.5 rounded tracking-widest">{item.size}</span>
+                              {(() => {
+                                const attrVals: string[] = [];
+                                if (item.variant?.attributes && typeof item.variant.attributes === 'object') {
+                                  Object.values(item.variant.attributes as Record<string, string>).forEach(v => { if (v && v !== 'Default') attrVals.push(v); });
+                                }
+                                if (attrVals.length === 0 && item.variant?.size && item.variant.size !== 'Default') attrVals.push(item.variant.size);
+                                if (attrVals.length === 0 && item.variant?.color && item.variant.color !== 'Default') attrVals.push(item.variant.color);
+                                if (attrVals.length === 0 && item.size && item.size !== 'Default') attrVals.push(item.size);
+                                return attrVals.length > 0 ? (
+                                  <span className="text-[10px] font-black bg-slate-900 text-white px-1.5 py-0.5 rounded tracking-widest">{attrVals.join(' / ')}</span>
+                                ) : null;
+                              })()}
                               <span className="text-xs text-slate-500">Qty: <span className="font-semibold text-slate-700">{rem}</span></span>
                               <span className="text-xs font-mono text-slate-600">{formatBDT(item.price)}</span>
                             </div>
@@ -773,7 +789,15 @@ export default function ReturnsClient({
                               {ret.orderItem.product.name}
                             </p>
                             <p className="text-[10px] text-slate-400 mt-0.5 uppercase font-bold tracking-tight">
-                              Size {ret.variant.size} · Qty {ret.quantity}
+                              {(() => {
+                                const attrVals: string[] = [];
+                                if (ret.variant?.attributes && typeof ret.variant.attributes === 'object') {
+                                  Object.values(ret.variant.attributes as Record<string, string>).forEach(v => { if (v && v !== 'Default') attrVals.push(v); });
+                                }
+                                if (attrVals.length === 0 && ret.variant?.size && ret.variant.size !== 'Default') attrVals.push(ret.variant.size);
+                                if (attrVals.length === 0 && ret.variant?.color && ret.variant.color !== 'Default') attrVals.push(ret.variant.color);
+                                return attrVals.length > 0 ? attrVals.join(' / ') : ret.variant?.size || '';
+                              })()} · Qty {ret.quantity}
                             </p>
                           </td>
                           <td className="px-5 py-4 text-center">
