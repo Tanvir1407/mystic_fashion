@@ -399,41 +399,43 @@ export default async function ProductDetailView({ params }: { params: { id: stri
             </div>
 
             <div className="overflow-hidden border border-slate-200">
-              <table className="w-full text-sm text-left">
-                <thead className="text-xs text-slate-500 uppercase bg-slate-50 border-b border-slate-200">
-                  <tr>
-                    <th className="px-4 py-3 font-medium">Size</th>
-                    <th className="px-4 py-3 font-medium text-right">Stock</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {product.variants.sort((a, b) => a.order - b.order).map((variant) => {
-                    const isLowStock = variant.stock <= lowStockThreshold;
-                    return (
-                      <tr key={variant.id} className={isLowStock ? 'bg-red-50/30' : ''}>
-                        <td className="px-4 py-3 font-medium text-slate-900">
-                          {variant.size}
-                        </td>
-                        <td className="px-4 py-3 text-right">
-                          <span
-                            className={`inline-flex items-center gap-1.5 px-2 py-0.5 font-bold ${isLowStock ? 'text-red-600' : 'text-slate-900'
-                              }`}
-                          >
-                            {variant.stock}
-                          </span>
+              <div className="max-h-[300px] overflow-y-auto custom-scrollbar">
+                <table className="w-full text-sm text-left">
+                  <thead className="text-xs text-slate-500 uppercase bg-slate-50 border-b border-slate-200 sticky top-0 z-10">
+                    <tr>
+                      <th className="px-4 py-3 font-medium bg-slate-50">Size</th>
+                      <th className="px-4 py-3 font-medium text-right bg-slate-50">Stock</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {product.variants.sort((a, b) => a.order - b.order).map((variant) => {
+                      const isLowStock = variant.stock <= lowStockThreshold;
+                      return (
+                        <tr key={variant.id} className={isLowStock ? 'bg-red-50/30' : ''}>
+                          <td className="px-4 py-3 font-medium text-slate-900">
+                            {variant.size}
+                          </td>
+                          <td className="px-4 py-3 text-right">
+                            <span
+                              className={`inline-flex items-center gap-1.5 px-2 py-0.5 font-bold ${isLowStock ? 'text-red-600' : 'text-slate-900'
+                                }`}
+                            >
+                              {variant.stock}
+                            </span>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                    {product.variants.length === 0 && (
+                      <tr>
+                        <td colSpan={2} className="px-4 py-6 text-center text-slate-500">
+                          No variants available.
                         </td>
                       </tr>
-                    );
-                  })}
-                  {product.variants.length === 0 && (
-                    <tr>
-                      <td colSpan={2} className="px-4 py-6 text-center text-slate-500">
-                        No variants available.
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
+                    )}
+                  </tbody>
+                </table>
+              </div>
             </div>
 
             <div className="mt-4 pt-4 border-t border-slate-100">

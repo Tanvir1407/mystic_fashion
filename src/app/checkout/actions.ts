@@ -254,7 +254,6 @@ export async function placeOrderAction(payload: {
                 const printedItems = item.printDetails.map((pd: any) => ({
                   productId: item.id,
                   variantId,
-                  size: item.size || "M",
                   quantity: 1,
                   price: item.price,
                   requiresPrint: true,
@@ -267,7 +266,6 @@ export async function placeOrderAction(payload: {
                   printedItems.push({
                     productId: item.id,
                     variantId,
-                    size: item.size || "M",
                     quantity: remainingQty,
                     price: item.price,
                     requiresPrint: false,
@@ -281,7 +279,6 @@ export async function placeOrderAction(payload: {
                 return [{
                   productId: item.id,
                   variantId,
-                  size: item.size || "M",
                   quantity: item.quantity,
                   price: item.price,
                   requiresPrint: item.requiresPrint || false,
