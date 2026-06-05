@@ -20,7 +20,7 @@ export default function SidebarCart() {
 
 
 
-   useEffect(() => {
+  useEffect(() => {
     if (isOpen && items.length > 0) {
       const productIds = items.map((i: any) => i.id);
       syncCartPrices(productIds).then((updatedPrices) => {
@@ -139,16 +139,24 @@ export default function SidebarCart() {
                       </div>
                       <div className="flex flex-wrap gap-2">
                         {item.size && item.size.toLowerCase() !== "default" && (
-                          <span className="text-[11px] font-semibold bg-slate-100 dark:bg-zinc-900 px-2 py-0.5 text-slate-600 dark:text-slate-400">
+                          <span className="text-[11px]  bg-slate-100 dark:bg-zinc-900 px-2 py-0.5 text-slate-600 dark:text-slate-400">
                             {item.sizeAttributeName || "Size"}: {item.size}
                           </span>
                         )}
                         {item.color && item.color !== "Default" && (
-                          <span className="text-[11px] font-semibold bg-slate-100 dark:bg-zinc-900 px-2 py-0.5 text-slate-600 dark:text-slate-400">
+                          <span className="text-[11px]  bg-slate-100 dark:bg-zinc-900 px-2 py-0.5 text-slate-600 dark:text-slate-400">
                             {item.colorAttributeName || "Color"}: {item.color}
                           </span>
                         )}
+
                       </div>
+
+                      <div>
+                        <span className="text-[11px] font-semibold  px-2 py-0.5 text-slate-600 dark:text-slate-400">
+                          QTY: {item.quantity}
+                        </span>
+                      </div>
+
                       <div>
 
 

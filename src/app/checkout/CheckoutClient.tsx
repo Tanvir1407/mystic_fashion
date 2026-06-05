@@ -595,12 +595,12 @@ export default function CheckoutClient({
                           <div>
                             <h4 className="font-bold text-xs uppercase tracking-tight text-slate-800 line-clamp-1 group-hover:text-black transition-colors">{item.name}</h4>
                             <div className="flex flex-wrap items-center gap-2 mt-1.5">
-                              {item.size && item.size.toLowerCase() !== "default" && <span className="text-[10px] font-black uppercase bg-slate-100 px-1.5 py-0.5 text-slate-500">{item.sizeAttributeName || "Size"}: {item.size}</span>}
-                              {item.color && item.color !== "Default" && <span className="text-[10px] font-black uppercase bg-slate-100 px-1.5 py-0.5 text-slate-500">{item.colorAttributeName || "Color"}: {item.color}</span>}
+                              {item.size && item.size.toLowerCase() !== "default" && <span className="text-[10px]  bg-slate-100 px-1.5 py-0.5 text-slate-500">{item.sizeAttributeName || "Size"}: {item.size}</span>}
+                              {item.color && item.color !== "Default" && <span className="text-[10px] bg-slate-100 px-1.5 py-0.5 text-slate-500">{item.colorAttributeName || "Color"}: {item.color}</span>}
                             </div>
                           </div>
                           <div>
-                            <span className="text-[10px] font-bold text-slate-400 uppercase">Qty: {item.quantity}</span>
+                            <span className="text-[11px] font-bold text-slate-400 uppercase">Qty: {item.quantity}</span>
                           </div>
                           <div className="flex items-center gap-2">
                             {item.originalPrice && item.originalPrice > item.price && (
