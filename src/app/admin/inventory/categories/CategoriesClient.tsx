@@ -54,14 +54,8 @@ export default function CategoriesClient({
 }) {
   const [showForm, setShowForm] = useState(false);
   const [editingCategory, setEditingCategory] = useState<any>(null);
-  // Inline display editing moved to the modal. Keep editing in modal only.
-  const [localCategories, setLocalCategories] = useState<any[]>(categories);
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
-  const [isSavingDisplay, startSaveDisplayTransition] = useTransition();
-
-  // Keep local state in sync if server re-renders
-  // (only needed for optimistic updates)
 
   const handleDelete = async (id: string) => {
     if (
@@ -94,7 +88,7 @@ export default function CategoriesClient({
   // Display edits (image + sortOrder) are handled inside `CategoryForm` modal now.
 
   // Sort by sortOrder for display
-  const sortedCategories = [...localCategories].sort(
+  const sortedCategories = [...categories].sort(
     (a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0)
   );
 
