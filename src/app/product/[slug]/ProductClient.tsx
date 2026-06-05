@@ -34,10 +34,15 @@ interface Product {
     discountType: "PERCENTAGE" | "FLAT";
     value: number;
   } | null;
+  categoryRel?: any;
 }
 
 export default function ProductClient({ product, sizeChartData, deliveryData }: { product: Product, sizeChartData?: any, deliveryData?: { insideDhaka: number, outsideDhaka: number } }) {
   const router = useRouter();
+
+  // Dynamic variant names based on PIM category attribute mapping
+  const sizeAttributeName = product.categoryRel?.attributeMappings?.[0]?.attribute?.name || "Size";
+  const colorAttributeName = product.categoryRel?.attributeMappings?.[1]?.attribute?.name || "Color";
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const selectedImage = product.images[selectedImageIndex] || "";
 
@@ -319,7 +324,7 @@ export default function ProductClient({ product, sizeChartData, deliveryData }: 
             {/* Color Selector */}
             {availableColors.length > 0 && (
               <div className="mb-6">
-                <h3 className="font-semibold text-zinc-900 text-xs uppercase tracking-widest mb-3">Select Color</h3>
+                <h3 className="font-semibold text-zinc-900 text-xs uppercase tracking-widest mb-3">Select {colorAttributeName}</h3>
                 <div className="flex flex-wrap gap-2">
                   {availableColors.map((col) => {
                     const isAvailableForSelectedSize = selectedSize
@@ -352,7 +357,7 @@ export default function ProductClient({ product, sizeChartData, deliveryData }: 
             {!isSizeLess && (
               <div className="mb-8">
                 <div className="flex justify-between items-center mb-3">
-                  <h3 className="font-semibold text-zinc-900 text-xs uppercase tracking-widest">Select Size</h3>
+                  <h3 className="font-semibold text-zinc-900 text-xs uppercase tracking-widest">Select {sizeAttributeName}</h3>
                 </div>
 
                 {product.variants.length === 0 ? (
@@ -434,7 +439,7 @@ export default function ProductClient({ product, sizeChartData, deliveryData }: 
                         : 'bg-primary text-white hover:opacity-95 active:scale-[0.98]'
                       }`}
                   >
-                    {addedEffect ? 'Added To Cart' : (selectedSize ? 'Add To Cart' : 'Select Size')}
+                    {addedEffect ? 'Added To Cart' : (selectedSize ? 'Add To Cart' : `Select ${sizeAttributeName}`)}
                   </button>
                 </div>
 
@@ -451,7 +456,7 @@ export default function ProductClient({ product, sizeChartData, deliveryData }: 
                 </button>
               </div>
 
-              {!selectedSize && <p className="text-xs text-red-500 font-medium mt-3">Please select a size to continue</p>}
+              {!selectedSize && <p className="text-xs text-red-500 font-medium mt-3">Please select a {sizeAttributeName.toLowerCase()} to continue</p>}
             </div>
 
             {/* Size Chart Data Table */}
@@ -462,7 +467,7 @@ export default function ProductClient({ product, sizeChartData, deliveryData }: 
                   <table className="w-full text-left border-collapse border border-slate-200">
                     <thead>
                       <tr className="bg-slate-50 uppercase text-xs tracking-widest text-zinc-900">
-                        <th className="p-3 border border-slate-200 font-bold">Size</th>
+                        <th className="p-3 border border-slate-200 font-bold">{sizeAttributeName}</th>
                         {Object.keys(sizeChartData.data[0])
                           .filter(k => k !== 'size')
                           .map((h: string, idx: number) => (

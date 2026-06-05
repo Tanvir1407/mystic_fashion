@@ -32,6 +32,18 @@ export default async function ProductPage({ params }: { params: { slug: string }
         sizeChart: true,
         discount: true,
         mediaAssets: { orderBy: { sortOrder: "asc" } },
+        categoryRel: {
+          include: {
+            attributeMappings: {
+              include: {
+                attribute: true
+              },
+              orderBy: {
+                sortOrder: "asc"
+              }
+            }
+          }
+        },
       }
     });
 
@@ -52,6 +64,18 @@ export default async function ProductPage({ params }: { params: { slug: string }
         sizeChart: true,
         discount: true,
         mediaAssets: { orderBy: { sortOrder: "asc" } },
+        categoryRel: {
+          include: {
+            attributeMappings: {
+              include: {
+                attribute: true
+              },
+              orderBy: {
+                sortOrder: "asc"
+              }
+            }
+          }
+        },
       }
     });
   }
@@ -70,6 +94,18 @@ export default async function ProductPage({ params }: { params: { slug: string }
         sizeChart: true,
         discount: true,
         mediaAssets: { orderBy: { sortOrder: "asc" } },
+        categoryRel: {
+          include: {
+            attributeMappings: {
+              include: {
+                attribute: true
+              },
+              orderBy: {
+                sortOrder: "asc"
+              }
+            }
+          }
+        },
       }
     });
     if (productRes && productRes.slug) {

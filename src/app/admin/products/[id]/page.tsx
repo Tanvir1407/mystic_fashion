@@ -26,7 +26,18 @@ export default async function ProductDetailView({ params }: { params: { id: stri
     where: { id: params.id },
     include: {
       brand: true,
-      categoryRel: true,
+      categoryRel: {
+        include: {
+          attributeMappings: {
+            include: {
+              attribute: true
+            },
+            orderBy: {
+              sortOrder: 'asc'
+            }
+          }
+        }
+      },
       subcategory: true,
       mediaAssets: { orderBy: { sortOrder: 'asc' } },
       variants: {
@@ -80,6 +91,11 @@ export default async function ProductDetailView({ params }: { params: { id: stri
   if (!product) {
     notFound();
   }
+
+  // Dynamic variant names based on PIM category attribute mapping
+  const sizeAttributeName = productRes.categoryRel?.attributeMappings?.[0]?.attribute?.name || "Size";
+  const colorAttributeName = productRes.categoryRel?.attributeMappings?.[1]?.attribute?.name || "Color";
+  const hasSecondAttribute = product.variants.some((v: any) => v.color && v.color !== 'Default' && v.color !== '');
 
   // Sort orderItems in-memory based on order.createdAt descending
   product.orderItems.sort((a, b) => new Date(b.order.createdAt).getTime() - new Date(a.order.createdAt).getTime());
@@ -398,12 +414,15 @@ export default async function ProductDetailView({ params }: { params: { id: stri
               </span>
             </div>
 
-            <div className="overflow-hidden border border-slate-200">
-              <div className="max-h-[300px] overflow-y-auto custom-scrollbar">
+            <div className="relative overflow-hidden border border-slate-200">
+              <div className="max-h-[410px] overflow-y-auto custom-scrollbar">
                 <table className="w-full text-sm text-left">
                   <thead className="text-xs text-slate-500 uppercase bg-slate-50 border-b border-slate-200 sticky top-0 z-10">
                     <tr>
-                      <th className="px-4 py-3 font-medium bg-slate-50">Size</th>
+                      <th className="px-4 py-3 font-medium bg-slate-50">{sizeAttributeName}</th>
+                      {hasSecondAttribute && (
+                        <th className="px-4 py-3 font-medium bg-slate-50">{colorAttributeName}</th>
+                      )}
                       <th className="px-4 py-3 font-medium text-right bg-slate-50">Stock</th>
                     </tr>
                   </thead>
@@ -415,6 +434,11 @@ export default async function ProductDetailView({ params }: { params: { id: stri
                           <td className="px-4 py-3 font-medium text-slate-900">
                             {variant.size}
                           </td>
+                          {hasSecondAttribute && (
+                            <td className="px-4 py-3 text-slate-600">
+                              {variant.color}
+                            </td>
+                          )}
                           <td className="px-4 py-3 text-right">
                             <span
                               className={`inline-flex items-center gap-1.5 px-2 py-0.5 font-bold ${isLowStock ? 'text-red-600' : 'text-slate-900'
@@ -428,7 +452,7 @@ export default async function ProductDetailView({ params }: { params: { id: stri
                     })}
                     {product.variants.length === 0 && (
                       <tr>
-                        <td colSpan={2} className="px-4 py-6 text-center text-slate-500">
+                        <td colSpan={hasSecondAttribute ? 3 : 2} className="px-4 py-6 text-center text-slate-500">
                           No variants available.
                         </td>
                       </tr>
@@ -436,6 +460,8 @@ export default async function ProductDetailView({ params }: { params: { id: stri
                   </tbody>
                 </table>
               </div>
+              {/* Bottom scroll shadow indicator */}
+              <div className="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-slate-900/10 to-transparent pointer-events-none z-10" />
             </div>
 
             <div className="mt-4 pt-4 border-t border-slate-100">
