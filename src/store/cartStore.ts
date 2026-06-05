@@ -12,6 +12,8 @@ export interface CartItem {
   color?: string;
   originalPrice?: number;
   isCustomize?: boolean;
+  sizeAttributeName?: string;
+  colorAttributeName?: string;
   // DTF Printing Fields
   requiresPrint?: boolean;
   printName?: string;

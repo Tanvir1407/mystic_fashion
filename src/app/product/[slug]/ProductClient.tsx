@@ -227,6 +227,8 @@ export default function ProductClient({ product, sizeChartData, deliveryData }: 
       image: selectedImage || product.images[0] || "",
       category: product.team,
       isCustomize: product.isCustomize ?? false,
+      sizeAttributeName,
+      colorAttributeName,
     }, selectedSize!, quantity, selectedColor || undefined);
 
     setAddedEffect(true);
