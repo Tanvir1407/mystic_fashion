@@ -1,5 +1,5 @@
 import prisma from "@/lib/prisma";
-import { getDeliverySettings } from "../../actions";
+import { getDeliverySettings, getDTFPrintSetting } from "../../actions";
 import { getProductsForOrder } from "@/app/admin/products/actions";
 import { pathaoClient } from "@/lib/pathao/PathaoClient";
 import { notFound } from "next/navigation";
@@ -18,6 +18,7 @@ export default async function SingleOrderPage({ params }: { params: { id: string
     }
   });
   const deliverySettings = await getDeliverySettings();
+  const dtfSetting = await getDTFPrintSetting();
 
   if (!order) notFound();
 
@@ -110,6 +111,7 @@ export default async function SingleOrderPage({ params }: { params: { id: string
         deliverySettings={deliverySettings}
         products={products}
         pathaoInfo={pathaoInfo}
+        dtfSetting={dtfSetting}
       />
     </div>
   );
