@@ -16,7 +16,7 @@ export default async function EditPurchasePage({ params }: { params: { id: strin
 
   const [products, suppliers] = await Promise.all([
     prisma.product.findMany({
-      include: { variants: true }
+      include: { variants: { include: { stocks: true } } }
     }),
     prisma.supplier.findMany({
       where: { active: true },

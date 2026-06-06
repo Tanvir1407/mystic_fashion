@@ -299,7 +299,15 @@ export default function PurchaseFormClient({
                       </td>
                       <td className="px-4 py-2 min-w-[150px]">
                         <CustomSelect
-                          options={availableVariants.map((v: any) => ({ value: v.id, label: v.size }))}
+                          options={availableVariants.map((v: any) => {
+                            let label = v.size;
+                            if (v.color && v.color !== 'Default' && v.color !== 'All') {
+                              label += ` / ${v.color}`;
+                            }
+                            const stock = v.stocks?.[0]?.availableQuantity ?? v.stock ?? 0;
+                            label += ` (Stock: ${stock})`;
+                            return { value: v.id, label };
+                          })}
                           value={item.variantId}
                           onChange={(val) => updateItem(item.id, "variantId", val)}
                           placeholder="-- Size --"

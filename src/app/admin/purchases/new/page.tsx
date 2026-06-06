@@ -6,7 +6,7 @@ export const dynamic = "force-dynamic";
 export default async function NewPurchasePage() {
   const [products, suppliers] = await Promise.all([
     prisma.product.findMany({
-      include: { variants: true }
+      include: { variants: { include: { stocks: true } } }
     }),
     prisma.supplier.findMany({
       where: { active: true },
