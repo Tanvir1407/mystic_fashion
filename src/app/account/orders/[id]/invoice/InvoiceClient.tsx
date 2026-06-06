@@ -227,7 +227,9 @@ export default function InvoiceClient({
                         </div>
                       )}
                     </td>
-                    <td className="py-4 text-center font-light uppercase text-slate-600">{item.size || "N/A"}</td>
+                    <td className="py-4 text-center font-light uppercase text-slate-600">
+                      {(!item.size || item.size.toLowerCase() === "default") ? "-" : item.size}
+                    </td>
                     <td className="py-4 text-center font-light text-slate-600">{item.quantity}</td>
                     <td className="py-4 text-right font-light text-slate-600">{formatBDT(item.price)}</td>
                     <td className="py-4 text-right font-semibold text-slate-900 print:text-black">

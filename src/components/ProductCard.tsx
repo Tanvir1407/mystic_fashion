@@ -36,6 +36,56 @@ export default function ProductCard({ product }: ProductCardProps) {
     }
   }
 
+  let hasMultiplePrices = false;
+  let minPrice = finalPrice;
+  let maxPrice = finalPrice;
+  let originalMinPrice = product.price;
+  let originalMaxPrice = product.price;
+
+  if (product.variants && product.variants.length > 0) {
+    const variantPrices = product.variants.map((v: any) => {
+      let vPrice = product.price;
+      if (v.price !== undefined) {
+         vPrice = Number(v.price);
+      } else if (v.pricingMatrix?.basePrice !== undefined) {
+         vPrice = Number(v.pricingMatrix.basePrice);
+      }
+      return vPrice;
+    });
+
+    const vMin = Math.min(...variantPrices);
+    const vMax = Math.max(...variantPrices);
+    
+    if (vMax > vMin) {
+       hasMultiplePrices = true;
+       originalMinPrice = vMin;
+       originalMaxPrice = vMax;
+       
+       minPrice = vMin;
+       maxPrice = vMax;
+       
+       if (product.discount && product.discount.active) {
+         if (product.discount.discountType === "PERCENTAGE") {
+           minPrice = roundPrice(vMin - (vMin * (product.discount.value / 100)));
+           maxPrice = roundPrice(vMax - (vMax * (product.discount.value / 100)));
+         } else {
+           minPrice = roundPrice(Math.max(0, vMin - product.discount.value));
+           maxPrice = roundPrice(Math.max(0, vMax - product.discount.value));
+         }
+       }
+    } else if (vMin > 0) {
+       originalMinPrice = vMin;
+       finalPrice = vMin;
+       if (product.discount && product.discount.active) {
+         if (product.discount.discountType === "PERCENTAGE") {
+           finalPrice = roundPrice(vMin - (vMin * (product.discount.value / 100)));
+         } else {
+           finalPrice = roundPrice(Math.max(0, vMin - product.discount.value));
+         }
+       }
+    }
+  }
+
   return (
     <Link href={`/product/${product.slug || product.id}`} className="group">
       <div className="flex flex-col bg-white overflow-hidden transition-all duration-300 shadow-sm border border-transparent h-full relative">
@@ -71,11 +121,11 @@ export default function ProductCard({ product }: ProductCardProps) {
           <div className="flex items-baseline gap-2 mt-auto ">
             {isDiscounted && (
               <span className="text-zinc-400 dark:text-zinc-500 font-medium text-sm line-through">
-                {formatBDT(product.price)}
+                {hasMultiplePrices ? `${formatBDT(originalMinPrice)} - ${formatBDT(originalMaxPrice)}` : formatBDT(originalMinPrice)}
               </span>
             )}
             <span className="text-[#800020] font-black text-base md:text-lg">
-              {formatBDT(finalPrice)}
+              {hasMultiplePrices ? `${formatBDT(minPrice)} - ${formatBDT(maxPrice)}` : formatBDT(finalPrice)}
             </span>
           </div>
           <h3 className="text-xs mm:text-sm md:text-[13px] font-medium text-zinc-800 dark:text-zinc-100 leading-snug line-clamp-2 group-hover:text-[#800020] transition-colors duration-300">

@@ -262,7 +262,7 @@ export default function OrdersTab({ orders }: OrdersTabProps) {
                                 {item.product.name}
                               </h4>
                               <div className="flex items-center gap-3 mt-1.5 text-[10px] text-slate-400 font-normal">
-                                {item.size && (
+                                {item.size && item.size.toLowerCase() !== "default" && (
                                   <span className="bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded-sm">
                                     Size: {item.size}
                                   </span>
