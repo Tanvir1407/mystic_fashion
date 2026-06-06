@@ -17,11 +17,13 @@ export default function OrderDetailsClient({
   deliverySettings,
   products = [],
   pathaoInfo = null,
+  dtfSetting = { printCost: 300 },
 }: {
   order: any;
   deliverySettings: any;
   products?: any[];
   pathaoInfo?: any;
+  dtfSetting?: any;
 }) {
   const router = useRouter();
   const [isEditing, setIsEditing] = useState(false);
@@ -54,7 +56,7 @@ export default function OrderDetailsClient({
     requiresPrint: false,
     printName: "",
     printNumber: "",
-    printCost: 300,
+    printCost: dtfSetting?.printCost || 300,
   });
 
   const handleCopy = (text: string) => {
@@ -178,7 +180,7 @@ export default function OrderDetailsClient({
       }],
     });
     setIsAddingProduct(false);
-    setNewProductData({ productId: "", size: "", quantity: 1, requiresPrint: false, printName: "", printNumber: "", printCost: 300 });
+    setNewProductData({ productId: "", size: "", quantity: 1, requiresPrint: false, printName: "", printNumber: "", printCost: dtfSetting?.printCost || 300 });
   };
 
   // Financial calculations

@@ -13,14 +13,19 @@ async function generateOrderId(tx: any): Promise<string> {
   const date = now.getDate().toString().padStart(2, "0");
   const datePrefix = `MJEPE-${year}${month}${date}`;
 
-  const last = await tx.order.findFirst({
+  const lastOrder = await tx.order.findFirst({
     where: { id: { startsWith: datePrefix } },
-    orderBy: { id: "desc" },
+    orderBy: { createdAt: "desc" },
     select: { id: true },
   });
 
-  const seq = last ? parseInt(last.id.slice(-2), 10) + 1 : 1;
-  return `${datePrefix}${String(seq).padStart(2, "0")}`;
+  let seq = 1;
+  if (lastOrder) {
+    const maxNum = parseInt(lastOrder.id.replace(datePrefix, ""), 10) || 0;
+    seq = maxNum + 1;
+  }
+  const numStr = seq < 10 ? `0${seq}` : seq.toString();
+  return `${datePrefix}${numStr}`;
 }
 
 export async function createStaffOrder(data: {
