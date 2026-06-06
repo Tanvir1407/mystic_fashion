@@ -153,8 +153,8 @@ export default function AttributesClient({
 
         if (res.success && res.attribute) {
           const newAttr = res.attribute as Attribute;
-          setAttributes([...attributes, newAttr]);
-          setAllAttributes([...allAttributes, newAttr]);
+          setAttributes([newAttr, ...attributes]);
+          setAllAttributes([newAttr, ...allAttributes]);
           setName("");
           setCode("");
           setDescription("");
