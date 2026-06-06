@@ -63,11 +63,11 @@ export default function ProductClient({ product, sizeChartData, deliveryData, re
   };
 
   // Determine if product is size-less (e.g. only contains size "Default" or "-")
-  const isSizeLess = product.variants.length === 0 || 
-    (product.variants.length === 1 && 
-      (product.variants[0].size.toLowerCase() === "default" || 
-       product.variants[0].size === "-" || 
-       product.variants[0].size === ""));
+  const isSizeLess = product.variants.length === 0 ||
+    (product.variants.length === 1 &&
+      (product.variants[0].size.toLowerCase() === "default" ||
+        product.variants[0].size === "-" ||
+        product.variants[0].size === ""));
 
   // Unique sizes list
   const uniqueSizes = Array.from(new Set(product.variants.map((v) => v.size)));
@@ -358,13 +358,12 @@ export default function ProductClient({ product, sizeChartData, deliveryData, re
                         type="button"
                         onClick={() => handleColorSelect(col)}
                         disabled={!isAvailableForSelectedSize}
-                        className={`h-12 px-6 flex items-center justify-center font-bold text-xs uppercase tracking-wider transition-colors border ${
-                          !isAvailableForSelectedSize
-                            ? 'opacity-20 border-slate-200 cursor-not-allowed select-none bg-slate-50 text-slate-400'
-                            : selectedColor === col
-                              ? 'bg-primary text-white border-primary'
-                              : 'bg-white text-zinc-900 border-zinc-200 hover:border-primary hover:text-primary'
-                        }`}
+                        className={`h-12 px-6 flex items-center justify-center font-bold text-xs uppercase tracking-wider transition-colors border ${!isAvailableForSelectedSize
+                          ? 'opacity-20 border-slate-200 cursor-not-allowed select-none bg-slate-50 text-slate-400'
+                          : selectedColor === col
+                            ? 'bg-primary text-white border-primary'
+                            : 'bg-white text-zinc-900 border-zinc-200 hover:border-primary hover:text-primary'
+                          }`}
                       >
                         <span>{col}</span>
                       </button>
@@ -568,7 +567,7 @@ export default function ProductClient({ product, sizeChartData, deliveryData, re
         {/* Related Products Section */}
         {relatedProducts && relatedProducts.length > 0 && (
           <div className="container mx-auto pb-16 pt-8 border-t border-slate-200">
-            <h2 className="text-2xl font-black text-zinc-900 mb-8 uppercase tracking-tight text-center">You may also like</h2>
+            <h2 className="text-2xl font-medium text-zinc-900 mb-8 text-center">You may also like</h2>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
               {relatedProducts.map((rp, idx) => (
                 <ProductCard key={rp.id || idx} product={rp} />
