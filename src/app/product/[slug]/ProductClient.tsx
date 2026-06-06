@@ -7,6 +7,7 @@ import { useCartStore } from "@/store/cartStore";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { formatBDT, roundPrice } from "@/utils/formatPrice";
+import ProductCard from "@/components/ProductCard";
 
 import { Check, ShoppingCart, ShoppingBag, Plus, Minus, ChevronLeft, ChevronRight, Play } from "lucide-react";
 
@@ -37,7 +38,7 @@ interface Product {
   categoryRel?: any;
 }
 
-export default function ProductClient({ product, sizeChartData, deliveryData }: { product: Product, sizeChartData?: any, deliveryData?: { insideDhaka: number, outsideDhaka: number } }) {
+export default function ProductClient({ product, sizeChartData, deliveryData, relatedProducts }: { product: Product, sizeChartData?: any, deliveryData?: { insideDhaka: number, outsideDhaka: number }, relatedProducts?: any[] }) {
   const router = useRouter();
 
   // Dynamic variant names based on PIM category attribute mapping
@@ -563,6 +564,18 @@ export default function ProductClient({ product, sizeChartData, deliveryData }: 
             <p className="text-sm">Please make sure to record an unboxing video to claim any damages or missing items.</p>
           </div>
         </div>
+
+        {/* Related Products Section */}
+        {relatedProducts && relatedProducts.length > 0 && (
+          <div className="container mx-auto pb-16 pt-8 border-t border-slate-200">
+            <h2 className="text-2xl font-black text-zinc-900 mb-8 uppercase tracking-tight text-center">You may also like</h2>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
+              {relatedProducts.map((rp, idx) => (
+                <ProductCard key={rp.id || idx} product={rp} />
+              ))}
+            </div>
+          </div>
+        )}
 
       </div>
     </div>

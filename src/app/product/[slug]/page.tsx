@@ -139,6 +139,55 @@ export default async function ProductPage({ params }: { params: { slug: string }
     }))
   };
 
+  let relatedProductsRes = await prisma.product.findMany({
+    where: {
+      isPublished: true,
+      categoryId: productRes.categoryId,
+      id: { not: productRes.id }
+    },
+    take: 4,
+    include: {
+      variants: {
+        include: { pricingMatrix: true }
+      },
+      discount: true,
+      mediaAssets: { orderBy: { sortOrder: "asc" } }
+    }
+  });
+
+  // Fallback to random if not enough related products
+  if (relatedProductsRes.length < 4) {
+    const additional = await prisma.product.findMany({
+      where: {
+        isPublished: true,
+        id: { notIn: [productRes.id, ...relatedProductsRes.map(p => p.id)] }
+      },
+      take: 4 - relatedProductsRes.length,
+      include: {
+        variants: {
+          include: { pricingMatrix: true }
+        },
+        discount: true,
+        mediaAssets: { orderBy: { sortOrder: "asc" } }
+      }
+    });
+    relatedProductsRes = [...relatedProductsRes, ...additional];
+  }
+
+  const relatedProducts = relatedProductsRes.map((rp: any) => {
+    const rpBasePrice = rp.variants?.[0]?.pricingMatrix?.basePrice
+      ? Number(rp.variants[0].pricingMatrix.basePrice)
+      : rp.price;
+    const rpDisplayImages = (rp.mediaAssets && rp.mediaAssets.length > 0)
+      ? rp.mediaAssets.map((asset: any) => asset.url)
+      : (rp.images || []);
+    return {
+      ...rp,
+      price: rpBasePrice,
+      images: rpDisplayImages,
+    };
+  });
+
   const [delivery, footerData] = await Promise.all([
     prisma.deliverySetting.findUnique({
       where: { id: "default" }
@@ -152,7 +201,7 @@ export default async function ProductPage({ params }: { params: { slug: string }
     <div className="min-h-screen bg-white">
       <Header />
       <main className="w-full">
-        <ProductClient product={product as any} sizeChartData={product.sizeChart || null} deliveryData={deliveryData} />
+        <ProductClient product={product as any} sizeChartData={product.sizeChart || null} deliveryData={deliveryData} relatedProducts={relatedProducts} />
       </main>
       <Footer config={footerData} />
       <SidebarCart />
