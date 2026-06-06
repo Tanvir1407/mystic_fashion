@@ -46,12 +46,12 @@ export default async function AttributesPage({ searchParams }: { searchParams: {
   // Fetch paginated attributes, all attributes, and total count in parallel
   const [attributes, allAttributes, totalCount] = await Promise.all([
     prisma.attributeRegistry.findMany({
-      orderBy: { name: "asc" },
+      orderBy: { createdAt: "desc" },
       skip: (page - 1) * PER_PAGE,
       take: PER_PAGE,
     }),
     prisma.attributeRegistry.findMany({
-      orderBy: { name: "asc" }
+      orderBy: { createdAt: "desc" }
     }),
     prisma.attributeRegistry.count(),
   ]);

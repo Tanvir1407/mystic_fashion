@@ -142,7 +142,7 @@ export default function TrackOrderClient() {
                 <div>
                   <span className="text-[10px] uppercase font-black tracking-widest text-zinc-400 block mb-0.5">Customer Name</span>
                   <h3 className="text-sm font-extrabold text-zinc-800">{result.order.customerName}</h3>
-                  <span className="text-[11px] font-mono text-zinc-400">Order ID: #{result.order.id}</span>
+                  <span className="text-[11px] font-mono text-zinc-400">Order ID: {result.order.id}</span>
                 </div>
                 <div className="sm:text-right">
                   <span className="text-[10px] uppercase font-black tracking-widest text-zinc-400 block mb-0.5">Order Placed Date</span>
@@ -260,7 +260,7 @@ export default function TrackOrderClient() {
                   <h4 className="text-[10px] uppercase font-black tracking-widest text-zinc-400">Order Items Summary</h4>
                   <div className="space-y-2">
                     {result.order.items.map((item: any, idx: number) => (
-                      <div key={idx} className="flex justify-between items-center">
+                      <div key={idx} className="flex justify-between items-center pb-2 ">
                         <div className="flex flex-col min-w-0">
                           <span className="font-semibold text-zinc-700 truncate max-w-[180px]">{item.product?.name}</span>
                           {item.variant && (item.variant.size !== "Default" && item.variant.size !== "-") && (
@@ -270,7 +270,7 @@ export default function TrackOrderClient() {
                             </span>
                           )}
                         </div>
-                        <span className="font-mono text-zinc-500 bg-zinc-100 px-2 py-0.5 rounded text-[10px] font-bold">x{item.quantity}</span>
+                        <span className="font-mono text-zinc-500 bg-zinc-100 px-2 py-0.5 rounded text-[10px] ">×{item.quantity}</span>
                       </div>
                     ))}
                   </div>

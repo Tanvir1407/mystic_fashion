@@ -71,11 +71,20 @@ export default function CheckoutClient({
 
   useEffect(() => {
     if (items.length > 0) {
-      const productIds = items.map(i => i.id);
-      syncCartPrices(productIds).then((updatedPrices) => {
+      const cartItemsPayload = items.map((i: any) => ({
+        id: i.id,
+        size: i.size,
+        color: i.color
+      }));
+      syncCartPrices(cartItemsPayload).then((updatedPrices) => {
         updatedPrices.forEach(updated => {
           items.forEach(item => {
-            if (item.id === updated.id && item.price !== updated.price) {
+            if (
+              item.id === updated.id &&
+              item.size === updated.size &&
+              item.color === updated.color &&
+              item.price !== updated.price
+            ) {
               updateItem(item.id, item.size, item.color, { price: updated.price });
             }
           });

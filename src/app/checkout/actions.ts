@@ -380,8 +380,12 @@ export async function validateCoupon(
   }
 }
 
-export async function syncCartPrices(productIds: string[]) {
+export async function syncCartPrices(cartItems: { id: string; size?: string; color?: string }[]) {
   try {
+    if (!cartItems || !Array.isArray(cartItems) || cartItems.length === 0) {
+      return [];
+    }
+    const productIds = Array.from(new Set(cartItems.map(item => item.id)));
     const products = await prisma.product.findMany({
       where: {
         id: { in: productIds },
@@ -390,16 +394,24 @@ export async function syncCartPrices(productIds: string[]) {
       include: {
         discount: true,
         variants: {
-          orderBy: { order: "asc" },
           include: { pricingMatrix: true }
         }
       }
     });
 
-    return products.map(product => {
-      const basePrice = product.variants?.[0]?.pricingMatrix?.basePrice
-        ? Number(product.variants[0].pricingMatrix.basePrice)
-        : 0;
+    return cartItems.map(item => {
+      const product = products.find(p => p.id === item.id);
+      if (!product) return null;
+
+      // Find the specific variant matching the item's size and color
+      const targetColor = item.color || "Default";
+      const variant = product.variants.find(
+        v => v.size === item.size && v.color === targetColor
+      ) || product.variants[0];
+
+      const basePrice = variant?.pricingMatrix?.basePrice
+        ? Number(variant.pricingMatrix.basePrice)
+        : product.price;
 
       let finalPrice = basePrice;
       if (product.discount && product.discount.active) {
@@ -409,8 +421,14 @@ export async function syncCartPrices(productIds: string[]) {
           finalPrice = basePrice - product.discount.value;
         }
       }
-      return { id: product.id, price: roundPrice(finalPrice) };
-    });
+
+      return {
+        id: item.id,
+        size: item.size,
+        color: item.color,
+        price: roundPrice(finalPrice)
+      };
+    }).filter(Boolean) as { id: string; size?: string; color?: string; price: number }[];
   } catch (error) {
     console.error("Failed to sync cart prices:", error);
     return [];
