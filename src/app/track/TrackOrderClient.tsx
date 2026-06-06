@@ -261,7 +261,15 @@ export default function TrackOrderClient() {
                   <div className="space-y-2">
                     {result.order.items.map((item: any, idx: number) => (
                       <div key={idx} className="flex justify-between items-center">
-                        <span className="font-semibold text-zinc-700 truncate max-w-[180px]">{item.product?.name}</span>
+                        <div className="flex flex-col min-w-0">
+                          <span className="font-semibold text-zinc-700 truncate max-w-[180px]">{item.product?.name}</span>
+                          {item.variant && (item.variant.size !== "Default" && item.variant.size !== "-") && (
+                            <span className="text-[10px] text-zinc-500 truncate mt-0.5">
+                              {item.variant.size}
+                              {item.variant.color && item.variant.color !== "Default" && item.variant.color !== "All" && ` / ${item.variant.color}`}
+                            </span>
+                          )}
+                        </div>
                         <span className="font-mono text-zinc-500 bg-zinc-100 px-2 py-0.5 rounded text-[10px] font-bold">x{item.quantity}</span>
                       </div>
                     ))}

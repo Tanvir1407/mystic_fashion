@@ -132,11 +132,14 @@ export default async function ProductPage({ params }: { params: { slug: string }
     ...productRes,
     price: basePrice,
     images: displayImages,
-    variants: productRes.variants.map((v: any) => ({
-      ...v,
-      stock: v.stocks?.[0]?.availableQuantity ?? v.stock ?? 0,
-      price: v.pricingMatrix?.basePrice ? Number(v.pricingMatrix.basePrice) : basePrice
-    }))
+    variants: productRes.variants.map((v: any) => {
+      const { pricingMatrix, ...rest } = v;
+      return {
+        ...rest,
+        stock: v.stocks?.[0]?.availableQuantity ?? v.stock ?? 0,
+        price: pricingMatrix?.basePrice ? Number(pricingMatrix.basePrice) : basePrice
+      };
+    })
   };
 
   let relatedProductsRes = await prisma.product.findMany({
@@ -185,6 +188,13 @@ export default async function ProductPage({ params }: { params: { slug: string }
       ...rp,
       price: rpBasePrice,
       images: rpDisplayImages,
+      variants: rp.variants?.map((v: any) => {
+        const { pricingMatrix, ...rest } = v;
+        return {
+          ...rest,
+          price: pricingMatrix?.basePrice ? Number(pricingMatrix.basePrice) : rpBasePrice
+        };
+      })
     };
   });
 

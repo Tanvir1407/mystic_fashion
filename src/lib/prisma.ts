@@ -115,7 +115,7 @@ const prismaClientSingleton = () => {
             args.where = args.where || {};
             if (!('deletedAt' in args.where)) {
               const result = await query(args);
-              if (result && result.deletedAt !== null) {
+              if (result && result.deletedAt) {
                 return null;
               }
               return result;

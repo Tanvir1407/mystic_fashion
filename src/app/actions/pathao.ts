@@ -57,6 +57,7 @@ export async function trackCustomerOrder(query: string) {
                 items: {
                     select: {
                         product: { select: { name: true } },
+                        variant: { select: { size: true, color: true } },
                         quantity: true
                     }
                 }
@@ -89,6 +90,7 @@ export async function trackCustomerOrder(query: string) {
                         items: {
                             select: {
                                 product: { select: { name: true } },
+                                variant: { select: { size: true, color: true } },
                                 quantity: true
                             }
                         }
