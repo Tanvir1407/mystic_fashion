@@ -409,7 +409,7 @@ export default function CreateOrderClient({
       <div className="lg:col-span-2 space-y-6">
 
         {/* Customer Details Card */}
-        <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+        <div className="bg-white   border border-slate-200 shadow-sm">
           <div className="px-6 py-4 border-b border-slate-100 bg-slate-50 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div className="flex items-center gap-2">
               <User className="w-4 h-4 text-indigo-500" />
@@ -457,7 +457,7 @@ export default function CreateOrderClient({
                   value={customerName}
                   onChange={e => setCustomerName(e.target.value)}
                   placeholder="Enter name"
-                  className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
+                  className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200  text-sm focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
                 />
               </div>
             </div>
@@ -470,7 +470,7 @@ export default function CreateOrderClient({
                   value={phone}
                   onChange={e => setPhone(e.target.value)}
                   placeholder="01XXXXXXXXX"
-                  className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all font-mono"
+                  className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200  text-sm focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all font-mono"
                 />
               </div>
             </div>
@@ -484,7 +484,7 @@ export default function CreateOrderClient({
                     min="0"
                     value={deliveryCharge}
                     onChange={(e) => setDeliveryCharge(parseFloat(e.target.value) || 0)}
-                    className="w-full pl-8 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm font-bold text-slate-800 focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all outline-none"
+                    className="w-full pl-8 pr-4 py-2 bg-slate-50 border border-slate-200  text-sm font-bold text-slate-800 focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all outline-none"
                     placeholder="0"
                   />
                 </div>
@@ -492,7 +492,7 @@ export default function CreateOrderClient({
             )}
 
             {isExchange && (
-              <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4 p-4 border border-orange-100 bg-orange-50/30 rounded-xl animate-in fade-in duration-200">
+              <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4 p-4 border border-orange-100 bg-orange-50/30   animate-in fade-in duration-200">
                 <div className="space-y-1.5">
                   <label className="text-[10px] font-orange-700 uppercase tracking-wider font-bold">Original Order ID *</label>
                   <input
@@ -500,7 +500,7 @@ export default function CreateOrderClient({
                     value={exchangeRefOrderId}
                     onChange={(e) => setExchangeRefOrderId(e.target.value.toUpperCase())}
                     placeholder="e.g. MJEPE-26052301"
-                    className="w-full px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm font-mono focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 outline-none transition-all"
+                    className="w-full px-4 py-2 bg-white border border-slate-200  text-sm font-mono focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 outline-none transition-all"
                   />
                 </div>
                 <div className="space-y-1.5">
@@ -510,7 +510,7 @@ export default function CreateOrderClient({
                     value={exchangeItemNote}
                     onChange={(e) => setExchangeItemNote(e.target.value)}
                     placeholder="e.g. XL → XXL, Argentina Jersey"
-                    className="w-full px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 outline-none transition-all"
+                    className="w-full px-4 py-2 bg-white border border-slate-200  text-sm focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 outline-none transition-all"
                   />
                 </div>
               </div>
@@ -540,6 +540,7 @@ export default function CreateOrderClient({
                     }}
                     placeholder={loadingCities ? "Loading..." : "-- Select City --"}
                     searchable={true}
+                    heightClass="8"
                   />
                 </div>
                 <div className="space-y-1.5">
@@ -554,6 +555,8 @@ export default function CreateOrderClient({
                     placeholder={loadingZones ? "Loading..." : (selectedCityId ? "-- Select Zone --" : "First select city")}
                     disabled={!selectedCityId || loadingZones}
                     searchable={true}
+                    heightClass="8"
+
                   />
                 </div>
                 <div className="space-y-1.5">
@@ -565,6 +568,7 @@ export default function CreateOrderClient({
                     placeholder={loadingAreas ? "Loading..." : (selectedZoneId ? "-- Select Area --" : "First select zone")}
                     disabled={!selectedZoneId || loadingAreas}
                     searchable={true}
+                    heightClass="8"
                   />
                 </div>
               </div>
@@ -576,7 +580,7 @@ export default function CreateOrderClient({
                 value={address}
                 onChange={e => setAddress(e.target.value)}
                 placeholder="e.g., House 12, Road 4, Block C, Mirpur 2, Dhaka"
-                className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
+                className="w-full px-4 py-2 bg-slate-50 border border-slate-200  text-sm focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
               />
             </div>
             <div className="space-y-1.5">
@@ -587,7 +591,7 @@ export default function CreateOrderClient({
                   type="number"
                   value={advancePaid}
                   onChange={e => setAdvancePaid(parseFloat(e.target.value) || 0)}
-                  className="w-full pl-8 pr-4 py-2 bg-red-50/50 border border-red-100 rounded-lg text-sm font-bold text-red-600 focus:bg-white focus:ring-2 focus:ring-red-500/20 focus:border-red-500 transition-all outline-none"
+                  className="w-full pl-8 pr-4 py-2 bg-red-50/50 border border-red-100  text-sm font-bold text-red-600 focus:bg-white focus:ring-2 focus:ring-red-500/20 focus:border-red-500 transition-all outline-none"
                   placeholder="0"
                 />
               </div>
@@ -603,14 +607,14 @@ export default function CreateOrderClient({
                     type="number"
                     value={manualDiscountValue}
                     onChange={e => setManualDiscountValue(parseFloat(e.target.value) || 0)}
-                    className="w-full pl-8 pr-4 py-2 bg-indigo-50/50 border border-indigo-100 rounded-lg text-sm font-bold text-indigo-600 focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all outline-none"
+                    className="w-full pl-8 pr-4 py-2 bg-indigo-50/50 border border-indigo-100  text-sm font-bold text-indigo-600 focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all outline-none"
                     placeholder="0"
                   />
                 </div>
                 <select
                   value={manualDiscountType}
                   onChange={e => setManualDiscountType(e.target.value as "FLAT" | "PERCENTAGE")}
-                  className="px-2 py-2 bg-indigo-50/50 border border-indigo-100 rounded-lg text-[10px] font-bold uppercase focus:bg-white focus:ring-2 focus:ring-indigo-500/20 outline-none"
+                  className="px-2 py-2 bg-indigo-50/50 border border-indigo-100  text-[10px] font-bold uppercase focus:bg-white focus:ring-2 focus:ring-indigo-500/20 outline-none"
                 >
                   <option value="FLAT">Flat</option>
                   <option value="PERCENTAGE">%</option>
@@ -624,12 +628,12 @@ export default function CreateOrderClient({
                 onChange={e => setRemarks(e.target.value)}
                 placeholder="Add any internal notes, packaging instructions, or customer requests..."
                 rows={3}
-                className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all resize-none"
+                className="w-full px-4 py-2 bg-slate-50 border border-slate-200  text-sm focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all resize-none"
               />
             </div>
             <div className="space-y-1.5 md:col-span-2">
               <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Order Tags (Administrative)</label>
-              <div className="flex flex-wrap items-center gap-2 p-2 bg-slate-50 border border-slate-200 rounded-lg focus-within:bg-white focus-within:ring-2 focus-within:ring-indigo-500/20 focus-within:border-indigo-500 transition-all min-h-[42px]">
+              <div className="flex flex-wrap items-center gap-2 p-2 bg-slate-50 border border-slate-200  focus-within:bg-white focus-within:ring-2 focus-within:ring-indigo-500/20 focus-within:border-indigo-500 transition-all min-h-[42px]">
                 {tags.map((tag, idx) => (
                   <span
                     key={tag}
@@ -664,7 +668,7 @@ export default function CreateOrderClient({
         </div>
 
         {/* Product Selection Card */}
-        <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+        <div className="bg-white   border border-slate-200 shadow-sm">
           <div className="px-6 py-4 border-b border-slate-100 bg-slate-50 flex items-center gap-2">
             <ShoppingBag className="w-4 h-4 text-emerald-500" />
             <h2 className="text-sm font-bold text-slate-800 uppercase tracking-wider">Add Products</h2>
@@ -685,12 +689,12 @@ export default function CreateOrderClient({
                     }}
                     onKeyDown={handleKeyDown}
                     placeholder="Search name, team, or category..."
-                    className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm font-medium focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all outline-none"
+                    className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200  text-sm font-medium focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all outline-none"
                   />
                 </div>
                 {/* Search Results Dropdown */}
                 {filteredProducts.length > 0 && (
-                  <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-slate-200 rounded-xl shadow-2xl z-20 overflow-hidden ring-1 ring-black/5 animate-in fade-in slide-in-from-top-2 duration-200">
+                  <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-slate-200   shadow-2xl z-20 overflow-hidden ring-1 ring-black/5 animate-in fade-in slide-in-from-top-2 duration-200">
                     <div className="max-h-[150px] overflow-y-auto custom-scrollbar">
                       {filteredProducts.map((p, idx) => (
                         <button
@@ -734,8 +738,8 @@ export default function CreateOrderClient({
                 if (!selectedProductId) {
                   return (
                     <div className="md:col-span-4">
-                      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1.5">Size & Stock</label>
-                      <div className="h-9 flex items-center text-slate-400 text-xs italic">Select a product first</div>
+                      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1.5">Select Variant</label>
+                      <div className="h-[38px] flex items-center text-slate-400 text-xs italic bg-slate-50 border border-slate-200  px-3">Select a product first</div>
                     </div>
                   );
                 }
@@ -744,53 +748,39 @@ export default function CreateOrderClient({
                 const isDefaultOnly = selectedProduct?.variants?.length === 1 &&
                   (!onlyVariant.size || onlyVariant.size === "Default") &&
                   (!onlyVariant.color || onlyVariant.color === "Default");
-                
+
                 if (isDefaultOnly) return null;
+
+                const options = availableSizes.map(v => {
+                  const uniqueParts = new Set<string>();
+                  if (v.size && v.size !== "Default") uniqueParts.add(v.size);
+                  if (v.color && v.color !== "Default") uniqueParts.add(v.color);
+                  if (v.attributes && typeof v.attributes === 'object') {
+                    Object.values(v.attributes).forEach((val) => {
+                      if (val && typeof val === 'string' && val !== 'Default') uniqueParts.add(val);
+                    });
+                  }
+                  const desc = Array.from(uniqueParts).join(' / ');
+                  return {
+                    value: v.id,
+                    label: `${desc || "Default"} (Stock: ${v.stock})`
+                  };
+                });
 
                 return (
                   <div className="md:col-span-4">
-                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1.5">Size & Stock</label>
-                    <div className="flex flex-wrap gap-2">
-                      {availableSizes.map(v => {
-                        const isOutOfStock = v.stock <= 0;
-                        const uniqueParts = new Set<string>();
-                        if (v.size && v.size !== "Default") uniqueParts.add(v.size);
-                        if (v.color && v.color !== "Default") uniqueParts.add(v.color);
-                        if (v.attributes && typeof v.attributes === 'object') {
-                          Object.values(v.attributes).forEach((val) => {
-                            if (val && typeof val === 'string' && val !== 'Default') uniqueParts.add(val);
-                          });
-                        }
-                        const desc = Array.from(uniqueParts).join(' / ');
-                        return (
-                          <button
-                            key={v.id}
-                            type="button"
-                            onClick={() => setSelectedVariantId(v.id)}
-                            className={`relative px-3 py-2 rounded-md border text-xs font-black transition-all ${selectedVariantId === v.id
-                              ? "bg-indigo-600 border-indigo-600 text-white shadow-lg shadow-indigo-200"
-                              : isOutOfStock
-                                ? "bg-orange-50 border-orange-200 text-orange-700 hover:border-orange-400 hover:bg-orange-100"
-                                : "bg-white border-slate-200 text-slate-700 hover:border-indigo-400"
-                              }`}
-                          >
-                            {desc || "Default"}
-                            <span className={`ml-1 text-[9px] ${selectedVariantId === v.id ? "text-indigo-200" : isOutOfStock ? "text-orange-400" : "text-slate-400"
-                              }`}>
-                              ({v.stock})
-                            </span>
-                            {isOutOfStock && (
-                              <span className="absolute -top-1.5 -right-1.5 bg-orange-500 text-white text-[7px] font-black px-1 py-0 rounded-sm leading-tight">
-                                OUT
-                              </span>
-                            )}
-                          </button>
-                        );
-                      })}
-                    </div>
+                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1.5">Select Variant *</label>
+                    <CustomSelect
+                      options={options}
+                      value={selectedVariantId}
+                      onChange={(val) => setSelectedVariantId(val)}
+                      placeholder="-- Select Variant --"
+                      searchable={true}
+                      heightClass="8"
+                    />
                     {selectedVariantId && availableSizes.find(v => v.id === selectedVariantId)?.stock <= 0 && (
                       <p className="mt-1.5 text-[10px] text-orange-600 font-bold flex items-center gap-1">
-                        <span>⚠</span> Out of stock — admin override active. Stock will go negative.
+                        <span>⚠</span> Out of stock. Stock will go negative.
                       </p>
                     )}
                   </div>
@@ -805,7 +795,7 @@ export default function CreateOrderClient({
                   min="1"
                   value={quantity}
                   onChange={e => setQuantity(parseInt(e.target.value) || 1)}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm font-bold focus:bg-white focus:ring-2 focus:ring-indigo-500/20"
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200  text-sm font-bold focus:bg-white focus:ring-2 focus:ring-indigo-500/20"
                 />
               </div>
 
@@ -816,7 +806,7 @@ export default function CreateOrderClient({
                   type="button"
                   onClick={addToOrder}
                   disabled={!selectedProductId || !selectedVariantId}
-                  className="w-full h-[38px] flex items-center justify-center bg-slate-900 text-white rounded-lg hover:bg-slate-700 disabled:bg-slate-100 disabled:text-slate-300 transition-all shadow-sm"
+                  className="w-full h-[38px] flex items-center justify-center bg-slate-900 text-white  hover:bg-slate-700 disabled:bg-slate-100 disabled:text-slate-300 transition-all shadow-sm"
                 >
                   <Plus className="w-5 h-5" />
                 </button>
@@ -843,7 +833,7 @@ export default function CreateOrderClient({
                   </label>
 
                   {requiresPrint && (
-                    <div className="bg-slate-50 p-3 rounded-lg border border-slate-200 space-y-2 animate-in fade-in slide-in-from-top-1 duration-200">
+                    <div className="bg-slate-50 p-3  border border-slate-200 space-y-2 animate-in fade-in slide-in-from-top-1 duration-200">
                       <div className="flex items-center justify-between">
                         <span className="text-[9px] font-black text-indigo-500 uppercase tracking-widest">Customization Data</span>
                         <span className="text-[9px] font-bold text-slate-500 italic">Limit: {quantity} items</span>
@@ -910,7 +900,7 @@ export default function CreateOrderClient({
             </div>
 
             {/* Selected Items Table */}
-            <div className="border border-slate-100 rounded-lg overflow-hidden">
+            <div className="border border-slate-100  overflow-hidden">
               <table className="w-full text-left text-sm">
                 <thead className="bg-slate-50 text-[10px] font-bold text-slate-500 uppercase tracking-wider border-b border-slate-100">
                   <tr>
@@ -964,7 +954,7 @@ export default function CreateOrderClient({
 
       {/* Right Column: Order Summary & Action */}
       <div className="lg:col-span-1 space-y-6">
-        <div className="bg-white rounded-xl border border-slate-200 shadow-md overflow-hidden sticky top-6">
+        <div className="bg-white   border border-slate-200 shadow-md overflow-hidden sticky top-6">
           <div className="px-6 py-4 border-b border-slate-100 bg-slate-900 text-white flex items-center justify-between">
             <h2 className="text-sm font-black uppercase tracking-widest">Order Summary</h2>
             <ShoppingBag className="w-4 h-4 text-gold" />
@@ -1023,7 +1013,7 @@ export default function CreateOrderClient({
 
               {
                 hasBackorderItems && (
-                  <div className="border-2 border-dashed border-orange-200 p-2 rounded-lg text-xs font-bold text-center ">
+                  <div className="border-2 border-dashed border-orange-200 p-2  text-xs font-bold text-center ">
                     ⚠ This order contains backordered items.
                   </div>
                 )
@@ -1031,7 +1021,7 @@ export default function CreateOrderClient({
               <button
                 onClick={handleSubmit}
                 disabled={isPending || orderItems.length === 0}
-                className="w-full text-white font-black py-4 rounded-xl shadow-lg shadow-indigo-200 bg-black hover:shadow-black/10 transition-all flex items-center justify-center gap-2 active:scale-[0.98] disabled:bg-slate-300 disabled:shadow-none disabled:cursor-not-allowed group">
+                className="w-full text-white font-black py-4   shadow-lg shadow-indigo-200 bg-black hover:shadow-black/10 transition-all flex items-center justify-center gap-2 active:scale-[0.98] disabled:bg-slate-300 disabled:shadow-none disabled:cursor-not-allowed group">
                 <CheckCircle className="w-5 h-5 group-hover:scale-110 transition-transform" />
                 CREATE ORDER
               </button>
