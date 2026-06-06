@@ -20,7 +20,9 @@ interface Product {
 interface OrderItem {
   productId: string;
   productName: string;
+  variantId?: string;
   size: string;
+  color?: string;
   quantity: number;
   price: number; // Unit price at calculation
   stock: number;
@@ -152,7 +154,7 @@ export default function CreateOrderClient({
   // Product Search State
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedProductId, setSelectedProductId] = useState("");
-  const [selectedSize, setSelectedSize] = useState("");
+  const [selectedVariantId, setSelectedVariantId] = useState("");
   const [quantity, setQuantity] = useState(1);
   const [focusedIndex, setFocusedIndex] = useState(-1);
 
@@ -200,6 +202,19 @@ export default function CreateOrderClient({
     [selectedProduct]
   );
 
+  // Auto-select variant if only one exists
+  useEffect(() => {
+    if (selectedProduct) {
+      if (selectedProduct.variants?.length === 1) {
+        setSelectedVariantId(selectedProduct.variants[0].id);
+      } else {
+        setSelectedVariantId("");
+      }
+    } else {
+      setSelectedVariantId("");
+    }
+  }, [selectedProductId, selectedProduct]);
+
   // Calculate unit price with discount
   const getDiscountedPrice = (product: Product) => {
     if (!product.discount) return product.price;
@@ -210,16 +225,16 @@ export default function CreateOrderClient({
   };
 
   const addToOrder = () => {
-    if (!selectedProduct || !selectedSize) return;
+    if (!selectedProduct || !selectedVariantId) return;
 
-    const variant = selectedProduct.variants.find((v: any) => v.size === selectedSize);
+    const variant = selectedProduct.variants.find((v: any) => v.id === selectedVariantId);
     if (!variant) return;
 
     const unitPrice = getDiscountedPrice(selectedProduct);
 
-    // Check if item already exists (only merge if NEITHER requires print)
+    // Check if item already exists (only merge if variant match and print status matches)
     const existingIndex = orderItems.findIndex(
-      item => item.productId === selectedProductId && item.size === selectedSize && !item.requiresPrint && !requiresPrint
+      item => item.productId === selectedProductId && item.variantId === selectedVariantId && !item.requiresPrint && !requiresPrint
     );
 
     if (existingIndex > -1) {
@@ -230,7 +245,9 @@ export default function CreateOrderClient({
       setOrderItems([...orderItems, {
         productId: selectedProduct.id,
         productName: selectedProduct.name,
-        size: selectedSize,
+        variantId: variant.id,
+        size: variant.size,
+        color: variant.color,
         quantity: quantity,
         price: unitPrice,
         stock: variant.stock,
@@ -243,7 +260,7 @@ export default function CreateOrderClient({
     // Reset selection for next item
     setSearchQuery("");
     setSelectedProductId("");
-    setSelectedSize("");
+    setSelectedVariantId("");
     setQuantity(1);
     setRequiresPrint(false);
     setPendingPrintDetails([]);
@@ -335,6 +352,7 @@ export default function CreateOrderClient({
             items: orderItems.map(item => ({
               productId: item.productId,
               size: item.size,
+              color: item.color || "Default",
               quantity: item.quantity,
               price: item.price,
               requiresPrint: item.requiresPrint,
@@ -362,6 +380,7 @@ export default function CreateOrderClient({
             items: orderItems.map(item => ({
               productId: item.productId,
               size: item.size,
+              color: item.color || "Default",
               quantity: item.quantity,
               price: item.price,
               requiresPrint: item.requiresPrint,
@@ -711,47 +730,72 @@ export default function CreateOrderClient({
               </div>
 
               {/* Size Selection */}
-              <div className="md:col-span-4">
-                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1.5">Size & Stock</label>
-                <div className="flex flex-wrap gap-2">
-                  {selectedProductId ? (
-                    availableSizes.map(v => {
-                      const isOutOfStock = v.stock <= 0;
-                      return (
-                        <button
-                          key={v.id}
-                          type="button"
-                          onClick={() => setSelectedSize(v.size)}
-                          className={`relative px-3 py-2 rounded-md border text-xs font-black transition-all ${selectedSize === v.size
-                            ? "bg-indigo-600 border-indigo-600 text-white shadow-lg shadow-indigo-200"
-                            : isOutOfStock
-                              ? "bg-orange-50 border-orange-200 text-orange-700 hover:border-orange-400 hover:bg-orange-100"
-                              : "bg-white border-slate-200 text-slate-700 hover:border-indigo-400"
-                            }`}
-                        >
-                          {v.size}
-                          <span className={`ml-1 text-[9px] ${selectedSize === v.size ? "text-indigo-200" : isOutOfStock ? "text-orange-400" : "text-slate-400"
-                            }`}>
-                            ({v.stock})
-                          </span>
-                          {isOutOfStock && (
-                            <span className="absolute -top-1.5 -right-1.5 bg-orange-500 text-white text-[7px] font-black px-1 py-0 rounded-sm leading-tight">
-                              OUT
+              {(() => {
+                if (!selectedProductId) {
+                  return (
+                    <div className="md:col-span-4">
+                      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1.5">Size & Stock</label>
+                      <div className="h-9 flex items-center text-slate-400 text-xs italic">Select a product first</div>
+                    </div>
+                  );
+                }
+
+                const onlyVariant = selectedProduct?.variants?.[0];
+                const isDefaultOnly = selectedProduct?.variants?.length === 1 &&
+                  (!onlyVariant.size || onlyVariant.size === "Default") &&
+                  (!onlyVariant.color || onlyVariant.color === "Default");
+                
+                if (isDefaultOnly) return null;
+
+                return (
+                  <div className="md:col-span-4">
+                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1.5">Size & Stock</label>
+                    <div className="flex flex-wrap gap-2">
+                      {availableSizes.map(v => {
+                        const isOutOfStock = v.stock <= 0;
+                        const uniqueParts = new Set<string>();
+                        if (v.size && v.size !== "Default") uniqueParts.add(v.size);
+                        if (v.color && v.color !== "Default") uniqueParts.add(v.color);
+                        if (v.attributes && typeof v.attributes === 'object') {
+                          Object.values(v.attributes).forEach((val) => {
+                            if (val && typeof val === 'string' && val !== 'Default') uniqueParts.add(val);
+                          });
+                        }
+                        const desc = Array.from(uniqueParts).join(' / ');
+                        return (
+                          <button
+                            key={v.id}
+                            type="button"
+                            onClick={() => setSelectedVariantId(v.id)}
+                            className={`relative px-3 py-2 rounded-md border text-xs font-black transition-all ${selectedVariantId === v.id
+                              ? "bg-indigo-600 border-indigo-600 text-white shadow-lg shadow-indigo-200"
+                              : isOutOfStock
+                                ? "bg-orange-50 border-orange-200 text-orange-700 hover:border-orange-400 hover:bg-orange-100"
+                                : "bg-white border-slate-200 text-slate-700 hover:border-indigo-400"
+                              }`}
+                          >
+                            {desc || "Default"}
+                            <span className={`ml-1 text-[9px] ${selectedVariantId === v.id ? "text-indigo-200" : isOutOfStock ? "text-orange-400" : "text-slate-400"
+                              }`}>
+                              ({v.stock})
                             </span>
-                          )}
-                        </button>
-                      );
-                    })
-                  ) : (
-                    <div className="h-9 flex items-center text-slate-400 text-xs italic">Select a product first</div>
-                  )}
-                </div>
-                {selectedSize && availableSizes.find(v => v.size === selectedSize)?.stock <= 0 && (
-                  <p className="mt-1.5 text-[10px] text-orange-600 font-bold flex items-center gap-1">
-                    <span>⚠</span> Out of stock — admin override active. Stock will go negative.
-                  </p>
-                )}
-              </div>
+                            {isOutOfStock && (
+                              <span className="absolute -top-1.5 -right-1.5 bg-orange-500 text-white text-[7px] font-black px-1 py-0 rounded-sm leading-tight">
+                                OUT
+                              </span>
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                    {selectedVariantId && availableSizes.find(v => v.id === selectedVariantId)?.stock <= 0 && (
+                      <p className="mt-1.5 text-[10px] text-orange-600 font-bold flex items-center gap-1">
+                        <span>⚠</span> Out of stock — admin override active. Stock will go negative.
+                      </p>
+                    )}
+                  </div>
+                );
+              })()}
 
               {/* Quantity */}
               <div className="md:col-span-2">
@@ -771,7 +815,7 @@ export default function CreateOrderClient({
                 <button
                   type="button"
                   onClick={addToOrder}
-                  disabled={!selectedProductId || !selectedSize}
+                  disabled={!selectedProductId || !selectedVariantId}
                   className="w-full h-[38px] flex items-center justify-center bg-slate-900 text-white rounded-lg hover:bg-slate-700 disabled:bg-slate-100 disabled:text-slate-300 transition-all shadow-sm"
                 >
                   <Plus className="w-5 h-5" />
@@ -779,7 +823,7 @@ export default function CreateOrderClient({
               </div>
 
               {/* DTF Print Section */}
-              {selectedProductId && selectedSize && (
+              {selectedProductId && selectedVariantId && (
                 <div className="md:col-span-12 pt-3 mt-2 border-t border-dashed border-slate-200">
                   <label className="inline-flex items-center gap-2 cursor-pointer group mb-2">
                     <input
@@ -884,7 +928,7 @@ export default function CreateOrderClient({
                     </tr>
                   ) : (
                     orderItems.map((item, idx) => (
-                      <tr key={`${item.productId}-${item.size}`} className={`hover:bg-slate-50 transition-colors ${item.stock <= 0 ? "bg-orange-50/40" : ""}`}>
+                      <tr key={`${item.productId}-${item.size}-${item.color || "Default"}-${idx}`} className={`hover:bg-slate-50 transition-colors ${item.stock <= 0 ? "bg-orange-50/40" : ""}`}>
                         <td className="px-4 py-3">
                           <div className="font-bold text-slate-900">{item.productName}</div>
                           {item.stock <= 0 && (
@@ -900,7 +944,7 @@ export default function CreateOrderClient({
                             </div>
                           )}
                         </td>
-                        <td className="px-4 py-3 text-center"><span className="px-2 py-0.5 bg-slate-100 rounded text-[10px] font-black">{item.size}</span></td>
+                        <td className="px-4 py-3 text-center"><span className="px-2 py-0.5 bg-slate-100 rounded text-[10px] font-black">{item.size}{item.color && item.color !== 'Default' ? ` / ${item.color}` : ''}</span></td>
                         <td className="px-4 py-3 text-center font-semibold">{item.quantity}</td>
                         <td className="px-4 py-3 text-right font-mono">{formatBDT(item.price)}</td>
                         <td className="px-4 py-3 text-right">

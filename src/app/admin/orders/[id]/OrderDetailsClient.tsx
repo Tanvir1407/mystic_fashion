@@ -49,7 +49,9 @@ export default function OrderDetailsClient({
 
   const [newProductData, setNewProductData] = useState({
     productId: "",
+    variantId: "",
     size: "",
+    color: "",
     quantity: 1,
     requiresPrint: false,
     printName: "",
@@ -78,7 +80,8 @@ export default function OrderDetailsClient({
       items: formData.items.map((i: any) => ({
         id: i.id,
         productId: i.productId,
-        size: i.size,
+        size: i.size || i.variant?.size,
+        color: i.color || i.variant?.color || "Default",
         quantity: i.quantity,
         price: i.price,
         requiresPrint: i.requiresPrint,
@@ -158,8 +161,9 @@ export default function OrderDetailsClient({
   };
 
   const handleAddNewProduct = () => {
-    if (!newProductData.productId || !newProductData.size) { alert("Please select a product and size."); return; }
+    if (!newProductData.productId || !newProductData.variantId) { alert("Please select a product and variant."); return; }
     const product = products.find((p) => p.id === newProductData.productId);
+    const variant = product?.variants?.find((v: any) => v.id === newProductData.variantId);
     let price = product.price;
     if (product.discount) {
       price = product.discount.discountType === "PERCENTAGE"
@@ -169,8 +173,15 @@ export default function OrderDetailsClient({
     setFormData({
       ...formData,
       items: [...formData.items, {
-        id: `new-${Date.now()}`, productId: product.id, product,
-        size: newProductData.size, quantity: newProductData.quantity, price,
+        id: `new-${Date.now()}`,
+        productId: product.id,
+        product,
+        variantId: variant.id,
+        variant,
+        size: variant.size,
+        color: variant.color,
+        quantity: newProductData.quantity,
+        price,
         requiresPrint: newProductData.requiresPrint,
         printName: newProductData.requiresPrint ? newProductData.printName : "",
         printNumber: newProductData.requiresPrint ? newProductData.printNumber : "",
@@ -178,7 +189,7 @@ export default function OrderDetailsClient({
       }],
     });
     setIsAddingProduct(false);
-    setNewProductData({ productId: "", size: "", quantity: 1, requiresPrint: false, printName: "", printNumber: "", printCost: 300 });
+    setNewProductData({ productId: "", variantId: "", size: "", color: "", quantity: 1, requiresPrint: false, printName: "", printNumber: "", printCost: 300 });
   };
 
   // Financial calculations
@@ -372,14 +383,67 @@ export default function OrderDetailsClient({
                     </div>
                     <div>
                       <label className="text-[10px] font-bold uppercase text-slate-500 block mb-1">Product</label>
-                      <CustomSelect options={products.map((p) => ({ value: p.id, label: p.name }))} value={newProductData.productId} onChange={(val) => setNewProductData({ ...newProductData, productId: val })} searchable />
+                      <CustomSelect
+                        options={products.map((p) => ({ value: p.id, label: p.name }))}
+                        value={newProductData.productId}
+                        onChange={(val) => {
+                          const prod = products.find((p) => p.id === val);
+                          const onlyVariant = prod?.variants?.[0];
+                          const hasOnlyOne = prod?.variants?.length === 1;
+                          setNewProductData({
+                            ...newProductData,
+                            productId: val,
+                            variantId: hasOnlyOne ? onlyVariant.id : "",
+                            size: hasOnlyOne ? onlyVariant.size : "",
+                            color: hasOnlyOne ? onlyVariant.color : "",
+                          });
+                        }}
+                        searchable
+                      />
                     </div>
-                    {newProductData.productId && (
-                      <div>
-                        <label className="text-[10px] font-bold uppercase text-slate-500 block mb-1">Size</label>
-                        <CustomSelect options={(products.find((p) => p.id === newProductData.productId)?.variants || []).map((v: any) => ({ value: v.size, label: `${v.size} (Stock: ${v.stock})` }))} value={newProductData.size} onChange={(val) => setNewProductData({ ...newProductData, size: val })} openUpwards />
-                      </div>
-                    )}
+                    {(() => {
+                      const prod = products.find((p) => p.id === newProductData.productId);
+                      const onlyVariant = prod?.variants?.[0];
+                      const isDefaultOnly = prod?.variants?.length === 1 &&
+                        (!onlyVariant.size || onlyVariant.size === "Default") &&
+                        (!onlyVariant.color || onlyVariant.color === "Default");
+                      
+                      if (!newProductData.productId || isDefaultOnly) return null;
+
+                      return (
+                        <div>
+                          <label className="text-[10px] font-bold uppercase text-slate-500 block mb-1">Variant</label>
+                          <CustomSelect
+                            options={(prod?.variants || []).map((v: any) => {
+                              const uniqueParts = new Set<string>();
+                              if (v.size && v.size !== "Default") uniqueParts.add(v.size);
+                              if (v.color && v.color !== "Default") uniqueParts.add(v.color);
+                              if (v.attributes && typeof v.attributes === 'object') {
+                                Object.values(v.attributes).forEach((val) => {
+                                  if (val && typeof val === 'string' && val !== 'Default') uniqueParts.add(val);
+                                });
+                              }
+                              const desc = Array.from(uniqueParts).join(' / ');
+                              return {
+                                value: v.id,
+                                label: `${desc || 'Default'} (Stock: ${v.stock})`
+                              };
+                            })}
+                            value={newProductData.variantId}
+                            onChange={(val) => {
+                              const variant = prod?.variants?.find((v: any) => v.id === val);
+                              setNewProductData({
+                                ...newProductData,
+                                variantId: val,
+                                size: variant?.size || "",
+                                color: variant?.color || "Default",
+                              });
+                            }}
+                            openUpwards
+                          />
+                        </div>
+                      );
+                    })()}
                     <div>
                       <label className="text-[10px] font-bold uppercase text-slate-500 block mb-1">Quantity</label>
                       <div className="flex items-center border border-slate-200 rounded-lg overflow-hidden w-fit bg-white">

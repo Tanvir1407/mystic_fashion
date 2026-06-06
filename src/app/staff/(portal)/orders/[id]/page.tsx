@@ -40,7 +40,7 @@ export default async function StaffOrderDetailPage({ params }: { params: { id: s
     prisma.order.findFirst({
       where: { id: params.id, createdById: session.staffId, deletedAt: null },
       include: {
-        items: { include: { product: true } },
+        items: { include: { product: true, variant: true } },
         createdBy: true,
       },
     }),

@@ -350,6 +350,7 @@ async function _updateOrderDetails(
       id: string;
       productId: string;
       size: string;
+      color?: string;
       quantity: number;
       price: number;
       requiresPrint: boolean;
@@ -407,7 +408,7 @@ async function _updateOrderDetails(
                   productId_size_color: {
                     productId: newItem.productId,
                     size: newItem.size,
-                    color: (newItem as any).color || "Default",
+                    color: newItem.color || "Default",
                   },
                 },
               });
@@ -444,7 +445,7 @@ async function _updateOrderDetails(
               productId_size_color: {
                 productId: newItem.productId,
                 size: newItem.size,
-                color: (newItem as any).color || "Default",
+                color: newItem.color || "Default",
               },
             },
             select: { id: true },
@@ -589,6 +590,7 @@ async function _createAdminOrder(data: {
   items: {
     productId: string;
     size: string;
+    color?: string;
     quantity: number;
     price: number;
     requiresPrint?: boolean;
@@ -665,13 +667,13 @@ async function _createAdminOrder(data: {
             productId_size_color: {
               productId: item.productId,
               size: item.size,
-              color: (item as any).color || "Default",
+              color: item.color || "Default",
             },
           },
           select: { id: true },
         });
         if (!variant) {
-          throw new Error(`Variant not found for product ${item.productId} (Size: ${item.size}, Color: ${(item as any).color || "Default"})`);
+          throw new Error(`Variant not found for product ${item.productId} (Size: ${item.size}, Color: ${item.color || "Default"})`);
         }
         itemsWithVariants.push({
           ...item,

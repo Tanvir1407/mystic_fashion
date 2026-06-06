@@ -31,6 +31,7 @@ export async function createStaffOrder(data: {
   items: {
     productId: string;
     size: string;
+    color?: string;
     quantity: number;
     price: number;
     requiresPrint?: boolean;
@@ -78,12 +79,23 @@ export async function createStaffOrder(data: {
       // Resolve variant ID for each item
       const resolvedItems = [];
       for (const item of data.items) {
-        let variant = await tx.productVariant.findFirst({
+        let variant = await tx.productVariant.findUnique({
           where: {
-            productId: item.productId,
-            size: item.size,
+            productId_size_color: {
+              productId: item.productId,
+              size: item.size,
+              color: item.color || "Default",
+            }
           }
         });
+        if (!variant) {
+          variant = await tx.productVariant.findFirst({
+            where: {
+              productId: item.productId,
+              size: item.size,
+            }
+          });
+        }
         if (!variant) {
           variant = await tx.productVariant.findFirst({
             where: {
