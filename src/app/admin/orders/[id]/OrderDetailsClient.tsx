@@ -452,18 +452,20 @@ export default function OrderDetailsClient({
                         <button onClick={() => setNewProductData({ ...newProductData, quantity: newProductData.quantity + 1 })} className="px-3 py-1.5 hover:bg-slate-100 font-bold text-slate-600">+</button>
                       </div>
                     </div>
-                    <div className="p-3 bg-indigo-50/60 border border-indigo-100 rounded-lg">
-                      <label className="flex items-center gap-2 cursor-pointer text-xs font-semibold text-slate-800">
-                        <input type="checkbox" checked={newProductData.requiresPrint} onChange={(e) => setNewProductData({ ...newProductData, requiresPrint: e.target.checked })} className="rounded text-indigo-600" />
-                        Jersey Customization (Name & Number)
-                      </label>
-                      {newProductData.requiresPrint && (
-                        <div className="mt-3 grid grid-cols-2 gap-2">
-                          <input type="text" placeholder="Print Name" value={newProductData.printName} onChange={(e) => setNewProductData({ ...newProductData, printName: e.target.value })} className="text-xs px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:border-slate-400" />
-                          <input type="text" placeholder="Number" value={newProductData.printNumber} onChange={(e) => setNewProductData({ ...newProductData, printNumber: e.target.value })} className="text-xs px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:border-slate-400" />
-                        </div>
-                      )}
-                    </div>
+                    {products.find((p) => p.id === newProductData.productId)?.isCustomize && (
+                      <div className="p-3 bg-indigo-50/60 border border-indigo-100 rounded-lg">
+                        <label className="flex items-center gap-2 cursor-pointer text-xs font-semibold text-slate-800">
+                          <input type="checkbox" checked={newProductData.requiresPrint} onChange={(e) => setNewProductData({ ...newProductData, requiresPrint: e.target.checked })} className="rounded text-indigo-600" />
+                          Jersey Customization (Name & Number)
+                        </label>
+                        {newProductData.requiresPrint && (
+                          <div className="mt-3 grid grid-cols-2 gap-2">
+                            <input type="text" placeholder="Print Name" value={newProductData.printName} onChange={(e) => setNewProductData({ ...newProductData, printName: e.target.value })} className="text-xs px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:border-slate-400" />
+                            <input type="text" placeholder="Number" value={newProductData.printNumber} onChange={(e) => setNewProductData({ ...newProductData, printNumber: e.target.value })} className="text-xs px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:border-slate-400" />
+                          </div>
+                        )}
+                      </div>
+                    )}
                     <button onClick={handleAddNewProduct} className="w-full py-2 bg-slate-900 text-white text-xs font-bold rounded-lg hover:bg-slate-800 transition-colors flex items-center justify-center gap-1.5">
                       <Plus className="w-3.5 h-3.5" /> Add to Order
                     </button>

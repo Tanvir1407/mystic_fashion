@@ -813,7 +813,7 @@ export default function CreateOrderClient({
               </div>
 
               {/* DTF Print Section */}
-              {selectedProductId && selectedVariantId && (
+              {selectedProductId && selectedVariantId && selectedProduct?.isCustomize && (
                 <div className="md:col-span-12 pt-3 mt-2 border-t border-dashed border-slate-200">
                   <label className="inline-flex items-center gap-2 cursor-pointer group mb-2">
                     <input
