@@ -136,3 +136,35 @@ export async function destroyCustomerSession() {
     console.warn(`[Auth] Cookies could not be deleted (non-request context):`, cookieError.message);
   }
 }
+
+export async function verifyCustomerToken(token: string): Promise<CustomerSessionPayload | null> {
+  try {
+    const { payload } = await jwtVerify(token, encodedSecret, {
+      algorithms: ['HS256'],
+    });
+    return payload as unknown as CustomerSessionPayload;
+  } catch (error) {
+    return null;
+  }
+}
+
+export async function getCustomerSessionFromRequest(req: any): Promise<CustomerSessionPayload | null> {
+  // 1. Check Authorization header
+  const authHeader = req.headers.get("authorization");
+  if (authHeader && authHeader.toLowerCase().startsWith("bearer ")) {
+    const token = authHeader.substring(7).trim();
+    return verifyCustomerToken(token);
+  }
+
+  // 2. Check NextRequest cookies if present
+  if (req.cookies && typeof req.cookies.get === "function") {
+    const cookieToken = req.cookies.get("customer-session")?.value;
+    if (cookieToken) {
+      return verifyCustomerToken(cookieToken);
+    }
+  }
+
+  // 3. Fallback to standard cookieStore
+  return getCustomerSession();
+}
+

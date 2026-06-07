@@ -213,16 +213,17 @@ export async function placeOrderAction(payload: {
 
       const lastOrder = await tx.order.findFirst({
         where: { id: { startsWith: datePrefix } },
-        orderBy: { id: 'desc' },
+        orderBy: { createdAt: "desc" },
         select: { id: true }
       });
 
       let nextNum = 1;
       if (lastOrder) {
-        const lastNumStr = lastOrder.id.replace(datePrefix, "");
-        nextNum = parseInt(lastNumStr) + 1;
+        const maxNum = parseInt(lastOrder.id.replace(datePrefix, ""), 10) || 0;
+        nextNum = maxNum + 1;
       }
-      const customId = `${datePrefix}${nextNum.toString().padStart(2, '0')}`;
+      const numStr = nextNum < 10 ? `0${nextNum}` : nextNum.toString();
+      const customId = `${datePrefix}${numStr}`;
 
       // 2. Create the order & items
       const order = await tx.order.create({
