@@ -1,17 +1,42 @@
 import { NextRequest, NextResponse } from "next/server";
-import { pathaoClient } from "@/lib/pathao/PathaoClient";
+import { getPathaoAreas } from "@/app/actions/pathao";
 
 export async function GET(req: NextRequest) {
-  const zoneId = req.nextUrl.searchParams.get("zoneId");
-
-  if (!zoneId || isNaN(Number(zoneId))) {
-    return NextResponse.json({ success: false, error: "zoneId is required." }, { status: 400 });
-  }
-
   try {
-    const areas = await pathaoClient.getAreas(Number(zoneId));
-    return NextResponse.json({ success: true, data: areas });
-  } catch (err: any) {
-    return NextResponse.json({ success: false, error: err.message }, { status: 500 });
+    const { searchParams } = req.nextUrl;
+    const zoneIdStr = searchParams.get("zoneId");
+
+    if (!zoneIdStr) {
+      return NextResponse.json(
+        { success: false, error: "zoneId query parameter is required." },
+        { status: 400 }
+      );
+    }
+
+    const zoneId = parseInt(zoneIdStr);
+    if (isNaN(zoneId)) {
+      return NextResponse.json(
+        { success: false, error: "Invalid zoneId format." },
+        { status: 400 }
+      );
+    }
+
+    const res = await getPathaoAreas(zoneId);
+    if (!res.success) {
+      return NextResponse.json(
+        { success: false, error: res.error },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json({
+      success: true,
+      areas: res.data
+    });
+  } catch (error: any) {
+    return NextResponse.json(
+      { success: false, error: error.message || "An unexpected error occurred." },
+      { status: 500 }
+    );
   }
 }
