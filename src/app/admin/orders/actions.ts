@@ -23,16 +23,19 @@ async function generateOrderIdInternal(tx: any) {
 
   const lastOrder = await tx.order.findFirst({
     where: { id: { startsWith: datePrefix } },
-    orderBy: { id: "desc" },
+    orderBy: { createdAt: "desc" },
     select: { id: true },
   });
 
   let nextNum = 1;
   if (lastOrder) {
-    const lastNumStr = lastOrder.id.replace(datePrefix, "");
-    nextNum = parseInt(lastNumStr) + 1;
+    const maxNum = parseInt(lastOrder.id.replace(datePrefix, ""), 10) || 0;
+    nextNum = maxNum + 1;
   }
-  return `${datePrefix}${nextNum.toString().padStart(2, "0")}`;
+  
+  // Pad with at least 2 digits (e.g., 01, 02... 99, 100, 101)
+  const numStr = nextNum < 10 ? `0${nextNum}` : nextNum.toString();
+  return `${datePrefix}${numStr}`;
 }
 
 // ─── ORDER STATUS ─────────────────────────────────────────────────────────────

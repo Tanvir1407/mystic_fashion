@@ -17,11 +17,13 @@ export default function OrderDetailsClient({
   deliverySettings,
   products = [],
   pathaoInfo = null,
+  dtfSetting = { printCost: 300 },
 }: {
   order: any;
   deliverySettings: any;
   products?: any[];
   pathaoInfo?: any;
+  dtfSetting?: any;
 }) {
   const router = useRouter();
   const [isEditing, setIsEditing] = useState(false);
@@ -56,7 +58,7 @@ export default function OrderDetailsClient({
     requiresPrint: false,
     printName: "",
     printNumber: "",
-    printCost: 300,
+    printCost: dtfSetting?.printCost || 300,
   });
 
   const handleCopy = (text: string) => {
@@ -407,7 +409,7 @@ export default function OrderDetailsClient({
                       const isDefaultOnly = prod?.variants?.length === 1 &&
                         (!onlyVariant.size || onlyVariant.size === "Default") &&
                         (!onlyVariant.color || onlyVariant.color === "Default");
-                      
+
                       if (!newProductData.productId || isDefaultOnly) return null;
 
                       return (
