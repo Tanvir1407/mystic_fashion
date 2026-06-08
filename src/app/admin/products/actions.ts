@@ -23,6 +23,7 @@ async function _createProduct(data: {
   sizeChartId?: string | null;
   discountId?: string | null;
   isFeatured: boolean;
+  featuredOrder?: number;
   isPublished: boolean;
   isCustomize?: boolean | null;
   trackStock: boolean;
@@ -61,6 +62,7 @@ async function _createProduct(data: {
         categoryId: data.categoryId || null,
         subcategoryId: data.subcategoryId || null,
         isFeatured: data.isFeatured,
+        featuredOrder: data.featuredOrder ?? 0,
         isPublished: data.isPublished,
         isCustomize: data.isCustomize ?? false,
         trackStock: data.trackStock,
@@ -123,6 +125,7 @@ async function _updateProduct(
     sizeChartId?: string | null;
     discountId?: string | null;
     isFeatured: boolean;
+    featuredOrder?: number;
     isPublished: boolean;
     isCustomize?: boolean | null;
     trackStock: boolean;
@@ -165,6 +168,7 @@ async function _updateProduct(
         categoryId: data.categoryId || null,
         subcategoryId: data.subcategoryId || null,
         isFeatured: data.isFeatured,
+        featuredOrder: data.featuredOrder ?? 0,
         isPublished: data.isPublished,
         isCustomize: data.isCustomize ?? false,
         trackStock: data.trackStock,
