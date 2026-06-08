@@ -158,6 +158,7 @@ model Product {
   updatedAt     DateTime         @updatedAt
   deletedAt     DateTime?
   isFeatured    Boolean          @default(false)
+  featuredOrder Int              @default(0)
   isPublished   Boolean          @default(true)
   isCustomize   Boolean?         @default(false)
   trackStock    Boolean?         @default(false)

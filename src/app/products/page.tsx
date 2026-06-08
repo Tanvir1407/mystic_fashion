@@ -103,6 +103,7 @@ export default async function ProductsPage({
         subcategoryId: true,
         createdAt: true,
         isFeatured: true,
+        featuredOrder: true,
         isPublished: true,
         brand: true,
         categoryRel: true,
@@ -175,13 +176,33 @@ export default async function ProductsPage({
 
   // Apply selected Sorting options
   const sortedProducts = [...priceFilteredProducts];
-  if (sortParam === "price-asc") {
-    sortedProducts.sort((a, b) => getFinalPrice(a) - getFinalPrice(b));
-  } else if (sortParam === "price-desc") {
-    sortedProducts.sort((a, b) => getFinalPrice(b) - getFinalPrice(a));
+  if (categoryParam && sortParam === "newest") {
+    // Category filtered page and default sort: featured products first by featuredOrder, then regular products by newest
+    const featuredProducts = sortedProducts.filter((p) => p.isFeatured);
+    const regularProducts = sortedProducts.filter((p) => !p.isFeatured);
+
+    featuredProducts.sort((a, b) => {
+      const orderA = a.featuredOrder ?? 0;
+      const orderB = b.featuredOrder ?? 0;
+      if (orderA !== orderB) {
+        return orderA - orderB;
+      }
+      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+    });
+
+    regularProducts.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+    sortedProducts.splice(0, sortedProducts.length, ...featuredProducts, ...regularProducts);
   } else {
-    // default: newest
-    sortedProducts.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    // Mixed sorting for custom sort choices (e.g. price) or general catalog list
+    if (sortParam === "price-asc") {
+      sortedProducts.sort((a, b) => getFinalPrice(a) - getFinalPrice(b));
+    } else if (sortParam === "price-desc") {
+      sortedProducts.sort((a, b) => getFinalPrice(b) - getFinalPrice(a));
+    } else {
+      // default: newest
+      sortedProducts.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    }
   }
 
   // Paginate products

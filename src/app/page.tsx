@@ -38,13 +38,14 @@ export default async function Home() {
     Promise.all(
       categoriesList.map(async (catName) => {
         try {
-          // Fetch featured products (up to 4)
+          // Fetch featured products (up to 4) ordered by featuredOrder
           const featured = await prisma.product.findMany({
             where: {
               isPublished: true,
               category: { equals: catName, mode: "insensitive" },
               isFeatured: true
             },
+            orderBy: { featuredOrder: "asc" },
             take: 4,
             include: { discount: true, variants: true }
           });

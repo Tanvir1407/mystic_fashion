@@ -29,6 +29,7 @@ export default function ProductFormClient({
   const [images, setImages] = useState<string[]>(initialData?.images || []);
   const [isUploading, setIsUploading] = useState(false);
   const [isFeatured, setIsFeatured] = useState(initialData?.isFeatured || false);
+  const [featuredOrder, setFeaturedOrder] = useState<number>(initialData?.featuredOrder || 0);
   const [isPublished, setIsPublished] = useState(initialData?.isPublished ?? true);
   const [isCustomize, setIsCustomize] = useState(initialData?.isCustomize || false);
   const [trackStock, setTrackStock] = useState(initialData?.trackStock || false);
@@ -276,6 +277,7 @@ export default function ProductFormClient({
       sizeChartId: sizeChartId || null,
       discountId: discountId || null,
       isFeatured,
+      featuredOrder,
       isPublished,
       isCustomize,
       trackStock,
@@ -483,6 +485,21 @@ export default function ProductFormClient({
                   <span className="text-[10px] text-amber-700 font-medium">Pin this product to the top of homepage</span>
                 </label>
               </div>
+
+              {isFeatured && (
+                <div className="pl-8 pb-2">
+                  <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                    Featured Sort Order (Lower values show first)
+                  </label>
+                  <input
+                    type="number"
+                    value={featuredOrder}
+                    onChange={(e) => setFeaturedOrder(parseInt(e.target.value) || 0)}
+                    placeholder="e.g. 1"
+                    className="w-full max-w-[150px] px-3 py-1.5 border border-slate-300 rounded-none focus:outline-none focus:border-slate-900 text-xs font-mono"
+                  />
+                </div>
+              )}
 
               <div className="flex items-center gap-3 p-2 rounded-none">
                 <input
