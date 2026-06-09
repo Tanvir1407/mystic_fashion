@@ -23,14 +23,14 @@ export async function generateOrderId(tx: any): Promise<string> {
   const lockKey = parseInt(`${year}${month}${date}`, 10);
   await tx.$executeRaw`SELECT pg_advisory_xact_lock(${lockCategory}, ${lockKey})`;
 
-  // 3. Find the last order of the day.
-  // Since we hold the lock, no other transaction can read/write this query for this lockKey concurrently.
-  // We sort by createdAt DESC to find the absolute latest order of the day.
-  const lastOrder = await tx.order.findFirst({
-    where: { id: { startsWith: datePrefix } },
-    orderBy: { createdAt: "desc" },
-    select: { id: true },
-  });
+  // 3. Find the last order of the day (including soft-deleted ones to avoid ID collisions).
+  const lastOrderRows = await tx.$queryRaw`
+    SELECT id FROM "Order"
+    WHERE id LIKE ${datePrefix + '%'}
+    ORDER BY "createdAt" DESC
+    LIMIT 1
+  `;
+  const lastOrder = lastOrderRows[0] || null;
 
   // 4. Calculate the next sequence number
   let nextNum = 1;
