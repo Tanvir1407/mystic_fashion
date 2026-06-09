@@ -3,6 +3,7 @@ import prisma from "@/lib/prisma";
 import { roundPrice } from "@/utils/formatPrice";
 import { normalizePhone } from "@/lib/utils";
 import { validateCouponRules } from "@/lib/coupon/couponValidator";
+import { executeOrderTransaction } from "@/lib/order-utils";
 
 export async function POST(req: NextRequest) {
   try {
@@ -34,24 +35,8 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const result = await prisma.$transaction(async (tx) => {
-      // Generate custom order ID (same pattern as web)
-      const now = new Date();
-      const year = now.getFullYear().toString().slice(-2);
-      const month = (now.getMonth() + 1).toString().padStart(2, "0");
-      const date = now.getDate().toString().padStart(2, "0");
-      const datePrefix = `MJEPE-${year}${month}${date}`;
+    const result = await executeOrderTransaction(async (tx, customId) => {
 
-      const lastOrder = await tx.order.findFirst({
-        where: { id: { startsWith: datePrefix } },
-        orderBy: { id: "desc" },
-        select: { id: true },
-      });
-
-      const nextNum = lastOrder
-        ? parseInt(lastOrder.id.replace(datePrefix, "")) + 1
-        : 1;
-      const customId = `${datePrefix}${nextNum.toString().padStart(2, "0")}`;
 
       // Advance paid = sum of print costs
       const calculatedAdvance = items.reduce((sum: number, item: any) => {

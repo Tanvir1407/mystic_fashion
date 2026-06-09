@@ -6,6 +6,7 @@ import { roundPrice } from "@/utils/formatPrice";
 import { normalizePhone } from "@/lib/utils";
 import { validateCouponRules } from "@/lib/coupon/couponValidator";
 import { getCustomerSession } from "@/lib/auth";
+import { executeOrderTransaction } from "@/lib/order-utils";
 
 export async function placeOrderAction(payload: {
   fullName: string;
@@ -25,7 +26,7 @@ export async function placeOrderAction(payload: {
   couponSessionId?: string;
 }) {
   try {
-    return await prisma.$transaction(async (tx) => {
+    return await executeOrderTransaction(async (tx, customId) => {
       // 0. Check active session or check/create customer profile by phone
       const phone = payload.phone ? normalizePhone(payload.phone) : undefined;
       const session = await getCustomerSession();
@@ -154,26 +155,7 @@ export async function placeOrderAction(payload: {
         calculatedSubtotal - validatedDiscountAmount + calculatedAdvance + finalDeliveryCharge
       );
 
-      // Generate Custom Order ID
-      const now = new Date();
-      const year = now.getFullYear().toString().slice(-2);
-      const month = (now.getMonth() + 1).toString().padStart(2, '0');
-      const date = now.getDate().toString().padStart(2, '0');
-      const datePrefix = `MJEPE-${year}${month}${date}`;
 
-      const lastOrder = await tx.order.findFirst({
-        where: { id: { startsWith: datePrefix } },
-        orderBy: { createdAt: "desc" },
-        select: { id: true }
-      });
-
-      let nextNum = 1;
-      if (lastOrder) {
-        const maxNum = parseInt(lastOrder.id.replace(datePrefix, ""), 10) || 0;
-        nextNum = maxNum + 1;
-      }
-      const numStr = nextNum < 10 ? `0${nextNum}` : nextNum.toString();
-      const customId = `${datePrefix}${numStr}`;
 
       // 1. Create the order & items
       const order = await tx.order.create({

@@ -5,28 +5,7 @@ import { getStaffSession } from "@/lib/staff-auth";
 import { normalizePhone } from "@/lib/utils";
 import { revalidatePath } from "next/cache";
 import { getEffectiveCommissionRate } from "@/lib/commission";
-
-async function generateOrderId(tx: any): Promise<string> {
-  const now = new Date();
-  const year = now.getFullYear().toString().slice(-2);
-  const month = (now.getMonth() + 1).toString().padStart(2, "0");
-  const date = now.getDate().toString().padStart(2, "0");
-  const datePrefix = `MJEPE-${year}${month}${date}`;
-
-  const lastOrder = await tx.order.findFirst({
-    where: { id: { startsWith: datePrefix } },
-    orderBy: { createdAt: "desc" },
-    select: { id: true },
-  });
-
-  let seq = 1;
-  if (lastOrder) {
-    const maxNum = parseInt(lastOrder.id.replace(datePrefix, ""), 10) || 0;
-    seq = maxNum + 1;
-  }
-  const numStr = seq < 10 ? `0${seq}` : seq.toString();
-  return `${datePrefix}${numStr}`;
-}
+import { executeOrderTransaction } from "@/lib/order-utils";
 
 export async function createStaffOrder(data: {
   customerName: string;
@@ -61,8 +40,7 @@ export async function createStaffOrder(data: {
 
     const rate = await getEffectiveCommissionRate(session.staffId);
 
-    const order = await prisma.$transaction(async (tx) => {
-      const customId = await generateOrderId(tx);
+    const order = await executeOrderTransaction(async (tx, customId) => {
       const phone = data.phone ? normalizePhone(data.phone) : data.phone;
 
       let customerId: string | null = null;
