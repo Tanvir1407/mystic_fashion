@@ -4,7 +4,7 @@ import { processDailyCommissions } from "@/lib/cron";
 export async function GET(request: NextRequest) {
   try {
     const authHeader = request.headers.get("authorization");
-    const expectedKey = process.env.CRON_API_KEY;
+    const expectedKey = process.env.CRON_SECRET || process.env.CRON_API_KEY;
 
     if (expectedKey && authHeader !== `Bearer ${expectedKey}`) {
       return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
