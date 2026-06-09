@@ -10,32 +10,9 @@ import { getSession } from "@/lib/auth";
 import { getOrCreateSystemAccount, createDoubleEntryJournal } from "@/lib/accounting";
 import { normalizePhone } from "@/lib/utils";
 import { getEffectiveCommissionRate } from "@/lib/commission";
+import { generateOrderId } from "@/lib/order-utils";
 
 // ─── INTERNAL HELPERS ────────────────────────────────────────────────────────
-
-async function generateOrderIdInternal(tx: any) {
-  const now = new Date();
-  const year = now.getFullYear().toString().slice(-2);
-  const month = (now.getMonth() + 1).toString().padStart(2, "0");
-  const date = now.getDate().toString().padStart(2, "0");
-  const datePrefix = `MJEPE-${year}${month}${date}`;
-
-  const lastOrder = await tx.order.findFirst({
-    where: { id: { startsWith: datePrefix } },
-    orderBy: { createdAt: "desc" },
-    select: { id: true },
-  });
-
-  let nextNum = 1;
-  if (lastOrder) {
-    const maxNum = parseInt(lastOrder.id.replace(datePrefix, ""), 10) || 0;
-    nextNum = maxNum + 1;
-  }
-  
-  // Pad with at least 2 digits (e.g., 01, 02... 99, 100, 101)
-  const numStr = nextNum < 10 ? `0${nextNum}` : nextNum.toString();
-  return `${datePrefix}${numStr}`;
-}
 
 // ─── ORDER STATUS ─────────────────────────────────────────────────────────────
 
@@ -628,7 +605,7 @@ async function _createAdminOrder(data: {
     }
 
     const order = await prisma.$transaction(async (tx) => {
-      const customId = await generateOrderIdInternal(tx);
+      const customId = await generateOrderId(tx);
 
       const phone = data.phone ? normalizePhone(data.phone) : undefined;
       let customerId: string | null = null;
