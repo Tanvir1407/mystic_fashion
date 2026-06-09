@@ -10,7 +10,7 @@ import { getSession } from "@/lib/auth";
 import { getOrCreateSystemAccount, createDoubleEntryJournal } from "@/lib/accounting";
 import { normalizePhone } from "@/lib/utils";
 import { getEffectiveCommissionRate } from "@/lib/commission";
-import { generateOrderId } from "@/lib/order-utils";
+import { executeOrderTransaction } from "@/lib/order-utils";
 
 // ─── INTERNAL HELPERS ────────────────────────────────────────────────────────
 
@@ -604,8 +604,7 @@ async function _createAdminOrder(data: {
       }
     }
 
-    const order = await prisma.$transaction(async (tx) => {
-      const customId = await generateOrderId(tx);
+    const order = await executeOrderTransaction(async (tx, customId) => {
 
       const phone = data.phone ? normalizePhone(data.phone) : undefined;
       let customerId: string | null = null;

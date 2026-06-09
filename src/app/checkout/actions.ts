@@ -6,7 +6,7 @@ import { roundPrice } from "@/utils/formatPrice";
 import { normalizePhone } from "@/lib/utils";
 import { validateCouponRules } from "@/lib/coupon/couponValidator";
 import { getCustomerSession } from "@/lib/auth";
-import { generateOrderId } from "@/lib/order-utils";
+import { executeOrderTransaction } from "@/lib/order-utils";
 
 export async function placeOrderAction(payload: {
   fullName: string;
@@ -26,7 +26,7 @@ export async function placeOrderAction(payload: {
   couponSessionId?: string;
 }) {
   try {
-    return await prisma.$transaction(async (tx) => {
+    return await executeOrderTransaction(async (tx, customId) => {
       // 0. Check active session or check/create customer profile by phone
       const phone = payload.phone ? normalizePhone(payload.phone) : undefined;
       const session = await getCustomerSession();
@@ -155,8 +155,7 @@ export async function placeOrderAction(payload: {
         calculatedSubtotal - validatedDiscountAmount + calculatedAdvance + finalDeliveryCharge
       );
 
-      // Generate Custom Order ID
-      const customId = await generateOrderId(tx);
+
 
       // 1. Create the order & items
       const order = await tx.order.create({

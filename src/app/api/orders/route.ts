@@ -3,7 +3,7 @@ import prisma from "@/lib/prisma";
 import { roundPrice } from "@/utils/formatPrice";
 import { normalizePhone } from "@/lib/utils";
 import { validateCouponRules } from "@/lib/coupon/couponValidator";
-import { generateOrderId } from "@/lib/order-utils";
+import { executeOrderTransaction } from "@/lib/order-utils";
 
 export async function POST(req: NextRequest) {
   try {
@@ -35,9 +35,8 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const result = await prisma.$transaction(async (tx) => {
-      // Generate custom order ID (same pattern as web)
-      const customId = await generateOrderId(tx);
+    const result = await executeOrderTransaction(async (tx, customId) => {
+
 
       // Advance paid = sum of print costs
       const calculatedAdvance = items.reduce((sum: number, item: any) => {
