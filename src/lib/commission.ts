@@ -1,83 +1,155 @@
 import prisma from "@/lib/prisma";
 
-export async function getEffectiveCommissionRate(staffId: string): Promise<number> {
-  const [staff, globalSetting] = await Promise.all([
-    prisma.staff.findUnique({ where: { id: staffId }, select: { commissionRate: true } }),
-    prisma.commissionSetting.findUnique({ where: { id: "default" } }),
-  ]);
-
-  if (staff?.commissionRate != null) return staff.commissionRate;
-  return globalSetting?.commissionRate ?? 10;
+interface Slab {
+  id: string;
+  minAmount: number;
+  maxAmount: number | null;
+  rate: number;
+  priority: number;
 }
 
-interface OrderForCommission {
-  totalAmount: number;
-  deliveryCharge: number;
-  discountAmount: number;
-  status: string;
-  commissionRate?: number | null;
-  salesReturns: { returnCost: number; productLoss: number; printingLoss: number; deliveryLoss: number }[];
+let slabsCache: Slab[] | null = null;
+let slabsCacheTime = 0;
+const CACHE_TTL = 60_000;
+
+export async function getCommissionSlabs(): Promise<Slab[]> {
+  const now = Date
+  .now();
+  if (slabsCache && now - slabsCacheTime < CACHE_TTL) {
+    return slabsCache;
+  }
+  const slabs = await prisma.commissionSlab.findMany({
+    orderBy: { priority: "asc" },
+  });
+  slabsCache = slabs;
+  slabsCacheTime = now;
+  return slabs;
 }
 
-// Uses order.commissionRate if stored (locked at creation), falls back to provided rate
-function calcBase(order: OrderForCommission, fallbackRate: number): number {
-  if (order.status === "CANCELLED") return 0;
-  const netOrderValue = order.totalAmount - order.deliveryCharge - order.discountAmount;
-  const returnDeduction = (order.salesReturns ?? []).reduce(
-    (sum, r) => sum + r.returnCost + r.productLoss,
-    0
-  );
-  const commissionBase = Math.max(0, netOrderValue - returnDeduction);
-  // CRITICAL: always prefer order.commissionRate (locked at creation time)
-  const rateToUse = order.commissionRate ?? fallbackRate;
-  return parseFloat(((commissionBase * rateToUse) / 100).toFixed(2));
+export function calculateSlabCommission(dailyTotal: number, slabs: Slab[]): number {
+  let totalCommission = 0;
+  let remaining = dailyTotal;
+
+  for (const slab of slabs) {
+    if (remaining <= 0) break;
+    const slabRange = slab.maxAmount != null
+      ? slab.maxAmount - slab.minAmount
+      : Infinity;
+    const taxable = Math.min(remaining, slabRange);
+    totalCommission += taxable * (slab.rate / 100);
+    remaining -= taxable;
+  }
+
+  return parseFloat(totalCommission.toFixed(2));
 }
 
-// For earned calculation — only DELIVERED counts
-export function calcOrderCommission(order: OrderForCommission, rate: number): number {
-  if (order.status !== "DELIVERED") return 0;
-  return calcBase(order, rate);
+export async function updateDailyCommission(staffId: string, date: Date): Promise<void> {
+  const dayStart = new Date(date);
+  dayStart.setHours(0, 0, 0, 0);
+  const dayEnd = new Date(dayStart);
+  dayEnd.setDate(dayEnd.getDate() + 1);
+
+  const orders = await prisma.order.findMany({
+    where: {
+      createdById: staffId,
+      status: "DELIVERED",
+      deliveredAt: { gte: dayStart, lt: dayEnd },
+      deletedAt: null,
+    },
+    include: {
+      salesReturns: {
+        select: { returnCost: true, productLoss: true, printingLoss: true, deliveryLoss: true },
+      },
+    },
+  });
+
+  const dailyTotal = orders.reduce((sum, o) => {
+    const net = o.totalAmount - o.deliveryCharge - o.discountAmount;
+    const returnDeduction = o.salesReturns.reduce(
+      (rSum, r) => rSum + r.returnCost + r.productLoss + r.printingLoss + r.deliveryLoss,
+      0
+    );
+    return sum + Math.max(0, net - returnDeduction);
+  }, 0);
+
+  const slabs = await getCommissionSlabs();
+  const commission = calculateSlabCommission(dailyTotal, slabs);
+
+  await prisma.dailyStaffCommission.upsert({
+    where: { staffId_date: { staffId, date: dayStart } },
+    update: { totalSales: dailyTotal, commission },
+    create: { staffId, date: dayStart, totalSales: dailyTotal, commission },
+  });
 }
 
-// For display — shows potential commission for any non-cancelled status
-export function calcPotentialCommission(order: OrderForCommission, rate: number): number {
-  return calcBase(order, rate);
+interface DailyCommissionRow {
+  date: Date;
+  totalSales: number;
+  commission: number;
+  orderCount: number;
 }
 
-export async function getStaffCommissionSummary(staffId: string, month: number, year: number) {
-  // Current rate is used ONLY as fallback for orders that don't have a stored rate.
-  // Orders created after the commissionRate field was added will always use their stored rate.
-  const currentRate = await getEffectiveCommissionRate(staffId);
+interface MonthlySummary {
+  dailyRows: DailyCommissionRow[];
+  totalSales: number;
+  totalCommission: number;
+  paid: number;
+  pending: number;
+  orderCount: number;
+}
 
+export async function getStaffCommissionSummary(
+  staffId: string,
+  month: number,
+  year: number
+): Promise<MonthlySummary> {
   const startDate = new Date(year, month - 1, 1);
   const endDate = new Date(year, month, 1);
 
-  const [orders, payments] = await Promise.all([
-    prisma.order.findMany({
+  const [dailyRows, payments, orders] = await Promise.all([
+    prisma.dailyStaffCommission.findMany({
       where: {
-        createdById: staffId,
-        createdAt: { gte: startDate, lt: endDate },
-        deletedAt: null,
+        staffId,
+        date: { gte: startDate, lt: endDate },
       },
-      include: {
-        salesReturns: { select: { returnCost: true, productLoss: true, printingLoss: true, deliveryLoss: true } },
-      },
+      orderBy: { date: "desc" },
     }),
     prisma.commissionPayment.findMany({
       where: { staffId, month, year },
     }),
+    prisma.order.findMany({
+      where: {
+        createdById: staffId,
+        status: "DELIVERED",
+        deliveredAt: { gte: startDate, lt: endDate },
+        deletedAt: null,
+      },
+      select: { deliveredAt: true },
+    }),
   ]);
 
-  // Each order uses its own locked rate. currentRate is fallback only for legacy orders.
-  const earned = orders.reduce((sum, o) => sum + calcOrderCommission(o, currentRate), 0);
-  const paid   = payments.reduce((sum, p) => sum + p.amount, 0);
+  const orderCountByDate = new Map<string, number>();
+  for (const o of orders) {
+    if (o.deliveredAt) {
+      const key = new Date(o.deliveredAt).toDateString();
+      orderCountByDate.set(key, (orderCountByDate.get(key) || 0) + 1);
+    }
+  }
+
+  const enrichedDailyRows = dailyRows.map((r) => ({
+    ...r,
+    orderCount: orderCountByDate.get(new Date(r.date).toDateString()) || 0,
+  }));
+
+  const paid = payments.reduce((sum, p) => sum + p.amount, 0);
+  const totalCommission = enrichedDailyRows.reduce((sum, r) => sum + r.commission, 0);
 
   return {
-    rate: currentRate,
-    earned: parseFloat(earned.toFixed(2)),
-    paid: parseFloat(paid.toFixed(2)),
-    pending: parseFloat(Math.max(0, earned - paid).toFixed(2)),
+    dailyRows: enrichedDailyRows,
+    totalSales: enrichedDailyRows.reduce((sum, r) => sum + r.totalSales, 0),
+    totalCommission,
+    paid,
+    pending: parseFloat(Math.max(0, totalCommission - paid).toFixed(2)),
     orderCount: orders.length,
-    totalSales: orders.reduce((s, o) => s + (o.status !== "CANCELLED" ? o.totalAmount : 0), 0),
   };
 }

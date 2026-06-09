@@ -2,10 +2,18 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, TrendingUp, ShoppingBag, Coins, CheckCircle2, User, Mail, Shield, ChevronLeft, ChevronRight, Activity, Calendar, Wallet, Plus, Loader2, X } from "lucide-react";
+import { ArrowLeft, TrendingUp, ShoppingBag, Coins, CheckCircle2, User, Mail, Shield, ChevronLeft, ChevronRight, Activity, Calendar, Wallet, Plus, Loader2, X, RefreshCw } from "lucide-react";
 import { formatBDT } from "@/utils/formatPrice";
 import { formatDate } from "@/utils/formatDate";
 import { createCommissionPayment } from "../actions";
+
+interface SlabInfo {
+  id: string;
+  minAmount: number;
+  maxAmount: number | null;
+  rate: number;
+  priority: number;
+}
 
 function CommissionPanel({
   staffId,
@@ -13,17 +21,20 @@ function CommissionPanel({
   recentPayments,
   currentMonth,
   currentYear,
+  slabs,
 }: {
   staffId: string;
   commissionSummary: any;
   recentPayments: any[];
   currentMonth: number;
   currentYear: number;
+  slabs: SlabInfo[];
 }) {
   const [showModal, setShowModal] = useState(false);
   const [amount, setAmount] = useState("");
   const [note, setNote] = useState("");
   const [loading, setLoading] = useState(false);
+  const [recalcLoading, setRecalcLoading] = useState(false);
   const [payments, setPayments] = useState(recentPayments);
   const [summary, setSummary] = useState(commissionSummary);
   const [payFull, setPayFull] = useState(false);
@@ -31,7 +42,7 @@ function CommissionPanel({
   const payPerPage = 5;
 
   const monthName = new Date(currentYear, currentMonth - 1).toLocaleString("en-US", { month: "long" });
-  const paidPercent = summary.earned > 0 ? Math.min(100, (summary.paid / summary.earned) * 100) : 0;
+  const paidPercent = summary.totalCommission > 0 ? Math.min(100, (summary.paid / summary.totalCommission) * 100) : 0;
 
   const handlePay = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -59,6 +70,20 @@ function CommissionPanel({
     setLoading(false);
   };
 
+  const handleRecalculate = async () => {
+    setRecalcLoading(true);
+    const { recalculateCommission } = await import("../actions");
+    const res = await recalculateCommission(staffId, currentMonth, currentYear);
+    if (res.success) {
+      window.location.reload();
+    } else {
+      alert(res.error || "Failed to recalculate.");
+    }
+    setRecalcLoading(false);
+  };
+
+  const slabLabel = slabs.map((s) => `${s.rate}%`).join(" / ");
+
   return (
     <>
       <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm">
@@ -73,24 +98,34 @@ function CommissionPanel({
               <p className="text-xs text-slate-400">{monthName} {currentYear}</p>
             </div>
           </div>
-          <button
-            onClick={() => { setShowModal(true); setPayFull(false); setAmount(""); setNote(""); }}
-            className="flex items-center gap-1.5 px-3.5 py-2 bg-slate-900 text-white text-xs font-semibold rounded-lg hover:bg-slate-800 transition-colors shadow-sm"
-          >
-            <Plus className="w-3.5 h-3.5" /> Record Payment
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleRecalculate}
+              disabled={recalcLoading}
+              className="flex items-center gap-1.5 px-3.5 py-2 bg-slate-100 text-slate-700 text-xs font-semibold rounded-lg hover:bg-slate-200 transition-colors disabled:opacity-50"
+            >
+              {recalcLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
+              Recalculate
+            </button>
+            <button
+              onClick={() => { setShowModal(true); setPayFull(false); setAmount(""); setNote(""); }}
+              className="flex items-center gap-1.5 px-3.5 py-2 bg-slate-900 text-white text-xs font-semibold rounded-lg hover:bg-slate-800 transition-colors shadow-sm"
+            >
+              <Plus className="w-3.5 h-3.5" /> Record Payment
+            </button>
+          </div>
         </div>
 
         {/* Stats grid */}
         <div className="grid grid-cols-2 sm:grid-cols-4 divide-x divide-y sm:divide-y-0 divide-slate-100">
           <div className="p-4 space-y-1">
-            <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Rate</p>
-            <p className="text-2xl font-black text-slate-900">{summary.rate}<span className="text-base font-bold text-slate-400">%</span></p>
-            <p className="text-[10px] text-slate-400">commission rate</p>
+            <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Slab Rates</p>
+            <p className="text-2xl font-black text-slate-900">{slabLabel}</p>
+            <p className="text-[10px] text-slate-400">progressive daily rate</p>
           </div>
           <div className="p-4 space-y-1">
             <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Total Earned</p>
-            <p className="text-2xl font-black text-emerald-600">{formatBDT(summary.earned)}</p>
+            <p className="text-2xl font-black text-emerald-600">{formatBDT(summary.totalCommission)}</p>
             <p className="text-[10px] text-slate-400">{summary.orderCount ?? 0} delivered orders</p>
           </div>
           <div className="p-4 space-y-1">
@@ -108,7 +143,7 @@ function CommissionPanel({
         </div>
 
         {/* Progress bar */}
-        {summary.earned > 0 && (
+        {summary.totalCommission > 0 && (
           <div className="px-5 py-3 border-t border-slate-100 bg-slate-50/50">
             <div className="flex items-center justify-between mb-1.5">
               <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">Payment Progress</p>
@@ -122,7 +157,46 @@ function CommissionPanel({
             </div>
             <div className="flex justify-between mt-1">
               <span className="text-[10px] text-slate-400">Paid: {formatBDT(summary.paid)}</span>
-              <span className="text-[10px] text-slate-400">Total: {formatBDT(summary.earned)}</span>
+              <span className="text-[10px] text-slate-400">Total: {formatBDT(summary.totalCommission)}</span>
+            </div>
+          </div>
+        )}
+
+        {/* Daily breakdown */}
+        {summary.dailyRows?.length > 0 && (
+          <div className="border-t border-slate-100">
+            <div className="px-5 py-2.5 bg-slate-50 border-b border-slate-100">
+              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Daily Breakdown</p>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="bg-slate-50/50 border-b border-slate-100">
+                    <th className="text-left px-4 py-2 text-[10px] font-semibold text-slate-500 uppercase tracking-wider">Date</th>
+                    <th className="text-center px-4 py-2 text-[10px] font-semibold text-slate-500 uppercase tracking-wider">Orders</th>
+                    <th className="text-right px-4 py-2 text-[10px] font-semibold text-slate-500 uppercase tracking-wider">Total Sales</th>
+                    <th className="text-right px-4 py-2 text-[10px] font-semibold text-slate-500 uppercase tracking-wider">Commission</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {summary.dailyRows.map((r: any) => (
+                    <tr key={r.date} className="hover:bg-slate-50 transition-colors">
+                      <td className="px-4 py-2.5 text-xs font-medium text-slate-900">
+                        {new Date(r.date).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}
+                      </td>
+                      <td className="px-4 py-2.5 text-center text-xs text-slate-600">{r.orderCount ?? 0}</td>
+                      <td className="px-4 py-2.5 text-right text-xs font-medium text-slate-900">{formatBDT(r.totalSales)}</td>
+                      <td className="px-4 py-2.5 text-right text-xs font-semibold text-green-700">{formatBDT(r.commission)}</td>
+                    </tr>
+                  ))}
+                  <tr className="bg-slate-50 font-semibold">
+                    <td className="px-4 py-2.5 text-xs text-slate-700">Totals</td>
+                    <td className="px-4 py-2.5 text-center text-xs text-slate-700">{summary.orderCount}</td>
+                    <td className="px-4 py-2.5 text-right text-xs text-slate-900">{formatBDT(summary.totalSales)}</td>
+                    <td className="px-4 py-2.5 text-right text-xs text-green-700">{formatBDT(summary.totalCommission)}</td>
+                  </tr>
+                </tbody>
+              </table>
             </div>
           </div>
         )}
@@ -193,7 +267,7 @@ function CommissionPanel({
           );
         })()}
 
-        {payments.length === 0 && summary.earned === 0 && (
+        {payments.length === 0 && summary.totalCommission === 0 && (
           <div className="px-5 py-8 text-center border-t border-slate-100">
             <p className="text-sm text-slate-400">No commission earned this month yet.</p>
           </div>
@@ -288,12 +362,14 @@ export default function StaffDetailsClient({
   recentPayments,
   currentMonth,
   currentYear,
+  slabs,
 }: {
   staff: any;
   commissionSummary: any;
   recentPayments: any[];
   currentMonth: number;
   currentYear: number;
+  slabs: any[];
 }) {
   const [chartMode, setChartMode] = useState<"daily" | "cumulative">("daily");
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
@@ -750,6 +826,7 @@ export default function StaffDetailsClient({
           recentPayments={recentPayments}
           currentMonth={currentMonth}
           currentYear={currentYear}
+          slabs={slabs}
         />
 
       {/* Main Grid: Left Column (Breakdowns), Right Column (Order log) */}

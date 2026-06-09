@@ -7,12 +7,11 @@ import { Loader2, X, Save } from "lucide-react";
 interface StaffFormProps {
   staff?: any;
   availableRoles: any[];
-  globalCommissionRate?: number;
   onClose: () => void;
   onSuccess: (savedStaff: any) => void;
 }
 
-export function StaffForm({ staff, availableRoles, globalCommissionRate = 10, onClose, onSuccess }: StaffFormProps) {
+export function StaffForm({ staff, availableRoles, onClose, onSuccess }: StaffFormProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -22,17 +21,12 @@ export function StaffForm({ staff, availableRoles, globalCommissionRate = 10, on
     password: "",
     roleId: staff?.roleId || "",
     hasPortalAccess: staff?.hasPortalAccess ?? false,
-    commissionRate: staff?.commissionRate != null ? String(staff.commissionRate) : "",
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError("");
-
-    const commissionRate = formData.commissionRate.trim() !== ""
-      ? parseFloat(formData.commissionRate)
-      : null;
 
     try {
       let res: any;
@@ -42,7 +36,6 @@ export function StaffForm({ staff, availableRoles, globalCommissionRate = 10, on
           email: formData.email,
           roleId: formData.roleId || null,
           hasPortalAccess: formData.hasPortalAccess,
-          commissionRate,
         };
         if (formData.password.trim()) {
           updateData.password = formData.password;
@@ -58,7 +51,6 @@ export function StaffForm({ staff, availableRoles, globalCommissionRate = 10, on
           password: formData.password,
           roleId: formData.roleId || undefined,
           hasPortalAccess: formData.hasPortalAccess,
-          commissionRate,
         });
       }
 
@@ -146,24 +138,6 @@ export function StaffForm({ staff, availableRoles, globalCommissionRate = 10, on
                 placeholder={staff ? "Leave blank to keep unchanged" : "••••••••"}
                 className="w-full text-sm px-3 py-2 border border-slate-200 rounded-md focus:border-slate-400 focus:outline-none transition-colors"
               />
-            </div>
-
-            {/* Commission Rate */}
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-slate-700">
-                Commission Rate (%)
-              </label>
-              <input
-                type="number"
-                min={0}
-                max={100}
-                step={0.1}
-                value={formData.commissionRate}
-                onChange={(e) => setFormData({ ...formData, commissionRate: e.target.value })}
-                placeholder={`Default: ${globalCommissionRate}%`}
-                className="w-full text-sm px-3 py-2 border border-slate-200 rounded-md focus:border-slate-400 focus:outline-none transition-colors"
-              />
-              <p className="text-xs text-slate-400">Leave blank to use global rate ({globalCommissionRate}%)</p>
             </div>
 
             {/* Portal Access Checkbox */}

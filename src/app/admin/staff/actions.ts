@@ -47,7 +47,6 @@ async function _createStaff(data: {
   password: string;
   roleId?: string;
   hasPortalAccess?: boolean;
-  commissionRate?: number | null;
 }) {
   try {
     const hashedPassword = await bcrypt.hash(data.password, 10);
@@ -58,7 +57,6 @@ async function _createStaff(data: {
         password: hashedPassword,
         roleId: data.roleId,
         hasPortalAccess: data.hasPortalAccess ?? false,
-        commissionRate: data.commissionRate ?? null,
       },
       include: { role: true }
     });
@@ -87,7 +85,6 @@ async function _updateStaff(id: string, data: {
   password?: string;
   roleId?: string | null;
   hasPortalAccess?: boolean;
-  commissionRate?: number | null;
 }) {
   try {
     const updateData: any = { ...data };
@@ -145,6 +142,46 @@ export const deleteStaff = withAuditLog(_deleteStaff, {
   describe: (args) => `Deleted staff member ${args[0]}`,
 });
 
+// ─── RECALCULATE COMMISSION ─────────────────────────────────────────────────
+
+export async function recalculateCommission(staffId: string, month: number, year: number) {
+  try {
+    const { updateDailyCommission } = await import("@/lib/commission");
+
+    const startDate = new Date(year, month - 1, 1);
+    const endDate = new Date(year, month, 1);
+
+    const orders = await prisma.order.findMany({
+      where: {
+        createdById: staffId,
+        status: "DELIVERED",
+        deliveredAt: { gte: startDate, lt: endDate },
+        deletedAt: null,
+      },
+      select: { deliveredAt: true },
+    });
+
+    const uniqueDates = new Set<string>();
+    for (const o of orders) {
+      if (o.deliveredAt) {
+        const d = new Date(o.deliveredAt);
+        d.setHours(0, 0, 0, 0);
+        uniqueDates.add(d.toISOString());
+      }
+    }
+
+    for (const dateStr of uniqueDates) {
+      await updateDailyCommission(staffId, new Date(dateStr));
+    }
+
+    revalidatePath(`/admin/staff/${staffId}`);
+    return { success: true, count: uniqueDates.size };
+  } catch (error: any) {
+    console.error("Error recalculating commission:", error);
+    return { success: false, error: error instanceof Error ? error.message : "Failed to recalculate commission." };
+  }
+}
+
 // ─── COMMISSION PAYMENT ──────────────────────────────────────────────────────
 
 export async function createCommissionPayment(data: {
@@ -159,7 +196,7 @@ export async function createCommissionPayment(data: {
     const payment = await prisma.commissionPayment.create({ data });
     revalidatePath(`/admin/staff/${data.staffId}`);
     return { success: true, data: payment };
-  } catch (error: any) {
+  } catch (error: any) {+
     console.error("Error in createCommissionPayment:", error);
     return { success: false, error: error instanceof Error ? error.message : "An unexpected error occurred." };
   }

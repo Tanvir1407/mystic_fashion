@@ -20,7 +20,7 @@ interface Staff {
   };
 }
 
-export default function StaffClient({ initialStaff, availableRoles, globalCommissionRate = 10 }: { initialStaff: Staff[], availableRoles: any[], globalCommissionRate?: number }) {
+export default function StaffClient({ initialStaff, availableRoles }: { initialStaff: Staff[], availableRoles: any[] }) {
   const [staffList, setStaffList] = useState<Staff[]>(initialStaff);
   const [isPending, startTransition] = useTransition();
   const [showForm, setShowForm] = useState(false);
@@ -167,7 +167,6 @@ export default function StaffClient({ initialStaff, availableRoles, globalCommis
         <StaffForm
           staff={editingStaff}
           availableRoles={availableRoles}
-          globalCommissionRate={globalCommissionRate}
           onClose={() => {
             setShowForm(false);
             setEditingStaff(null);

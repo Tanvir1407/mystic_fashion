@@ -10,7 +10,7 @@ export default async function StaffPerformancePage({ params }: { params: { id: s
   const month = now.getMonth() + 1;
   const year = now.getFullYear();
 
-  const [staff, commissionSummary, recentPayments] = await Promise.all([
+  const [staff, commissionSummary, recentPayments, slabs] = await Promise.all([
     prisma.staff.findUnique({
       where: { id: params.id },
       include: {
@@ -27,6 +27,9 @@ export default async function StaffPerformancePage({ params }: { params: { id: s
       orderBy: { paidAt: "desc" },
       take: 10,
     }),
+    prisma.commissionSlab.findMany({
+      orderBy: { priority: "asc" },
+    }),
   ]);
 
   if (!staff) notFound();
@@ -39,6 +42,7 @@ export default async function StaffPerformancePage({ params }: { params: { id: s
         recentPayments={recentPayments}
         currentMonth={month}
         currentYear={year}
+        slabs={slabs}
       />
     </div>
   );

@@ -41,16 +41,36 @@ model Staff {
   updatedAt          DateTime            @updatedAt
   roleId             String?
   hasPortalAccess    Boolean             @default(false)
-  commissionRate     Float?
+  dailyCommissions DailyStaffCommission[]
   role               Role?               @relation(fields: [roleId], references: [id])
   orders             Order[]
   commissionPayments CommissionPayment[]
 }
 
-model CommissionSetting {
-  id             String   @id @default("default")
-  commissionRate Float    @default(10)
-  updatedAt      DateTime @updatedAt
+model CommissionSlab {
+  id        String   @id @default(uuid())
+  minAmount Float    @default(0)
+  maxAmount Float?
+  rate      Float    @default(0)
+  priority  Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model DailyStaffCommission {
+  id         String   @id @default(uuid())
+  staffId    String
+  date       DateTime
+  totalSales Float    @default(0)
+  commission Float    @default(0)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  staff Staff @relation(fields: [staffId], references: [id], onDelete: Cascade)
+
+  @@unique([staffId, date])
+  @@index([staffId])
+  @@index([date])
 }
 
 model CommissionPayment {
@@ -217,9 +237,9 @@ model Order {
   isExchange         Boolean @default(false)
   exchangeRefOrderId String?
   exchangeItemNote   String?
+  deliveredAt        DateTime?
   createdById         String?
   customerId          String?
-  commissionRate      Float?
   createdBy           Staff?        @relation(fields: [createdById], references: [id], onDelete: SetNull)
   customer            Customer?     @relation(fields: [customerId], references: [id], onDelete: SetNull)
   coupon              Coupon?       @relation(fields: [couponCode], references: [code])

@@ -5,17 +5,14 @@ import { Wallet } from "lucide-react";
 import Link from "next/link";
 
 export default function CommissionCard({
-  monthCommission, monthPending, totalCommission, totalPaid, rate, monthName,
+  monthEarned, totalCommission, totalPaid, totalDue, monthName,
 }: {
-  monthCommission: number;
-  monthPending: number;
+  monthEarned: number;
   totalCommission: number;
   totalPaid: number;
-  rate: number;
+  totalDue: number;
   monthName: string;
 }) {
-  const totalDue = Math.max(0, totalCommission - totalPaid);
-
   return (
     <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm">
       {/* Header */}
@@ -26,7 +23,7 @@ export default function CommissionCard({
           </div>
           <div>
             <h3 className="text-sm font-bold text-slate-900">Commission</h3>
-            <p className="text-xs text-slate-400">{rate}% rate</p>
+            <p className="text-xs text-slate-400">Slab-based</p>
           </div>
         </div>
         <Link href="/staff/payments" className="text-xs font-semibold text-slate-500 hover:text-slate-800 transition-colors">
@@ -39,14 +36,7 @@ export default function CommissionCard({
         <div className="px-5 py-4 flex flex-col justify-between">
           <div>
             <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">This Month Earned</p>
-            <div className="flex flex-wrap items-baseline gap-1.5 mt-1">
-              <p className="text-2xl font-black text-emerald-700">{formatBDT(monthCommission)}</p>
-              {monthPending > 0 && (
-                <span className="text-[10px] font-bold text-amber-600 bg-amber-50 border border-amber-200/50 px-1 py-0.5 rounded">
-                  +{formatBDT(monthPending)} pending
-                </span>
-              )}
-            </div>
+            <p className="text-2xl font-black text-emerald-700 mt-1">{formatBDT(monthEarned)}</p>
           </div>
           <p className="text-[10px] text-slate-400 mt-1.5">{monthName} (delivered only)</p>
         </div>

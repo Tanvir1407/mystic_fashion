@@ -1,7 +1,6 @@
 import { getStaffSession } from "@/lib/staff-auth";
 import { redirect } from "next/navigation";
 import prisma from "@/lib/prisma";
-import { getEffectiveCommissionRate, calcOrderCommission, calcPotentialCommission } from "@/lib/commission";
 import { formatBDT } from "@/utils/formatPrice";
 import { Plus } from "lucide-react";
 import Link from "next/link";
@@ -24,32 +23,29 @@ export default async function StaffDashboardPage() {
   const year = now.getFullYear();
   const monthName = now.toLocaleString("en-US", { month: "long" });
 
-  const rate = await getEffectiveCommissionRate(session.staffId);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const baseWhere = { createdById: session.staffId, deletedAt: null as any };
+  const baseWhere = { createdById: session.staffId, deletedAt: null };
 
   const [
     todayAgg, monthAgg, totalAgg,
-    monthOrders, allDelivered,
     totalPaidAgg, monthPayments,
     allStaff,
-    // last 7 days for sparkline
+    monthCommissionAgg, totalCommissionAgg,
     last7Days,
   ] = await Promise.all([
     prisma.order.aggregate({ where: { ...baseWhere, createdAt: { gte: todayStart } }, _sum: { totalAmount: true }, _count: { id: true } }),
     prisma.order.aggregate({ where: { ...baseWhere, createdAt: { gte: monthStart, lt: monthEnd } }, _sum: { totalAmount: true }, _count: { id: true } }),
     prisma.order.aggregate({ where: baseWhere, _sum: { totalAmount: true }, _count: { id: true } }),
-    prisma.order.findMany({
-      where: { ...baseWhere, createdAt: { gte: monthStart, lt: monthEnd } },
-      include: { salesReturns: { select: { returnCost: true, productLoss: true, printingLoss: true, deliveryLoss: true } } },
-    }),
-    prisma.order.findMany({
-      where: { ...baseWhere, status: "DELIVERED" },
-      include: { salesReturns: { select: { returnCost: true, productLoss: true, printingLoss: true, deliveryLoss: true } } },
-    }),
     prisma.commissionPayment.aggregate({ where: { staffId: session.staffId }, _sum: { amount: true } }),
     prisma.commissionPayment.findMany({ where: { staffId: session.staffId, month, year } }),
     prisma.staff.findMany({ where: { hasPortalAccess: true }, select: { id: true, username: true } }),
+    prisma.dailyStaffCommission.aggregate({
+      where: { staffId: session.staffId, date: { gte: monthStart, lt: monthEnd } },
+      _sum: { commission: true },
+    }),
+    prisma.dailyStaffCommission.aggregate({
+      where: { staffId: session.staffId },
+      _sum: { commission: true },
+    }),
     // last 7 days daily sales
     (async () => {
       const days: { date: string; amount: number; count: number }[] = [];
@@ -66,16 +62,11 @@ export default async function StaffDashboardPage() {
     })(),
   ]);
 
-  // Commission
-  const monthCommission = monthOrders.reduce((s, o) => s + calcPotentialCommission(o, rate), 0);
-  const monthEarned = allDelivered.filter(o => {
-    const oDate = new Date(o.createdAt);
-    return oDate >= monthStart && oDate < monthEnd;
-  }).reduce((s, o) => s + calcOrderCommission(o, rate), 0);
-  const totalCommission = allDelivered.reduce((s, o) => s + calcOrderCommission(o, rate), 0);
+  const monthEarned = monthCommissionAgg._sum.commission ?? 0;
+  const totalCommission = totalCommissionAgg._sum.commission ?? 0;
   const totalPaid = totalPaidAgg._sum.amount ?? 0;
   const monthPaid = monthPayments.reduce((s, p) => s + p.amount, 0);
-  const monthPending = Math.max(0, monthEarned - monthPaid);
+  const pendingPayment = Math.max(0, monthEarned - monthPaid);
 
   // Leaderboard
   const leaderboard = await Promise.all(
@@ -134,22 +125,20 @@ export default async function StaffDashboardPage() {
           sparkline={last7Days}
         />
         <CommissionCard
-          monthCommission={monthEarned}
-          monthPending={Math.max(0, monthCommission - monthEarned)}
+          monthEarned={monthEarned}
           totalCommission={totalCommission}
           totalPaid={totalPaid}
-          rate={rate}
+          totalDue={Math.max(0, totalCommission - totalPaid)}
           monthName={monthName}
         />
-
       </div>
 
       {/* Pending banner */}
-      {monthPending > 0 && (
+      {pendingPayment > 0 && (
         <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-center justify-between">
           <div>
             <p className="text-xs font-bold text-amber-600 uppercase tracking-wide">Pending Commission — {monthName}</p>
-            <p className="text-2xl font-black text-amber-800 mt-0.5">{formatBDT(monthPending)}</p>
+            <p className="text-2xl font-black text-amber-800 mt-0.5">{formatBDT(pendingPayment)}</p>
           </div>
           <Link href="/staff/payments" className="text-xs font-semibold text-amber-700 bg-amber-100 hover:bg-amber-200 px-3 py-2 rounded-lg transition-colors border border-amber-300">
             View History →

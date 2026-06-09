@@ -44,6 +44,12 @@ async function main() {
     await tx.coupon.deleteMany();
     console.log("- Deleted Coupons");
 
+    await tx.commissionSlab.deleteMany();
+    console.log("- Deleted CommissionSlabs");
+
+    await tx.dailyStaffCommission.deleteMany();
+    console.log("- Deleted DailyStaffCommissions");
+
     await tx.heroSlide.deleteMany();
     console.log("- Deleted HeroSlides");
 
@@ -62,6 +68,21 @@ async function main() {
       },
     });
     console.log(`- Created Admin: ${admin.email} (password: admin123)`);
+
+    // 0.5. Seed Commission Slabs
+    const slabs = [
+      { id: "slab-1", minAmount: 0,     maxAmount: 5000,  rate: 0,   priority: 1 },
+      { id: "slab-2", minAmount: 5001,  maxAmount: 10000, rate: 1,   priority: 2 },
+      { id: "slab-3", minAmount: 10001, maxAmount: null,  rate: 1.5, priority: 3 },
+    ];
+    for (const slab of slabs) {
+      await tx.commissionSlab.upsert({
+        where: { id: slab.id },
+        update: slab,
+        create: slab,
+      });
+    }
+    console.log("- Seeded 3 Commission Slabs");
 
     // 1. Create a Product
     const product = await tx.product.create({

@@ -12,13 +12,11 @@ export default function PaymentHistoryClient({
   totalEarned,
   totalPaid,
   totalPending,
-  rate,
 }: {
   payments: any[];
   totalEarned: number;
   totalPaid: number;
   totalPending: number;
-  rate: number;
 }) {
   const [page, setPage] = useState(1);
   const [monthFilter, setMonthFilter] = useState("all");
@@ -67,7 +65,7 @@ export default function PaymentHistoryClient({
           </div>
           <p className="text-xs text-slate-500 font-medium">Total Earned</p>
           <p className="text-xl font-black text-emerald-700 mt-0.5">{formatBDT(totalEarned)}</p>
-          <p className="text-xs text-slate-400 mt-0.5">{rate}% commission rate</p>
+          <p className="text-xs text-slate-400 mt-0.5">Daily slab-based commission</p>
         </div>
         <div className="bg-white rounded-xl border border-slate-200 p-4">
           <div className="w-9 h-9 rounded-xl bg-blue-50 flex items-center justify-center mb-3">

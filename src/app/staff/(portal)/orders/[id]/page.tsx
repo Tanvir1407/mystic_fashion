@@ -3,7 +3,6 @@ import { redirect, notFound } from "next/navigation";
 import prisma from "@/lib/prisma";
 import { getDeliverySettings } from "@/app/admin/actions";
 import { getProductsForOrder } from "@/app/admin/products/actions";
-import { calcPotentialCommission, getEffectiveCommissionRate } from "@/lib/commission";
 import OrderDetailsClient from "@/app/admin/orders/[id]/OrderDetailsClient";
 import Link from "next/link";
 import { ArrowLeft, CalendarDays } from "lucide-react";
@@ -36,7 +35,7 @@ export default async function StaffOrderDetailPage({ params }: { params: { id: s
   const session = await getStaffSession();
   if (!session) redirect("/staff/login");
 
-  const [order, deliverySettings, products, rate] = await Promise.all([
+  const [order, deliverySettings, products] = await Promise.all([
     prisma.order.findFirst({
       where: { id: params.id, createdById: session.staffId, deletedAt: null },
       include: {
@@ -46,12 +45,9 @@ export default async function StaffOrderDetailPage({ params }: { params: { id: s
     }),
     getDeliverySettings(),
     getProductsForOrder(),
-    getEffectiveCommissionRate(session.staffId),
   ]);
 
   if (!order) notFound();
-
-  const commission = calcPotentialCommission(order as any, rate);
 
   return (
     <div className="flex flex-col gap-5 max-w-8xl mx-auto pb-10 px-2">
@@ -85,13 +81,9 @@ export default async function StaffOrderDetailPage({ params }: { params: { id: s
 
         {/* Commission badge */}
         <div className="text-right">
-          <p className="text-xs text-slate-500">Commission ({rate}%)</p>
-          <p className={`text-lg font-bold ${order.status === "DELIVERED" ? "text-green-700" : order.status === "CANCELLED" ? "text-slate-400" : "text-amber-600"}`}>
-            {order.status === "CANCELLED" ? "—" : `৳${commission.toLocaleString()}`}
-          </p>
-          {order.status !== "DELIVERED" && order.status !== "CANCELLED" && (
-            <p className="text-xs text-amber-500">Earns when Delivered</p>
-          )}
+          <p className="text-xs text-slate-500">Commission</p>
+          <p className="text-lg font-bold text-slate-700">Slab-based</p>
+          <p className="text-xs text-slate-400">Calculated daily</p>
         </div>
       </div>
 

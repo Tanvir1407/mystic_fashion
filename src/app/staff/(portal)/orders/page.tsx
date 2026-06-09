@@ -3,7 +3,6 @@ import { redirect } from "next/navigation";
 import prisma from "@/lib/prisma";
 import { formatDateTime } from "@/utils/formatDate";
 import { formatBDT } from "@/utils/formatPrice";
-import { calcPotentialCommission, getEffectiveCommissionRate } from "@/lib/commission";
 import Link from "next/link";
 import { Plus, ShoppingBag, ExternalLink } from "lucide-react";
 import { AdminPagination } from "@/components/AdminPagination";
@@ -46,7 +45,7 @@ export default async function StaffOrdersPage({
 
   const whereClause = { createdById: session.staffId, deletedAt: null };
 
-  const [orders, totalCount, rate] = await Promise.all([
+  const [orders, totalCount] = await Promise.all([
     prisma.order.findMany({
       where: whereClause,
       skip: (page - 1) * PER_PAGE,
@@ -60,7 +59,6 @@ export default async function StaffOrdersPage({
       },
     }),
     prisma.order.count({ where: whereClause }),
-    getEffectiveCommissionRate(session.staffId),
   ]);
 
   const totalPages = Math.ceil(totalCount / PER_PAGE);
@@ -110,7 +108,6 @@ export default async function StaffOrdersPage({
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {orders.map((order) => {
-                  const commission = calcPotentialCommission(order, rate);
                   const isDelivered = order.status === "DELIVERED";
                   const isCancelled = order.status === "CANCELLED";
                   const statusStyle = STATUS_STYLES[order.status] ?? "bg-slate-50 text-slate-600 border-slate-200";
@@ -134,16 +131,7 @@ export default async function StaffOrdersPage({
                         {formatBDT(order.totalAmount)}
                       </td>
                       <td className="px-4 py-3 text-right">
-                        {isCancelled ? (
-                          <span className="text-slate-400 text-xs">—</span>
-                        ) : isDelivered ? (
-                          <span className="font-semibold text-green-700">{formatBDT(commission)}</span>
-                        ) : (
-                          <div>
-                            <p className="text-xs text-slate-500 text-right">{formatBDT(commission)}</p>
-                            <p className="text-xs text-amber-500 text-right">pending</p>
-                          </div>
-                        )}
+                        <span className="text-xs text-slate-400">Slab-based</span>
                       </td>
                       <td className="px-4 py-3 text-center">
                         <span className={`inline-flex px-2.5 py-1 rounded-md text-[11px] font-black uppercase tracking-wider border ${statusStyle}`}>
