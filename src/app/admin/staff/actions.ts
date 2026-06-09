@@ -175,6 +175,8 @@ export async function recalculateCommission(staffId: string, month: number, year
     }
 
     revalidatePath(`/admin/staff/${staffId}`);
+    revalidatePath("/staff/dashboard");
+    revalidatePath("/staff/commission");
     return { success: true, count: uniqueDates.size };
   } catch (error: any) {
     console.error("Error recalculating commission:", error);

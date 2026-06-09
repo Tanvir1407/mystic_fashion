@@ -158,7 +158,7 @@ async function _updateOrderStatus(orderId: string, status: OrderStatus) {
           data: { deliveredAt: new Date() },
         });
         if (order.createdById) {
-          await updateDailyCommission(order.createdById, new Date());
+          await updateDailyCommission(order.createdById, new Date(), tx);
         }
       }
     });

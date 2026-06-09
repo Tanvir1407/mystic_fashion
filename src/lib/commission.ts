@@ -43,13 +43,18 @@ export function calculateSlabCommission(dailyTotal: number, slabs: Slab[]): numb
   return parseFloat(totalCommission.toFixed(2));
 }
 
-export async function updateDailyCommission(staffId: string, date: Date): Promise<void> {
+export async function updateDailyCommission(
+  staffId: string,
+  date: Date,
+  tx?: any
+): Promise<void> {
+  const client = tx || prisma;
   const dayStart = new Date(date);
   dayStart.setHours(0, 0, 0, 0);
   const dayEnd = new Date(dayStart);
   dayEnd.setDate(dayEnd.getDate() + 1);
 
-  const orders = await prisma.order.findMany({
+  const orders = await client.order.findMany({
     where: {
       createdById: staffId,
       status: "DELIVERED",
@@ -75,7 +80,14 @@ export async function updateDailyCommission(staffId: string, date: Date): Promis
   const slabs = await getCommissionSlabs();
   const commission = calculateSlabCommission(dailyTotal, slabs);
 
-  await prisma.dailyStaffCommission.upsert({
+  if (dailyTotal === 0 && commission === 0) {
+    console.warn(
+      `[Commission Zero] staffId=${staffId}, date=${dayStart.toISOString()}. ` +
+      `Check if deliveredAt is set correctly on DELIVERED orders.`
+    );
+  }
+
+  await client.dailyStaffCommission.upsert({
     where: { staffId_date: { staffId, date: dayStart } },
     update: { totalSales: dailyTotal, commission },
     create: { staffId, date: dayStart, totalSales: dailyTotal, commission },

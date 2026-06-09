@@ -9,16 +9,20 @@ export async function processDailyCommissions(): Promise<{ processed: number }> 
       deletedAt: null,
     },
     select: { createdById: true, deliveredAt: true },
-    distinct: ["createdById", "deliveredAt"],
   });
 
   let processed = 0;
+  const processedKeys = new Set<string>();
 
   for (const order of staffWithOrders) {
     if (!order.createdById || !order.deliveredAt) continue;
 
     const dayStart = new Date(order.deliveredAt);
     dayStart.setHours(0, 0, 0, 0);
+
+    const key = `${order.createdById}-${dayStart.toISOString()}`;
+    if (processedKeys.has(key)) continue;
+    processedKeys.add(key);
 
     const existing = await prisma.dailyStaffCommission.findUnique({
       where: {
