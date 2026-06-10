@@ -7,7 +7,7 @@ import Link from "next/link";
 import { Eye, Trash2, RotateCcw } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { StatusAlertModal } from "@/components/StatusAlertModal";
-import { formatDate, formatDateTime } from "@/utils/formatDate";
+import { formatDateTime } from "@/utils/formatDate";
 import { formatBDT } from "@/utils/formatPrice";
 import type { OrderStatus } from "@/generated/prisma/client";
 
