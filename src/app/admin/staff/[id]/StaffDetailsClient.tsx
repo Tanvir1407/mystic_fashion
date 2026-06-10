@@ -42,7 +42,7 @@ function CommissionPanel({
   const payPerPage = 5;
 
   const monthName = new Date(currentYear, currentMonth - 1).toLocaleString("en-US", { month: "long" });
-  const paidPercent = summary.totalCommission > 0 ? Math.min(100, (summary.paid / summary.totalCommission) * 100) : 0;
+  const paidPercent = summary.totalEarnedCommission > 0 ? Math.min(100, (summary.paid / summary.totalEarnedCommission) * 100) : 0;
 
   const handlePay = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -60,6 +60,8 @@ function CommissionPanel({
         ...prev,
         paid: parseFloat((prev.paid + payAmount).toFixed(2)),
         pending: parseFloat(Math.max(0, prev.pending - payAmount).toFixed(2)),
+        totalPotentialCommission: prev.totalPotentialCommission,
+        totalEarnedCommission: prev.totalEarnedCommission,
       }));
       setPayments((prev) => [res.data, ...prev]);
       setShowModal(false);
@@ -117,15 +119,20 @@ function CommissionPanel({
         </div>
 
         {/* Stats grid */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 divide-x divide-y sm:divide-y-0 divide-slate-100">
+        <div className="grid grid-cols-2 sm:grid-cols-5 divide-x divide-y sm:divide-y-0 divide-slate-100">
           <div className="p-4 space-y-1">
             <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Slab Rates</p>
             <p className="text-2xl font-black text-slate-900">{slabLabel}</p>
             <p className="text-[10px] text-slate-400">progressive daily rate</p>
           </div>
           <div className="p-4 space-y-1">
-            <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Total Earned</p>
-            <p className="text-2xl font-black text-emerald-600">{formatBDT(summary.totalCommission)}</p>
+            <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Estimated</p>
+            <p className="text-2xl font-black text-amber-600">{formatBDT(summary.totalPotentialCommission)}</p>
+            <p className="text-[10px] text-slate-400">based on all orders</p>
+          </div>
+          <div className="p-4 space-y-1">
+            <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Confirmed Earned</p>
+            <p className="text-2xl font-black text-emerald-600">{formatBDT(summary.totalEarnedCommission)}</p>
             <p className="text-[10px] text-slate-400">{summary.orderCount ?? 0} delivered orders</p>
           </div>
           <div className="p-4 space-y-1">
@@ -143,7 +150,7 @@ function CommissionPanel({
         </div>
 
         {/* Progress bar */}
-        {summary.totalCommission > 0 && (
+        {summary.totalEarnedCommission > 0 && (
           <div className="px-5 py-3 border-t border-slate-100 bg-slate-50/50">
             <div className="flex items-center justify-between mb-1.5">
               <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">Payment Progress</p>
@@ -157,7 +164,7 @@ function CommissionPanel({
             </div>
             <div className="flex justify-between mt-1">
               <span className="text-[10px] text-slate-400">Paid: {formatBDT(summary.paid)}</span>
-              <span className="text-[10px] text-slate-400">Total: {formatBDT(summary.totalCommission)}</span>
+              <span className="text-[10px] text-slate-400">Total: {formatBDT(summary.totalEarnedCommission)}</span>
             </div>
           </div>
         )}
@@ -175,7 +182,8 @@ function CommissionPanel({
                     <th className="text-left px-4 py-2 text-[10px] font-semibold text-slate-500 uppercase tracking-wider">Date</th>
                     <th className="text-center px-4 py-2 text-[10px] font-semibold text-slate-500 uppercase tracking-wider">Orders</th>
                     <th className="text-right px-4 py-2 text-[10px] font-semibold text-slate-500 uppercase tracking-wider">Total Sales</th>
-                    <th className="text-right px-4 py-2 text-[10px] font-semibold text-slate-500 uppercase tracking-wider">Commission</th>
+                    <th className="text-right px-4 py-2 text-[10px] font-semibold text-slate-500 uppercase tracking-wider">Estimated</th>
+                    <th className="text-right px-4 py-2 text-[10px] font-semibold text-slate-500 uppercase tracking-wider">Confirmed</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
@@ -186,14 +194,16 @@ function CommissionPanel({
                       </td>
                       <td className="px-4 py-2.5 text-center text-xs text-slate-600">{r.orderCount ?? 0}</td>
                       <td className="px-4 py-2.5 text-right text-xs font-medium text-slate-900">{formatBDT(r.totalSales)}</td>
-                      <td className="px-4 py-2.5 text-right text-xs font-semibold text-green-700">{formatBDT(r.commission)}</td>
+                      <td className="px-4 py-2.5 text-right text-xs font-medium text-amber-600">{formatBDT(r.potentialCommission)}</td>
+                      <td className="px-4 py-2.5 text-right text-xs font-semibold text-green-700">{formatBDT(r.earnedCommission)}</td>
                     </tr>
                   ))}
                   <tr className="bg-slate-50 font-semibold">
                     <td className="px-4 py-2.5 text-xs text-slate-700">Totals</td>
                     <td className="px-4 py-2.5 text-center text-xs text-slate-700">{summary.orderCount}</td>
                     <td className="px-4 py-2.5 text-right text-xs text-slate-900">{formatBDT(summary.totalSales)}</td>
-                    <td className="px-4 py-2.5 text-right text-xs text-green-700">{formatBDT(summary.totalCommission)}</td>
+                    <td className="px-4 py-2.5 text-right text-xs text-amber-600">{formatBDT(summary.totalPotentialCommission)}</td>
+                    <td className="px-4 py-2.5 text-right text-xs text-green-700">{formatBDT(summary.totalEarnedCommission)}</td>
                   </tr>
                 </tbody>
               </table>
@@ -267,7 +277,7 @@ function CommissionPanel({
           );
         })()}
 
-        {payments.length === 0 && summary.totalCommission === 0 && (
+        {payments.length === 0 && summary.totalEarnedCommission === 0 && (
           <div className="px-5 py-8 text-center border-t border-slate-100">
             <p className="text-sm text-slate-400">No commission earned this month yet.</p>
           </div>

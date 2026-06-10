@@ -58,13 +58,15 @@ model CommissionSlab {
 }
 
 model DailyStaffCommission {
-  id         String   @id @default(uuid())
-  staffId    String
-  date       DateTime
-  totalSales Float    @default(0)
-  commission Float    @default(0)
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  id                  String   @id @default(uuid())
+  staffId             String
+  date                DateTime
+  totalSales          Float    @default(0)
+  potentialCommission Float    @default(0)
+  deliveredSales      Float    @default(0)
+  earnedCommission    Float    @default(0)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
 
   staff Staff @relation(fields: [staffId], references: [id], onDelete: Cascade)
 

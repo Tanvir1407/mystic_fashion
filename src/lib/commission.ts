@@ -54,11 +54,11 @@ export async function updateDailyCommission(
   const dayEnd = new Date(dayStart);
   dayEnd.setDate(dayEnd.getDate() + 1);
 
-  const orders = await client.order.findMany({
+  const allOrders = await client.order.findMany({
     where: {
       createdById: staffId,
-      status: "DELIVERED",
-      deliveredAt: { gte: dayStart, lt: dayEnd },
+      createdAt: { gte: dayStart, lt: dayEnd },
+      status: { notIn: ["CANCELLED", "RETURNED"] },
       deletedAt: null,
     },
     include: {
@@ -68,43 +68,54 @@ export async function updateDailyCommission(
     },
   });
 
-  const dailyTotal = orders.reduce((sum, o) => {
+  let totalSales = 0;
+  let deliveredSales = 0;
+
+  for (const o of allOrders) {
     const net = o.totalAmount - o.deliveryCharge - o.discountAmount;
     const returnDeduction = o.salesReturns.reduce(
       (rSum, r) => rSum + r.returnCost + r.productLoss + r.printingLoss + r.deliveryLoss,
       0
     );
-    return sum + Math.max(0, net - returnDeduction);
-  }, 0);
+    const dailyNet = Math.max(0, net - returnDeduction);
+    totalSales += dailyNet;
+    if (o.status === "DELIVERED") {
+      deliveredSales += dailyNet;
+    }
+  }
 
   const slabs = await getCommissionSlabs();
-  const commission = calculateSlabCommission(dailyTotal, slabs);
+  const potentialCommission = calculateSlabCommission(totalSales, slabs);
+  const earnedCommission = calculateSlabCommission(deliveredSales, slabs);
 
-  if (dailyTotal === 0 && commission === 0) {
+  if (totalSales === 0 && deliveredSales === 0) {
     console.warn(
       `[Commission Zero] staffId=${staffId}, date=${dayStart.toISOString()}. ` +
-      `Check if deliveredAt is set correctly on DELIVERED orders.`
+      `No active orders found for this date.`
     );
   }
 
   await client.dailyStaffCommission.upsert({
     where: { staffId_date: { staffId, date: dayStart } },
-    update: { totalSales: dailyTotal, commission },
-    create: { staffId, date: dayStart, totalSales: dailyTotal, commission },
+    update: { totalSales, potentialCommission, deliveredSales, earnedCommission },
+    create: { staffId, date: dayStart, totalSales, potentialCommission, deliveredSales, earnedCommission },
   });
 }
 
 interface DailyCommissionRow {
   date: Date;
   totalSales: number;
-  commission: number;
+  potentialCommission: number;
+  deliveredSales: number;
+  earnedCommission: number;
   orderCount: number;
 }
 
 interface MonthlySummary {
   dailyRows: DailyCommissionRow[];
   totalSales: number;
-  totalCommission: number;
+  totalPotentialCommission: number;
+  totalEarnedCommission: number;
   paid: number;
   pending: number;
   orderCount: number;
@@ -133,17 +144,17 @@ export async function getStaffCommissionSummary(
       where: {
         createdById: staffId,
         status: "DELIVERED",
-        deliveredAt: { gte: startDate, lt: endDate },
+        createdAt: { gte: startDate, lt: endDate },
         deletedAt: null,
       },
-      select: { deliveredAt: true },
+      select: { createdAt: true },
     }),
   ]);
 
   const orderCountByDate = new Map<string, number>();
   for (const o of orders) {
-    if (o.deliveredAt) {
-      const key = new Date(o.deliveredAt).toDateString();
+    if (o.createdAt) {
+      const key = new Date(o.createdAt).toDateString();
       orderCountByDate.set(key, (orderCountByDate.get(key) || 0) + 1);
     }
   }
@@ -154,14 +165,15 @@ export async function getStaffCommissionSummary(
   }));
 
   const paid = payments.reduce((sum, p) => sum + p.amount, 0);
-  const totalCommission = enrichedDailyRows.reduce((sum, r) => sum + r.commission, 0);
+  const totalEarned = enrichedDailyRows.reduce((sum, r) => sum + r.earnedCommission, 0);
 
   return {
     dailyRows: enrichedDailyRows,
     totalSales: enrichedDailyRows.reduce((sum, r) => sum + r.totalSales, 0),
-    totalCommission,
+    totalPotentialCommission: enrichedDailyRows.reduce((sum, r) => sum + r.potentialCommission, 0),
+    totalEarnedCommission: totalEarned,
     paid,
-    pending: parseFloat(Math.max(0, totalCommission - paid).toFixed(2)),
+    pending: parseFloat(Math.max(0, totalEarned - paid).toFixed(2)),
     orderCount: orders.length,
   };
 }

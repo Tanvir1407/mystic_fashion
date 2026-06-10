@@ -157,9 +157,9 @@ async function _updateOrderStatus(orderId: string, status: OrderStatus) {
           where: { id: orderId },
           data: { deliveredAt: new Date() },
         });
-        if (order.createdById) {
-          await updateDailyCommission(order.createdById, new Date(), tx);
-        }
+      }
+      if (order.createdById && oldStatus !== newStatus) {
+        await updateDailyCommission(order.createdById, order.createdAt, tx);
       }
     });
 
@@ -732,6 +732,11 @@ async function _createAdminOrder(data: {
 
     revalidatePath("/admin/orders");
     revalidatePath("/admin/products");
+
+    if (createdById) {
+      await updateDailyCommission(createdById, new Date());
+    }
+
     return { success: true, orderId: order.id };
   } catch (error: any) {
     console.error("Create admin order error:", error);

@@ -7,7 +7,8 @@ import { formatBDT } from "@/utils/formatPrice";
 interface DailyRecord {
   date: Date;
   totalSales: number;
-  commission: number;
+  potentialCommission: number;
+  earnedCommission: number;
 }
 
 interface OrderSummary {
@@ -34,7 +35,8 @@ export default function DailyCommissionTable({
     return map;
   }, {});
 
-  const totalCommission = dailyRecords.reduce((s, r) => s + r.commission, 0);
+  const totalEstimated = dailyRecords.reduce((s, r) => s + r.potentialCommission, 0);
+  const totalEarned = dailyRecords.reduce((s, r) => s + r.earnedCommission, 0);
 
   return (
     <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
@@ -53,7 +55,8 @@ export default function DailyCommissionTable({
                   <th className="text-left px-3 py-3 text-xs font-semibold text-slate-500">Date</th>
                   <th className="text-center px-3 py-3 text-xs font-semibold text-slate-500">Orders</th>
                   <th className="text-right px-3 py-3 text-xs font-semibold text-slate-500">Total Sales</th>
-                  <th className="text-right px-3 py-3 text-xs font-semibold text-slate-500">Commission</th>
+                  <th className="text-right px-3 py-3 text-xs font-semibold text-slate-500">Estimated</th>
+                  <th className="text-right px-3 py-3 text-xs font-semibold text-slate-500">Confirmed</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -82,8 +85,11 @@ export default function DailyCommissionTable({
                       <td className="px-3 py-3 text-right text-slate-900 font-medium">
                         {formatBDT(r.totalSales)}
                       </td>
+                      <td className="px-3 py-3 text-right font-medium text-amber-600">
+                        {formatBDT(r.potentialCommission)}
+                      </td>
                       <td className="px-3 py-3 text-right font-semibold text-green-700">
-                        {formatBDT(r.commission)}
+                        {formatBDT(r.earnedCommission)}
                       </td>
                     </tr>
                   );
@@ -97,8 +103,11 @@ export default function DailyCommissionTable({
                   <td className="px-3 py-3 text-right text-slate-900 text-sm">
                     {formatBDT(dailyRecords.reduce((s, r) => s + r.totalSales, 0))}
                   </td>
+                  <td className="px-3 py-3 text-right text-amber-600 text-sm">
+                    {formatBDT(totalEstimated)}
+                  </td>
                   <td className="px-3 py-3 text-right text-green-700 text-sm">
-                    {formatBDT(totalCommission)}
+                    {formatBDT(totalEarned)}
                   </td>
                 </tr>
               </tbody>

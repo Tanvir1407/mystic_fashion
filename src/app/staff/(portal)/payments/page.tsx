@@ -14,7 +14,7 @@ export default async function PaymentHistoryPage() {
   const [dailyAgg, payments, totalPaidAgg] = await Promise.all([
     prisma.dailyStaffCommission.aggregate({
       where: { staffId: session.staffId },
-      _sum: { commission: true },
+      _sum: { earnedCommission: true },
     }),
     prisma.commissionPayment.findMany({
       where: { staffId: session.staffId },
@@ -23,7 +23,7 @@ export default async function PaymentHistoryPage() {
     prisma.commissionPayment.aggregate({ where: { staffId: session.staffId }, _sum: { amount: true } }),
   ]);
 
-  const totalEarned  = dailyAgg._sum.commission ?? 0;
+  const totalEarned  = dailyAgg._sum.earnedCommission ?? 0;
   const totalPaid    = totalPaidAgg._sum.amount ?? 0;
   const totalPending = Math.max(0, totalEarned - totalPaid);
 

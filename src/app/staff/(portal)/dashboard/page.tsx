@@ -40,11 +40,11 @@ export default async function StaffDashboardPage() {
     prisma.staff.findMany({ where: { hasPortalAccess: true }, select: { id: true, username: true } }),
     prisma.dailyStaffCommission.aggregate({
       where: { staffId: session.staffId, date: { gte: monthStart, lt: monthEnd } },
-      _sum: { commission: true },
+      _sum: { potentialCommission: true, earnedCommission: true },
     }),
     prisma.dailyStaffCommission.aggregate({
       where: { staffId: session.staffId },
-      _sum: { commission: true },
+      _sum: { earnedCommission: true },
     }),
     // last 7 days daily sales
     (async () => {
@@ -62,8 +62,9 @@ export default async function StaffDashboardPage() {
     })(),
   ]);
 
-  const monthEarned = monthCommissionAgg._sum.commission ?? 0;
-  const totalCommission = totalCommissionAgg._sum.commission ?? 0;
+  const monthEstimated = monthCommissionAgg._sum.potentialCommission ?? 0;
+  const monthEarned = monthCommissionAgg._sum.earnedCommission ?? 0;
+  const totalEarned = totalCommissionAgg._sum.earnedCommission ?? 0;
   const totalPaid = totalPaidAgg._sum.amount ?? 0;
   const monthPaid = monthPayments.reduce((s, p) => s + p.amount, 0);
   const pendingPayment = Math.max(0, monthEarned - monthPaid);
@@ -125,10 +126,10 @@ export default async function StaffDashboardPage() {
           sparkline={last7Days}
         />
         <CommissionCard
+          monthEstimated={monthEstimated}
           monthEarned={monthEarned}
-          totalCommission={totalCommission}
+          totalEarned={totalEarned}
           totalPaid={totalPaid}
-          totalDue={Math.max(0, totalCommission - totalPaid)}
           monthName={monthName}
         />
       </div>

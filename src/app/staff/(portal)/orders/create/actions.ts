@@ -4,6 +4,7 @@ import prisma from "@/lib/prisma";
 import { getStaffSession } from "@/lib/staff-auth";
 import { normalizePhone } from "@/lib/utils";
 import { revalidatePath } from "next/cache";
+import { updateDailyCommission } from "@/lib/commission";
 async function generateOrderId(tx: any): Promise<string> {
   const now = new Date();
   const year = now.getFullYear().toString().slice(-2);
@@ -120,6 +121,9 @@ export async function createStaffOrder(data: {
     revalidatePath("/staff/orders");
     revalidatePath("/staff/dashboard");
     revalidatePath("/admin/orders");
+
+    await updateDailyCommission(session.staffId, new Date());
+
     return { success: true, orderId: order.id };
   } catch (error: any) {
     console.error("createStaffOrder error:", error);

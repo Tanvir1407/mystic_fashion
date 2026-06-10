@@ -51,9 +51,10 @@ export default async function StaffCommissionPage({
     }),
   ]);
 
-  const totalCommission = dailyRecords.reduce((s, r) => s + r.commission, 0);
+  const totalEstimated = dailyRecords.reduce((s, r) => s + r.potentialCommission, 0);
+  const totalEarned = dailyRecords.reduce((s, r) => s + r.earnedCommission, 0);
   const paid = payments.reduce((s, p) => s + p.amount, 0);
-  const pending = Math.max(0, totalCommission - paid);
+  const pending = Math.max(0, totalEarned - paid);
 
   const monthName = new Date(year, month - 1).toLocaleString("en-US", { month: "long" });
 
@@ -72,13 +73,21 @@ export default async function StaffCommissionPage({
         <MonthSelector current={`${month}-${year}`} options={monthOptions} />
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+        <div className="bg-white rounded-xl border border-slate-200 p-4">
+          <div className="w-8 h-8 rounded-lg bg-amber-50 flex items-center justify-center mb-3">
+            <TrendingUp className="w-4 h-4 text-amber-600" />
+          </div>
+          <p className="text-xs text-slate-500">Estimated</p>
+          <p className="text-xl font-bold text-slate-900 mt-0.5">{formatBDT(totalEstimated)}</p>
+          <p className="text-xs text-slate-400 mt-0.5">based on all orders</p>
+        </div>
         <div className="bg-white rounded-xl border border-slate-200 p-4">
           <div className="w-8 h-8 rounded-lg bg-green-50 flex items-center justify-center mb-3">
             <TrendingUp className="w-4 h-4 text-green-600" />
           </div>
-          <p className="text-xs text-slate-500">Total Earned</p>
-          <p className="text-xl font-bold text-slate-900 mt-0.5">{formatBDT(totalCommission)}</p>
+          <p className="text-xs text-slate-500">Confirmed Earned</p>
+          <p className="text-xl font-bold text-slate-900 mt-0.5">{formatBDT(totalEarned)}</p>
           <p className="text-xs text-slate-400 mt-0.5">{dailyRecords.length} days in {monthName}</p>
         </div>
         <div className="bg-white rounded-xl border border-slate-200 p-4">
@@ -121,7 +130,8 @@ export default async function StaffCommissionPage({
         dailyRecords={dailyRecords.map((r) => ({
           date: r.date,
           totalSales: r.totalSales,
-          commission: r.commission,
+          potentialCommission: r.potentialCommission,
+          earnedCommission: r.earnedCommission,
         }))}
         orders={orders.map((o) => ({
           id: o.id,
