@@ -97,7 +97,7 @@ export async function GET(req: NextRequest) {
 
     // Track by order ID — returns single order
     if (id) {
-      const order = await prisma.order.findUnique({
+      const order = await prisma.order.findFirst({
         where: { id, deletedAt: null },
         select: orderSelect,
       });
