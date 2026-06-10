@@ -4,17 +4,11 @@ import { useState, useRef, useEffect } from "react";
 import {
   ScanLine,
   Search,
-  Package,
-  CheckCircle2,
   Check,
-  AlertCircle,
   X,
-  Trash2,
-  AlertTriangle,
   Play
 } from "lucide-react";
 import { trackCustomerOrder } from "@/app/actions/pathao";
-import { formatDateTime } from "@/utils/formatDate";
 import { formatBDT } from "@/utils/formatPrice";
 import { validateStatusTransition } from "@/lib/utils";
 import type { OrderStatus } from "@/generated/prisma/client";
@@ -505,7 +499,7 @@ export default function ScanScreen() {
               </div>
 
               <div className="border border-slate-100 rounded-lg divide-y divide-slate-100 max-h-48 overflow-y-auto">
-                {scannedOrders.map((order, i) => (
+                {scannedOrders.map((order) => (
                   <div key={order.id} className="p-2.5 flex justify-between items-center text-xs">
                     <span className="font-mono font-semibold text-slate-800">{order.id}</span>
                     <div className="text-slate-400 flex items-center gap-1.5">

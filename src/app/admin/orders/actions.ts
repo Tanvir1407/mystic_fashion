@@ -872,16 +872,16 @@ export async function bulkSendToPathaoAction(orderIds: string[]) {
 
     revalidatePath("/admin/orders");
 
-    if (errors.length > 0 && successCount === 0) {
+    if (errors.length > 0) {
       return {
         success: false,
-        error: `Failed to send orders: ${errors.join(", ")}`,
+        error: `Failed to send orders: ${errors.join(", ")}` + (successCount > 0 ? ` (${successCount} order(s) sent successfully)` : ""),
       };
     }
 
     return {
       success: true,
-      message: `${successCount} orders sent to Pathao successfully.${errors.length > 0 ? ` Note: ${errors.length} failed.` : ""}`,
+      message: `${successCount} orders sent to Pathao successfully.`,
     };
   } catch (error: any) {
     console.error("Bulk Pathao action error:", error);

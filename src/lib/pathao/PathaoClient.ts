@@ -360,7 +360,14 @@ class PathaoClient {
       const data = await response.json();
       if (!response.ok) {
         console.error('[PathaoClient] Create Order API Error:', data);
-        throw new Error(data.message || 'Failed to create Pathao order');
+        let errMsg = data.message || 'Failed to create Pathao order';
+        if (data.errors) {
+          const detailList = Object.entries(data.errors)
+            .map(([field, msgs]) => `${field}: ${(msgs as string[]).join(', ')}`)
+            .join(' | ');
+          errMsg = `${errMsg} (${detailList})`;
+        }
+        throw new Error(errMsg);
       }
 
       return data.data as PathaoOrderResponse;
