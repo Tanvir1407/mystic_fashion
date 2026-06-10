@@ -166,9 +166,11 @@ export default function OrderRowClient({
                 🌐 eCommerce
               </span>
             ) : (
-              <span className="inline-flex items-center gap-1 bg-violet-50 text-violet-700 text-[10px] font-bold px-1.5 py-0.5 rounded border border-violet-100 uppercase tracking-wider">
-                👤 Salesman
-              </span>
+              <div className="flex flex-col items-start gap-0.5">
+                <span className="inline-flex items-center gap-1 bg-violet-50 text-violet-700 text-[10px] font-bold px-1.5 py-0.5 rounded border border-violet-100 uppercase tracking-wider">
+                  {order.createdBy?.username ? `👤 ${order.createdBy.username}` : "👤 Salesman"}
+                </span>
+              </div>
             )}
           </div>
         </div>
