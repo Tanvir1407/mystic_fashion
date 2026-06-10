@@ -17,7 +17,7 @@ export default function OrderDetailsClient({
   deliverySettings,
   products = [],
   pathaoInfo = null,
-  dtfSetting = { printCost: 300 },
+  dtfSetting = { printCost: 250 },
 }: {
   order: any;
   deliverySettings: any;
