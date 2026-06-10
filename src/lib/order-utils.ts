@@ -2,7 +2,7 @@ import prisma from "@/lib/prisma";
 
 /**
  * Generates a unique, stateless Order ID for the current date.
- * Format: MJEPE-YYMMDDXXXX (where XXXX is a 4-character random uppercase alphanumeric suffix)
+ * Format: M-YYMMDDXXXX (where XXXX is a 4-character random uppercase alphanumeric suffix)
  */
 export async function generateOrderId(tx?: any): Promise<string> {
   // 1. Get current date in Asia/Dhaka timezone parts using Intl.DateTimeFormat
@@ -16,7 +16,7 @@ export async function generateOrderId(tx?: any): Promise<string> {
   const year = parts.find(p => p.type === "year")!.value;
   const month = parts.find(p => p.type === "month")!.value;
   const date = parts.find(p => p.type === "day")!.value;
-  const datePrefix = `MJEPE-${year}${month}${date}`;
+  const datePrefix = `M-${year}${month}${date}`;
 
   // 2. Generate 4 random uppercase alphanumeric characters (A-Z, 0-9)
   const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";

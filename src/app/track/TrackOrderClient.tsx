@@ -258,7 +258,7 @@ export default function TrackOrderClient() {
             Order Tracking
           </h1>
           <p className="text-zinc-500 max-w-md mx-auto text-sm sm:text-base leading-relaxed">
-            Enter your <span className="font-semibold text-zinc-800">Order ID</span> (e.g., MJEPE-260XXXXX) or{" "}
+            Enter your <span className="font-semibold text-zinc-800">Order ID</span> (e.g., M-{`${String(new Date().getFullYear()).slice(-2)}0101XXXX`}) or{" "}
             <span className="font-semibold text-zinc-800">Phone Number</span> to track your shipment.
           </p>
         </div>

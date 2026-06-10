@@ -480,7 +480,7 @@ export default function CreateOrderClient({
                     type="text"
                     value={exchangeRefOrderId}
                     onChange={(e) => setExchangeRefOrderId(e.target.value.toUpperCase())}
-                    placeholder="e.g. MJEPE-26052301"
+                    placeholder="e.g. M-26052301"
                     className="w-full px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm font-mono focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 outline-none transition-all"
                   />
                 </div>
