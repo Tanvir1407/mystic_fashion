@@ -44,8 +44,9 @@ export async function trackCustomerOrder(query: string) {
         const rawQuery = query.trim();
         
         // Determine if this is a phone number or an Order ID
-        // Order IDs always start with "MJEPE-"
-        const isOrderId = rawQuery.toUpperCase().startsWith("MJEPE");
+        // Order IDs start with "M-" (new format) or "MJEPE-" (legacy format)
+        const upper = rawQuery.toUpperCase();
+        const isOrderId = upper.startsWith("M-") || upper.startsWith("MJEPE");
 
         if (isOrderId) {
             // ── Order ID search ─────────────────────────────────────
