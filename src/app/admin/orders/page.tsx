@@ -110,10 +110,10 @@ export default async function AdminOrdersPage({ searchParams }: { searchParams: 
   const totalPages = Math.ceil(totalCount / PER_PAGE);
 
   return (
-    <OrderListClient 
-      initialOrders={orders} 
-      currentPage={page} 
-      totalPages={totalPages} 
+    <OrderListClient
+      initialOrders={orders}
+      currentPage={page}
+      totalPages={totalPages}
       currentFilter={filter}
       currentSource={source}
       currentSearch={search}

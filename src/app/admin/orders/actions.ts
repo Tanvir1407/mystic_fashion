@@ -8,7 +8,7 @@ import { revalidatePath } from "next/cache";
 import { pathaoClient } from "@/lib/pathao/PathaoClient";
 import { getSession } from "@/lib/auth";
 import { getOrCreateSystemAccount, createDoubleEntryJournal } from "@/lib/accounting";
-import { normalizePhone } from "@/lib/utils";
+import { normalizePhone, validateStatusTransition } from "@/lib/utils";
 import { getEffectiveCommissionRate } from "@/lib/commission";
 import { executeOrderTransaction } from "@/lib/order-utils";
 
@@ -31,17 +31,9 @@ async function _updateOrderStatus(orderId: string, status: OrderStatus) {
 
       if (oldStatus === newStatus) return;
 
-      if (["RETURNED", "CANCELLED"].includes(oldStatus)) {
-        throw new Error(`Order is ${oldStatus} and cannot be modified.`);
-      }
-
-      if (
-        newStatus === "PENDING" &&
-        !["CONFIRMED", "PRINTING", "PACKAGING"].includes(oldStatus)
-      ) {
-        throw new Error(
-          "Can only revert to Pending from Confirmed, Printing, or Packaging status."
-        );
+      const validation = validateStatusTransition(oldStatus, newStatus);
+      if (!validation.isValid) {
+        throw new Error(validation.error);
       }
 
       const stockHoldingStatuses: OrderStatus[] = [

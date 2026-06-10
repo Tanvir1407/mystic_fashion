@@ -184,26 +184,26 @@ export default function OrderListClient({
       )}
 
       {/* no-print: everything below is hidden by @media print in globals.css */}
-      <div className="no-print flex flex-col gap-6">
+      <div className="no-print flex flex-col gap-3">
 
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        {/* Header + Tabs row */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <div>
-            <h1 className="text-2xl font-semibold tracking-tight text-slate-900">Orders</h1>
-            <p className="text-sm text-slate-500 mt-1">Manage customer orders and fulfillments.</p>
+            <h1 className="text-lg font-bold tracking-tight text-slate-900">Orders</h1>
+            <p className="text-xs text-slate-400 mt-0.5">Manage customer orders and fulfillments.</p>
           </div>
           {canCreate && currentTab === "active" && (
             <div className="flex items-center gap-2">
               <button
                 onClick={() => router.push("/admin/orders/ai-create")}
-                className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-violet-600 to-indigo-600 text-white text-sm font-semibold rounded-lg hover:from-violet-700 hover:to-indigo-700 transition-all shadow-sm shadow-violet-200 whitespace-nowrap"
+                className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-violet-600 to-indigo-600 text-white text-sm font-semibold rounded-lg hover:from-violet-700 hover:to-indigo-700 transition-all shadow-sm shadow-violet-200 whitespace-nowrap"
               >
                 <Sparkles className="w-4 h-4" />
                 AI Create
               </button>
               <button
                 onClick={() => router.push("/admin/orders/create")}
-                className="flex items-center gap-2 px-4 py-2.5 bg-slate-900 text-white text-sm font-semibold rounded-lg hover:bg-slate-800 transition-colors shadow-sm whitespace-nowrap"
+                className="flex items-center gap-2 px-4 py-2 bg-slate-900 text-white text-sm font-semibold rounded-lg hover:bg-slate-800 transition-colors shadow-sm whitespace-nowrap"
               >
                 <Plus className="w-4 h-4" />
                 Create Order
@@ -213,7 +213,7 @@ export default function OrderListClient({
         </div>
 
         {/* Tabs */}
-        <div className="flex items-center gap-1 my-2 bg-slate-100/70 border border-slate-200 rounded-xl p-1">
+        <div className="flex items-center gap-1 bg-slate-100/70 border border-slate-200 rounded-lg p-0.5 w-fit">
           <button
             onClick={() => {
               const params = new URLSearchParams(window.location.search);
@@ -221,10 +221,10 @@ export default function OrderListClient({
               params.set("page", "1");
               router.push(`/admin/orders?${params.toString()}`);
             }}
-            className={`px-4 py-2 text-xs font-bold uppercase tracking-wide rounded-lg transition-all ${
+            className={`px-3 py-1.5 text-[11px] font-bold uppercase tracking-wide rounded-md transition-all ${
               currentTab === "active"
                 ? "bg-white text-slate-900 shadow-sm border border-slate-200"
-                : "text-slate-500 hover:text-slate-700 hover:bg-white/60"
+                : "text-slate-500 hover:text-slate-700"
             }`}
           >
             Active Orders
@@ -236,10 +236,10 @@ export default function OrderListClient({
               params.set("page", "1");
               router.push(`/admin/orders?${params.toString()}`);
             }}
-            className={`px-4 py-2 text-xs font-bold uppercase tracking-wide rounded-lg transition-all ${
+            className={`px-3 py-1.5 text-[11px] font-bold uppercase tracking-wide rounded-md transition-all ${
               currentTab === "trash"
                 ? "bg-white text-slate-900 shadow-sm border border-slate-200"
-                : "text-slate-500 hover:text-slate-700 hover:bg-white/60"
+                : "text-slate-500 hover:text-slate-700"
             }`}
           >
             Trash Bin
@@ -250,13 +250,13 @@ export default function OrderListClient({
               params.set("tab", "scan");
               router.push(`/admin/orders?${params.toString()}`);
             }}
-            className={`px-4 py-2 text-xs font-bold uppercase tracking-wide rounded-lg transition-all flex items-center gap-1.5 ${
+            className={`px-3 py-1.5 text-[11px] font-bold uppercase tracking-wide rounded-md transition-all flex items-center gap-1 ${
               currentTab === "scan"
                 ? "bg-white text-indigo-700 shadow-sm border border-indigo-100"
-                : "text-slate-500 hover:text-slate-700 hover:bg-white/60"
+                : "text-slate-500 hover:text-slate-700"
             }`}
           >
-            <ScanLine className="w-3.5 h-3.5" />
+            <ScanLine className="w-3 h-3" />
             Scan Screen
           </button>
         </div>
@@ -264,13 +264,12 @@ export default function OrderListClient({
         {/* Scan Screen Tab */}
         {currentTab === "scan" && <ScanScreen />}
 
-        {/* Toolbar, Search & Bulk Actions — hidden on scan tab */}
         {currentTab !== "scan" && <>
         <div className="bg-white border border-slate-200 rounded-xl shadow-sm">
-          <div className="p-4 flex flex-col xl:flex-row xl:items-center gap-4 justify-between">
+          <div className="px-3 py-2.5 flex flex-col xl:flex-row xl:items-center gap-2.5 justify-between">
 
             {/* Left Side: Search & Filter */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 flex-1">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 flex-1">
               {/* Search Block */}
               <div className="flex-1 relative group max-w-[400px]">
                 <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
@@ -291,7 +290,7 @@ export default function OrderListClient({
                     }
                   }}
                   onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-                  className="block w-full pl-10 pr-24 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:ring-4 focus:ring-slate-500/10 focus:border-slate-300 focus:bg-white transition-all outline-none font-medium text-slate-900 placeholder:text-slate-400"
+                  className="block w-full pl-9 pr-20 py-2 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-slate-500/10 focus:border-slate-300 focus:bg-white transition-all outline-none font-medium text-slate-900 placeholder:text-slate-400"
                 />
                 <div className="absolute inset-y-0 right-0 pr-1 flex items-center gap-1">
                   {searchValue && (
@@ -317,10 +316,10 @@ export default function OrderListClient({
                 </div>
               </div>
 
-              <div className="h-8 w-px bg-slate-200 hidden md:block" />
+              <div className="h-6 w-px bg-slate-200 hidden md:block" />
 
               {/* Filter Block */}
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2">
                 <CustomSelect
                   options={[
                     { value: "ALL", label: "All Statuses" },
@@ -341,8 +340,8 @@ export default function OrderListClient({
                     setSelectedIds(new Set());
                     router.push(`/admin/orders?${params.toString()}`);
                   }}
-                  heightClass="h-[38px]"
-                  className="w-40"
+                  heightClass="h-[32px]"
+                  className="w-36"
                 />
 
                 <CustomSelect
@@ -359,8 +358,8 @@ export default function OrderListClient({
                     setSelectedIds(new Set());
                     router.push(`/admin/orders?${params.toString()}`);
                   }}
-                  heightClass="h-[38px]"
-                  className="w-40"
+                  heightClass="h-[32px]"
+                  className="w-32"
                 />
 
                 <CustomSelect
@@ -377,8 +376,8 @@ export default function OrderListClient({
                     setSelectedIds(new Set());
                     router.push(`/admin/orders?${params.toString()}`);
                   }}
-                  heightClass="h-[38px]"
-                  className="w-40"
+                  heightClass="h-[32px]"
+                  className="w-32"
                   searchable={availableTags.length > 5}
                 />
               </div>
@@ -389,12 +388,12 @@ export default function OrderListClient({
 
           {/* Dedicated Bulk Actions Section below the Search and Filter section */}
           {selectedIds.size > 0 && (
-            <div className="border-t border-slate-100 bg-indigo-50/20 px-4 py-3.5 flex flex-col lg:flex-row lg:items-center justify-between gap-4 animate-fade-in transition-all rounded-b-xl">
+            <div className="border-t border-slate-100 bg-indigo-50/20 px-3 py-2 flex flex-col lg:flex-row lg:items-center justify-between gap-2 animate-fade-in transition-all rounded-b-xl">
               <div className="flex items-center gap-2">
                 <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-indigo-600 text-white font-bold text-[10px]">
                   {selectedIds.size}
                 </span>
-                <span className="text-sm font-semibold text-slate-700">
+                <span className="text-xs font-semibold text-slate-700">
                   orders selected for bulk operations
                 </span>
                 <button
@@ -488,7 +487,7 @@ export default function OrderListClient({
             <table className="w-full text-left border-collapse whitespace-nowrap">
               <thead>
                 <tr className="border-b border-slate-200 bg-slate-50">
-                  <th className="px-6 py-4 w-10">
+                  <th className="px-3 py-2.5 w-10">
                     <input
                       type="checkbox"
                       onChange={handleSelectAll}
@@ -499,15 +498,15 @@ export default function OrderListClient({
                       className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
                     />
                   </th>
-                  <th className="px-2 py-4 font-semibold text-xs text-slate-500 uppercase tracking-wider">ID</th>
-                  <th className="px-2 py-4 font-semibold text-xs text-slate-500 uppercase tracking-wider">Customer</th>
-                  <th className="px-2 py-4 font-semibold text-xs text-slate-500 uppercase tracking-wider">Address</th>
-                  <th className="px-2 py-4 font-semibold text-xs text-slate-500 uppercase tracking-wider">Items</th>
-                  <th className="px-2 py-4 font-semibold text-xs text-slate-500 uppercase tracking-wider">Advance</th>
-                  <th className="px-2 py-4 font-semibold text-xs text-slate-500 uppercase tracking-wider">Due</th>
-                  <th className="px-2 py-4 font-semibold text-xs text-slate-500 uppercase tracking-wider">Total</th>
-                  <th className="px-2 py-4 font-semibold text-xs text-slate-500 uppercase tracking-wider text-right">Status</th>
-                  <th className="px-2 py-4 font-semibold text-xs text-slate-500 uppercase tracking-wider text-right">Actions</th>
+                  <th className="px-2 py-2.5 font-semibold text-xs text-slate-500 uppercase tracking-wider">ID</th>
+                  <th className="px-2 py-2.5 font-semibold text-xs text-slate-500 uppercase tracking-wider">Customer</th>
+                  <th className="px-2 py-2.5 font-semibold text-xs text-slate-500 uppercase tracking-wider">Address</th>
+                  <th className="px-2 py-2.5 font-semibold text-xs text-slate-500 uppercase tracking-wider">Items</th>
+                  <th className="px-2 py-2.5 font-semibold text-xs text-slate-500 uppercase tracking-wider">Advance</th>
+                  <th className="px-2 py-2.5 font-semibold text-xs text-slate-500 uppercase tracking-wider">Due</th>
+                  <th className="px-2 py-2.5 font-semibold text-xs text-slate-500 uppercase tracking-wider">Total</th>
+                  <th className="px-2 py-2.5 font-semibold text-xs text-slate-500 uppercase tracking-wider text-right">Status</th>
+                  <th className="px-2 py-2.5 font-semibold text-xs text-slate-500 uppercase tracking-wider text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
