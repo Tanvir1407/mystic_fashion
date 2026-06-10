@@ -1,13 +1,14 @@
-import cron from "node-cron";
+import cron, { type ScheduledTask } from "node-cron";
+
 import { processDailyCommissions } from "./cron";
 
-let task: cron.ScheduledTask | null = null;
+let task: ScheduledTask | null = null;
 
 export function initCronScheduler() {
   if (task) return;
 
   task = cron.schedule(
-    "0 0 * * *",
+    "* * * * *",
     async () => {
       console.log("[Cron] Running daily commission recalculation...");
       try {
