@@ -165,6 +165,8 @@ async function _updateOrderStatus(orderId: string, status: OrderStatus) {
 
     revalidatePath("/admin/orders");
     revalidatePath("/admin/products");
+    revalidatePath("/staff/commission");
+    revalidatePath("/staff/dashboard");
     return { success: true };
   } catch (error: any) {
     console.error("Order update error:", error);

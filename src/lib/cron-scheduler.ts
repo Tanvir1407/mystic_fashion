@@ -8,7 +8,7 @@ export function initCronScheduler() {
   if (task) return;
 
   task = cron.schedule(
-    "* * * * *",
+    "5 0 * * *",
     async () => {
       console.log("[Cron] Running daily commission recalculation...");
       try {
