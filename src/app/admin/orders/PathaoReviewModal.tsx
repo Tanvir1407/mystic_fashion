@@ -36,9 +36,10 @@ export default function PathaoReviewModal({ isOpen, onClose, selectedOrders, onS
       const orderIds = validOrders.map((o) => o.id);
       const res = await bulkSendToPathaoAction(orderIds);
 
+      router.refresh();
+
       if (res.success) {
         onSuccess();
-        router.refresh();
         onClose();
       } else {
         console.log("Pathao Review Modal Error:", res.error);
