@@ -4,7 +4,8 @@ import { useState, useEffect } from "react";
 import OrderRowClient from "./OrderRowClient";
 import type { OrderStatus } from "@/generated/prisma/client";
 import { bulkUpdateOrderStatus, bulkDeleteOrders } from "./actions";
-import { Filter, Plus, Printer, Trash2, Search as SearchIcon, X, Truck, Sparkles } from "lucide-react";
+import { Filter, Plus, Printer, Trash2, Search as SearchIcon, X, Truck, Sparkles, ScanLine } from "lucide-react";
+import ScanScreen from "./ScanScreen";
 import InvoicePrintView from "./InvoicePrintView";
 import ThermalPrintView from "./ThermalPrintView";
 import PathaoReviewModal from "./PathaoReviewModal";
@@ -212,7 +213,7 @@ export default function OrderListClient({
         </div>
 
         {/* Tabs */}
-        <div className="flex border-b border-slate-200 gap-6 my-2">
+        <div className="flex items-center gap-1 my-2 bg-slate-100/70 border border-slate-200 rounded-xl p-1">
           <button
             onClick={() => {
               const params = new URLSearchParams(window.location.search);
@@ -220,10 +221,10 @@ export default function OrderListClient({
               params.set("page", "1");
               router.push(`/admin/orders?${params.toString()}`);
             }}
-            className={`pb-3 text-sm font-bold uppercase tracking-wide border-b-2 transition-all ${
+            className={`px-4 py-2 text-xs font-bold uppercase tracking-wide rounded-lg transition-all ${
               currentTab === "active"
-                ? "border-slate-900 text-slate-900"
-                : "border-transparent text-slate-400 hover:text-slate-600"
+                ? "bg-white text-slate-900 shadow-sm border border-slate-200"
+                : "text-slate-500 hover:text-slate-700 hover:bg-white/60"
             }`}
           >
             Active Orders
@@ -235,17 +236,36 @@ export default function OrderListClient({
               params.set("page", "1");
               router.push(`/admin/orders?${params.toString()}`);
             }}
-            className={`pb-3 text-sm font-bold uppercase tracking-wide border-b-2 transition-all ${
+            className={`px-4 py-2 text-xs font-bold uppercase tracking-wide rounded-lg transition-all ${
               currentTab === "trash"
-                ? "border-slate-900 text-slate-900"
-                : "border-transparent text-slate-400 hover:text-slate-600"
+                ? "bg-white text-slate-900 shadow-sm border border-slate-200"
+                : "text-slate-500 hover:text-slate-700 hover:bg-white/60"
             }`}
           >
             Trash Bin
           </button>
+          <button
+            onClick={() => {
+              const params = new URLSearchParams(window.location.search);
+              params.set("tab", "scan");
+              router.push(`/admin/orders?${params.toString()}`);
+            }}
+            className={`px-4 py-2 text-xs font-bold uppercase tracking-wide rounded-lg transition-all flex items-center gap-1.5 ${
+              currentTab === "scan"
+                ? "bg-white text-indigo-700 shadow-sm border border-indigo-100"
+                : "text-slate-500 hover:text-slate-700 hover:bg-white/60"
+            }`}
+          >
+            <ScanLine className="w-3.5 h-3.5" />
+            Scan Screen
+          </button>
         </div>
 
-        {/* Toolbar, Search & Bulk Actions */}
+        {/* Scan Screen Tab */}
+        {currentTab === "scan" && <ScanScreen />}
+
+        {/* Toolbar, Search & Bulk Actions — hidden on scan tab */}
+        {currentTab !== "scan" && <>
         <div className="bg-white border border-slate-200 rounded-xl shadow-sm">
           <div className="p-4 flex flex-col xl:flex-row xl:items-center gap-4 justify-between">
 
@@ -552,6 +572,7 @@ export default function OrderListClient({
             });
           }}
         />
+        </> }
       </div>{/* end no-print */}
     </div>
   );
