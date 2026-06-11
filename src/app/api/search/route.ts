@@ -60,6 +60,7 @@ export async function GET(req: NextRequest) {
       price: p.price,
       finalPrice: calcFinalPrice(p),
       images: p.images,
+      trackStock: p.trackStock,
       brand: p.brand,
       category: p.categoryRel,
       discount: p.discount ? { type: p.discount.discountType, value: p.discount.value } : null,

@@ -105,6 +105,7 @@ export default async function ProductsPage({
         isFeatured: true,
         featuredOrder: true,
         isPublished: true,
+        trackStock: true,
         brand: true,
         categoryRel: true,
         subcategory: true,

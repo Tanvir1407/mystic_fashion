@@ -97,6 +97,7 @@ export async function GET(req: NextRequest) {
       images: p.images,
       isFeatured: p.isFeatured,
       isCustomize: p.isCustomize,
+      trackStock: p.trackStock,
       brand: p.brand,
       category: p.categoryRel,
       subcategory: p.subcategory,

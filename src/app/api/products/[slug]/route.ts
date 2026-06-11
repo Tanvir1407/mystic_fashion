@@ -47,6 +47,7 @@ export async function GET(_req: NextRequest, { params }: { params: { slug: strin
         images: product.images,
         isFeatured: product.isFeatured,
         isCustomize: product.isCustomize,
+        trackStock: product.trackStock,
         brand: product.brand,
         category: product.categoryRel,
         subcategory: product.subcategory,
