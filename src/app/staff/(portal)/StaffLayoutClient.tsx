@@ -4,17 +4,17 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
-  LayoutDashboard, ShoppingBag, Wallet,TrendingUp,
+  LayoutDashboard, ShoppingBag, Wallet, TrendingUp,
   LogOut, Menu, X, Plus
 } from "lucide-react";
 import { staffLogout } from "../login/actions";
 import type { StaffSessionPayload } from "@/lib/staff-auth";
 
 const NAV_ITEMS = [
-  { href: "/staff/dashboard", label: "Dashboard",       icon: LayoutDashboard, exact: true  },
-  { href: "/staff/orders",    label: "My Orders",        icon: ShoppingBag,     exact: false },
-  { href: "/staff/commission", label: "My Commission",    icon: TrendingUp,      exact: false },
-  { href: "/staff/payments",  label: "Payment History",  icon: Wallet,          exact: false },
+  { href: "/staff/dashboard", label: "Dashboard", icon: LayoutDashboard, exact: true },
+  { href: "/staff/orders", label: "My Orders", icon: ShoppingBag, exact: false },
+  { href: "/staff/commission", label: "My Commission", icon: TrendingUp, exact: false },
+  { href: "/staff/payments", label: "Payment History", icon: Wallet, exact: false },
 ];
 
 export default function StaffLayoutClient({
