@@ -332,6 +332,7 @@ async function _updateOrderDetails(
     pathaoZoneId?: number;
     pathaoAreaId?: number;
     tags?: string[];
+    createdById?: string | null;
     items?: {
       id: string;
       productId: string;
@@ -468,6 +469,15 @@ async function _updateOrderDetails(
 
       const newTotalAmount = subtotal + deliveryCharge - data.discountAmount;
 
+      let commissionRate = order.commissionRate;
+      if (data.createdById !== undefined && data.createdById !== order.createdById) {
+        if (data.createdById) {
+          commissionRate = await getEffectiveCommissionRate(data.createdById);
+        } else {
+          commissionRate = null;
+        }
+      }
+
       await tx.order.update({
         where: { id },
         data: {
@@ -484,6 +494,8 @@ async function _updateOrderDetails(
           pathaoZoneId: data.pathaoZoneId,
           pathaoAreaId: data.pathaoAreaId,
           tags: data.tags,
+          createdById: data.createdById !== undefined ? data.createdById : order.createdById,
+          commissionRate: commissionRate,
         },
       });
 
@@ -584,10 +596,11 @@ async function _createAdminOrder(data: {
   exchangeRefOrderId?: string;
   exchangeItemNote?: string;
   tags?: string[];
+  createdById?: string | null;
 }) {
   try {
     const session = await getSession();
-    const createdById = session?.userId || null;
+    const createdById = data.createdById !== undefined ? data.createdById : (session?.userId || null);
     let commissionRate: number | null = null;
     if (createdById) {
       const staff = await prisma.staff.findUnique({ where: { id: createdById }, select: { id: true } });
@@ -741,6 +754,7 @@ async function _createExchangeOrder(data: {
   exchangeRefOrderId: string;
   exchangeItemNote: string;
   tags?: string[];
+  createdById?: string | null;
 }) {
   if (data.exchangeRefOrderId) {
     const refOrder = await prisma.order.findUnique({

@@ -14,18 +14,28 @@ import { formatBDT, roundPrice } from "@/utils/formatPrice";
 import { validateStatusTransition } from "@/lib/utils";
 import type { OrderStatus } from "@/generated/prisma/client";
 
+interface StaffMember {
+  id: string;
+  username: string;
+  role: {
+    name: string;
+  } | null;
+}
+
 export default function OrderDetailsClient({
   order,
   deliverySettings,
   products = [],
   pathaoInfo = null,
   dtfSetting = { printCost: 250 },
+  staff = [],
 }: {
   order: any;
   deliverySettings: any;
   products?: any[];
   pathaoInfo?: any;
   dtfSetting?: any;
+  staff?: StaffMember[];
 }) {
   const router = useRouter();
   const [isEditing, setIsEditing] = useState(false);
@@ -76,6 +86,7 @@ export default function OrderDetailsClient({
     items: order.items || [],
     deliveryCharge: order.deliveryCharge || 0,
     tags: order.tags || [],
+    createdById: order.createdById || "",
   });
 
   const [newProductData, setNewProductData] = useState({
@@ -106,6 +117,7 @@ export default function OrderDetailsClient({
       deliveryCharge: formData.deliveryCharge,
       isStorePickup: order.isStorePickup,
       tags: formData.tags,
+      createdById: formData.createdById || null,
       items: formData.items.map((i: any) => ({
         id: i.id,
         productId: i.productId,
@@ -163,6 +175,7 @@ export default function OrderDetailsClient({
       items: order.items || [],
       deliveryCharge: order.deliveryCharge || 0,
       tags: order.tags || [],
+      createdById: order.createdById || "",
     });
   };
 
@@ -844,6 +857,21 @@ export default function OrderDetailsClient({
                       value={formData.phone}
                       onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                       className="w-full text-sm px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:border-slate-400 text-slate-800 font-mono"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Salesman (Incentive Owner)</label>
+                    <CustomSelect
+                      options={[
+                        { value: "", label: "System / eCommerce (None)" },
+                        ...staff.map((s: StaffMember) => ({
+                          value: s.id,
+                          label: `${s.username} (${s.role?.name || "Staff"})`
+                        }))
+                      ]}
+                      value={formData.createdById || ""}
+                      onChange={(val) => setFormData({ ...formData, createdById: val })}
+                      searchable={true}
                     />
                   </div>
                 </>
