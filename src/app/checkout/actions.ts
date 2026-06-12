@@ -24,6 +24,7 @@ export async function placeOrderAction(payload: {
   pathaoZoneId?: number;
   pathaoAreaId?: number;
   couponSessionId?: string;
+  isFullPayment?: boolean;
 }) {
   try {
     return await executeOrderTransaction(async (tx, customId) => {
@@ -158,6 +159,13 @@ export async function placeOrderAction(payload: {
 
 
       // 1. Create the order & items
+      const tags = [];
+      if (payload.isFullPayment) {
+        tags.push("Full Payment");
+      } else if (calculatedAdvance > 0) {
+        tags.push("DTF Advance");
+      }
+
       const order = await tx.order.create({
         data: {
           id: customId,
@@ -166,7 +174,7 @@ export async function placeOrderAction(payload: {
           district: payload.district,
           address: payload.address,
           totalAmount: secureTotalAmount,
-          advancePaid: calculatedAdvance,
+          advancePaid: payload.isFullPayment ? secureTotalAmount : calculatedAdvance,
           bkashNumber: payload.bkashNumber,
           bkashTrxId: payload.bkashTrxId,
           remarks: payload.remarks,
@@ -178,6 +186,7 @@ export async function placeOrderAction(payload: {
           pathaoAreaId: payload.pathaoAreaId,
           orderSource: "eCommerce",
           customerId: customerId,
+          tags: tags,
           items: {
             create: payload.items.flatMap((item) => {
               if (item.requiresPrint && item.printDetails && item.printDetails.length > 0) {

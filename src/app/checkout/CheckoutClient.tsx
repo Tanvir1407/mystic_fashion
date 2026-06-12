@@ -43,6 +43,7 @@ export default function CheckoutClient({
   const [couponSuccess, setCouponSuccess] = useState("");
   const [bkashNumber, setBkashNumber] = useState("");
   const [bkashTrxId, setBkashTrxId] = useState("");
+  const [paymentMethod, setPaymentMethod] = useState<"COD" | "FULL">("COD");
   const [couponSessionId, setCouponSessionId] = useState("");
   const [phone, setPhone] = useState("");
   // DTF Modal State
@@ -117,22 +118,22 @@ export default function CheckoutClient({
       setSelectedZoneId(null);
       setSelectedAreaId(null);
       setSelectedDistrict(addr.district || "");
-      
+
       setLoadingZones(true);
       const zoneRes = await getPathaoZones(addr.pathaoCityId);
       if (zoneRes.success && zoneRes.data) {
         const mappedZones = zoneRes.data.map((z: any) => ({ value: z.zone_id.toString(), label: z.zone_name }));
         setZones(mappedZones);
-        
+
         if (addr.pathaoZoneId) {
           setSelectedZoneId(addr.pathaoZoneId);
-          
+
           setLoadingAreas(true);
           const areaRes = await getPathaoAreas(addr.pathaoZoneId);
           if (areaRes.success && areaRes.data) {
             const mappedAreas = areaRes.data.map((a: any) => ({ value: a.area_id.toString(), label: a.area_name }));
             setAreas(mappedAreas);
-            
+
             if (addr.pathaoAreaId) {
               setSelectedAreaId(addr.pathaoAreaId);
             }
@@ -255,8 +256,13 @@ export default function CheckoutClient({
       setErrorMsg("Please provide all the required information (Name, Phone, City, Zone, Area, and Detail Address).");
       return;
     }
-    if (totalDTFCost > 0 && (!bkashNumber || !bkashTrxId)) {
-      setErrorMsg("Please provide your bKash Number and Transaction ID for the DTF advance payment.");
+    const requiresPayment = paymentMethod === "FULL" || totalDTFCost > 0;
+    if (requiresPayment && (!bkashNumber.trim() || !bkashTrxId.trim())) {
+      setErrorMsg(
+        paymentMethod === "FULL"
+          ? "Please provide your bKash Number and Transaction ID for the full payment."
+          : "Please provide your bKash Number and Transaction ID for the DTF advance payment."
+      );
       return;
     }
 
@@ -284,6 +290,7 @@ export default function CheckoutClient({
         pathaoZoneId: selectedZoneId || undefined,
         pathaoAreaId: selectedAreaId || undefined,
         couponSessionId: couponSessionId || undefined,
+        isFullPayment: paymentMethod === "FULL",
       });
 
       if (result.success) {
@@ -434,8 +441,8 @@ export default function CheckoutClient({
                       <span className="font-bold text-[#800020]">Already have an account? </span>
                       Sign in to checkout faster with saved addresses and track orders live.
                     </div>
-                    <Link 
-                      href="/auth/login?callbackUrl=/checkout" 
+                    <Link
+                      href="/auth/login?callbackUrl=/checkout"
                       className="px-4 py-2 border border-[#800020] text-[#800020] text-xs font-bold uppercase tracking-wider hover:bg-[#800020] hover:text-white transition-all whitespace-nowrap"
                     >
                       Sign In
@@ -475,13 +482,13 @@ export default function CheckoutClient({
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <label className="text-sm font-bold text-zinc-700">Full Name *</label>
-                      <input 
-                        name="fullName" 
-                        type="text" 
+                      <input
+                        name="fullName"
+                        type="text"
                         value={fullName}
                         onChange={(e) => setFullName(e.target.value)}
-                        className="w-full bg-slate-50 border border-slate-200 px-4 py-3 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all font-medium" 
-                        placeholder="Enter your full name" 
+                        className="w-full bg-slate-50 border border-slate-200 px-4 py-3 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all font-medium"
+                        placeholder="Enter your full name"
                       />
                     </div>
                     <div className="space-y-2">
@@ -554,13 +561,13 @@ export default function CheckoutClient({
 
                     <div className="space-y-2">
                       <label className="text-sm font-bold text-zinc-700">House / Road / Flat No. / Landmark *</label>
-                      <textarea 
-                        name="address" 
-                        rows={3} 
+                      <textarea
+                        name="address"
+                        rows={3}
                         value={specificAddress}
                         onChange={(e) => setSpecificAddress(e.target.value)}
-                        className="w-full bg-slate-50 border border-slate-200 px-4 py-3 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all resize-none font-medium" 
-                        placeholder="e.g., House 12, Road 4, Block C, near the central mosque" 
+                        className="w-full bg-slate-50 border border-slate-200 px-4 py-3 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all resize-none font-medium"
+                        placeholder="e.g., House 12, Road 4, Block C, near the central mosque"
                       />
                     </div>
 
@@ -750,36 +757,86 @@ export default function CheckoutClient({
                   </div>
                 </div>
 
-                <div className="border-t border-slate-100 pt-6 mb-8 flex justify-between items-end">
+                <div className="border-t border-slate-100 pt-6 mb-6 flex justify-between items-end">
                   <div className="flex justify-between w-full">
                     <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-1">Grand Total</span>
                     <span className="text-3xl font-black text-slate-900 tracking-tighter">{formatBDT(total)}</span>
                   </div>
                 </div>
 
+                {/* Payment Method Selector */}
+                <div className="mb-6 pt-4 border-t border-slate-100">
+                  <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-3">Payment Method</h3>
+                  <div className="flex bg-slate-50 border border-slate-200/80 p-1 w-full">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPaymentMethod("COD");
+                        setErrorMsg("");
+                        if (totalDTFCost === 0) {
+                          setBkashNumber("");
+                          setBkashTrxId("");
+                        }
+                      }}
+                      className={`flex-1 text-center py-2.5  text-xs font-bold transition-all ${paymentMethod === "COD"
+                        ? "bg-slate-900 text-white shadow-sm"
+                        : "text-slate-600 hover:text-slate-950 hover:bg-slate-100/50"
+                        }`}
+                    >
+                      Cash on Delivery
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPaymentMethod("FULL");
+                        setErrorMsg("");
+                      }}
+                      className={`flex-1 text-center py-2.5 text-xs font-bold transition-all ${paymentMethod === "FULL"
+                        ? "bg-slate-900 text-white shadow-sm"
+                        : "text-slate-600 hover:text-slate-950 hover:bg-slate-100/50"
+                        }`}
+                    >
+                      Full Payment
+                    </button>
+                  </div>
+                </div>
+
                 {errorMsg && (
                   <div className="bg-red-500/10 text-red-500 p-4 mb-6  flex items-start justify-between gap-3">
-                    <p className="leading-relaxed">{errorMsg}</p>
+                    <p className="leading-relaxed text-xs font-semibold">{errorMsg}</p>
                     <button onClick={() => setErrorMsg("")} className="text-slate-400 hover:text-white transition-colors flex-shrink-0">
                       <X className="w-4 h-4" />
                     </button>
                   </div>
                 )}
 
-                {/* bKash Advance Section for DTF */}
-                {totalDTFCost > 0 && (
+                {/* bKash Payment Section */}
+                {(paymentMethod === "FULL" || totalDTFCost > 0) && (
                   <div className="mb-8 bg-white border-t border-slate-100 pt-6 relative overflow-hidden">
                     <div className="flex items-center gap-4 mb-6">
                       <div className="w-12 h-12 bg-slate-900 rounded-full flex items-center justify-center text-white font-black italic text-xl ">b</div>
                       <div>
-                        <h3 className="text-sm font-black uppercase tracking-[0.2em] text-slate-900">Advance Verification</h3>
-                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Required for Custom Orders</p>
+                        <h3 className="text-sm font-black uppercase tracking-[0.2em] text-slate-900">
+                          {paymentMethod === "FULL" ? "Payment Verification" : "Advance Verification"}
+                        </h3>
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                          {paymentMethod === "FULL" ? "Required for Full Payment" : "Required for Custom Orders"}
+                        </p>
                       </div>
                     </div>
 
                     <div className="mb-8 space-y-4">
                       <p className="text-xs font-medium text-slate-600 leading-relaxed">
-                        Jersey customization requires a <span className="font-black text-slate-900 underline decoration-slate-200 underline-offset-4">{formatBDT(totalDTFCost)} advance payment</span>. Please use "Send Money" to the number below:
+                        {paymentMethod === "FULL" ? (
+                          <>
+                            Please pay the full grand total of <span className="font-black text-slate-900 underline decoration-slate-200 underline-offset-4">{formatBDT(total)}</span>. Please use "Send Money" to the number below:
+                          </>
+                        ) : (
+                          <>
+                            Jersey customization requires a <span className="font-black text-slate-900 underline decoration-slate-200 underline-offset-4">{formatBDT(totalDTFCost)} advance payment</span>. Please use "Send Money" to the number below:
+                          </>
+                        )}
                       </p>
                       <div className="flex flex-col gap-1">
                         <span className="text-[14px] font-black text-slate-500 ">bKash Number (Send Money Only)</span>
@@ -791,6 +848,7 @@ export default function CheckoutClient({
                       <div className="space-y-2">
                         <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Paid From</label>
                         <input
+                          value={bkashNumber}
                           onChange={(e) => {
                             setBkashNumber(e.target.value);
                             setErrorMsg("");
@@ -804,6 +862,7 @@ export default function CheckoutClient({
                       <div className="space-y-2">
                         <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Transaction ID</label>
                         <input
+                          value={bkashTrxId}
                           onChange={(e) => {
                             setBkashTrxId(e.target.value);
                             setErrorMsg("");
@@ -815,8 +874,6 @@ export default function CheckoutClient({
                         />
                       </div>
                     </div>
-
-
                   </div>
                 )}
 
