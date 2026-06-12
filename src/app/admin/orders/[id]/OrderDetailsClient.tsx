@@ -8,6 +8,7 @@ import {
   CalendarDays, ArrowLeft
 } from "lucide-react";
 import { updateOrderDetails, updateOrderRemark, updateOrderStatus } from "../actions";
+import { getPathaoCities, getPathaoZones, getPathaoAreas } from "@/app/actions/pathao";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import UploadedImage from "@/components/UploadedImage";
@@ -89,7 +90,67 @@ export default function OrderDetailsClient({
     deliveryCharge: order.deliveryCharge || 0,
     tags: order.tags || [],
     createdById: order.createdById || "",
+    pathaoCityId: order.pathaoCityId || null,
+    pathaoZoneId: order.pathaoZoneId || null,
+    pathaoAreaId: order.pathaoAreaId || null,
   });
+
+  const [cities, setCities] = useState<{ value: string; label: string }[]>([]);
+  const [zones, setZones] = useState<{ value: string; label: string }[]>([]);
+  const [areas, setAreas] = useState<{ value: string; label: string }[]>([]);
+
+  const [loadingCities, setLoadingCities] = useState(false);
+  const [loadingZones, setLoadingZones] = useState(false);
+  const [loadingAreas, setLoadingAreas] = useState(false);
+
+  // Fetch Pathao Cities on mount
+  useEffect(() => {
+    async function fetchCities() {
+      setLoadingCities(true);
+      const res = await getPathaoCities();
+      if (res.success && res.data) {
+        setCities(res.data.map((c: any) => ({ value: c.city_id.toString(), label: c.city_name })));
+      }
+      setLoadingCities(false);
+    }
+    fetchCities();
+  }, []);
+
+  // Fetch Zones when city ID changes
+  useEffect(() => {
+    async function fetchZones() {
+      const cityId = isEditing ? formData.pathaoCityId : order.pathaoCityId;
+      if (!cityId) {
+        setZones([]);
+        return;
+      }
+      setLoadingZones(true);
+      const res = await getPathaoZones(cityId);
+      if (res.success && res.data) {
+        setZones(res.data.map((z: any) => ({ value: z.zone_id.toString(), label: z.zone_name })));
+      }
+      setLoadingZones(false);
+    }
+    fetchZones();
+  }, [formData.pathaoCityId, order.pathaoCityId, isEditing]);
+
+  // Fetch Areas when zone ID changes
+  useEffect(() => {
+    async function fetchAreas() {
+      const zoneId = isEditing ? formData.pathaoZoneId : order.pathaoZoneId;
+      if (!zoneId) {
+        setAreas([]);
+        return;
+      }
+      setLoadingAreas(true);
+      const res = await getPathaoAreas(zoneId);
+      if (res.success && res.data) {
+        setAreas(res.data.map((a: any) => ({ value: a.area_id.toString(), label: a.area_name })));
+      }
+      setLoadingAreas(false);
+    }
+    fetchAreas();
+  }, [formData.pathaoZoneId, order.pathaoZoneId, isEditing]);
 
   const [newProductData, setNewProductData] = useState({
     productId: "",
@@ -108,6 +169,11 @@ export default function OrderDetailsClient({
   };
 
   const handleSave = async () => {
+    if (formData.pathaoCityId && !formData.pathaoZoneId) {
+      alert("Please select a Pathao zone since a city is selected.");
+      return;
+    }
+
     setLoading(true);
     const result = await updateOrderDetails(order.id, {
       customerName: formData.customerName,
@@ -118,6 +184,9 @@ export default function OrderDetailsClient({
       discountAmount: formData.discountAmount,
       deliveryCharge: formData.deliveryCharge,
       isStorePickup: order.isStorePickup,
+      pathaoCityId: formData.pathaoCityId,
+      pathaoZoneId: formData.pathaoZoneId,
+      pathaoAreaId: formData.pathaoAreaId,
       tags: formData.tags,
       createdById: formData.createdById || null,
       items: formData.items.map((i: any) => ({
@@ -178,6 +247,9 @@ export default function OrderDetailsClient({
       deliveryCharge: order.deliveryCharge || 0,
       tags: order.tags || [],
       createdById: order.createdById || "",
+      pathaoCityId: order.pathaoCityId || null,
+      pathaoZoneId: order.pathaoZoneId || null,
+      pathaoAreaId: order.pathaoAreaId || null,
     });
   };
 
@@ -711,13 +783,13 @@ export default function OrderDetailsClient({
                   onChange={handleStatusChange}
                   disabled={statusLoading || status === "CANCELLED" || status === "RETURNED"}
                   className={`w-full text-xs font-black uppercase tracking-wider px-3.5 py-2.5 rounded-lg border transition-all cursor-pointer outline-none focus:ring-2 focus:ring-opacity-50 ${status === "PENDING" ? "bg-amber-50 text-amber-700 border-amber-200 focus:ring-amber-500" :
-                      status === "CONFIRMED" ? "bg-blue-50 text-blue-700 border-blue-200 focus:ring-blue-500" :
-                        status === "PRINTING" ? "bg-cyan-50 text-cyan-700 border-cyan-200 focus:ring-cyan-500" :
-                          status === "PACKAGING" ? "bg-purple-50 text-purple-700 border-purple-200 focus:ring-purple-500" :
-                            status === "SHIPPED" ? "bg-indigo-50 text-indigo-700 border-indigo-200 focus:ring-indigo-500" :
-                              status === "DELIVERED" ? "bg-green-50 text-green-700 border-green-200 focus:ring-green-500" :
-                                status === "RETURNED" ? "bg-rose-50 text-rose-700 border-rose-200 focus:ring-rose-500" :
-                                  "bg-red-50 text-red-700 border-red-200 focus:ring-red-500"
+                    status === "CONFIRMED" ? "bg-blue-50 text-blue-700 border-blue-200 focus:ring-blue-500" :
+                      status === "PRINTING" ? "bg-cyan-50 text-cyan-700 border-cyan-200 focus:ring-cyan-500" :
+                        status === "PACKAGING" ? "bg-purple-50 text-purple-700 border-purple-200 focus:ring-purple-500" :
+                          status === "SHIPPED" ? "bg-indigo-50 text-indigo-700 border-indigo-200 focus:ring-indigo-500" :
+                            status === "DELIVERED" ? "bg-green-50 text-green-700 border-green-200 focus:ring-green-500" :
+                              status === "RETURNED" ? "bg-rose-50 text-rose-700 border-rose-200 focus:ring-rose-500" :
+                                "bg-red-50 text-red-700 border-red-200 focus:ring-red-500"
                     }`}
                 >
                   <option value="PENDING" disabled={!validateStatusTransition(status, "PENDING").isValid}>Placed</option>
@@ -757,11 +829,68 @@ export default function OrderDetailsClient({
               {isEditing ? (
                 <>
                   <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">District</label>
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Select City</label>
                     <CustomSelect
-                      options={DISTRICTS.map((d) => ({ value: d, label: d }))}
-                      value={formData.district}
-                      onChange={(val) => setFormData({ ...formData, district: val })}
+                      options={[
+                        { value: "", label: "-- None / Direct Address --" },
+                        ...cities
+                      ]}
+                      value={formData.pathaoCityId?.toString() || ""}
+                      onChange={(val) => {
+                        const valNum = val ? parseInt(val) : null;
+                        const city = cities.find((c) => c.value === val);
+                        setFormData({
+                          ...formData,
+                          pathaoCityId: valNum,
+                          pathaoZoneId: null,
+                          pathaoAreaId: null,
+                          district: city ? city.label : formData.district,
+                        });
+                      }}
+                      placeholder={loadingCities ? "Loading cities..." : "Select City"}
+                      searchable
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                      Pathao Zone {formData.pathaoCityId ? <span className="text-red-500">*</span> : ""}
+                    </label>
+                    <CustomSelect
+                      options={[
+                        { value: "", label: "-- Select Zone --" },
+                        ...zones
+                      ]}
+                      value={formData.pathaoZoneId?.toString() || ""}
+                      onChange={(val) => {
+                        const valNum = val ? parseInt(val) : null;
+                        setFormData({
+                          ...formData,
+                          pathaoZoneId: valNum,
+                          pathaoAreaId: null,
+                        });
+                      }}
+                      disabled={!formData.pathaoCityId || loadingZones}
+                      placeholder={loadingZones ? "Loading zones..." : (!formData.pathaoCityId ? "First select Pathao City" : "Select Zone")}
+                      searchable
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Pathao Area</label>
+                    <CustomSelect
+                      options={[
+                        { value: "", label: "-- Select Area --" },
+                        ...areas
+                      ]}
+                      value={formData.pathaoAreaId?.toString() || ""}
+                      onChange={(val) => {
+                        const valNum = val ? parseInt(val) : null;
+                        setFormData({
+                          ...formData,
+                          pathaoAreaId: valNum,
+                        });
+                      }}
+                      disabled={!formData.pathaoZoneId || loadingAreas}
+                      placeholder={loadingAreas ? "Loading areas..." : (!formData.pathaoZoneId ? "First select Pathao Zone" : "Select Area")}
                       searchable
                     />
                   </div>
@@ -779,13 +908,29 @@ export default function OrderDetailsClient({
                 <div className="space-y-1.5">
                   <p className="text-sm font-semibold text-slate-900">{order.customerName}</p>
                   <div className="flex flex-wrap items-center gap-2">
-                    <span className="inline-block bg-[#800020] text-[#FFD700] px-3 py-1 rounded text-[10px] font-black tracking-wider uppercase border border-[#600010]">
-                      {order.district}
-                    </span>
                     {order.isStorePickup && (
                       <span className="text-[10px] font-bold bg-teal-50 text-teal-700 border border-teal-200 px-2 py-0.5 rounded uppercase tracking-wider">🏪 Store Pickup</span>
                     )}
                   </div>
+                  {(order.pathaoCityId || order.pathaoZoneId) && (
+                    <div className="flex flex-wrap gap-1.5 mt-1">
+                      {cities.find((c) => c.value === order.pathaoCityId?.toString())?.label && (
+                        <span className="text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200 px-2.5 py-1 rounded uppercase tracking-wider">
+                          🏙️ City: {cities.find((c) => c.value === order.pathaoCityId?.toString())?.label}
+                        </span>
+                      )}
+                      {zones.find((z) => z.value === order.pathaoZoneId?.toString())?.label && (
+                        <span className="text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200 px-2.5 py-1 rounded uppercase tracking-wider">
+                          📍 Zone: {zones.find((z) => z.value === order.pathaoZoneId?.toString())?.label}
+                        </span>
+                      )}
+                      {areas.find((a) => a.value === order.pathaoAreaId?.toString())?.label && (
+                        <span className="text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200 px-2.5 py-1 rounded uppercase tracking-wider">
+                          🗺️ Area: {areas.find((a) => a.value === order.pathaoAreaId?.toString())?.label}
+                        </span>
+                      )}
+                    </div>
+                  )}
                   <p className="text-sm text-slate-600 leading-relaxed">{order.address}</p>
                 </div>
               )}
@@ -950,7 +1095,7 @@ export default function OrderDetailsClient({
           </div>
 
           {/* Customer Info Card */}
-          <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
+          <div className="bg-white border border-slate-200 rounded-xl shadow-sm">
             <div className="px-4 py-3.5 border-b border-slate-100 flex items-center justify-between">
               <h3 className="text-sm font-semibold text-slate-900">Customer info</h3>
               {!isEditing && (

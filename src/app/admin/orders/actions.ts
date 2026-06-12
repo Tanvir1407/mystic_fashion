@@ -328,9 +328,9 @@ async function _updateOrderDetails(
     discountAmount: number;
     deliveryCharge?: number;
     isStorePickup?: boolean;
-    pathaoCityId?: number;
-    pathaoZoneId?: number;
-    pathaoAreaId?: number;
+    pathaoCityId?: number | null;
+    pathaoZoneId?: number | null;
+    pathaoAreaId?: number | null;
     tags?: string[];
     createdById?: string | null;
     items?: {
