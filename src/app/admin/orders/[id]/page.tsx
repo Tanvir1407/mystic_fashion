@@ -69,54 +69,13 @@ export default async function SingleOrderPage({ params }: { params: { id: string
     }
   }
   return (
-    <div className="flex flex-col gap-5 max-w-7xl mx-auto pb-10 px-4 sm:px-6">
-      {/* Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 pb-5 border-b border-slate-200">
-        <div className="flex items-start gap-3">
-          <Link
-            href="/admin/orders"
-            className="mt-0.5 p-2 bg-white border border-slate-200 rounded-lg text-slate-500 hover:text-slate-800 hover:bg-slate-50 shadow-sm transition-colors shrink-0"
-          >
-            <ArrowLeft className="w-4 h-4" />
-          </Link>
-          <div>
-            <div className="flex flex-wrap items-center gap-2">
-              <h1 className="text-xl font-bold text-slate-900 tracking-tight">
-                Order ID: <span className="font-mono">{order.id}</span>
-              </h1>
-              <span className={`text-[10px] px-2.5 py-1 rounded-full border font-bold uppercase tracking-wider ${statusColor[order.status] ?? "bg-slate-100 text-slate-600 border-slate-200"}`}>
-                {modifyStatus(order.status)}
-              </span>
-              {order.isStorePickup && (
-                <span className="text-[10px] px-2.5 py-1 rounded-full border font-bold uppercase tracking-wider bg-teal-50 text-teal-700 border-teal-200">
-                  Store Pickup
-                </span>
-              )}
-              {order.orderSource === "eCommerce" && (
-                <span className="text-[10px] px-2.5 py-1 rounded-full border font-bold uppercase tracking-wider bg-sky-50 text-sky-700 border-sky-200">
-                  eCommerce
-                </span>
-              )}
-            </div>
-            <p className="text-xs text-slate-500 flex items-center gap-1.5 mt-1.5">
-              <CalendarDays className="w-3.5 h-3.5" />
-              Created {new Date(order.createdAt).toLocaleString("en-GB", {
-                day: "numeric", month: "short", year: "numeric",
-                hour: "2-digit", minute: "2-digit"
-              })}
-            </p>
-          </div>
-        </div>
-      </div>
-
-      <OrderDetailsClient
-        order={order}
-        deliverySettings={deliverySettings}
-        products={products}
-        pathaoInfo={pathaoInfo}
-        dtfSetting={dtfSetting}
-        staff={staff}
-      />
-    </div>
+    <OrderDetailsClient
+      order={order}
+      deliverySettings={deliverySettings}
+      products={products}
+      pathaoInfo={pathaoInfo}
+      dtfSetting={dtfSetting}
+      staff={staff}
+    />
   );
 }

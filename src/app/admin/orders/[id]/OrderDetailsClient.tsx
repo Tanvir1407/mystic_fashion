@@ -5,9 +5,11 @@ import {
   Edit2, Check, X, Package, Trash2, Plus, Copy,
   Compass, CheckCircle2, Truck, PackageCheck, Printer,
   AlertCircle, Minus, VerifiedIcon, Loader2,
+  CalendarDays, ArrowLeft
 } from "lucide-react";
 import { updateOrderDetails, updateOrderRemark, updateOrderStatus } from "../actions";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import UploadedImage from "@/components/UploadedImage";
 import { CustomSelect } from "@/components/CustomSelect";
 import { formatBDT, roundPrice } from "@/utils/formatPrice";
@@ -260,13 +262,83 @@ export default function OrderDetailsClient({
 
   const DISTRICTS = ["Bagerhat", "Bandarban", "Barguna", "Barisal", "Bhola", "Bogra", "Brahmanbaria", "Chandpur", "Chapainawabganj", "Chattogram", "Chuadanga", "Comilla", "Cox's Bazar", "Dhaka", "Dinajpur", "Faridpur", "Feni", "Gaibandha", "Gazipur", "Gopalganj", "Habiganj", "Jamalpur", "Jashore", "Jhalokati", "Jhenaidah", "Joypurhat", "Khagrachhari", "Khulna", "Kishoreganj", "Kurigram", "Kushtia", "Lakshmipur", "Lalmonirhat", "Madaripur", "Magura", "Manikganj", "Meherpur", "Moulvibazar", "Munshiganj", "Mymensingh", "Naogaon", "Narail", "Narayanganj", "Narsingdi", "Natore", "Netrokona", "Nilphamari", "Noakhali", "Pabna", "Panchagarh", "Patuakhali", "Pirojpur", "Rajbari", "Rajshahi", "Rangamati", "Rangpur", "Satkhira", "Shariatpur", "Sherpur", "Sirajganj", "Sunamganj", "Sylhet", "Tangail", "Thakurgaon", "Self Pickup"].sort();
 
+  const statusColor: Record<string, string> = {
+    DELIVERED: "bg-emerald-100 text-emerald-700 border-emerald-200",
+    PENDING: "bg-amber-100 text-amber-700 border-amber-200",
+    CONFIRMED: "bg-blue-100 text-blue-700 border-blue-200",
+    PACKAGING: "bg-purple-100 text-purple-700 border-purple-200",
+    PRINTING: "bg-violet-100 text-violet-700 border-violet-200",
+    SHIPPED: "bg-indigo-100 text-indigo-700 border-indigo-200",
+    CANCELLED: "bg-red-100 text-red-700 border-red-200",
+    RETURNED: "bg-slate-100 text-slate-600 border-slate-200",
+  };
+
+  const modifyStatus = (status: string) => {
+    switch (status) {
+      case "PENDING":
+        return "Order Placed";
+      case "CONFIRMED":
+        return "Order Confirmed";
+      case "PRINTING":
+        return "Order Printing";
+      case "PACKAGING":
+        return "Order Packaged";
+      case "SHIPPED":
+        return "Order Shipped";
+      case "DELIVERED":
+        return "Order Delivered";
+      case "CANCELLED":
+        return "Order Cancelled";
+      case "RETURNED":
+        return "Order Returned";
+      default:
+        return status;
+    }
+  };
+
   return (
-    <div className="space-y-4">
-      {/* Edit Mode Action Bar */}
-      {isEditing && (
-        <div className="flex items-center justify-between px-4 py-3 bg-amber-50 border border-amber-200 rounded-xl animate-in fade-in slide-in-from-top-1 duration-200">
-          <p className="text-xs font-semibold text-amber-700">You are in edit mode — make changes and save.</p>
-          <div className="flex items-center gap-2">
+    <div className="flex flex-col gap-5 max-w-7xl mx-auto pb-10 px-4 sm:px-6">
+      {/* Sticky Page Header */}
+      <div className="sticky top-0 z-40 bg-slate-50/95 backdrop-blur-sm -mx-4 sm:-mx-6 px-4 sm:px-6 py-4 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div className="flex items-start gap-3">
+          <Link
+            href="/admin/orders"
+            className="mt-0.5 p-2 bg-white border border-slate-200 rounded-lg text-slate-500 hover:text-slate-800 hover:bg-slate-50 shadow-sm transition-colors shrink-0"
+          >
+            <ArrowLeft className="w-4 h-4" />
+          </Link>
+          <div>
+            <div className="flex flex-wrap items-center gap-2">
+              <h1 className="text-xl font-bold text-slate-900 tracking-tight">
+                Order ID: <span className="font-mono">{order.id}</span>
+              </h1>
+              <span className={`text-[10px] px-2.5 py-1 rounded-full border font-bold uppercase tracking-wider ${statusColor[order.status] ?? "bg-slate-100 text-slate-600 border-slate-200"}`}>
+                {modifyStatus(order.status)}
+              </span>
+              {order.isStorePickup && (
+                <span className="text-[10px] px-2.5 py-1 rounded-full border font-bold uppercase tracking-wider bg-teal-50 text-teal-700 border-teal-200">
+                  Store Pickup
+                </span>
+              )}
+              {order.orderSource === "eCommerce" && (
+                <span className="text-[10px] px-2.5 py-1 rounded-full border font-bold uppercase tracking-wider bg-sky-50 text-sky-700 border-sky-200">
+                  eCommerce
+                </span>
+              )}
+            </div>
+            <p className="text-xs text-slate-500 flex items-center gap-1.5 mt-1.5">
+              <CalendarDays className="w-3.5 h-3.5" />
+              Created {new Date(order.createdAt).toLocaleString("en-GB", {
+                day: "numeric", month: "short", year: "numeric",
+                hour: "2-digit", minute: "2-digit"
+              })}
+            </p>
+          </div>
+        </div>
+
+        {/* Edit Mode Buttons on the right of Order ID */}
+        {isEditing && (
+          <div className="flex items-center gap-2 shrink-0">
             <button
               onClick={handleSave}
               disabled={loading}
@@ -284,8 +356,8 @@ export default function OrderDetailsClient({
               Cancel
             </button>
           </div>
-        </div>
-      )}
+        )}
+      </div>
 
       {/* Pathao Consignment ID */}
       {order.pathaoConsignmentId && (
@@ -638,16 +710,15 @@ export default function OrderDetailsClient({
                   value={status}
                   onChange={handleStatusChange}
                   disabled={statusLoading || status === "CANCELLED" || status === "RETURNED"}
-                  className={`w-full text-xs font-black uppercase tracking-wider px-3.5 py-2.5 rounded-lg border transition-all cursor-pointer outline-none focus:ring-2 focus:ring-opacity-50 ${
-                    status === "PENDING" ? "bg-amber-50 text-amber-700 border-amber-200 focus:ring-amber-500" :
-                    status === "CONFIRMED" ? "bg-blue-50 text-blue-700 border-blue-200 focus:ring-blue-500" :
-                    status === "PRINTING" ? "bg-cyan-50 text-cyan-700 border-cyan-200 focus:ring-cyan-500" :
-                    status === "PACKAGING" ? "bg-purple-50 text-purple-700 border-purple-200 focus:ring-purple-500" :
-                    status === "SHIPPED" ? "bg-indigo-50 text-indigo-700 border-indigo-200 focus:ring-indigo-500" :
-                    status === "DELIVERED" ? "bg-green-50 text-green-700 border-green-200 focus:ring-green-500" :
-                    status === "RETURNED" ? "bg-rose-50 text-rose-700 border-rose-200 focus:ring-rose-500" :
-                    "bg-red-50 text-red-700 border-red-200 focus:ring-red-500"
-                  }`}
+                  className={`w-full text-xs font-black uppercase tracking-wider px-3.5 py-2.5 rounded-lg border transition-all cursor-pointer outline-none focus:ring-2 focus:ring-opacity-50 ${status === "PENDING" ? "bg-amber-50 text-amber-700 border-amber-200 focus:ring-amber-500" :
+                      status === "CONFIRMED" ? "bg-blue-50 text-blue-700 border-blue-200 focus:ring-blue-500" :
+                        status === "PRINTING" ? "bg-cyan-50 text-cyan-700 border-cyan-200 focus:ring-cyan-500" :
+                          status === "PACKAGING" ? "bg-purple-50 text-purple-700 border-purple-200 focus:ring-purple-500" :
+                            status === "SHIPPED" ? "bg-indigo-50 text-indigo-700 border-indigo-200 focus:ring-indigo-500" :
+                              status === "DELIVERED" ? "bg-green-50 text-green-700 border-green-200 focus:ring-green-500" :
+                                status === "RETURNED" ? "bg-rose-50 text-rose-700 border-rose-200 focus:ring-rose-500" :
+                                  "bg-red-50 text-red-700 border-red-200 focus:ring-red-500"
+                    }`}
                 >
                   <option value="PENDING" disabled={!validateStatusTransition(status, "PENDING").isValid}>Placed</option>
                   <option value="CONFIRMED" disabled={!validateStatusTransition(status, "CONFIRMED").isValid}>Confirmed</option>
@@ -659,7 +730,7 @@ export default function OrderDetailsClient({
                   <option value="CANCELLED" disabled={!validateStatusTransition(status, "CANCELLED").isValid}>Cancelled</option>
                 </select>
               </div>
-              
+
               {status === "CANCELLED" || status === "RETURNED" ? (
                 <p className="text-[10px] text-slate-400 font-medium">
                   Orders in {status} status cannot be further transitioned.
@@ -671,6 +742,56 @@ export default function OrderDetailsClient({
               )}
             </div>
           </div>
+
+          {/* Shipping Address Card */}
+          <div className="bg-white border border-slate-200 rounded-xl shadow-sm">
+            <div className="px-4 py-3.5 border-b border-slate-100 rounded-t-xl flex items-center justify-between">
+              <h3 className="text-sm font-semibold text-slate-900">Shipping address</h3>
+              {!isEditing && (
+                <button onClick={() => setIsEditing(true)} className="text-xs font-semibold text-indigo-600 hover:text-indigo-800 transition-colors flex items-center gap-1">
+                  <Edit2 className="w-3 h-3" /> Edit
+                </button>
+              )}
+            </div>
+            <div className="p-4 space-y-3">
+              {isEditing ? (
+                <>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">District</label>
+                    <CustomSelect
+                      options={DISTRICTS.map((d) => ({ value: d, label: d }))}
+                      value={formData.district}
+                      onChange={(val) => setFormData({ ...formData, district: val })}
+                      searchable
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Address</label>
+                    <textarea
+                      value={formData.address}
+                      onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                      rows={3}
+                      className="w-full text-sm px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:border-slate-400 text-slate-700 resize-none"
+                    />
+                  </div>
+                </>
+              ) : (
+                <div className="space-y-1.5">
+                  <p className="text-sm font-semibold text-slate-900">{order.customerName}</p>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="inline-block bg-[#800020] text-[#FFD700] px-3 py-1 rounded text-[10px] font-black tracking-wider uppercase border border-[#600010]">
+                      {order.district}
+                    </span>
+                    {order.isStorePickup && (
+                      <span className="text-[10px] font-bold bg-teal-50 text-teal-700 border border-teal-200 px-2 py-0.5 rounded uppercase tracking-wider">🏪 Store Pickup</span>
+                    )}
+                  </div>
+                  <p className="text-sm text-slate-600 leading-relaxed">{order.address}</p>
+                </div>
+              )}
+            </div>
+          </div>
+
 
           {/* Notes / Remarks Card */}
           <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
@@ -896,54 +1017,6 @@ export default function OrderDetailsClient({
             </div>
           </div>
 
-          {/* Shipping Address Card */}
-          <div className="bg-white border border-slate-200 rounded-xl shadow-sm">
-            <div className="px-4 py-3.5 border-b border-slate-100 rounded-t-xl flex items-center justify-between">
-              <h3 className="text-sm font-semibold text-slate-900">Shipping address</h3>
-              {!isEditing && (
-                <button onClick={() => setIsEditing(true)} className="text-xs font-semibold text-indigo-600 hover:text-indigo-800 transition-colors flex items-center gap-1">
-                  <Edit2 className="w-3 h-3" /> Edit
-                </button>
-              )}
-            </div>
-            <div className="p-4 space-y-3">
-              {isEditing ? (
-                <>
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">District</label>
-                    <CustomSelect
-                      options={DISTRICTS.map((d) => ({ value: d, label: d }))}
-                      value={formData.district}
-                      onChange={(val) => setFormData({ ...formData, district: val })}
-                      searchable
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Address</label>
-                    <textarea
-                      value={formData.address}
-                      onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                      rows={3}
-                      className="w-full text-sm px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:border-slate-400 text-slate-700 resize-none"
-                    />
-                  </div>
-                </>
-              ) : (
-                <div className="space-y-1.5">
-                  <p className="text-sm font-semibold text-slate-900">{order.customerName}</p>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="inline-block bg-[#800020] text-[#FFD700] px-3 py-1 rounded text-[10px] font-black tracking-wider uppercase border border-[#600010]">
-                      {order.district}
-                    </span>
-                    {order.isStorePickup && (
-                      <span className="text-[10px] font-bold bg-teal-50 text-teal-700 border border-teal-200 px-2 py-0.5 rounded uppercase tracking-wider">🏪 Store Pickup</span>
-                    )}
-                  </div>
-                  <p className="text-sm text-slate-600 leading-relaxed">{order.address}</p>
-                </div>
-              )}
-            </div>
-          </div>
 
           {/* Order Source / Exchange Tag Card (if applicable) */}
           {(order.isExchange || order.exchangeRefOrderId) && (
