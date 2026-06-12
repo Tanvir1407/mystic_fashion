@@ -29,6 +29,14 @@ interface OrderItem {
   printDetails?: { name: string; number: string }[];
 }
 
+interface StaffMember {
+  id: string;
+  username: string;
+  role: {
+    name: string;
+  } | null;
+}
+
 export default function CreateOrderClient({
   products,
   deliverySettings,
@@ -36,6 +44,7 @@ export default function CreateOrderClient({
   backUrl = "/admin/orders",
   successUrl = "/admin/orders",
   orderAction,
+  staff = [],
 }: {
   products: any[];
   deliverySettings: any;
@@ -43,6 +52,7 @@ export default function CreateOrderClient({
   backUrl?: string;
   successUrl?: string;
   orderAction?: (data: any) => Promise<{ success: boolean; orderId?: string; error?: string }>;
+  staff?: StaffMember[];
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -58,6 +68,7 @@ export default function CreateOrderClient({
   const [manualDiscountType, setManualDiscountType] = useState<"FLAT" | "PERCENTAGE">("FLAT");
   const [isStorePickup, setIsStorePickup] = useState(false);
   const [deliveryCharge, setDeliveryCharge] = useState(0);
+  const [createdById, setCreatedById] = useState("");
 
   // Tags State & Helpers
   const [tags, setTags] = useState<string[]>([]);
@@ -294,6 +305,10 @@ export default function CreateOrderClient({
       return alert("Please fill in all customer details and add at least one item.");
     }
 
+    if (!isStorePickup && selectedCityId && !selectedZoneId) {
+      return alert("Please select a zone for the selected city.");
+    }
+
     if (isExchange) {
       if (!exchangeRefOrderId.trim() || !exchangeItemNote.trim()) {
         return alert("Please fill in the Original Order ID and Exchange Note.");
@@ -344,6 +359,7 @@ export default function CreateOrderClient({
             exchangeRefOrderId: exchangeRefOrderId.trim(),
             exchangeItemNote: exchangeItemNote.trim(),
             tags,
+            createdById: createdById || undefined,
           })
           : await (orderAction ?? createAdminOrder)({
             customerName,
@@ -370,6 +386,7 @@ export default function CreateOrderClient({
             })),
             hasBackorderItems,
             tags,
+            createdById: createdById || undefined,
           });
 
         if (res.success) {
@@ -454,6 +471,21 @@ export default function CreateOrderClient({
                   className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all font-mono"
                 />
               </div>
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Salesman (Incentive Owner)</label>
+              <CustomSelect
+                options={[
+                  { value: "", label: "Current Logged-in User (Default)" },
+                  ...staff.map((s: StaffMember) => ({
+                    value: s.id,
+                    label: `${s.username} (${s.role?.name || "Staff"})`
+                  }))
+                ]}
+                value={createdById}
+                onChange={(val) => setCreatedById(val)}
+                searchable={true}
+              />
             </div>
             {isStorePickup && (
               <div className="space-y-1.5 animate-in fade-in duration-200">

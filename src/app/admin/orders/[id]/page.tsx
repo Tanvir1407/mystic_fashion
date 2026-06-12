@@ -6,6 +6,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, CalendarDays } from "lucide-react";
 import OrderDetailsClient from "./OrderDetailsClient";
+import { getStaff } from "@/app/admin/staff/actions";
 
 export const dynamic = "force-dynamic";
 
@@ -19,6 +20,8 @@ export default async function SingleOrderPage({ params }: { params: { id: string
   });
   const deliverySettings = await getDeliverySettings();
   const dtfSetting = await getDTFPrintSetting();
+  const staffRes = await getStaff();
+  const staff = staffRes.success ? staffRes.data : [];
 
   if (!order) notFound();
 
@@ -112,6 +115,7 @@ export default async function SingleOrderPage({ params }: { params: { id: string
         products={products}
         pathaoInfo={pathaoInfo}
         dtfSetting={dtfSetting}
+        staff={staff}
       />
     </div>
   );

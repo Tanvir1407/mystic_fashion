@@ -1,16 +1,26 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Edit2, Check, X, Package, Trash2, Plus, Copy,
   Compass, CheckCircle2, Truck, PackageCheck, Printer,
   AlertCircle, Minus, VerifiedIcon, Loader2,
 } from "lucide-react";
-import { updateOrderDetails, updateOrderRemark } from "../actions";
+import { updateOrderDetails, updateOrderRemark, updateOrderStatus } from "../actions";
 import { useRouter } from "next/navigation";
 import UploadedImage from "@/components/UploadedImage";
 import { CustomSelect } from "@/components/CustomSelect";
 import { formatBDT, roundPrice } from "@/utils/formatPrice";
+import { validateStatusTransition } from "@/lib/utils";
+import type { OrderStatus } from "@/generated/prisma/client";
+
+interface StaffMember {
+  id: string;
+  username: string;
+  role: {
+    name: string;
+  } | null;
+}
 
 export default function OrderDetailsClient({
   order,
@@ -18,12 +28,14 @@ export default function OrderDetailsClient({
   products = [],
   pathaoInfo = null,
   dtfSetting = { printCost: 250 },
+  staff = [],
 }: {
   order: any;
   deliverySettings: any;
   products?: any[];
   pathaoInfo?: any;
   dtfSetting?: any;
+  staff?: StaffMember[];
 }) {
   const router = useRouter();
   const [isEditing, setIsEditing] = useState(false);
@@ -36,6 +48,33 @@ export default function OrderDetailsClient({
   const [tagInput, setTagInput] = useState("");
   const [isEditingTags, setIsEditingTags] = useState(false);
   const [tagsFormData, setTagsFormData] = useState<string[]>(order.tags || []);
+  const [status, setStatus] = useState<OrderStatus>(order.status);
+  const [statusLoading, setStatusLoading] = useState(false);
+
+  useEffect(() => {
+    setStatus(order.status);
+  }, [order.status]);
+
+  const handleStatusChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const newStatus = e.target.value as OrderStatus;
+    const oldStatus = status;
+
+    if (newStatus === "RETURNED") {
+      router.push(`/admin/orders/returns?orderId=${order.id}`);
+      return;
+    }
+
+    setStatus(newStatus);
+    setStatusLoading(true);
+    const result = await updateOrderStatus(order.id, newStatus);
+    if (!result?.success) {
+      alert(result?.error || "Failed to update order status. Please verify transition rules.");
+      setStatus(oldStatus);
+    } else {
+      router.refresh();
+    }
+    setStatusLoading(false);
+  };
 
   const [formData, setFormData] = useState({
     customerName: order.customerName,
@@ -47,6 +86,7 @@ export default function OrderDetailsClient({
     items: order.items || [],
     deliveryCharge: order.deliveryCharge || 0,
     tags: order.tags || [],
+    createdById: order.createdById || "",
   });
 
   const [newProductData, setNewProductData] = useState({
@@ -77,6 +117,7 @@ export default function OrderDetailsClient({
       deliveryCharge: formData.deliveryCharge,
       isStorePickup: order.isStorePickup,
       tags: formData.tags,
+      createdById: formData.createdById || null,
       items: formData.items.map((i: any) => ({
         id: i.id,
         productId: i.productId,
@@ -134,6 +175,7 @@ export default function OrderDetailsClient({
       items: order.items || [],
       deliveryCharge: order.deliveryCharge || 0,
       tags: order.tags || [],
+      createdById: order.createdById || "",
     });
   };
 
@@ -584,6 +626,52 @@ export default function OrderDetailsClient({
         {/* ── Right Sidebar ── */}
         <div className="space-y-4">
 
+          {/* Order Status Action Card */}
+          <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
+            <div className="px-4 py-3.5 border-b border-slate-100 flex items-center justify-between">
+              <h3 className="text-sm font-semibold text-slate-900">Order Status</h3>
+              {statusLoading && <Loader2 className="w-4 h-4 animate-spin text-slate-400" />}
+            </div>
+            <div className="p-4 space-y-3">
+              <div className="relative">
+                <select
+                  value={status}
+                  onChange={handleStatusChange}
+                  disabled={statusLoading || status === "CANCELLED" || status === "RETURNED"}
+                  className={`w-full text-xs font-black uppercase tracking-wider px-3.5 py-2.5 rounded-lg border transition-all cursor-pointer outline-none focus:ring-2 focus:ring-opacity-50 ${
+                    status === "PENDING" ? "bg-amber-50 text-amber-700 border-amber-200 focus:ring-amber-500" :
+                    status === "CONFIRMED" ? "bg-blue-50 text-blue-700 border-blue-200 focus:ring-blue-500" :
+                    status === "PRINTING" ? "bg-cyan-50 text-cyan-700 border-cyan-200 focus:ring-cyan-500" :
+                    status === "PACKAGING" ? "bg-purple-50 text-purple-700 border-purple-200 focus:ring-purple-500" :
+                    status === "SHIPPED" ? "bg-indigo-50 text-indigo-700 border-indigo-200 focus:ring-indigo-500" :
+                    status === "DELIVERED" ? "bg-green-50 text-green-700 border-green-200 focus:ring-green-500" :
+                    status === "RETURNED" ? "bg-rose-50 text-rose-700 border-rose-200 focus:ring-rose-500" :
+                    "bg-red-50 text-red-700 border-red-200 focus:ring-red-500"
+                  }`}
+                >
+                  <option value="PENDING" disabled={!validateStatusTransition(status, "PENDING").isValid}>Placed</option>
+                  <option value="CONFIRMED" disabled={!validateStatusTransition(status, "CONFIRMED").isValid}>Confirmed</option>
+                  <option value="PRINTING" disabled={!validateStatusTransition(status, "PRINTING").isValid}>Printing</option>
+                  <option value="PACKAGING" disabled={!validateStatusTransition(status, "PACKAGING").isValid}>Packaged</option>
+                  <option value="SHIPPED" disabled={!validateStatusTransition(status, "SHIPPED").isValid}>Shipped</option>
+                  <option value="DELIVERED" disabled={!validateStatusTransition(status, "DELIVERED").isValid}>Delivered</option>
+                  <option value="RETURNED" disabled={!validateStatusTransition(status, "RETURNED").isValid}>Returned</option>
+                  <option value="CANCELLED" disabled={!validateStatusTransition(status, "CANCELLED").isValid}>Cancelled</option>
+                </select>
+              </div>
+              
+              {status === "CANCELLED" || status === "RETURNED" ? (
+                <p className="text-[10px] text-slate-400 font-medium">
+                  Orders in {status} status cannot be further transitioned.
+                </p>
+              ) : (
+                <p className="text-[10px] text-slate-400 font-medium">
+                  Select a status to update. Some transitions are restricted based on business rules.
+                </p>
+              )}
+            </div>
+          </div>
+
           {/* Notes / Remarks Card */}
           <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
             <div className="px-4 py-3.5 border-b border-slate-100 flex items-center justify-between">
@@ -769,6 +857,21 @@ export default function OrderDetailsClient({
                       value={formData.phone}
                       onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                       className="w-full text-sm px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:border-slate-400 text-slate-800 font-mono"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Salesman (Incentive Owner)</label>
+                    <CustomSelect
+                      options={[
+                        { value: "", label: "System / eCommerce (None)" },
+                        ...staff.map((s: StaffMember) => ({
+                          value: s.id,
+                          label: `${s.username} (${s.role?.name || "Staff"})`
+                        }))
+                      ]}
+                      value={formData.createdById || ""}
+                      onChange={(val) => setFormData({ ...formData, createdById: val })}
+                      searchable={true}
                     />
                   </div>
                 </>
