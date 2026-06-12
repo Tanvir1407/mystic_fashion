@@ -305,6 +305,10 @@ export default function CreateOrderClient({
       return alert("Please fill in all customer details and add at least one item.");
     }
 
+    if (!isStorePickup && selectedCityId && !selectedZoneId) {
+      return alert("Please select a zone for the selected city.");
+    }
+
     if (isExchange) {
       if (!exchangeRefOrderId.trim() || !exchangeItemNote.trim()) {
         return alert("Please fill in the Original Order ID and Exchange Note.");

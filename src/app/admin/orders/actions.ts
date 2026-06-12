@@ -844,6 +844,12 @@ export async function bulkSendToPathaoAction(orderIds: string[]) {
             .join("\n"),
         };
 
+        if (!payload.recipient_zone) {
+          delete payload.recipient_city;
+          delete payload.recipient_zone;
+          delete payload.recipient_area;
+        }
+
         const res = await pathaoClient.createOrder(payload);
 
         if (res.consignment_id) {
@@ -973,6 +979,12 @@ export async function sendPathaoPickupManually(orderId: string) {
         .map((i) => `${i.product?.name || "Item"} (Size: ${i.size}, Qty: ${i.quantity})`)
         .join(", "),
     };
+
+    if (!payload.recipient_zone) {
+      delete payload.recipient_city;
+      delete payload.recipient_zone;
+      delete payload.recipient_area;
+    }
 
     const res = await pathaoClient.createOrder(payload);
     if (!res.consignment_id)
