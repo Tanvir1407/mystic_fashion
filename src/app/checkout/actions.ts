@@ -35,18 +35,26 @@ export async function placeOrderAction(payload: {
       let customerId: string | null = null;
 
       if (sessionCustomerId) {
-        customerId = sessionCustomerId;
-        // Optionally update customer's last used name and address
-        const nameToUse = payload.fullName?.trim();
-        const addressToUse = payload.address?.trim();
-        await tx.customer.update({
-          where: { id: sessionCustomerId },
-          data: {
-            name: nameToUse || undefined,
-            address: addressToUse || undefined,
-          }
+        const existingCustomer = await tx.customer.findUnique({
+          where: { id: sessionCustomerId }
         });
-      } else {
+
+        if (existingCustomer) {
+          customerId = sessionCustomerId;
+          // Optionally update customer's last used name and address
+          const nameToUse = payload.fullName?.trim();
+          const addressToUse = payload.address?.trim();
+          await tx.customer.update({
+            where: { id: sessionCustomerId },
+            data: {
+              name: nameToUse || undefined,
+              address: addressToUse || undefined,
+            }
+          });
+        }
+      }
+
+      if (!customerId) {
         if (phone) {
           let customer = await tx.customer.findUnique({
             where: { phone },
