@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
 export const revalidate = 0;
 
-export default async function AdminOrdersPage({ searchParams }: { searchParams: { page?: string, limit?: string, filter?: string, search?: string, source?: string, tab?: string, tag?: string } }) {
+export default async function AdminOrdersPage({ searchParams }: { searchParams: { page?: string, limit?: string, filter?: string, search?: string, source?: string, tab?: string, tag?: string, startDate?: string, endDate?: string } }) {
   const session = await getSession();
   const canView = hasPermission(session, "VIEW", "ORDERS");
   const canCreate = hasPermission(session, "CREATE", "ORDERS");
@@ -40,6 +40,8 @@ export default async function AdminOrdersPage({ searchParams }: { searchParams: 
   const search = searchParams?.search || "";
   const tab = searchParams?.tab || "active";
   const selectedTag = searchParams?.tag || "";
+  const startDate = searchParams?.startDate || "";
+  const endDate = searchParams?.endDate || "";
   const PER_PAGE = [10, 20, 50, 100].includes(limit) ? limit : 10;
 
   const whereClause: any = tab === "trash" ? { deletedAt: { not: null } as any } : {};
@@ -58,6 +60,14 @@ export default async function AdminOrdersPage({ searchParams }: { searchParams: 
       { customerName: { contains: search, mode: 'insensitive' } },
       { phone: { contains: search, mode: 'insensitive' } },
     ];
+  }
+
+  if (startDate && /^\d{4}-\d{2}-\d{2}$/.test(startDate)) {
+    const endVal = endDate && /^\d{4}-\d{2}-\d{2}$/.test(endDate) ? endDate : startDate;
+    whereClause.createdAt = {
+      gte: new Date(`${startDate}T00:00:00.000+06:00`),
+      lte: new Date(`${endVal}T23:59:59.999+06:00`),
+    };
   }
 
   let orders: any[] = [];
@@ -125,6 +135,8 @@ export default async function AdminOrdersPage({ searchParams }: { searchParams: 
       canCreate={canCreate}
       canEdit={canEdit}
       canDelete={canDelete}
+      currentStartDate={startDate}
+      currentEndDate={endDate}
     />
   );
 }
