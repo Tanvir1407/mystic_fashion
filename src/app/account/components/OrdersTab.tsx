@@ -91,6 +91,8 @@ export default function OrdersTab({ orders }: OrdersTabProps) {
         return "Cancelled";
       case "RETURNED":
         return "Returned";
+      case "HOLD":
+        return "On Hold";
       default:
         return status;
     }
@@ -115,6 +117,8 @@ export default function OrdersTab({ orders }: OrdersTabProps) {
         return "bg-rose-50/70 text-rose-700 border border-rose-200/60";
       case "CANCELLED":
         return "bg-slate-50/70 text-slate-700 border border-slate-200/60";
+      case "HOLD":
+        return "bg-pink-50/70 text-pink-700 border border-pink-200/60";
       default:
         return "bg-slate-50/70 text-slate-700 border border-slate-200/60";
     }

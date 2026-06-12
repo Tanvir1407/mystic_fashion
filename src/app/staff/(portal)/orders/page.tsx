@@ -19,6 +19,7 @@ const STATUS_LABELS: Record<string, string> = {
   DELIVERED: "Delivered",
   RETURNED: "Returned",
   CANCELLED: "Cancelled",
+  HOLD: "On Hold",
 };
 
 const STATUS_STYLES: Record<string, string> = {
@@ -30,6 +31,7 @@ const STATUS_STYLES: Record<string, string> = {
   DELIVERED: "bg-green-50 text-green-700 border-green-200",
   RETURNED: "bg-rose-50 text-rose-700 border-rose-200",
   CANCELLED: "bg-red-50 text-red-700 border-red-200",
+  HOLD: "bg-pink-50 text-pink-700 border-pink-200",
 };
 
 export default async function StaffOrdersPage({

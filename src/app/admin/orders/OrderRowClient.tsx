@@ -7,6 +7,7 @@ import Link from "next/link";
 import { Eye, Trash2, RotateCcw } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { StatusAlertModal } from "@/components/StatusAlertModal";
+import { HoldReasonModal } from "@/components/HoldReasonModal";
 import { formatDateTime } from "@/utils/formatDate";
 import { formatBDT } from "@/utils/formatPrice";
 import type { OrderStatus } from "@/generated/prisma/client";
@@ -20,6 +21,7 @@ const STATUS_LABELS: Record<OrderStatus, string> = {
   DELIVERED: "Delivered",
   RETURNED: "Returned",
   CANCELLED: "Cancelled",
+  HOLD: "On Hold",
 };
 
 export default function OrderRowClient({
@@ -38,6 +40,8 @@ export default function OrderRowClient({
   canDelete: boolean
 }) {
   const [status, setStatus] = useState<OrderStatus>(order.status);
+  const [isHoldModalOpen, setIsHoldModalOpen] = useState(false);
+  const [pendingStatus, setPendingStatus] = useState<OrderStatus | null>(null);
   const [loading, setLoading] = useState(false);
   const [alert, setAlert] = useState<{ isOpen: boolean; title: string; message: string; type: "error" | "warning" }>({
     isOpen: false,
@@ -60,6 +64,12 @@ export default function OrderRowClient({
       return;
     }
 
+    if (newStatus === "HOLD") {
+      setPendingStatus(newStatus);
+      setIsHoldModalOpen(true);
+      return;
+    }
+
     setStatus(newStatus);
     setLoading(true);
     const result = await updateOrderStatus(order.id, newStatus);
@@ -73,6 +83,33 @@ export default function OrderRowClient({
       setStatus(oldStatus);
     }
     setLoading(false);
+  };
+
+  const handleHoldConfirm = async (reason: string) => {
+    if (!pendingStatus) return;
+    const oldStatus = status;
+    setStatus(pendingStatus);
+    setLoading(true);
+    const result = await updateOrderStatus(order.id, pendingStatus, reason);
+    if (!result?.success) {
+      setAlert({
+        isOpen: true,
+        title: "Status Update Restricted",
+        message: result?.error || "We encountered an issue while attempting to update the order status.",
+        type: "error"
+      });
+      setStatus(oldStatus);
+    } else {
+      router.refresh();
+    }
+    setLoading(false);
+    setIsHoldModalOpen(false);
+    setPendingStatus(null);
+  };
+
+  const handleHoldClose = () => {
+    setIsHoldModalOpen(false);
+    setPendingStatus(null);
   };
 
   const handleDelete = async () => {
@@ -239,7 +276,8 @@ export default function OrderRowClient({
                       status === "SHIPPED" ? "bg-indigo-50 text-indigo-700 border-indigo-200 focus:ring-indigo-500" :
                         status === "DELIVERED" ? "bg-green-50 text-green-700 border-green-200 focus:ring-green-500" :
                           status === "RETURNED" ? "bg-rose-50 text-rose-700 border-rose-200 focus:ring-rose-500" :
-                            "bg-red-50 text-red-700 border-red-200 focus:ring-red-500"
+                            status === "HOLD" ? "bg-pink-50 text-pink-700 border-pink-200 focus:ring-pink-500" :
+                              "bg-red-50 text-red-700 border-red-200 focus:ring-red-500"
                 }`}
             >
               <option value="PENDING" disabled={!validateStatusTransition(status, "PENDING").isValid}>Placed</option>
@@ -248,6 +286,7 @@ export default function OrderRowClient({
               <option value="PACKAGING" disabled={!validateStatusTransition(status, "PACKAGING").isValid}>Packaged</option>
               <option value="SHIPPED" disabled={!validateStatusTransition(status, "SHIPPED").isValid}>Shipped</option>
               <option value="DELIVERED" disabled={!validateStatusTransition(status, "DELIVERED").isValid}>Delivered</option>
+              <option value="HOLD" disabled={!validateStatusTransition(status, "HOLD").isValid}>On Hold</option>
               <option value="RETURNED" disabled={!validateStatusTransition(status, "RETURNED").isValid}>Returned</option>
               <option value="CANCELLED" disabled={!validateStatusTransition(status, "CANCELLED").isValid}>Cancelled</option>
             </select>
@@ -259,7 +298,8 @@ export default function OrderRowClient({
                     status === "SHIPPED" ? "bg-indigo-50 text-indigo-700 border-indigo-200" :
                       status === "DELIVERED" ? "bg-green-50 text-green-700 border-green-200" :
                         status === "RETURNED" ? "bg-rose-50 text-rose-700 border-rose-200" :
-                          "bg-red-50 text-red-700 border-red-200"
+                          status === "HOLD" ? "bg-pink-50 text-pink-700 border-pink-200" :
+                            "bg-red-50 text-red-700 border-red-200"
               }`}>
               {STATUS_LABELS[status] || status}
             </span>
@@ -304,6 +344,11 @@ export default function OrderRowClient({
           </div>
         </div>
       </td>
+      <HoldReasonModal
+        isOpen={isHoldModalOpen}
+        onClose={handleHoldClose}
+        onConfirm={handleHoldConfirm}
+      />
       <StatusAlertModal
         isOpen={alert.isOpen}
         onClose={() => setAlert({ ...alert, isOpen: false })}

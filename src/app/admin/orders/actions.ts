@@ -16,7 +16,7 @@ import { executeOrderTransaction } from "@/lib/order-utils";
 
 // ─── ORDER STATUS ─────────────────────────────────────────────────────────────
 
-async function _updateOrderStatus(orderId: string, status: OrderStatus) {
+async function _updateOrderStatus(orderId: string, status: OrderStatus, holdReason?: string) {
   try {
     await prisma.$transaction(async (tx) => {
       const order = await tx.order.findUnique({
@@ -42,6 +42,7 @@ async function _updateOrderStatus(orderId: string, status: OrderStatus) {
         "PACKAGING",
         "SHIPPED",
         "DELIVERED",
+        "HOLD",
       ];
       const isStockHolding = (s: OrderStatus) => stockHoldingStatuses.includes(s);
 
@@ -78,7 +79,13 @@ async function _updateOrderStatus(orderId: string, status: OrderStatus) {
         }
       }
 
-      await tx.order.update({ where: { id: orderId }, data: { status: newStatus } });
+      await tx.order.update({
+        where: { id: orderId },
+        data: {
+          status: newStatus,
+          tags: newStatus === "HOLD" && holdReason ? Array.from(new Set([...(order.tags || []), holdReason])) : undefined,
+        },
+      });
 
       if (oldStatus === "PENDING" && newStatus === "CONFIRMED") {
         const account = await getOrCreateSystemAccount(tx, "Sales Revenue", "INCOME");
@@ -168,6 +175,7 @@ async function _deleteOrder(id: string) {
           "PACKAGING",
           "SHIPPED",
           "DELIVERED",
+          "HOLD",
         ];
         if (stockHoldingStatuses.includes(order.status)) {
           for (const item of order.items) {
@@ -216,6 +224,7 @@ export async function bulkDeleteOrders(orderIds: string[]) {
         "PACKAGING",
         "SHIPPED",
         "DELIVERED",
+        "HOLD",
       ];
       for (const order of orders) {
         if (stockHoldingStatuses.includes(order.status)) {
@@ -283,6 +292,7 @@ async function _restoreOrder(id: string) {
         "PACKAGING",
         "SHIPPED",
         "DELIVERED",
+        "HOLD",
       ];
       if (stockHoldingStatuses.includes(order.status)) {
         for (const item of order.items) {
@@ -369,6 +379,7 @@ async function _updateOrderDetails(
           "PACKAGING",
           "SHIPPED",
           "DELIVERED",
+          "HOLD",
         ];
         const isStockHolding = stockHoldingStatuses.includes(order.status);
         const oldItemsMap = new Map(order.items.map((i) => [i.id, i]));

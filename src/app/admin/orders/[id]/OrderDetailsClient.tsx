@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { updateOrderDetails, updateOrderRemark, updateOrderStatus } from "../actions";
 import { getPathaoCities, getPathaoZones, getPathaoAreas } from "@/app/actions/pathao";
+import { HoldReasonModal } from "@/components/HoldReasonModal";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import UploadedImage from "@/components/UploadedImage";
@@ -32,6 +33,8 @@ export default function OrderDetailsClient({
   pathaoInfo = null,
   dtfSetting = { printCost: 250 },
   staff = [],
+  backUrl = "/admin/orders",
+  commissionInfo = null,
 }: {
   order: any;
   deliverySettings: any;
@@ -39,6 +42,8 @@ export default function OrderDetailsClient({
   pathaoInfo?: any;
   dtfSetting?: any;
   staff?: StaffMember[];
+  backUrl?: string;
+  commissionInfo?: { rate: number; amount: number; orderStatus: string } | null;
 }) {
   const router = useRouter();
   const [isEditing, setIsEditing] = useState(false);
@@ -53,6 +58,8 @@ export default function OrderDetailsClient({
   const [tagsFormData, setTagsFormData] = useState<string[]>(order.tags || []);
   const [status, setStatus] = useState<OrderStatus>(order.status);
   const [statusLoading, setStatusLoading] = useState(false);
+  const [isHoldModalOpen, setIsHoldModalOpen] = useState(false);
+  const [pendingStatus, setPendingStatus] = useState<OrderStatus | null>(null);
 
   useEffect(() => {
     setStatus(order.status);
@@ -67,6 +74,12 @@ export default function OrderDetailsClient({
       return;
     }
 
+    if (newStatus === "HOLD") {
+      setPendingStatus(newStatus);
+      setIsHoldModalOpen(true);
+      return;
+    }
+
     setStatus(newStatus);
     setStatusLoading(true);
     const result = await updateOrderStatus(order.id, newStatus);
@@ -77,6 +90,28 @@ export default function OrderDetailsClient({
       router.refresh();
     }
     setStatusLoading(false);
+  };
+
+  const handleHoldConfirm = async (reason: string) => {
+    if (!pendingStatus) return;
+    const oldStatus = status;
+    setStatus(pendingStatus);
+    setStatusLoading(true);
+    const result = await updateOrderStatus(order.id, pendingStatus, reason);
+    if (!result?.success) {
+      alert(result?.error || "Failed to update order status.");
+      setStatus(oldStatus);
+    } else {
+      router.refresh();
+    }
+    setStatusLoading(false);
+    setIsHoldModalOpen(false);
+    setPendingStatus(null);
+  };
+
+  const handleHoldClose = () => {
+    setIsHoldModalOpen(false);
+    setPendingStatus(null);
   };
 
   const [formData, setFormData] = useState({
@@ -343,6 +378,7 @@ export default function OrderDetailsClient({
     SHIPPED: "bg-indigo-100 text-indigo-700 border-indigo-200",
     CANCELLED: "bg-red-100 text-red-700 border-red-200",
     RETURNED: "bg-slate-100 text-slate-600 border-slate-200",
+    HOLD: "bg-pink-100 text-pink-700 border-pink-200",
   };
 
   const modifyStatus = (status: string) => {
@@ -363,6 +399,8 @@ export default function OrderDetailsClient({
         return "Order Cancelled";
       case "RETURNED":
         return "Order Returned";
+      case "HOLD":
+        return "Order On Hold";
       default:
         return status;
     }
@@ -374,7 +412,7 @@ export default function OrderDetailsClient({
       <div className="sticky top-0 z-40 bg-slate-50/95 backdrop-blur-sm -mx-4 sm:-mx-6 px-4 sm:px-6 py-4 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div className="flex items-start gap-3">
           <Link
-            href="/admin/orders"
+            href={backUrl}
             className="mt-0.5 p-2 bg-white border border-slate-200 rounded-lg text-slate-500 hover:text-slate-800 hover:bg-slate-50 shadow-sm transition-colors shrink-0"
           >
             <ArrowLeft className="w-4 h-4" />
@@ -408,27 +446,41 @@ export default function OrderDetailsClient({
           </div>
         </div>
 
-        {/* Edit Mode Buttons on the right of Order ID */}
-        {isEditing && (
-          <div className="flex items-center gap-2 shrink-0">
-            <button
-              onClick={handleSave}
-              disabled={loading}
-              className="flex items-center gap-1.5 px-4 py-2 bg-slate-900 text-white text-xs font-bold rounded-lg hover:bg-slate-800 transition-colors disabled:opacity-50 shadow-sm"
-            >
-              {loading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
-              {loading ? "Saving..." : "Save Changes"}
-            </button>
-            <button
-              onClick={handleCancelEdit}
-              disabled={loading}
-              className="flex items-center gap-1.5 px-4 py-2 bg-white border border-slate-200 text-slate-600 text-xs font-bold rounded-lg hover:bg-slate-50 transition-colors disabled:opacity-50"
-            >
-              <X className="w-3.5 h-3.5" />
-              Cancel
-            </button>
-          </div>
-        )}
+        {/* Right side of Header */}
+        <div className="flex items-center gap-4 shrink-0">
+          {!isEditing && commissionInfo && (
+            <div className="text-right">
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Commission ({commissionInfo.rate}%)</p>
+              <p className={`text-base font-extrabold tracking-tight ${commissionInfo.orderStatus === "DELIVERED" ? "text-emerald-600" : commissionInfo.orderStatus === "CANCELLED" ? "text-slate-400" : "text-amber-600"}`}>
+                {commissionInfo.orderStatus === "CANCELLED" ? "—" : `৳${commissionInfo.amount.toLocaleString()}`}
+              </p>
+              {commissionInfo.orderStatus !== "DELIVERED" && commissionInfo.orderStatus !== "CANCELLED" && (
+                <p className="text-[9px] text-amber-500 font-bold tracking-wide">Earns when Delivered</p>
+              )}
+            </div>
+          )}
+
+          {isEditing && (
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handleSave}
+                disabled={loading}
+                className="flex items-center gap-1.5 px-4 py-2 bg-slate-900 text-white text-xs font-bold rounded-lg hover:bg-slate-800 transition-colors disabled:opacity-50 shadow-sm"
+              >
+                {loading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
+                {loading ? "Saving..." : "Save Changes"}
+              </button>
+              <button
+                onClick={handleCancelEdit}
+                disabled={loading}
+                className="flex items-center gap-1.5 px-4 py-2 bg-white border border-slate-200 text-slate-600 text-xs font-bold rounded-lg hover:bg-slate-50 transition-colors disabled:opacity-50"
+              >
+                <X className="w-3.5 h-3.5" />
+                Cancel
+              </button>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Pathao Consignment ID */}
@@ -789,7 +841,8 @@ export default function OrderDetailsClient({
                           status === "SHIPPED" ? "bg-indigo-50 text-indigo-700 border-indigo-200 focus:ring-indigo-500" :
                             status === "DELIVERED" ? "bg-green-50 text-green-700 border-green-200 focus:ring-green-500" :
                               status === "RETURNED" ? "bg-rose-50 text-rose-700 border-rose-200 focus:ring-rose-500" :
-                                "bg-red-50 text-red-700 border-red-200 focus:ring-red-500"
+                                status === "HOLD" ? "bg-pink-50 text-pink-700 border-pink-200 focus:ring-pink-500" :
+                                  "bg-red-50 text-red-700 border-red-200 focus:ring-red-500"
                     }`}
                 >
                   <option value="PENDING" disabled={!validateStatusTransition(status, "PENDING").isValid}>Placed</option>
@@ -798,6 +851,7 @@ export default function OrderDetailsClient({
                   <option value="PACKAGING" disabled={!validateStatusTransition(status, "PACKAGING").isValid}>Packaged</option>
                   <option value="SHIPPED" disabled={!validateStatusTransition(status, "SHIPPED").isValid}>Shipped</option>
                   <option value="DELIVERED" disabled={!validateStatusTransition(status, "DELIVERED").isValid}>Delivered</option>
+                  <option value="HOLD" disabled={!validateStatusTransition(status, "HOLD").isValid}>On Hold</option>
                   <option value="RETURNED" disabled={!validateStatusTransition(status, "RETURNED").isValid}>Returned</option>
                   <option value="CANCELLED" disabled={!validateStatusTransition(status, "CANCELLED").isValid}>Cancelled</option>
                 </select>
@@ -1184,6 +1238,11 @@ export default function OrderDetailsClient({
           )}
         </div>
       </div>
+      <HoldReasonModal
+        isOpen={isHoldModalOpen}
+        onClose={handleHoldClose}
+        onConfirm={handleHoldConfirm}
+      />
     </div>
   );
 }

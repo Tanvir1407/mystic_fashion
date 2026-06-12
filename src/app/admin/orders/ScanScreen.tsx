@@ -23,6 +23,7 @@ const STATUS_LABELS: Record<OrderStatus, string> = {
   DELIVERED: "Delivered",
   RETURNED: "Returned",
   CANCELLED: "Cancelled",
+  HOLD: "On Hold",
 };
 
 const STATUS_COLORS: Record<OrderStatus, string> = {
@@ -34,6 +35,7 @@ const STATUS_COLORS: Record<OrderStatus, string> = {
   DELIVERED: "bg-green-50 text-green-700 border-green-200",
   RETURNED: "bg-rose-50 text-rose-700 border-rose-200",
   CANCELLED: "bg-red-50 text-red-700 border-red-200",
+  HOLD: "bg-pink-50 text-pink-700 border-pink-200",
 };
 
 // Web Audio API beep cues (useful for keyboard/barcode operators)
@@ -432,6 +434,7 @@ export default function ScanScreen() {
                 <option value="PACKAGING">Packaged (Packaging)</option>
                 <option value="SHIPPED">Shipped</option>
                 <option value="DELIVERED">Delivered</option>
+                <option value="HOLD">On Hold</option>
                 <option value="RETURNED">Returned</option>
                 <option value="CANCELLED">Cancelled</option>
               </select>

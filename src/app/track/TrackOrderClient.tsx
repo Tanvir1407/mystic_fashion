@@ -19,6 +19,7 @@ const STATUS_LABELS: Record<string, string> = {
   DELIVERED: "Delivered",
   RETURNED: "Returned",
   CANCELLED: "Cancelled",
+  HOLD: "On Hold",
 };
 
 const STATUS_COLORS: Record<string, string> = {
@@ -30,6 +31,7 @@ const STATUS_COLORS: Record<string, string> = {
   DELIVERED: "bg-emerald-100 text-emerald-700",
   RETURNED: "bg-zinc-100 text-zinc-600",
   CANCELLED: "bg-red-100 text-red-600",
+  HOLD: "bg-pink-100 text-pink-700",
 };
 
 interface Step {
@@ -52,7 +54,7 @@ const STEPS: Step[] = [
 
 function OrderDetailCard({ order, pathaoInfo }: { order: any; pathaoInfo?: any }) {
   const currentStepIndex = STATUS_ORDER.indexOf(order.status);
-  const isSpecialStatus = order.status === "CANCELLED" || order.status === "RETURNED";
+  const isSpecialStatus = order.status === "CANCELLED" || order.status === "RETURNED" || order.status === "HOLD";
 
   return (
     <div className="bg-white border border-zinc-200 overflow-hidden shadow-sm divide-y divide-zinc-100">
@@ -74,14 +76,16 @@ function OrderDetailCard({ order, pathaoInfo }: { order: any; pathaoInfo?: any }
 
       {/* Timeline or Special State */}
       {isSpecialStatus ? (
-        <div className={`p-8 flex flex-col items-center text-center gap-3 ${order.status === "CANCELLED" ? "bg-red-50/20 text-red-800" : "bg-zinc-50/30 text-zinc-800"}`}>
-          <AlertCircle className={`w-12 h-12 ${order.status === "CANCELLED" ? "text-red-500" : "text-zinc-500"}`} />
+        <div className={`p-8 flex flex-col items-center text-center gap-3 ${order.status === "CANCELLED" ? "bg-red-50/20 text-red-800" : order.status === "HOLD" ? "bg-pink-50/20 text-pink-800" : "bg-zinc-50/30 text-zinc-800"}`}>
+          <AlertCircle className={`w-12 h-12 ${order.status === "CANCELLED" ? "text-red-500" : order.status === "HOLD" ? "text-pink-500" : "text-zinc-500"}`} />
           <div>
-            <h3 className="text-base font-extrabold uppercase tracking-wide">Order {order.status}</h3>
+            <h3 className="text-base font-extrabold uppercase tracking-wide">Order {STATUS_LABELS[order.status] || order.status}</h3>
             <p className="text-xs font-medium opacity-80 mt-1 max-w-sm mx-auto">
               {order.status === "CANCELLED"
                 ? "This order has been cancelled. Please contact our support team if you have any questions."
-                : "This order has been returned to our warehouse. Please contact our support team for further assistance."}
+                : order.status === "HOLD"
+                  ? "This order is currently on hold. One of our support staff will contact you shortly."
+                  : "This order has been returned to our warehouse. Please contact our support team for further assistance."}
             </p>
           </div>
         </div>

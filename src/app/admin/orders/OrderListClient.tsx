@@ -329,8 +329,9 @@ export default function OrderListClient({
                     { value: "PACKAGING", label: "Packaged" },
                     { value: "SHIPPED", label: "Shipped" },
                     { value: "DELIVERED", label: "Delivered" },
-                    { value: "CANCELLED", label: "Cancelled" },
+                    { value: "HOLD", label: "On Hold" },
                     { value: "RETURNED", label: "Returned" },
+                    { value: "CANCELLED", label: "Cancelled" },
                   ]}
                   value={currentFilter}
                   onChange={(val) => {

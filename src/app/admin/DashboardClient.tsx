@@ -36,6 +36,7 @@ const STATUS_COLORS: Record<string, string> = {
   SHIPPED: "bg-indigo-50 text-indigo-600",
   DELIVERED: "bg-emerald-50 text-emerald-600",
   CANCELLED: "bg-red-50 text-red-600",
+  HOLD: "bg-pink-50 text-pink-600",
 };
 
 export default function DashboardClient({ filter, metrics, topProducts, recentOrders, chartData, topStaff }: DashboardClientProps) {

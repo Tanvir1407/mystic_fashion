@@ -564,6 +564,7 @@ enum OrderStatus {
   CANCELLED
   RETURNED
   PRINTING
+  HOLD
 }
 
 enum OrderSource {

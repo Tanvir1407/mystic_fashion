@@ -44,13 +44,13 @@ export function validateStatusTransition(
     }
   }
 
-  // 4. Can only revert to Pending from Confirmed, Printing, or Packaging status
+  // 4. Can only revert to Pending from Confirmed, Printing, Packaging, or Hold status
   if (newStatus === "PENDING") {
-    const allowedSourceStatuses: OrderStatus[] = ["CONFIRMED", "PRINTING", "PACKAGING"];
+    const allowedSourceStatuses: OrderStatus[] = ["CONFIRMED", "PRINTING", "PACKAGING", "HOLD"];
     if (!allowedSourceStatuses.includes(oldStatus)) {
       return {
         isValid: false,
-        error: "Can only revert to Pending from Confirmed, Printing, or Packaging status.",
+        error: "Can only revert to Pending from Confirmed, Printing, Packaging, or Hold status.",
       };
     }
   }
