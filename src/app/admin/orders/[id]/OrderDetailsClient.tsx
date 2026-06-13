@@ -52,6 +52,7 @@ export default function OrderDetailsClient({
   const [isEditingRemark, setIsEditingRemark] = useState(false);
   const [remarks, setRemarks] = useState(order.remarks || "");
   const [copied, setCopied] = useState(false);
+  const [idCopied, setIdCopied] = useState(false);
   const [isAddingProduct, setIsAddingProduct] = useState(false);
   const [tagInput, setTagInput] = useState("");
   const [isEditingTags, setIsEditingTags] = useState(false);
@@ -201,6 +202,12 @@ export default function OrderDetailsClient({
     navigator.clipboard.writeText(text);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleCopyOrderId = () => {
+    navigator.clipboard.writeText(order.id);
+    setIdCopied(true);
+    setTimeout(() => setIdCopied(false), 2000);
   };
 
   const handleSave = async () => {
@@ -419,8 +426,20 @@ export default function OrderDetailsClient({
           </Link>
           <div>
             <div className="flex flex-wrap items-center gap-2">
-              <h1 className="text-xl font-bold text-slate-900 tracking-tight">
-                Order ID: <span className="font-mono">{order.id}</span>
+              <h1 className="text-xl font-bold text-slate-900 tracking-tight flex items-center gap-1">
+                Order ID: <span className="font-mono select-all">{order.id}</span>
+                <button
+                  type="button"
+                  onClick={handleCopyOrderId}
+                  className="p-1.5 hover:bg-slate-100 bg-white rounded text-slate-500 hover:text-slate-800 transition-all ml-1 flex items-center justify-center shrink-0 cursor-pointer"
+                  title="Copy Order ID"
+                >
+                  {idCopied ? (
+                    <Check className="w-4 h-4 text-emerald-600" />
+                  ) : (
+                    <Copy className="w-4 h-4" />
+                  )}
+                </button>
               </h1>
               <span className={`text-[10px] px-2.5 py-1 rounded-full border font-bold uppercase tracking-wider ${statusColor[order.status] ?? "bg-slate-100 text-slate-600 border-slate-200"}`}>
                 {modifyStatus(order.status)}
