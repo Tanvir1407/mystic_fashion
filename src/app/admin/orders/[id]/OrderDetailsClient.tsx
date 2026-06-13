@@ -5,11 +5,13 @@ import {
   Edit2, Check, X, Package, Trash2, Plus, Copy,
   Compass, CheckCircle2, Truck, PackageCheck, Printer,
   AlertCircle, Minus, VerifiedIcon, Loader2,
-  CalendarDays, ArrowLeft
+  CalendarDays, ArrowLeft, Download
 } from "lucide-react";
 import { updateOrderDetails, updateOrderRemark, updateOrderStatus } from "../actions";
 import { getPathaoCities, getPathaoZones, getPathaoAreas } from "@/app/actions/pathao";
 import { HoldReasonModal } from "@/components/HoldReasonModal";
+import InvoicePrintView from "../InvoicePrintView";
+import ThermalPrintView from "../ThermalPrintView";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import UploadedImage from "@/components/UploadedImage";
@@ -61,10 +63,21 @@ export default function OrderDetailsClient({
   const [statusLoading, setStatusLoading] = useState(false);
   const [isHoldModalOpen, setIsHoldModalOpen] = useState(false);
   const [pendingStatus, setPendingStatus] = useState<OrderStatus | null>(null);
+  const [printType, setPrintType] = useState<"A4" | "80MM" | null>(null);
 
   useEffect(() => {
     setStatus(order.status);
   }, [order.status]);
+
+  useEffect(() => {
+    if (printType !== null) {
+      const timer = setTimeout(() => {
+        window.print();
+        setPrintType(null);
+      }, 150);
+      return () => clearTimeout(timer);
+    }
+  }, [printType]);
 
   const handleStatusChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
     const newStatus = e.target.value as OrderStatus;
@@ -414,7 +427,11 @@ export default function OrderDetailsClient({
   };
 
   return (
-    <div className="flex flex-col gap-5 max-w-7xl mx-auto pb-10 px-4 sm:px-6">
+    <>
+      {printType === "A4" && <InvoicePrintView orders={[order]} />}
+      {printType === "80MM" && <ThermalPrintView orders={[order]} />}
+
+      <div className="no-print flex flex-col gap-5 max-w-7xl mx-auto pb-10 px-4 sm:px-6">
       {/* Sticky Page Header */}
       <div className="sticky top-0 z-40 bg-slate-50/95 backdrop-blur-sm -mx-4 sm:-mx-6 px-4 sm:px-6 py-4 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div className="flex items-start gap-3">
@@ -476,6 +493,33 @@ export default function OrderDetailsClient({
               {commissionInfo.orderStatus !== "DELIVERED" && commissionInfo.orderStatus !== "CANCELLED" && (
                 <p className="text-[9px] text-amber-500 font-bold tracking-wide">Earns when Delivered</p>
               )}
+            </div>
+          )}
+
+          {!isEditing && (
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setPrintType("A4")}
+                className="flex items-center gap-1.5 text-xs font-semibold text-slate-700 bg-white border border-slate-200 px-3 py-1.5 rounded-lg hover:bg-slate-50 transition shadow-sm"
+              >
+                <Printer className="w-3.5 h-3.5" />
+                Print
+              </button>
+              <button
+                onClick={() => setPrintType("80MM")}
+                className="flex items-center gap-1.5 text-xs font-semibold text-slate-700 bg-white border border-slate-200 px-3 py-1.5 rounded-lg hover:bg-slate-50 transition shadow-sm"
+              >
+                <Printer className="w-3.5 h-3.5" />
+                POS Print
+              </button>
+              <button
+                onClick={() => setPrintType("A4")}
+                className="flex items-center gap-1.5 text-xs font-semibold text-slate-700 bg-white border border-slate-200 px-3 py-1.5 rounded-lg hover:bg-slate-50 transition shadow-sm"
+                title="Download A4 PDF"
+              >
+                <Download className="w-3.5 h-3.5" />
+                Download PDF
+              </button>
             </div>
           )}
 
@@ -1262,6 +1306,7 @@ export default function OrderDetailsClient({
         onClose={handleHoldClose}
         onConfirm={handleHoldConfirm}
       />
-    </div>
+      </div>
+    </>
   );
 }
