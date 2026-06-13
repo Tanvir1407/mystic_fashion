@@ -207,8 +207,8 @@ export default function StaffLayoutClient({
           </div>
         </header>
 
-        <main className="flex-1 overflow-y-auto bg-slate-50">
-          <div className="p-6 md:p-8 mx-auto">
+        <main className="flex-1 overflow-y-auto bg-slate-50 print:bg-white print:overflow-visible">
+          <div className="p-6 md:p-8 mx-auto print:p-0 print:max-w-none">
             {children}
           </div>
         </main>
