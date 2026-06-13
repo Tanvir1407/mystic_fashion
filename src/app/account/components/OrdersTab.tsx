@@ -178,7 +178,7 @@ export default function OrdersTab({ orders }: OrdersTabProps) {
               ];
 
               const STATUS_ORDER = ["PENDING", "CONFIRMED", "PRINTING", "PACKAGING", "SHIPPED", "DELIVERED"];
-              const isSpecialStatus = order.status === "CANCELLED" || order.status === "RETURNED";
+              const isSpecialStatus = order.status === "CANCELLED" || order.status === "RETURNED" || order.status === "HOLD";
               const currentIndex = STATUS_ORDER.indexOf(order.status.toUpperCase());
               const hasPrint = order.items?.some((i: any) => i.requiresPrint);
               const filteredSteps = STATUS_STEPS.filter(
@@ -303,14 +303,18 @@ export default function OrdersTab({ orders }: OrdersTabProps) {
                           <div className={`flex items-center gap-3 px-4 py-3 rounded-lg text-xs font-bold ${
                             order.status === "CANCELLED" 
                               ? "bg-rose-50 text-rose-700 border border-rose-100/60" 
+                              : order.status === "HOLD"
+                              ? "bg-pink-50 text-pink-700 border border-pink-100/60"
                               : "bg-slate-50 text-slate-700 border border-slate-200"
                           }`}>
-                            <AlertCircle className="w-4 h-4 shrink-0 text-rose-500" />
+                            <AlertCircle className={`w-4 h-4 shrink-0 ${order.status === "HOLD" ? "text-pink-500" : "text-rose-500"}`} />
                             <div>
                               <p className="font-semibold uppercase tracking-wider text-[10px]">Order {getStatusLabel(order.status)}</p>
                               <p className="font-normal text-slate-500 mt-0.5">
                                 {order.status === "CANCELLED"
                                   ? "This order has been cancelled. Please contact support if you have any questions."
+                                  : order.status === "HOLD"
+                                  ? "This order is currently on hold. We will resume processing it shortly or contact you if action is needed."
                                   : "This order has been returned. Please contact support for details."}
                               </p>
                             </div>

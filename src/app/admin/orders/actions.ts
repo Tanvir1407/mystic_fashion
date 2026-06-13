@@ -547,8 +547,8 @@ export const updateOrderDetails = withAuditLog(_updateOrderDetails, {
   entityType: "Order",
   action: "UPDATE",
   getEntityId: (args) => args[0],
-  fetchBefore: (id) => prisma.order.findUnique({ where: { id }, include: { items: true } }),
-  fetchAfter: (id) => prisma.order.findUnique({ where: { id }, include: { items: true } }),
+  fetchBefore: (id) => prisma.order.findUnique({ where: { id }, include: { items: { include: { product: true } } } }),
+  fetchAfter: (id) => prisma.order.findUnique({ where: { id }, include: { items: { include: { product: true } } } }),
   describe: (args) => `Updated order details for ${args[0]}`,
 });
 

@@ -6,7 +6,8 @@ import {
   Compass, CheckCircle2, Truck, PackageCheck, Printer,
   AlertCircle, Minus, VerifiedIcon, Loader2,
   CalendarDays, ArrowLeft, Download, Receipt, MapPin,
-  ClipboardList, Tag, User, ArrowRightLeft
+  ClipboardList, Tag, User, ArrowRightLeft, Activity,
+  Eye, EyeOff
 } from "lucide-react";
 import { updateOrderDetails, updateOrderRemark, updateOrderStatus } from "../actions";
 import { getPathaoCities, getPathaoZones, getPathaoAreas } from "@/app/actions/pathao";
@@ -29,6 +30,48 @@ interface StaffMember {
   } | null;
 }
 
+const formatValue = (val: any, fieldKey?: string) => {
+  if (val === null || val === undefined) return "None";
+  if (Array.isArray(val)) {
+    if (val.length === 0) return "None";
+    if (fieldKey === "items" || (val[0] && typeof val[0] === "object" && "productId" in val[0])) {
+      return val.map((item: any) => {
+        const name = item.product?.name || item.productName || `Product (${item.productId?.slice(0, 8) || "Unknown"})`;
+        const sizeInfo = item.size ? ` (${item.size})` : "";
+        const printInfo = item.requiresPrint ? ` [Print: ${item.printName || "No Name"}/${item.printNumber || "No No"}]` : "";
+        return `${item.quantity}x ${name}${sizeInfo} @ ৳${item.price}${printInfo}`;
+      }).join("\n");
+    }
+    if (typeof val[0] === "object") {
+      return JSON.stringify(val, null, 2);
+    }
+    return val.join(", ");
+  }
+  if (typeof val === "object") {
+    return JSON.stringify(val, null, 2);
+  }
+  return String(val);
+};
+
+const cleanForCompare = (val: any): any => {
+  if (val === null || val === undefined) return val;
+  if (Array.isArray(val)) {
+    return val.map(cleanForCompare);
+  }
+  if (typeof val === "object" && !(val instanceof Date)) {
+    const cleaned: any = {};
+    for (const key of Object.keys(val)) {
+      if (key === "id" || key === "createdAt" || key === "updatedAt" || key === "orderId") {
+        continue;
+      }
+      cleaned[key] = cleanForCompare(val[key]);
+    }
+    return cleaned;
+  }
+  return val;
+};
+
+
 export default function OrderDetailsClient({
   order,
   deliverySettings,
@@ -38,6 +81,7 @@ export default function OrderDetailsClient({
   staff = [],
   backUrl = "/admin/orders",
   commissionInfo = null,
+  activityLogs = [],
 }: {
   order: any;
   deliverySettings: any;
@@ -47,6 +91,7 @@ export default function OrderDetailsClient({
   staff?: StaffMember[];
   backUrl?: string;
   commissionInfo?: { rate: number; amount: number; orderStatus: string } | null;
+  activityLogs?: any[];
 }) {
   const router = useRouter();
   const [isEditing, setIsEditing] = useState(false);
@@ -55,6 +100,7 @@ export default function OrderDetailsClient({
   const [isEditingRemark, setIsEditingRemark] = useState(false);
   const [remarks, setRemarks] = useState(order.remarks || "");
   const [copied, setCopied] = useState(false);
+  const [copiedAddress, setCopiedAddress] = useState(false);
   const [idCopied, setIdCopied] = useState(false);
   const [isAddingProduct, setIsAddingProduct] = useState(false);
   const [tagInput, setTagInput] = useState("");
@@ -65,6 +111,48 @@ export default function OrderDetailsClient({
   const [isHoldModalOpen, setIsHoldModalOpen] = useState(false);
   const [pendingStatus, setPendingStatus] = useState<OrderStatus | null>(null);
   const [printType, setPrintType] = useState<"A4" | "80MM" | null>(null);
+  const [expandedLogs, setExpandedLogs] = useState<Record<string, boolean>>({});
+
+  const toggleLogExpanded = (logId: string) => {
+    setExpandedLogs((prev) => ({ ...prev, [logId]: !prev[logId] }));
+  };
+
+  const getDiffDetails = (log: any) => {
+    if (!log.dataBefore || !log.dataAfter) return null;
+    try {
+      const before = typeof log.dataBefore === "string" ? JSON.parse(log.dataBefore) : log.dataBefore;
+      const after = typeof log.dataAfter === "string" ? JSON.parse(log.dataAfter) : log.dataAfter;
+
+      const diffs = [];
+      const allKeys = Array.from(new Set([...Object.keys(before), ...Object.keys(after)]));
+      const ignoreKeys = ["createdAt", "updatedAt", "id"];
+
+      for (const key of allKeys) {
+        if (ignoreKeys.includes(key)) continue;
+        const valBefore = before[key];
+        const valAfter = after[key];
+
+        const cleanBefore = cleanForCompare(valBefore);
+        const cleanAfter = cleanForCompare(valAfter);
+
+        const match = typeof cleanBefore === "object" && typeof cleanAfter === "object"
+          ? JSON.stringify(cleanBefore) === JSON.stringify(cleanAfter)
+          : String(cleanBefore) === String(cleanAfter);
+
+        if (!match) {
+          diffs.push({
+            field: key,
+            oldVal: valBefore,
+            newVal: valAfter
+          });
+        }
+      }
+      return diffs;
+    } catch (e) {
+      console.error("[OrderDetailsClient] Failed to calculate diff details:", e);
+      return null;
+    }
+  };
 
   useEffect(() => {
     setStatus(order.status);
@@ -218,6 +306,34 @@ export default function OrderDetailsClient({
     setTimeout(() => setCopied(false), 2000);
   };
 
+  const handleCopyAddress = () => {
+    const cityLabel = cities.find((c) => c.value === order.pathaoCityId?.toString())?.label;
+    const zoneLabel = zones.find((z) => z.value === order.pathaoZoneId?.toString())?.label;
+    const areaLabel = areas.find((a) => a.value === order.pathaoAreaId?.toString())?.label;
+
+    const parts = [
+      `Name: ${order.customerName || ""}`,
+      `Phone: ${order.phone || ""}`
+    ];
+
+    if (cityLabel) {
+      parts.push(`City: ${cityLabel}`);
+    }
+    if (zoneLabel) {
+      parts.push(`Zone: ${zoneLabel}`);
+    }
+    if (areaLabel) {
+      parts.push(`Area: ${areaLabel}`);
+    }
+
+    parts.push(`Address: ${order.address || ""}`);
+
+    const text = parts.join("\n");
+    navigator.clipboard.writeText(text);
+    setCopiedAddress(true);
+    setTimeout(() => setCopiedAddress(false), 2000);
+  };
+
   const handleCopyOrderId = () => {
     navigator.clipboard.writeText(order.id);
     setIdCopied(true);
@@ -231,6 +347,16 @@ export default function OrderDetailsClient({
     }
 
     setLoading(true);
+    let finalTags = formData.tags;
+    const pendingTag = tagInput.replace(/,/g, "").trim();
+    if (pendingTag) {
+      if (!finalTags.includes(pendingTag)) {
+        finalTags = [...finalTags, pendingTag];
+        setFormData(prev => ({ ...prev, tags: finalTags }));
+      }
+      setTagInput("");
+    }
+
     const result = await updateOrderDetails(order.id, {
       customerName: formData.customerName,
       phone: formData.phone,
@@ -243,7 +369,7 @@ export default function OrderDetailsClient({
       pathaoCityId: formData.pathaoCityId,
       pathaoZoneId: formData.pathaoZoneId,
       pathaoAreaId: formData.pathaoAreaId,
-      tags: formData.tags,
+      tags: finalTags,
       createdById: formData.createdById || null,
       items: formData.items.map((i: any) => ({
         id: i.id,
@@ -269,6 +395,16 @@ export default function OrderDetailsClient({
 
   const handleSaveTags = async () => {
     setLoading(true);
+    let finalTags = tagsFormData;
+    const pendingTag = tagInput.replace(/,/g, "").trim();
+    if (pendingTag) {
+      if (!finalTags.includes(pendingTag)) {
+        finalTags = [...finalTags, pendingTag];
+        setTagsFormData(finalTags);
+      }
+      setTagInput("");
+    }
+
     const result = await updateOrderDetails(order.id, {
       customerName: order.customerName,
       phone: order.phone,
@@ -278,7 +414,7 @@ export default function OrderDetailsClient({
       discountAmount: order.discountAmount || 0,
       deliveryCharge: order.deliveryCharge || 0,
       isStorePickup: order.isStorePickup,
-      tags: tagsFormData,
+      tags: finalTags,
     });
     if (result.success) {
       setIsEditingTags(false);
@@ -380,7 +516,7 @@ export default function OrderDetailsClient({
     { statusKey: "DELIVERED", title: "Delivered", icon: Check },
   ];
   const STATUS_ORDER = ["PENDING", "CONFIRMED", "PRINTING", "PACKAGING", "SHIPPED", "DELIVERED"];
-  const isSpecial = order.status === "CANCELLED" || order.status === "RETURNED";
+  const isSpecial = order.status === "CANCELLED" || order.status === "RETURNED" || order.status === "HOLD";
   const currentIndex = STATUS_ORDER.indexOf(order.status);
   const hasPrint = order.items?.some((i: any) => i.requiresPrint);
   const filteredSteps = STATUS_STEPS.filter((s) => s.statusKey !== "PRINTING" || hasPrint || order.status === "PRINTING");
@@ -433,911 +569,1050 @@ export default function OrderDetailsClient({
       {printType === "80MM" && <ThermalPrintView orders={[order]} />}
 
       <div className="no-print flex flex-col gap-5 max-w-7xl mx-auto pb-10 px-4 sm:px-6">
-      {/* Sticky Page Header */}
-      <div className="sticky top-0 z-40 bg-slate-50/95 backdrop-blur-sm -mx-4 sm:-mx-6 px-4 sm:px-6 py-4 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <div className="flex items-start gap-3">
-          <Link
-            href={backUrl}
-            className="mt-0.5 p-2 bg-white border border-slate-200 rounded-lg text-slate-500 hover:text-slate-800 hover:bg-slate-50 shadow-sm transition-colors shrink-0"
-          >
-            <ArrowLeft className="w-4 h-4" />
-          </Link>
-          <div>
-            <div className="flex flex-wrap items-center gap-2">
-              <h1 className="text-xl font-black text-slate-900 tracking-tight flex items-center gap-1.5">
-                Order ID: <span className="font-mono select-all text-slate-800">{order.id}</span>
-                <button
-                  type="button"
-                  onClick={handleCopyOrderId}
-                  className="p-1 hover:bg-slate-100 rounded text-slate-400 hover:text-[#800020] transition-all duration-200 flex items-center justify-center shrink-0 cursor-pointer"
-                  title="Copy Order ID"
-                >
-                  {idCopied ? (
-                    <Check className="w-3.5 h-3.5 text-emerald-600 stroke-[3px]" />
-                  ) : (
-                    <Copy className="w-3.5 h-3.5" />
-                  )}
-                </button>
-              </h1>
-              <span className={`text-[10px] px-2.5 py-1 rounded-full border font-bold uppercase tracking-wider ${statusColor[order.status] ?? "bg-slate-100 text-slate-600 border-slate-200"}`}>
-                {modifyStatus(order.status)}
-              </span>
-              {order.isStorePickup && (
-                <span className="text-[10px] px-2.5 py-1 rounded-full border font-bold uppercase tracking-wider bg-teal-50 text-teal-700 border-teal-200">
-                  Store Pickup
-                </span>
-              )}
-              {order.orderSource === "eCommerce" && (
-                <span className="text-[10px] px-2.5 py-1 rounded-full border font-bold uppercase tracking-wider bg-sky-50 text-sky-700 border-sky-200">
-                  eCommerce
-                </span>
-              )}
-            </div>
-            <p className="text-xs text-slate-500 flex items-center gap-1.5 mt-1.5">
-              <CalendarDays className="w-3.5 h-3.5" />
-              Created {new Date(order.createdAt).toLocaleString("en-GB", {
-                day: "numeric", month: "short", year: "numeric",
-                hour: "2-digit", minute: "2-digit"
-              })}
-            </p>
-          </div>
-        </div>
-
-        {/* Right side of Header */}
-        <div className="flex items-center gap-4 shrink-0">
-          {!isEditing && commissionInfo && (
-            <div className="text-right">
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Commission ({commissionInfo.rate}%)</p>
-              <p className={`text-base font-extrabold tracking-tight ${commissionInfo.orderStatus === "DELIVERED" ? "text-emerald-600" : commissionInfo.orderStatus === "CANCELLED" ? "text-slate-400" : "text-amber-600"}`}>
-                {commissionInfo.orderStatus === "CANCELLED" ? "—" : `৳${commissionInfo.amount.toLocaleString()}`}
-              </p>
-              {commissionInfo.orderStatus !== "DELIVERED" && commissionInfo.orderStatus !== "CANCELLED" && (
-                <p className="text-[9px] text-amber-500 font-bold tracking-wide">Earns when Delivered</p>
-              )}
-            </div>
-          )}
-
-          {!isEditing && (
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setPrintType("A4")}
-                className="flex items-center gap-1.5 text-xs font-bold text-slate-700 bg-white border border-slate-200/80 px-3.5 py-1.5 rounded-lg hover:border-[#800020]/30 hover:text-[#800020] transition duration-200 shadow-sm cursor-pointer"
-              >
-                <Printer className="w-3.5 h-3.5 text-slate-400 group-hover:text-[#800020] transition-colors" />
-                Print
-              </button>
-              <button
-                onClick={() => setPrintType("80MM")}
-                className="flex items-center gap-1.5 text-xs font-bold text-slate-700 bg-white border border-slate-200/80 px-3.5 py-1.5 rounded-lg hover:border-[#800020]/30 hover:text-[#800020] transition duration-200 shadow-sm cursor-pointer"
-              >
-                <Printer className="w-3.5 h-3.5 text-slate-400 group-hover:text-[#800020] transition-colors" />
-                POS Print
-              </button>
-              <button
-                onClick={() => setPrintType("A4")}
-                className="flex items-center gap-1.5 text-xs font-bold text-[#800020] bg-[#800020]/5 border border-[#800020]/15 px-3.5 py-1.5 rounded-lg hover:bg-[#800020]/10 hover:border-[#800020]/25 transition duration-200 shadow-sm cursor-pointer"
-                title="Download A4 PDF"
-              >
-                <Download className="w-3.5 h-3.5 text-[#800020]" />
-                Download PDF
-              </button>
-            </div>
-          )}
-
-          {isEditing && (
-            <div className="flex items-center gap-2">
-              <button
-                onClick={handleSave}
-                disabled={loading}
-                className="flex items-center gap-1.5 px-4 py-2 bg-slate-900 text-white text-xs font-bold rounded-lg hover:bg-slate-800 transition-colors disabled:opacity-50 shadow-sm"
-              >
-                {loading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
-                {loading ? "Saving..." : "Save Changes"}
-              </button>
-              <button
-                onClick={handleCancelEdit}
-                disabled={loading}
-                className="flex items-center gap-1.5 px-4 py-2 bg-white border border-slate-200 text-slate-600 text-xs font-bold rounded-lg hover:bg-slate-50 transition-colors disabled:opacity-50"
-              >
-                <X className="w-3.5 h-3.5" />
-                Cancel
-              </button>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Pathao Consignment ID */}
-      {order.pathaoConsignmentId && (
-        <div className="flex items-center justify-between bg-indigo-50 border border-indigo-100 px-4 py-2.5 rounded-xl">
-          <div>
-            <span className="block text-[10px] uppercase font-bold text-indigo-400 tracking-wider mb-0.5">Pathao Consignment ID</span>
-            <span className="text-sm font-black text-indigo-700 tracking-widest font-mono">{order.pathaoConsignmentId}</span>
-          </div>
-          <button
-            onClick={() => handleCopy(order.pathaoConsignmentId)}
-            className="p-2 bg-white border border-indigo-200 rounded-lg text-indigo-500 hover:border-indigo-300 transition-all shadow-sm"
-            title="Copy"
-          >
-            {copied ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
-          </button>
-        </div>
-      )}
-
-      {/* Main 2-column layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-
-        {/* ── Left Main Column ── */}
-        <div className="lg:col-span-2 space-y-4">
-
-          {/* Products Card */}
-          <div className="bg-white border border-slate-200/80 rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.02)] overflow-hidden">
-            <div className="px-5 py-4 border-b border-slate-150 rounded-t-xl bg-slate-50/50 flex items-center justify-between">
-              <h2 className="text-sm font-bold text-slate-800 flex items-center gap-2">
-                <Package className="w-4 h-4 text-slate-500" />
-                Products
-                <span className="text-[11px] font-semibold bg-slate-200/60 text-slate-600 px-2 py-0.5 rounded-full ml-1">
-                  {formData.items.length}
-                </span>
-              </h2>
-              {!isEditing && (
-                <button
-                  onClick={() => setIsEditing(true)}
-                  className="flex items-center gap-1.5 text-xs font-bold text-indigo-600 hover:text-[#800020] transition-colors"
-                >
-                  <Edit2 className="w-3.5 h-3.5" />
-                  Edit
-                </button>
-              )}
-            </div>
-
-            <div className="divide-y divide-slate-100">
-              {formData.items.map((item: any, index: number) => (
-                <div key={item.id} className="flex items-start gap-4 px-5 py-4 hover:bg-slate-50/50 transition-colors">
-                  {/* Product Image */}
-                  <div className="w-14 h-16 relative bg-slate-100 rounded-lg overflow-hidden border border-slate-150 shrink-0">
-                    {item.product?.images?.[0] ? (
-                      <UploadedImage src={item.product.images[0]} alt={item.product.name} fill className="object-cover" />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center">
-                        <Package className="w-5 h-5 text-slate-300" />
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Product Info */}
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-bold text-slate-800 truncate">{item.product?.name}</p>
-                    <div className="flex flex-wrap items-center gap-2 mt-1.5">
-                      <span className="text-[9px] font-extrabold bg-slate-800 text-white px-2 py-0.5 rounded tracking-widest uppercase">{item.size}</span>
-                      <span className="text-xs font-semibold text-slate-500">@ {formatBDT(item.price)}</span>
-                      {item.requiresPrint && (
-                        <span className="text-[9px] font-bold bg-indigo-50 text-indigo-600 border border-indigo-100 px-2 py-0.5 rounded uppercase tracking-wider flex items-center gap-1">
-                          🖨️ Print: {item.printName} (#{item.printNumber})
-                        </span>
-                      )}
-                    </div>
-                    {item.requiresPrint && (
-                      <p className="text-[10px] text-indigo-500 font-medium mt-0.5">
-                        + {formatBDT(item.printCost * item.quantity)} DTF cost
-                      </p>
-                    )}
-                  </div>
-
-                  {/* Qty + Price */}
-                  <div className="shrink-0 flex flex-col items-end gap-2">
-                    {isEditing ? (
-                      <div className="flex items-center border border-slate-200 rounded-lg overflow-hidden bg-white">
-                        <button onClick={() => updateItemQuantity(index, -1)} className="px-2.5 py-1.5 hover:bg-slate-100 text-slate-600 font-bold text-sm transition-colors">−</button>
-                        <span className="px-3 py-1.5 text-xs font-bold text-slate-800 bg-slate-50 min-w-[32px] text-center">{item.quantity}</span>
-                        <button onClick={() => updateItemQuantity(index, 1)} className="px-2.5 py-1.5 hover:bg-slate-100 text-slate-600 font-bold text-sm transition-colors">+</button>
-                      </div>
-                    ) : (
-                      <span className="text-xs font-semibold text-slate-600">Qty: {item.quantity}</span>
-                    )}
-                    <span className="text-sm font-bold text-slate-900">
-                      {formatBDT((item.price + (item.requiresPrint ? item.printCost : 0)) * item.quantity)}
-                    </span>
-                    {isEditing && (
-                      <button onClick={() => removeItem(index)} className="text-[10px] font-bold text-red-500 hover:text-red-700 flex items-center gap-0.5 transition-colors">
-                        <Trash2 className="w-3 h-3" /> Remove
-                      </button>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            {/* Add Product (edit mode) */}
-            {isEditing && (
-              <div className="px-5 py-4 border-t border-slate-100 bg-slate-50/50">
-                {!isAddingProduct ? (
+        {/* Sticky Page Header */}
+        <div className="sticky top-0 z-40 bg-slate-50/95 backdrop-blur-sm -mx-4 sm:-mx-6 px-4 sm:px-6 py-4 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div className="flex items-start gap-3">
+            <Link
+              href={backUrl}
+              className="mt-0.5 p-2 bg-white border border-slate-200 rounded-lg text-slate-500 hover:text-slate-800 hover:bg-slate-50 shadow-sm transition-colors shrink-0"
+            >
+              <ArrowLeft className="w-4 h-4" />
+            </Link>
+            <div>
+              <div className="flex flex-wrap items-center gap-2">
+                <h1 className="text-xl font-black text-slate-900 tracking-tight flex items-center gap-1.5">
+                  Order ID: <span className="font-mono select-all text-slate-800">{order.id}</span>
                   <button
-                    onClick={() => setIsAddingProduct(true)}
-                    className="flex items-center justify-center gap-2 w-full py-2.5 border-2 border-dashed border-slate-300 rounded-lg text-xs font-semibold text-slate-500 hover:bg-slate-100 hover:border-slate-400 hover:text-slate-700 transition-all"
+                    type="button"
+                    onClick={handleCopyOrderId}
+                    className="p-1 hover:bg-slate-100 rounded text-slate-400 hover:text-[#800020] transition-all duration-200 flex items-center justify-center shrink-0 cursor-pointer"
+                    title="Copy Order ID"
                   >
-                    <Plus className="w-3.5 h-3.5" /> Add Item
-                  </button>
-                ) : (
-                  <div className="space-y-3 bg-white border border-slate-200 rounded-xl p-4 shadow-sm animate-in fade-in duration-200">
-                    <div className="flex items-center justify-between pb-2 border-b border-slate-100">
-                      <h4 className="text-sm font-semibold text-slate-800">Add New Product</h4>
-                      <button onClick={() => setIsAddingProduct(false)} className="text-slate-400 hover:text-slate-600"><X className="w-4 h-4" /></button>
-                    </div>
-                    <div>
-                      <label className="text-[10px] font-bold uppercase text-slate-500 block mb-1">Product</label>
-                      <CustomSelect options={products.map((p) => ({ value: p.id, label: p.name }))} value={newProductData.productId} onChange={(val) => setNewProductData({ ...newProductData, productId: val })} searchable />
-                    </div>
-                    {newProductData.productId && (
-                      <div>
-                        <label className="text-[10px] font-bold uppercase text-slate-500 block mb-1">Size</label>
-                        <CustomSelect options={(products.find((p) => p.id === newProductData.productId)?.variants || []).map((v: any) => ({ value: v.size, label: `${v.size} (Stock: ${v.stock})` }))} value={newProductData.size} onChange={(val) => setNewProductData({ ...newProductData, size: val })} openUpwards />
-                      </div>
+                    {idCopied ? (
+                      <Check className="w-3.5 h-3.5 text-emerald-600 stroke-[3px]" />
+                    ) : (
+                      <Copy className="w-3.5 h-3.5" />
                     )}
-                    <div>
-                      <label className="text-[10px] font-bold uppercase text-slate-500 block mb-1">Quantity</label>
-                      <div className="flex items-center border border-slate-200 rounded-lg overflow-hidden w-fit bg-white">
-                        <button onClick={() => setNewProductData({ ...newProductData, quantity: Math.max(1, newProductData.quantity - 1) })} className="px-3 py-1.5 hover:bg-slate-100 font-bold text-slate-600">−</button>
-                        <span className="px-4 py-1.5 text-xs font-bold bg-slate-50">{newProductData.quantity}</span>
-                        <button onClick={() => setNewProductData({ ...newProductData, quantity: newProductData.quantity + 1 })} className="px-3 py-1.5 hover:bg-slate-100 font-bold text-slate-600">+</button>
-                      </div>
-                    </div>
-                    <div className="p-3 bg-indigo-50/60 border border-indigo-100 rounded-lg">
-                      <label className="flex items-center gap-2 cursor-pointer text-xs font-semibold text-slate-800">
-                        <input type="checkbox" checked={newProductData.requiresPrint} onChange={(e) => setNewProductData({ ...newProductData, requiresPrint: e.target.checked })} className="rounded text-indigo-600" />
-                        Jersey Customization (Name & Number)
-                      </label>
-                      {newProductData.requiresPrint && (
-                        <div className="mt-3 grid grid-cols-2 gap-2">
-                          <input type="text" placeholder="Print Name" value={newProductData.printName} onChange={(e) => setNewProductData({ ...newProductData, printName: e.target.value })} className="text-xs px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:border-slate-400" />
-                          <input type="text" placeholder="Number" value={newProductData.printNumber} onChange={(e) => setNewProductData({ ...newProductData, printNumber: e.target.value })} className="text-xs px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:border-slate-400" />
+                  </button>
+                </h1>
+                <span className={`text-[10px] px-2.5 py-1 rounded-full border font-bold uppercase tracking-wider ${statusColor[order.status] ?? "bg-slate-100 text-slate-600 border-slate-200"}`}>
+                  {modifyStatus(order.status)}
+                </span>
+                {order.isStorePickup && (
+                  <span className="text-[10px] px-2.5 py-1 rounded-full border font-bold uppercase tracking-wider bg-teal-50 text-teal-700 border-teal-200">
+                    Store Pickup
+                  </span>
+                )}
+                {order.orderSource === "eCommerce" && (
+                  <span className="text-[10px] px-2.5 py-1 rounded-full border font-bold uppercase tracking-wider bg-sky-50 text-sky-700 border-sky-200">
+                    eCommerce
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-slate-500 flex items-center gap-1.5 mt-1.5">
+                <CalendarDays className="w-3.5 h-3.5" />
+                Created {new Date(order.createdAt).toLocaleString("en-GB", {
+                  day: "numeric", month: "short", year: "numeric",
+                  hour: "2-digit", minute: "2-digit"
+                })}
+              </p>
+            </div>
+          </div>
+
+          {/* Right side of Header */}
+          <div className="flex items-center gap-4 shrink-0">
+            {!isEditing && commissionInfo && (
+              <div className="text-right">
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Commission ({commissionInfo.rate}%)</p>
+                <p className={`text-base font-extrabold tracking-tight ${commissionInfo.orderStatus === "DELIVERED" ? "text-emerald-600" : commissionInfo.orderStatus === "CANCELLED" ? "text-slate-400" : "text-amber-600"}`}>
+                  {commissionInfo.orderStatus === "CANCELLED" ? "—" : `৳${commissionInfo.amount.toLocaleString()}`}
+                </p>
+                {commissionInfo.orderStatus !== "DELIVERED" && commissionInfo.orderStatus !== "CANCELLED" && (
+                  <p className="text-[9px] text-amber-500 font-bold tracking-wide">Earns when Delivered</p>
+                )}
+              </div>
+            )}
+
+            {!isEditing && (
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setPrintType("A4")}
+                  className="flex items-center gap-1.5 text-xs font-bold text-slate-700 bg-white border border-slate-200/80 px-3.5 py-1.5 rounded-lg hover:border-[#800020]/30 hover:text-[#800020] transition duration-200 shadow-sm cursor-pointer"
+                >
+                  <Printer className="w-3.5 h-3.5 text-slate-400 group-hover:text-[#800020] transition-colors" />
+                  Print
+                </button>
+                <button
+                  onClick={() => setPrintType("80MM")}
+                  className="flex items-center gap-1.5 text-xs font-bold text-slate-700 bg-white border border-slate-200/80 px-3.5 py-1.5 rounded-lg hover:border-[#800020]/30 hover:text-[#800020] transition duration-200 shadow-sm cursor-pointer"
+                >
+                  <Printer className="w-3.5 h-3.5 text-slate-400 group-hover:text-[#800020] transition-colors" />
+                  POS Print
+                </button>
+                <button
+                  onClick={() => setPrintType("A4")}
+                  className="flex items-center gap-1.5 text-xs font-bold text-[#800020] bg-[#800020]/5 border border-[#800020]/15 px-3.5 py-1.5 rounded-lg hover:bg-[#800020]/10 hover:border-[#800020]/25 transition duration-200 shadow-sm cursor-pointer"
+                  title="Download A4 PDF"
+                >
+                  <Download className="w-3.5 h-3.5 text-[#800020]" />
+                  Download PDF
+                </button>
+              </div>
+            )}
+
+            {isEditing && (
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={handleSave}
+                  disabled={loading}
+                  className="flex items-center gap-1.5 px-4 py-2 bg-slate-900 text-white text-xs font-bold rounded-lg hover:bg-slate-800 transition-colors disabled:opacity-50 shadow-sm"
+                >
+                  {loading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
+                  {loading ? "Saving..." : "Save Changes"}
+                </button>
+                <button
+                  onClick={handleCancelEdit}
+                  disabled={loading}
+                  className="flex items-center gap-1.5 px-4 py-2 bg-white border border-slate-200 text-slate-600 text-xs font-bold rounded-lg hover:bg-slate-50 transition-colors disabled:opacity-50"
+                >
+                  <X className="w-3.5 h-3.5" />
+                  Cancel
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Pathao Consignment ID */}
+        {order.pathaoConsignmentId && (
+          <div className="flex items-center justify-between bg-indigo-50 border border-indigo-100 px-4 py-2.5 rounded-xl">
+            <div>
+              <span className="block text-[10px] uppercase font-bold text-indigo-400 tracking-wider mb-0.5">Pathao Consignment ID</span>
+              <span className="text-sm font-black text-indigo-700 tracking-widest font-mono">{order.pathaoConsignmentId}</span>
+            </div>
+            <button
+              onClick={() => handleCopy(order.pathaoConsignmentId)}
+              className="p-2 bg-white border border-indigo-200 rounded-lg text-indigo-500 hover:border-indigo-300 transition-all shadow-sm"
+              title="Copy"
+            >
+              {copied ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
+            </button>
+          </div>
+        )}
+
+        {/* Main 2-column layout */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+
+          {/* ── Left Main Column ── */}
+          <div className="lg:col-span-2 space-y-4">
+
+            {/* Products Card */}
+            <div className="bg-white border border-slate-200/80 rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.02)] overflow-hidden">
+              <div className="px-5 py-4 border-b border-slate-150 rounded-t-xl bg-slate-50/50 flex items-center justify-between">
+                <h2 className="text-sm font-bold text-slate-800 flex items-center gap-2">
+                  <Package className="w-4 h-4 text-slate-500" />
+                  Products
+                  <span className="text-[11px] font-semibold bg-slate-200/60 text-slate-600 px-2 py-0.5 rounded-full ml-1">
+                    {formData.items.length}
+                  </span>
+                </h2>
+                {!isEditing && (
+                  <button
+                    onClick={() => setIsEditing(true)}
+                    className="flex items-center gap-1.5 text-xs font-bold text-indigo-600 hover:text-[#800020] transition-colors"
+                  >
+                    <Edit2 className="w-3.5 h-3.5" />
+                    Edit
+                  </button>
+                )}
+              </div>
+
+              <div className="divide-y divide-slate-100">
+                {formData.items.map((item: any, index: number) => (
+                  <div key={item.id} className="flex items-start gap-4 px-5 py-4 hover:bg-slate-50/50 transition-colors">
+                    {/* Product Image */}
+                    <div className="w-14 h-16 relative bg-slate-100 rounded-lg overflow-hidden border border-slate-150 shrink-0">
+                      {item.product?.images?.[0] ? (
+                        <UploadedImage src={item.product.images[0]} alt={item.product.name} fill className="object-cover" />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center">
+                          <Package className="w-5 h-5 text-slate-300" />
                         </div>
                       )}
                     </div>
-                    <button onClick={handleAddNewProduct} className="w-full py-2 bg-slate-900 text-white text-xs font-bold rounded-lg hover:bg-slate-800 transition-colors flex items-center justify-center gap-1.5">
-                      <Plus className="w-3.5 h-3.5" /> Add to Order
+
+                    {/* Product Info */}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-bold text-slate-800 truncate">{item.product?.name}</p>
+                      <div className="flex flex-wrap items-center gap-2 mt-1.5">
+                        <span className="text-[9px] font-extrabold bg-slate-800 text-white px-2 py-0.5 rounded tracking-widest uppercase">{item.size}</span>
+                        <span className="text-xs font-semibold text-slate-500">@ {formatBDT(item.price)}</span>
+                        {item.requiresPrint && (
+                          <span className="text-[9px] font-bold bg-indigo-50 text-indigo-600 border border-indigo-100 px-2 py-0.5 rounded uppercase tracking-wider flex items-center gap-1">
+                            🖨️ Print: {item.printName} (#{item.printNumber})
+                          </span>
+                        )}
+                      </div>
+                      {item.requiresPrint && (
+                        <p className="text-[10px] text-indigo-500 font-medium mt-0.5">
+                          + {formatBDT(item.printCost * item.quantity)} DTF cost
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Qty + Price */}
+                    <div className="shrink-0 flex flex-col items-end gap-2">
+                      {isEditing ? (
+                        <div className="flex items-center border border-slate-200 rounded-lg overflow-hidden bg-white">
+                          <button onClick={() => updateItemQuantity(index, -1)} className="px-2.5 py-1.5 hover:bg-slate-100 text-slate-600 font-bold text-sm transition-colors">−</button>
+                          <span className="px-3 py-1.5 text-xs font-bold text-slate-800 bg-slate-50 min-w-[32px] text-center">{item.quantity}</span>
+                          <button onClick={() => updateItemQuantity(index, 1)} className="px-2.5 py-1.5 hover:bg-slate-100 text-slate-600 font-bold text-sm transition-colors">+</button>
+                        </div>
+                      ) : (
+                        <span className="text-xs font-semibold text-slate-600">Qty: {item.quantity}</span>
+                      )}
+                      <span className="text-sm font-bold text-slate-900">
+                        {formatBDT((item.price + (item.requiresPrint ? item.printCost : 0)) * item.quantity)}
+                      </span>
+                      {isEditing && (
+                        <button onClick={() => removeItem(index)} className="text-[10px] font-bold text-red-500 hover:text-red-700 flex items-center gap-0.5 transition-colors">
+                          <Trash2 className="w-3 h-3" /> Remove
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Add Product (edit mode) */}
+              {isEditing && (
+                <div className="px-5 py-4 border-t border-slate-100 bg-slate-50/50">
+                  {!isAddingProduct ? (
+                    <button
+                      onClick={() => setIsAddingProduct(true)}
+                      className="flex items-center justify-center gap-2 w-full py-2.5 border-2 border-dashed border-slate-300 rounded-lg text-xs font-semibold text-slate-500 hover:bg-slate-100 hover:border-slate-400 hover:text-slate-700 transition-all"
+                    >
+                      <Plus className="w-3.5 h-3.5" /> Add Item
+                    </button>
+                  ) : (
+                    <div className="space-y-3 bg-white border border-slate-200 rounded-xl p-4 shadow-sm animate-in fade-in duration-200">
+                      <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+                        <h4 className="text-sm font-semibold text-slate-800">Add New Product</h4>
+                        <button onClick={() => setIsAddingProduct(false)} className="text-slate-400 hover:text-slate-600"><X className="w-4 h-4" /></button>
+                      </div>
+                      <div>
+                        <label className="text-[10px] font-bold uppercase text-slate-500 block mb-1">Product</label>
+                        <CustomSelect options={products.map((p) => ({ value: p.id, label: p.name }))} value={newProductData.productId} onChange={(val) => setNewProductData({ ...newProductData, productId: val })} searchable />
+                      </div>
+                      {newProductData.productId && (
+                        <div>
+                          <label className="text-[10px] font-bold uppercase text-slate-500 block mb-1">Size</label>
+                          <CustomSelect options={(products.find((p) => p.id === newProductData.productId)?.variants || []).map((v: any) => ({ value: v.size, label: `${v.size} (Stock: ${v.stock})` }))} value={newProductData.size} onChange={(val) => setNewProductData({ ...newProductData, size: val })} openUpwards />
+                        </div>
+                      )}
+                      <div>
+                        <label className="text-[10px] font-bold uppercase text-slate-500 block mb-1">Quantity</label>
+                        <div className="flex items-center border border-slate-200 rounded-lg overflow-hidden w-fit bg-white">
+                          <button onClick={() => setNewProductData({ ...newProductData, quantity: Math.max(1, newProductData.quantity - 1) })} className="px-3 py-1.5 hover:bg-slate-100 font-bold text-slate-600">−</button>
+                          <span className="px-4 py-1.5 text-xs font-bold bg-slate-50">{newProductData.quantity}</span>
+                          <button onClick={() => setNewProductData({ ...newProductData, quantity: newProductData.quantity + 1 })} className="px-3 py-1.5 hover:bg-slate-100 font-bold text-slate-600">+</button>
+                        </div>
+                      </div>
+                      <div className="p-3 bg-indigo-50/60 border border-indigo-100 rounded-lg">
+                        <label className="flex items-center gap-2 cursor-pointer text-xs font-semibold text-slate-800">
+                          <input type="checkbox" checked={newProductData.requiresPrint} onChange={(e) => setNewProductData({ ...newProductData, requiresPrint: e.target.checked })} className="rounded text-indigo-600" />
+                          Jersey Customization (Name & Number)
+                        </label>
+                        {newProductData.requiresPrint && (
+                          <div className="mt-3 grid grid-cols-2 gap-2">
+                            <input type="text" placeholder="Print Name" value={newProductData.printName} onChange={(e) => setNewProductData({ ...newProductData, printName: e.target.value })} className="text-xs px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:border-slate-400" />
+                            <input type="text" placeholder="Number" value={newProductData.printNumber} onChange={(e) => setNewProductData({ ...newProductData, printNumber: e.target.value })} className="text-xs px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:border-slate-400" />
+                          </div>
+                        )}
+                      </div>
+                      <button onClick={handleAddNewProduct} className="w-full py-2 bg-slate-900 text-white text-xs font-bold rounded-lg hover:bg-slate-800 transition-colors flex items-center justify-center gap-1.5">
+                        <Plus className="w-3.5 h-3.5" /> Add to Order
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Order Summary Card */}
+            <div className="bg-white border border-slate-200/80 rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.02)] overflow-hidden">
+              <div className="px-5 py-4 border-b border-slate-150 bg-slate-50/50">
+                <h2 className="text-sm font-bold text-slate-800 flex items-center gap-2">
+                  <Receipt className="w-4 h-4 text-slate-500" />
+                  Order Summary
+                </h2>
+              </div>
+              <div className="px-5 py-4 space-y-3">
+                {/* Subtotal */}
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-slate-500">{formData.items.length} item{formData.items.length !== 1 ? "s" : ""}</span>
+                  <span className="font-semibold text-slate-800">{formatBDT(baseSubtotal)}</span>
+                </div>
+
+                {/* DTF Cost */}
+                {totalDTFCost > 0 && (
+                  <div className="flex justify-between items-center text-sm">
+                    <span className="text-indigo-500">DTF Printing</span>
+                    <span className="font-semibold text-indigo-600">{formatBDT(totalDTFCost)}</span>
+                  </div>
+                )}
+
+                {/* Discount */}
+                {!isEditing && discount > 0 && (
+                  <div className="flex justify-between items-center text-sm">
+                    <span className="text-slate-500">Discount {order.couponCode && <span className="text-[10px] font-bold bg-slate-100 px-1.5 py-0.5 rounded ml-1">{order.couponCode}</span>}</span>
+                    <span className="font-semibold text-red-500">−{formatBDT(discount)}</span>
+                  </div>
+                )}
+
+                {/* Discount edit mode */}
+                {isEditing && (
+                  <div className="flex justify-between items-center text-sm">
+                    <span className="text-slate-500">Manual Discount</span>
+                    <div className="relative">
+                      <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-slate-400 font-bold">৳</span>
+                      <input
+                        type="number"
+                        value={formData.discountAmount}
+                        onChange={(e) => setFormData({ ...formData, discountAmount: parseFloat(e.target.value) || 0 })}
+                        className="w-28 pl-6 pr-3 py-1.5 border border-slate-200 rounded-lg text-xs font-bold text-red-500 text-right focus:outline-none focus:border-slate-400"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* Delivery */}
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-slate-500">Shipping {!order.isStorePickup && formData.district && <span className="text-[10px] text-slate-400 ml-1">({formData.district})</span>}</span>
+                  {isEditing && order.isStorePickup ? (
+                    <div className="relative">
+                      <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-slate-400 font-bold">৳</span>
+                      <input
+                        type="number"
+                        value={formData.deliveryCharge}
+                        onChange={(e) => setFormData({ ...formData, deliveryCharge: parseFloat(e.target.value) || 0 })}
+                        className="w-28 pl-6 pr-3 py-1.5 border border-slate-200 rounded-lg text-xs font-bold text-slate-800 text-right focus:outline-none focus:border-slate-400"
+                      />
+                    </div>
+                  ) : (
+                    <span className="font-semibold text-slate-800">{formatBDT(deliveryCharge)}</span>
+                  )}
+                </div>
+
+                {/* Total */}
+                <div className="flex justify-between items-center pt-3 border-t border-slate-200">
+                  <span className="text-sm font-bold text-slate-900">Total</span>
+                  <span className="text-sm font-bold text-slate-900">{formatBDT(displayTotal)}</span>
+                </div>
+
+                {/* Advance Paid */}
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-slate-500">Advance Paid</span>
+                  {isEditing ? (
+                    <div className="relative">
+                      <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-slate-400 font-bold">৳</span>
+                      <input
+                        type="number"
+                        value={formData.advancePaid}
+                        onChange={(e) => setFormData({ ...formData, advancePaid: parseFloat(e.target.value) || 0 })}
+                        className="w-28 pl-6 pr-3 py-1.5 border border-slate-200 rounded-lg text-xs font-bold text-emerald-600 text-right focus:outline-none focus:border-slate-400"
+                      />
+                    </div>
+                  ) : (
+                    <span className="font-semibold text-emerald-600 flex items-center gap-1">
+                      <Minus className="w-3 h-3" /> {formatBDT(order.advancePaid || 0)}
+                    </span>
+                  )}
+                </div>
+
+                {/* Payment Due */}
+                <div className={`mt-4 p-4 rounded-xl border flex items-center justify-between transition-all duration-300 ${totalDue > 0 ? "bg-rose-50/40 border-rose-100 text-rose-800" : "bg-emerald-50/40 border-emerald-100 text-emerald-800"}`}>
+                  <div>
+                    <span className="text-xs font-bold uppercase tracking-wider block opacity-75">Payment Due</span>
+                    <span className="text-[10px] opacity-60 block mt-0.5">Collectable from Customer</span>
+                  </div>
+                  <span className={`text-2xl font-black tracking-tight tabular-nums ${totalDue > 0 ? "text-rose-600" : "text-emerald-600"}`}>
+                    {formatBDT(totalDue)}
+                  </span>
+                </div>
+
+                {/* bKash Payment Verification */}
+                {order.bkashNumber && (
+                  <div className="mt-2 pt-4 border-t border-slate-100 space-y-2">
+                    <p className="text-[10px] font-bold uppercase text-slate-400 tracking-wider flex items-center gap-1.5">
+                      <VerifiedIcon className="w-3.5 h-3.5 text-emerald-500" /> bKash Verification
+                    </p>
+                    <div className="flex justify-between text-xs">
+                      <span className="text-slate-500">Customer bKash No.</span>
+                      <span className="font-bold font-mono text-slate-800">{order.bkashNumber}</span>
+                    </div>
+                    <div className="flex justify-between text-xs">
+                      <span className="text-slate-500">Transaction ID</span>
+                      <span className="font-bold font-mono text-slate-800">{order.bkashTrxId}</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Live Shipment Milestone Card */}
+            <div className="bg-white border border-slate-200/80 rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.02)] overflow-hidden">
+              <div className="px-5 py-4 border-b border-slate-150 bg-slate-50/50 flex items-center justify-between">
+                <h2 className="text-sm font-bold text-slate-800 flex items-center gap-2">
+                  <Compass className="w-4 h-4 text-[#800020]" />
+                  Shipment Status
+                </h2>
+                {order.status === "SHIPPED" && order.pathaoConsignmentId && (
+                  <div className="flex items-center gap-1.5">
+                    <span className="relative flex h-2 w-2">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75" />
+                      <span className="relative inline-flex rounded-full h-2 w-2 bg-indigo-500" />
+                    </span>
+                    <span className="text-[10px] font-bold text-indigo-500 uppercase tracking-wider">Live</span>
+                  </div>
+                )}
+              </div>
+              <div className="px-5 py-5">
+                {isSpecial ? (
+                  <div className={`flex items-center gap-2 px-4 py-3 rounded-lg text-sm font-bold ${order.status === "CANCELLED"
+                    ? "bg-red-50 text-red-700 border border-red-100"
+                    : order.status === "HOLD"
+                      ? "bg-pink-50 text-pink-700 border border-pink-100"
+                      : "bg-slate-50 text-slate-700 border border-slate-200"
+                    }`}>
+                    <AlertCircle className={`w-4 h-4 shrink-0 ${order.status === "HOLD" ? "text-pink-500" : "text-slate-500"}`} />
+                    Order {order.status === "HOLD" ? "On Hold" : order.status}
+                  </div>
+                ) : (
+                  <div className="relative flex items-start">
+                    <div className="absolute top-4 left-0 right-0 h-[2px] bg-slate-105" style={{ zIndex: 0 }}>
+                      <div
+                        className="h-full bg-emerald-500 transition-all duration-500 ease-in-out"
+                        style={{ width: `${filteredSteps.length > 1 ? (currentIndex / (filteredSteps.length - 1)) * 100 : 0}%` }}
+                      />
+                    </div>
+                    <div className="flex w-full relative">
+                      {filteredSteps.map((step) => {
+                        const stepIdx = STATUS_ORDER.indexOf(step.statusKey);
+                        const isCompleted = stepIdx < currentIndex;
+                        const isActive = stepIdx === currentIndex;
+                        const showPathao = step.statusKey === "SHIPPED" && order.pathaoConsignmentId;
+                        const Icon = step.icon;
+                        return (
+                          <div key={step.statusKey} className="flex flex-col items-center flex-1 min-w-0">
+                            <div className={`relative z-10 w-8 h-8 rounded-full border-2 flex items-center justify-center shrink-0 transition-all duration-300 ${isActive ? "bg-[#800020] border-[#800020] text-white ring-4 ring-[#800020]/15 shadow-md scale-110" : isCompleted ? "bg-emerald-500 border-emerald-500 text-white shadow-sm" : "bg-white border-slate-200 text-slate-400"}`}>
+                              {isCompleted ? <Check className="w-3.5 h-3.5 stroke-[3px]" /> : <Icon className="w-3.5 h-3.5 stroke-[2.5px]" />}
+                            </div>
+                            <span className={`mt-2 text-[10px] font-bold text-center leading-tight px-0.5 uppercase tracking-wide ${isActive ? "text-[#800020]" : isCompleted ? "text-emerald-600" : "text-slate-400"}`}>
+                              {step.title}
+                            </span>
+                            {showPathao && (
+                              <div className="mt-1.5 flex flex-col items-center gap-1">
+                                {pathaoStatus ? (
+                                  <span className={`inline-flex items-center gap-1 text-[9px] font-black px-2 py-0.5 rounded-full border tracking-wider uppercase ${pathaoStatusLower.includes("delivered") ? "bg-emerald-50 text-emerald-600 border-emerald-200" : pathaoStatusLower.includes("cancel") ? "bg-red-50 text-red-500 border-red-200" : "bg-indigo-50 text-indigo-600 border-indigo-200"}`}>
+                                    <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${pathaoStatusLower.includes("delivered") ? "bg-emerald-500" : pathaoStatusLower.includes("cancel") ? "bg-red-500" : "bg-indigo-500"}`} />
+                                    {pathaoStatus}
+                                  </span>
+                                ) : (
+                                  <span className="text-[9px] text-slate-400 italic">Syncing…</span>
+                                )}
+                                {pathaoInfo?.updated_at && (
+                                  <span className="text-[8px] text-slate-400 text-center leading-tight">
+                                    {new Date(pathaoInfo.updated_at).toLocaleString("en-GB", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}
+                                  </span>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* ── Right Sidebar ── */}
+          <div className="space-y-4">
+
+            {/* Order Status Action Card */}
+            <div className="bg-white border border-slate-200/80 rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.02)] overflow-hidden">
+              <div className="px-4 py-3.5 border-b border-slate-150 bg-slate-50/50 flex items-center justify-between">
+                <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-slate-500" />
+                  Order Status
+                </h3>
+                {statusLoading && <Loader2 className="w-4 h-4 animate-spin text-slate-400" />}
+              </div>
+              <div className="p-4 space-y-3">
+                <div className="relative">
+                  <select
+                    value={status}
+                    onChange={handleStatusChange}
+                    disabled={statusLoading || status === "CANCELLED" || status === "RETURNED"}
+                    className={`w-full text-xs font-black uppercase tracking-wider px-3.5 py-2.5 rounded-lg border transition-all cursor-pointer outline-none focus:ring-2 focus:ring-opacity-50 ${status === "PENDING" ? "bg-amber-50 text-amber-700 border-amber-200 focus:ring-amber-500" :
+                      status === "CONFIRMED" ? "bg-blue-50 text-blue-700 border-blue-200 focus:ring-blue-500" :
+                        status === "PRINTING" ? "bg-cyan-50 text-cyan-700 border-cyan-200 focus:ring-cyan-500" :
+                          status === "PACKAGING" ? "bg-purple-50 text-purple-700 border-purple-200 focus:ring-purple-500" :
+                            status === "SHIPPED" ? "bg-indigo-50 text-indigo-700 border-indigo-200 focus:ring-indigo-500" :
+                              status === "DELIVERED" ? "bg-green-50 text-green-700 border-green-200 focus:ring-green-500" :
+                                status === "RETURNED" ? "bg-rose-50 text-rose-700 border-rose-200 focus:ring-rose-500" :
+                                  status === "HOLD" ? "bg-pink-50 text-pink-700 border-pink-200 focus:ring-pink-500" :
+                                    "bg-red-50 text-red-700 border-red-200 focus:ring-red-500"
+                      }`}
+                  >
+                    <option value="PENDING" disabled={!validateStatusTransition(status, "PENDING").isValid}>Placed</option>
+                    <option value="CONFIRMED" disabled={!validateStatusTransition(status, "CONFIRMED").isValid}>Confirmed</option>
+                    <option value="PRINTING" disabled={!validateStatusTransition(status, "PRINTING").isValid}>Printing</option>
+                    <option value="PACKAGING" disabled={!validateStatusTransition(status, "PACKAGING").isValid}>Packaged</option>
+                    <option value="SHIPPED" disabled={!validateStatusTransition(status, "SHIPPED").isValid}>Shipped</option>
+                    <option value="DELIVERED" disabled={!validateStatusTransition(status, "DELIVERED").isValid}>Delivered</option>
+                    <option value="HOLD" disabled={!validateStatusTransition(status, "HOLD").isValid}>On Hold</option>
+                    <option value="RETURNED" disabled={!validateStatusTransition(status, "RETURNED").isValid}>Returned</option>
+                    <option value="CANCELLED" disabled={!validateStatusTransition(status, "CANCELLED").isValid}>Cancelled</option>
+                  </select>
+                </div>
+
+                {status === "CANCELLED" || status === "RETURNED" ? (
+                  <p className="text-[10px] text-slate-400 font-medium">
+                    Orders in {status} status cannot be further transitioned.
+                  </p>
+                ) : (
+                  <p className="text-[10px] text-slate-400 font-medium">
+                    Select a status to update. Some transitions are restricted based on business rules.
+                  </p>
+                )}
+              </div>
+            </div>
+
+            {/* Shipping Address Card */}
+            <div className="bg-white border border-slate-200/80 rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.02)] overflow-hidden">
+              <div className="px-4 py-3.5 border-b border-slate-150 rounded-t-xl bg-slate-50/50 flex items-center justify-between">
+                <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2">
+                  <MapPin className="w-4 h-4 text-slate-500" />
+                  Shipping Address
+                </h3>
+                {!isEditing && (
+                  <div className="flex items-center gap-3">
+                    <button onClick={handleCopyAddress} className="text-xs font-bold text-slate-500 hover:text-indigo-600 transition-colors flex items-center gap-1.5 cursor-pointer">
+                      {copiedAddress ? (
+                        <Check className="w-3.5 h-3.5 text-emerald-600 stroke-[3px]" />
+                      ) : (
+                        <Copy className="w-3.5 h-3.5" />
+                      )}
+                    </button>
+                    <button onClick={() => setIsEditing(true)} className="text-xs font-bold text-indigo-600 hover:text-[#800020] transition-colors flex items-center gap-1 cursor-pointer">
+                      <Edit2 className="w-3 h-3" /> Edit
                     </button>
                   </div>
                 )}
               </div>
-            )}
-          </div>
-
-          {/* Order Summary Card */}
-          <div className="bg-white border border-slate-200/80 rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.02)] overflow-hidden">
-            <div className="px-5 py-4 border-b border-slate-150 bg-slate-50/50">
-              <h2 className="text-sm font-bold text-slate-800 flex items-center gap-2">
-                <Receipt className="w-4 h-4 text-slate-500" />
-                Order Summary
-              </h2>
-            </div>
-            <div className="px-5 py-4 space-y-3">
-              {/* Subtotal */}
-              <div className="flex justify-between items-center text-sm">
-                <span className="text-slate-500">{formData.items.length} item{formData.items.length !== 1 ? "s" : ""}</span>
-                <span className="font-semibold text-slate-800">{formatBDT(baseSubtotal)}</span>
-              </div>
-
-              {/* DTF Cost */}
-              {totalDTFCost > 0 && (
-                <div className="flex justify-between items-center text-sm">
-                  <span className="text-indigo-500">DTF Printing</span>
-                  <span className="font-semibold text-indigo-600">{formatBDT(totalDTFCost)}</span>
-                </div>
-              )}
-
-              {/* Discount */}
-              {!isEditing && discount > 0 && (
-                <div className="flex justify-between items-center text-sm">
-                  <span className="text-slate-500">Discount {order.couponCode && <span className="text-[10px] font-bold bg-slate-100 px-1.5 py-0.5 rounded ml-1">{order.couponCode}</span>}</span>
-                  <span className="font-semibold text-red-500">−{formatBDT(discount)}</span>
-                </div>
-              )}
-
-              {/* Discount edit mode */}
-              {isEditing && (
-                <div className="flex justify-between items-center text-sm">
-                  <span className="text-slate-500">Manual Discount</span>
-                  <div className="relative">
-                    <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-slate-400 font-bold">৳</span>
-                    <input
-                      type="number"
-                      value={formData.discountAmount}
-                      onChange={(e) => setFormData({ ...formData, discountAmount: parseFloat(e.target.value) || 0 })}
-                      className="w-28 pl-6 pr-3 py-1.5 border border-slate-200 rounded-lg text-xs font-bold text-red-500 text-right focus:outline-none focus:border-slate-400"
-                    />
-                  </div>
-                </div>
-              )}
-
-              {/* Delivery */}
-              <div className="flex justify-between items-center text-sm">
-                <span className="text-slate-500">Shipping {!order.isStorePickup && formData.district && <span className="text-[10px] text-slate-400 ml-1">({formData.district})</span>}</span>
-                {isEditing && order.isStorePickup ? (
-                  <div className="relative">
-                    <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-slate-400 font-bold">৳</span>
-                    <input
-                      type="number"
-                      value={formData.deliveryCharge}
-                      onChange={(e) => setFormData({ ...formData, deliveryCharge: parseFloat(e.target.value) || 0 })}
-                      className="w-28 pl-6 pr-3 py-1.5 border border-slate-200 rounded-lg text-xs font-bold text-slate-800 text-right focus:outline-none focus:border-slate-400"
-                    />
-                  </div>
-                ) : (
-                  <span className="font-semibold text-slate-800">{formatBDT(deliveryCharge)}</span>
-                )}
-              </div>
-
-              {/* Total */}
-              <div className="flex justify-between items-center pt-3 border-t border-slate-200">
-                <span className="text-sm font-bold text-slate-900">Total</span>
-                <span className="text-sm font-bold text-slate-900">{formatBDT(displayTotal)}</span>
-              </div>
-
-              {/* Advance Paid */}
-              <div className="flex justify-between items-center text-sm">
-                <span className="text-slate-500">Advance Paid</span>
+              <div className="p-4 space-y-3">
                 {isEditing ? (
-                  <div className="relative">
-                    <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-slate-400 font-bold">৳</span>
-                    <input
-                      type="number"
-                      value={formData.advancePaid}
-                      onChange={(e) => setFormData({ ...formData, advancePaid: parseFloat(e.target.value) || 0 })}
-                      className="w-28 pl-6 pr-3 py-1.5 border border-slate-200 rounded-lg text-xs font-bold text-emerald-600 text-right focus:outline-none focus:border-slate-400"
-                    />
-                  </div>
-                ) : (
-                  <span className="font-semibold text-emerald-600 flex items-center gap-1">
-                    <Minus className="w-3 h-3" /> {formatBDT(order.advancePaid || 0)}
-                  </span>
-                )}
-              </div>
-
-              {/* Payment Due */}
-              <div className={`mt-4 p-4 rounded-xl border flex items-center justify-between transition-all duration-300 ${totalDue > 0 ? "bg-rose-50/40 border-rose-100 text-rose-800" : "bg-emerald-50/40 border-emerald-100 text-emerald-800"}`}>
-                <div>
-                  <span className="text-xs font-bold uppercase tracking-wider block opacity-75">Payment Due</span>
-                  <span className="text-[10px] opacity-60 block mt-0.5">Collectable from Customer</span>
-                </div>
-                <span className={`text-2xl font-black tracking-tight tabular-nums ${totalDue > 0 ? "text-rose-600" : "text-emerald-600"}`}>
-                  {formatBDT(totalDue)}
-                </span>
-              </div>
-
-              {/* bKash Payment Verification */}
-              {order.bkashNumber && (
-                <div className="mt-2 pt-4 border-t border-slate-100 space-y-2">
-                  <p className="text-[10px] font-bold uppercase text-slate-400 tracking-wider flex items-center gap-1.5">
-                    <VerifiedIcon className="w-3.5 h-3.5 text-emerald-500" /> bKash Verification
-                  </p>
-                  <div className="flex justify-between text-xs">
-                    <span className="text-slate-500">Customer bKash No.</span>
-                    <span className="font-bold font-mono text-slate-800">{order.bkashNumber}</span>
-                  </div>
-                  <div className="flex justify-between text-xs">
-                    <span className="text-slate-500">Transaction ID</span>
-                    <span className="font-bold font-mono text-slate-800">{order.bkashTrxId}</span>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Live Shipment Milestone Card */}
-          <div className="bg-white border border-slate-200/80 rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.02)] overflow-hidden">
-            <div className="px-5 py-4 border-b border-slate-150 bg-slate-50/50 flex items-center justify-between">
-              <h2 className="text-sm font-bold text-slate-800 flex items-center gap-2">
-                <Compass className="w-4 h-4 text-[#800020]" />
-                Shipment Status
-              </h2>
-              {order.status === "SHIPPED" && order.pathaoConsignmentId && (
-                <div className="flex items-center gap-1.5">
-                  <span className="relative flex h-2 w-2">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75" />
-                    <span className="relative inline-flex rounded-full h-2 w-2 bg-indigo-500" />
-                  </span>
-                  <span className="text-[10px] font-bold text-indigo-500 uppercase tracking-wider">Live</span>
-                </div>
-              )}
-            </div>
-            <div className="px-5 py-5">
-              {isSpecial ? (
-                <div className={`flex items-center gap-2 px-4 py-3 rounded-lg text-sm font-bold ${order.status === "CANCELLED" ? "bg-red-50 text-red-700 border border-red-100" : "bg-slate-50 text-slate-700 border border-slate-200"}`}>
-                  <AlertCircle className="w-4 h-4 shrink-0" />
-                  Order {order.status}
-                </div>
-              ) : (
-                <div className="relative flex items-start">
-                  <div className="absolute top-4 left-0 right-0 h-[2px] bg-slate-105" style={{ zIndex: 0 }}>
-                    <div
-                      className="h-full bg-emerald-500 transition-all duration-500 ease-in-out"
-                      style={{ width: `${filteredSteps.length > 1 ? (currentIndex / (filteredSteps.length - 1)) * 100 : 0}%` }}
-                    />
-                  </div>
-                  <div className="flex w-full relative">
-                    {filteredSteps.map((step) => {
-                      const stepIdx = STATUS_ORDER.indexOf(step.statusKey);
-                      const isCompleted = stepIdx < currentIndex;
-                      const isActive = stepIdx === currentIndex;
-                      const showPathao = step.statusKey === "SHIPPED" && order.pathaoConsignmentId;
-                      const Icon = step.icon;
-                      return (
-                        <div key={step.statusKey} className="flex flex-col items-center flex-1 min-w-0">
-                          <div className={`relative z-10 w-8 h-8 rounded-full border-2 flex items-center justify-center shrink-0 transition-all duration-300 ${isActive ? "bg-[#800020] border-[#800020] text-white ring-4 ring-[#800020]/15 shadow-md scale-110" : isCompleted ? "bg-emerald-500 border-emerald-500 text-white shadow-sm" : "bg-white border-slate-200 text-slate-400"}`}>
-                            {isCompleted ? <Check className="w-3.5 h-3.5 stroke-[3px]" /> : <Icon className="w-3.5 h-3.5 stroke-[2.5px]" />}
-                          </div>
-                          <span className={`mt-2 text-[10px] font-bold text-center leading-tight px-0.5 uppercase tracking-wide ${isActive ? "text-[#800020]" : isCompleted ? "text-emerald-600" : "text-slate-400"}`}>
-                            {step.title}
-                          </span>
-                          {showPathao && (
-                            <div className="mt-1.5 flex flex-col items-center gap-1">
-                              {pathaoStatus ? (
-                                <span className={`inline-flex items-center gap-1 text-[9px] font-black px-2 py-0.5 rounded-full border tracking-wider uppercase ${pathaoStatusLower.includes("delivered") ? "bg-emerald-50 text-emerald-600 border-emerald-200" : pathaoStatusLower.includes("cancel") ? "bg-red-50 text-red-500 border-red-200" : "bg-indigo-50 text-indigo-600 border-indigo-200"}`}>
-                                  <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${pathaoStatusLower.includes("delivered") ? "bg-emerald-500" : pathaoStatusLower.includes("cancel") ? "bg-red-500" : "bg-indigo-500"}`} />
-                                  {pathaoStatus}
-                                </span>
-                              ) : (
-                                <span className="text-[9px] text-slate-400 italic">Syncing…</span>
-                              )}
-                              {pathaoInfo?.updated_at && (
-                                <span className="text-[8px] text-slate-400 text-center leading-tight">
-                                  {new Date(pathaoInfo.updated_at).toLocaleString("en-GB", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}
-                                </span>
-                              )}
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* ── Right Sidebar ── */}
-        <div className="space-y-4">
-
-          {/* Order Status Action Card */}
-          <div className="bg-white border border-slate-200/80 rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.02)] overflow-hidden">
-            <div className="px-4 py-3.5 border-b border-slate-150 bg-slate-50/50 flex items-center justify-between">
-              <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2">
-                <CheckCircle2 className="w-4 h-4 text-slate-500" />
-                Order Status
-              </h3>
-              {statusLoading && <Loader2 className="w-4 h-4 animate-spin text-slate-400" />}
-            </div>
-            <div className="p-4 space-y-3">
-              <div className="relative">
-                <select
-                  value={status}
-                  onChange={handleStatusChange}
-                  disabled={statusLoading || status === "CANCELLED" || status === "RETURNED"}
-                  className={`w-full text-xs font-black uppercase tracking-wider px-3.5 py-2.5 rounded-lg border transition-all cursor-pointer outline-none focus:ring-2 focus:ring-opacity-50 ${status === "PENDING" ? "bg-amber-50 text-amber-700 border-amber-200 focus:ring-amber-500" :
-                    status === "CONFIRMED" ? "bg-blue-50 text-blue-700 border-blue-200 focus:ring-blue-500" :
-                      status === "PRINTING" ? "bg-cyan-50 text-cyan-700 border-cyan-200 focus:ring-cyan-500" :
-                        status === "PACKAGING" ? "bg-purple-50 text-purple-700 border-purple-200 focus:ring-purple-500" :
-                          status === "SHIPPED" ? "bg-indigo-50 text-indigo-700 border-indigo-200 focus:ring-indigo-500" :
-                            status === "DELIVERED" ? "bg-green-50 text-green-700 border-green-200 focus:ring-green-500" :
-                              status === "RETURNED" ? "bg-rose-50 text-rose-700 border-rose-200 focus:ring-rose-500" :
-                                status === "HOLD" ? "bg-pink-50 text-pink-700 border-pink-200 focus:ring-pink-500" :
-                                  "bg-red-50 text-red-700 border-red-200 focus:ring-red-500"
-                    }`}
-                >
-                  <option value="PENDING" disabled={!validateStatusTransition(status, "PENDING").isValid}>Placed</option>
-                  <option value="CONFIRMED" disabled={!validateStatusTransition(status, "CONFIRMED").isValid}>Confirmed</option>
-                  <option value="PRINTING" disabled={!validateStatusTransition(status, "PRINTING").isValid}>Printing</option>
-                  <option value="PACKAGING" disabled={!validateStatusTransition(status, "PACKAGING").isValid}>Packaged</option>
-                  <option value="SHIPPED" disabled={!validateStatusTransition(status, "SHIPPED").isValid}>Shipped</option>
-                  <option value="DELIVERED" disabled={!validateStatusTransition(status, "DELIVERED").isValid}>Delivered</option>
-                  <option value="HOLD" disabled={!validateStatusTransition(status, "HOLD").isValid}>On Hold</option>
-                  <option value="RETURNED" disabled={!validateStatusTransition(status, "RETURNED").isValid}>Returned</option>
-                  <option value="CANCELLED" disabled={!validateStatusTransition(status, "CANCELLED").isValid}>Cancelled</option>
-                </select>
-              </div>
-
-              {status === "CANCELLED" || status === "RETURNED" ? (
-                <p className="text-[10px] text-slate-400 font-medium">
-                  Orders in {status} status cannot be further transitioned.
-                </p>
-              ) : (
-                <p className="text-[10px] text-slate-400 font-medium">
-                  Select a status to update. Some transitions are restricted based on business rules.
-                </p>
-              )}
-            </div>
-          </div>
-
-          {/* Shipping Address Card */}
-          <div className="bg-white border border-slate-200/80 rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.02)] overflow-hidden">
-            <div className="px-4 py-3.5 border-b border-slate-150 rounded-t-xl bg-slate-50/50 flex items-center justify-between">
-              <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2">
-                <MapPin className="w-4 h-4 text-slate-500" />
-                Shipping Address
-              </h3>
-              {!isEditing && (
-                <button onClick={() => setIsEditing(true)} className="text-xs font-bold text-indigo-600 hover:text-[#800020] transition-colors flex items-center gap-1">
-                  <Edit2 className="w-3 h-3" /> Edit
-                </button>
-              )}
-            </div>
-            <div className="p-4 space-y-3">
-              {isEditing ? (
-                <>
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Select City</label>
-                    <CustomSelect
-                      options={[
-                        { value: "", label: "-- None / Direct Address --" },
-                        ...cities
-                      ]}
-                      value={formData.pathaoCityId?.toString() || ""}
-                      onChange={(val) => {
-                        const valNum = val ? parseInt(val) : null;
-                        const city = cities.find((c) => c.value === val);
-                        setFormData({
-                          ...formData,
-                          pathaoCityId: valNum,
-                          pathaoZoneId: null,
-                          pathaoAreaId: null,
-                          district: city ? city.label : formData.district,
-                        });
-                      }}
-                      placeholder={loadingCities ? "Loading cities..." : "Select City"}
-                      searchable
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
-                      Pathao Zone {formData.pathaoCityId ? <span className="text-red-500">*</span> : ""}
-                    </label>
-                    <CustomSelect
-                      options={[
-                        { value: "", label: "-- Select Zone --" },
-                        ...zones
-                      ]}
-                      value={formData.pathaoZoneId?.toString() || ""}
-                      onChange={(val) => {
-                        const valNum = val ? parseInt(val) : null;
-                        setFormData({
-                          ...formData,
-                          pathaoZoneId: valNum,
-                          pathaoAreaId: null,
-                        });
-                      }}
-                      disabled={!formData.pathaoCityId || loadingZones}
-                      placeholder={loadingZones ? "Loading zones..." : (!formData.pathaoCityId ? "First select Pathao City" : "Select Zone")}
-                      searchable
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Pathao Area</label>
-                    <CustomSelect
-                      options={[
-                        { value: "", label: "-- Select Area --" },
-                        ...areas
-                      ]}
-                      value={formData.pathaoAreaId?.toString() || ""}
-                      onChange={(val) => {
-                        const valNum = val ? parseInt(val) : null;
-                        setFormData({
-                          ...formData,
-                          pathaoAreaId: valNum,
-                        });
-                      }}
-                      disabled={!formData.pathaoZoneId || loadingAreas}
-                      placeholder={loadingAreas ? "Loading areas..." : (!formData.pathaoZoneId ? "First select Pathao Zone" : "Select Area")}
-                      searchable
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Address</label>
-                    <textarea
-                      value={formData.address}
-                      onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                      rows={3}
-                      className="w-full text-sm px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:border-slate-400 text-slate-700 resize-none"
-                    />
-                  </div>
-                </>
-              ) : (
-                <div className="space-y-1.5">
-                  <p className="text-sm font-semibold text-slate-900">{order.customerName}</p>
-                  <div className="flex flex-wrap items-center gap-2">
-                    {order.isStorePickup && (
-                      <span className="text-[10px] font-bold bg-teal-50 text-teal-700 border border-teal-200 px-2 py-0.5 rounded uppercase tracking-wider">🏪 Store Pickup</span>
-                    )}
-                  </div>
-                  {(order.pathaoCityId || order.pathaoZoneId) && (
-                    <div className="flex flex-wrap gap-1.5 mt-1">
-                      {cities.find((c) => c.value === order.pathaoCityId?.toString())?.label && (
-                        <span className="text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200 px-2.5 py-1 rounded uppercase tracking-wider">
-                          🏙️ City: {cities.find((c) => c.value === order.pathaoCityId?.toString())?.label}
-                        </span>
-                      )}
-                      {zones.find((z) => z.value === order.pathaoZoneId?.toString())?.label && (
-                        <span className="text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200 px-2.5 py-1 rounded uppercase tracking-wider">
-                          📍 Zone: {zones.find((z) => z.value === order.pathaoZoneId?.toString())?.label}
-                        </span>
-                      )}
-                      {areas.find((a) => a.value === order.pathaoAreaId?.toString())?.label && (
-                        <span className="text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200 px-2.5 py-1 rounded uppercase tracking-wider">
-                          🗺️ Area: {areas.find((a) => a.value === order.pathaoAreaId?.toString())?.label}
-                        </span>
-                      )}
+                  <>
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Select City</label>
+                      <CustomSelect
+                        options={[
+                          { value: "", label: "-- None / Direct Address --" },
+                          ...cities
+                        ]}
+                        value={formData.pathaoCityId?.toString() || ""}
+                        onChange={(val) => {
+                          const valNum = val ? parseInt(val) : null;
+                          const city = cities.find((c) => c.value === val);
+                          setFormData({
+                            ...formData,
+                            pathaoCityId: valNum,
+                            pathaoZoneId: null,
+                            pathaoAreaId: null,
+                            district: city ? city.label : formData.district,
+                          });
+                        }}
+                        placeholder={loadingCities ? "Loading cities..." : "Select City"}
+                        searchable
+                      />
                     </div>
-                  )}
-                  <p className="text-sm text-slate-600 leading-relaxed">{order.address}</p>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Notes / Remarks Card */}
-          <div className="bg-white border border-slate-200/80 rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.02)] overflow-hidden">
-            <div className="px-4 py-3.5 border-b border-slate-150 bg-slate-50/50 flex items-center justify-between">
-              <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2">
-                <ClipboardList className="w-4 h-4 text-slate-500" />
-                Notes
-              </h3>
-              {!isEditingRemark ? (
-                <button onClick={() => setIsEditingRemark(true)} className="text-xs font-bold text-indigo-600 hover:text-[#800020] transition-colors flex items-center gap-1">
-                  <Edit2 className="w-3 h-3" /> Edit
-                </button>
-              ) : (
-                <div className="flex items-center gap-2">
-                  <button onClick={handleSaveRemark} disabled={remarkLoading} className="text-xs font-bold text-white bg-slate-900 px-2.5 py-1 rounded-lg hover:bg-slate-800 disabled:opacity-50 flex items-center gap-1 transition-colors">
-                    {remarkLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />}
-                    Save
-                  </button>
-                  <button onClick={() => { setIsEditingRemark(false); setRemarks(order.remarks || ""); }} disabled={remarkLoading} className="text-xs font-bold text-slate-500 hover:text-slate-700 transition-colors">
-                    Cancel
-                  </button>
-                </div>
-              )}
-            </div>
-            <div className="p-4">
-              {isEditingRemark ? (
-                <textarea
-                  value={remarks}
-                  onChange={(e) => setRemarks(e.target.value)}
-                  placeholder="Add internal notes about this order..."
-                  rows={4}
-                  autoFocus
-                  className="w-full text-sm text-slate-700 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2.5 focus:outline-none focus:border-slate-400 resize-none leading-relaxed"
-                />
-              ) : order.remarks ? (
-                <p className="text-sm text-slate-600 leading-relaxed whitespace-pre-wrap cursor-pointer hover:text-slate-800" onClick={() => setIsEditingRemark(true)}>
-                  {order.remarks}
-                </p>
-              ) : (
-                <p className="text-xs text-slate-400 italic cursor-pointer hover:text-slate-500" onClick={() => setIsEditingRemark(true)}>
-                  No internal notes. Click to add...
-                </p>
-              )}
-            </div>
-          </div>
-
-          {/* Tags Card */}
-          <div className="bg-white border border-slate-200/80 rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.02)] overflow-hidden">
-            <div className="px-4 py-3.5 border-b border-slate-150 bg-slate-50/50 flex items-center justify-between">
-              <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2">
-                <Tag className="w-4 h-4 text-slate-500" />
-                Tags
-              </h3>
-              {!isEditing && !isEditingTags && (
-                <button
-                  onClick={() => {
-                    setIsEditingTags(true);
-                    setTagsFormData(order.tags || []);
-                  }}
-                  className="text-xs font-bold text-indigo-600 hover:text-[#800020] transition-colors flex items-center gap-1"
-                >
-                  <Edit2 className="w-3 h-3" /> Edit
-                </button>
-              )}
-              {isEditingTags && (
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={handleSaveTags}
-                    disabled={loading}
-                    className="text-xs font-bold text-white bg-slate-900 px-2.5 py-1 rounded-lg hover:bg-slate-800 disabled:opacity-50 flex items-center gap-1 transition-colors"
-                  >
-                    {loading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />}
-                    Save
-                  </button>
-                  <button
-                    onClick={() => {
-                      setIsEditingTags(false);
-                    }}
-                    disabled={loading}
-                    className="text-xs font-bold text-slate-500 hover:text-slate-700 transition-colors"
-                  >
-                    Cancel
-                  </button>
-                </div>
-              )}
-            </div>
-            <div className="p-4">
-              {(isEditing || isEditingTags) ? (
-                <div className="space-y-3">
-                  <div className="flex flex-wrap items-center gap-2 p-2 bg-slate-50 border border-slate-200 rounded-lg focus-within:bg-white focus-within:ring-2 focus-within:ring-indigo-500/20 focus-within:border-indigo-500 transition-all min-h-[42px]">
-                    {(isEditing ? formData.tags : tagsFormData).map((tag: string, idx: number) => (
-                      <span
-                        key={tag}
-                        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-100 uppercase tracking-wide"
-                      >
-                        {tag}
-                        <button
-                          type="button"
-                          onClick={() => {
-                            if (isEditing) {
-                              setFormData({
-                                ...formData,
-                                tags: formData.tags.filter((_, i) => i !== idx),
-                              });
-                            } else {
-                              setTagsFormData(tagsFormData.filter((_, i) => i !== idx));
-                            }
-                          }}
-                          className="text-indigo-400 hover:text-indigo-600 focus:outline-none transition-colors"
-                        >
-                          <X className="w-3.5 h-3.5" />
-                        </button>
-                      </span>
-                    ))}
-                    <input
-                      type="text"
-                      value={tagInput}
-                      onChange={e => setTagInput(e.target.value)}
-                      onKeyDown={e => {
-                        if (e.key === "Enter" || e.key === ",") {
-                          e.preventDefault();
-                          const val = tagInput.replace(/,/g, "").trim();
-                          if (val) {
-                            if (isEditing) {
-                              if (!formData.tags.includes(val)) {
-                                setFormData({
-                                  ...formData,
-                                  tags: [...formData.tags, val],
-                                });
-                              }
-                            } else {
-                              if (!tagsFormData.includes(val)) {
-                                setTagsFormData([...tagsFormData, val]);
-                              }
-                            }
-                          }
-                          setTagInput("");
-                        }
-                      }}
-                      placeholder={(isEditing ? formData.tags : tagsFormData).length === 0 ? "Type tag name and press Enter..." : "Add tag..."}
-                      className="flex-1 bg-transparent border-none p-0 text-sm focus:ring-0 outline-none placeholder:text-slate-400 min-w-[100px]"
-                    />
-                  </div>
-                </div>
-              ) : (
-                <div className="flex flex-wrap gap-1.5">
-                  {order.tags && order.tags.length > 0 ? (
-                    order.tags.map((tag: string) => (
-                      <span
-                        key={tag}
-                        className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-bold uppercase tracking-wider bg-slate-50 text-slate-600 border border-slate-200/60"
-                      >
-                        {tag}
-                      </span>
-                    ))
-                  ) : (
-                    <span className="text-xs text-slate-400 italic">No tags associated with this order.</span>
-                  )}
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Customer Info Card */}
-          <div className="bg-white border border-slate-200/80 rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.02)] overflow-hidden">
-            <div className="px-4 py-3.5 border-b border-slate-150 bg-slate-50/50 flex items-center justify-between">
-              <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2">
-                <User className="w-4 h-4 text-slate-500" />
-                Customer Info
-              </h3>
-              {!isEditing && (
-                <button onClick={() => setIsEditing(true)} className="text-xs font-bold text-indigo-600 hover:text-[#800020] transition-colors flex items-center gap-1">
-                  <Edit2 className="w-3 h-3" /> Edit
-                </button>
-              )}
-            </div>
-            <div className="p-4 space-y-3">
-              {isEditing ? (
-                <>
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Name</label>
-                    <input
-                      type="text"
-                      value={formData.customerName}
-                      onChange={(e) => setFormData({ ...formData, customerName: e.target.value })}
-                      className="w-full text-sm px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:border-slate-400 text-slate-800 font-medium"
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Phone</label>
-                    <input
-                      type="text"
-                      value={formData.phone}
-                      onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                      className="w-full text-sm px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:border-slate-400 text-slate-800 font-mono"
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Salesman (Incentive Owner)</label>
-                    <CustomSelect
-                      options={[
-                        { value: "", label: "System / eCommerce (None)" },
-                        ...staff.map((s: StaffMember) => ({
-                          value: s.id,
-                          label: `${s.username} (${s.role?.name || "Staff"})`
-                        }))
-                      ]}
-                      value={formData.createdById || ""}
-                      onChange={(val) => setFormData({ ...formData, createdById: val })}
-                      searchable={true}
-                    />
-                  </div>
-                </>
-              ) : (
-                <>
-                  <p className="text-sm font-semibold text-slate-900">{order.customerName}</p>
-                  <a href={`tel:${order.phone}`} className="text-sm text-indigo-600 hover:text-indigo-800 font-medium transition-colors block">
-                    {order.phone}
-                  </a>
-                </>
-              )}
-              <div className="pt-2 border-t border-slate-100">
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1.5">Created by</span>
-                {order.createdBy ? (
-                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold text-indigo-700 bg-indigo-50 border border-indigo-100 rounded-lg">👤 {order.createdBy.username}</span>
-                ) : order.orderSource === "eCommerce" ? (
-                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-100 rounded-lg">🌐 eCommerce</span>
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                        Pathao Zone {formData.pathaoCityId ? <span className="text-red-500">*</span> : ""}
+                      </label>
+                      <CustomSelect
+                        options={[
+                          { value: "", label: "-- Select Zone --" },
+                          ...zones
+                        ]}
+                        value={formData.pathaoZoneId?.toString() || ""}
+                        onChange={(val) => {
+                          const valNum = val ? parseInt(val) : null;
+                          setFormData({
+                            ...formData,
+                            pathaoZoneId: valNum,
+                            pathaoAreaId: null,
+                          });
+                        }}
+                        disabled={!formData.pathaoCityId || loadingZones}
+                        placeholder={loadingZones ? "Loading zones..." : (!formData.pathaoCityId ? "First select Pathao City" : "Select Zone")}
+                        searchable
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Pathao Area</label>
+                      <CustomSelect
+                        options={[
+                          { value: "", label: "-- Select Area --" },
+                          ...areas
+                        ]}
+                        value={formData.pathaoAreaId?.toString() || ""}
+                        onChange={(val) => {
+                          const valNum = val ? parseInt(val) : null;
+                          setFormData({
+                            ...formData,
+                            pathaoAreaId: valNum,
+                          });
+                        }}
+                        disabled={!formData.pathaoZoneId || loadingAreas}
+                        placeholder={loadingAreas ? "Loading areas..." : (!formData.pathaoZoneId ? "First select Pathao Zone" : "Select Area")}
+                        searchable
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Address</label>
+                      <textarea
+                        value={formData.address}
+                        onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                        rows={3}
+                        className="w-full text-sm px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:border-slate-400 text-slate-700 resize-none"
+                      />
+                    </div>
+                  </>
                 ) : (
-                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold text-violet-700 bg-violet-50 border border-violet-100 rounded-lg">👤 Salesman</span>
+                  <div className="space-y-3.5">
+                    {/* Name and Phone */}
+                    <div>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-sm font-bold text-slate-900 leading-tight">{order.customerName}</span>
+                        {order.isStorePickup && (
+                          <span className="text-[9px] font-extrabold bg-teal-50 text-teal-700 border border-teal-200 px-2 py-0.5 rounded uppercase tracking-wider">🏪 Store Pickup</span>
+                        )}
+                      </div>
+                      <p className="text-xs text-slate-500 font-medium flex items-center gap-1.5 mt-1.5">
+                        <span className="text-slate-400"></span> {order.phone}
+                      </p>
+                    </div>
+
+                    {/* Pathao / Shipping info */}
+                    {(order.pathaoCityId || order.pathaoZoneId) && (
+                      <div className="grid grid-cols-[45px_1fr] gap-x-2.5 gap-y-1.5 text-xs py-2 border-t border-b border-slate-100">
+                        {cities.find((c) => c.value === order.pathaoCityId?.toString())?.label && (
+                          <>
+                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider select-none self-center">City:</span>
+                            <span className="text-slate-700 font-semibold">{cities.find((c) => c.value === order.pathaoCityId?.toString())?.label}</span>
+                          </>
+                        )}
+                        {zones.find((z) => z.value === order.pathaoZoneId?.toString())?.label && (
+                          <>
+                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider select-none self-center">Zone:</span>
+                            <span className="text-slate-700 font-semibold">{zones.find((z) => z.value === order.pathaoZoneId?.toString())?.label}</span>
+                          </>
+                        )}
+                        {areas.find((a) => a.value === order.pathaoAreaId?.toString())?.label && (
+                          <>
+                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider select-none self-center">Area:</span>
+                            <span className="text-slate-700 font-semibold">{areas.find((a) => a.value === order.pathaoAreaId?.toString())?.label}</span>
+                          </>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Delivery Address */}
+                    <div>
+                      <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block mb-1 select-none">Delivery Address</span>
+                      <p className="text-xs text-slate-600 leading-relaxed font-medium bg-slate-50/50 p-2.5 rounded-lg border border-slate-100/70">{order.address}</p>
+                    </div>
+                  </div>
                 )}
               </div>
             </div>
-          </div>
 
-
-          {/* Order Source / Exchange Tag Card (if applicable) */}
-          {(order.isExchange || order.exchangeRefOrderId) && (
+            {/* Notes / Remarks Card */}
             <div className="bg-white border border-slate-200/80 rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.02)] overflow-hidden">
-              <div className="px-4 py-3.5 border-b border-slate-150 bg-slate-50/50">
+              <div className="px-4 py-3.5 border-b border-slate-150 bg-slate-50/50 flex items-center justify-between">
                 <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2">
-                  <ArrowRightLeft className="w-4 h-4 text-amber-500" />
-                  Exchange Order
+                  <ClipboardList className="w-4 h-4 text-slate-500" />
+                  Notes
                 </h3>
+                {!isEditingRemark ? (
+                  <button onClick={() => setIsEditingRemark(true)} className="text-xs font-bold text-indigo-600 hover:text-[#800020] transition-colors flex items-center gap-1">
+                    <Edit2 className="w-3 h-3" /> Edit
+                  </button>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <button onClick={handleSaveRemark} disabled={remarkLoading} className="text-xs font-bold text-white bg-slate-900 px-2.5 py-1 rounded-lg hover:bg-slate-800 disabled:opacity-50 flex items-center gap-1 transition-colors">
+                      {remarkLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />}
+                      Save
+                    </button>
+                    <button onClick={() => { setIsEditingRemark(false); setRemarks(order.remarks || ""); }} disabled={remarkLoading} className="text-xs font-bold text-slate-500 hover:text-slate-700 transition-colors">
+                      Cancel
+                    </button>
+                  </div>
+                )}
               </div>
               <div className="p-4">
-                {order.exchangeRefOrderId && (
-                  <div className="text-xs text-slate-600 space-y-1">
-                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Reference Order</span>
-                    <span className="font-mono font-bold text-slate-800">{order.exchangeRefOrderId}</span>
-                  </div>
-                )}
-                {order.exchangeItemNote && (
-                  <p className="text-xs text-slate-600 mt-2 leading-relaxed">{order.exchangeItemNote}</p>
+                {isEditingRemark ? (
+                  <textarea
+                    value={remarks}
+                    onChange={(e) => setRemarks(e.target.value)}
+                    placeholder="Add internal notes about this order..."
+                    rows={4}
+                    autoFocus
+                    className="w-full text-sm text-slate-700 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2.5 focus:outline-none focus:border-slate-400 resize-none leading-relaxed"
+                  />
+                ) : order.remarks ? (
+                  <p className="text-sm text-slate-600 leading-relaxed whitespace-pre-wrap cursor-pointer hover:text-slate-800" onClick={() => setIsEditingRemark(true)}>
+                    {order.remarks}
+                  </p>
+                ) : (
+                  <p className="text-xs text-slate-400 italic cursor-pointer hover:text-slate-500" onClick={() => setIsEditingRemark(true)}>
+                    No internal notes. Click to add...
+                  </p>
                 )}
               </div>
             </div>
-          )}
+
+            {/* Tags Card */}
+            <div className="bg-white border border-slate-200/80 rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.02)] overflow-hidden">
+              <div className="px-4 py-3.5 border-b border-slate-150 bg-slate-50/50 flex items-center justify-between">
+                <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2">
+                  <Tag className="w-4 h-4 text-slate-500" />
+                  Tags
+                </h3>
+                {!isEditing && !isEditingTags && (
+                  <button
+                    onClick={() => {
+                      setIsEditingTags(true);
+                      setTagsFormData(order.tags || []);
+                    }}
+                    className="text-xs font-bold text-indigo-600 hover:text-[#800020] transition-colors flex items-center gap-1"
+                  >
+                    <Edit2 className="w-3 h-3" /> Edit
+                  </button>
+                )}
+                {isEditingTags && (
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={handleSaveTags}
+                      disabled={loading}
+                      className="text-xs font-bold text-white bg-slate-900 px-2.5 py-1 rounded-lg hover:bg-slate-800 disabled:opacity-50 flex items-center gap-1 transition-colors"
+                    >
+                      {loading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />}
+                      Save
+                    </button>
+                    <button
+                      onClick={() => {
+                        setIsEditingTags(false);
+                      }}
+                      disabled={loading}
+                      className="text-xs font-bold text-slate-500 hover:text-slate-700 transition-colors"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                )}
+              </div>
+              <div className="p-4">
+                {(isEditing || isEditingTags) ? (
+                  <div className="space-y-3">
+                    <div className="flex flex-wrap items-center gap-2 p-2 bg-slate-50 border border-slate-200 rounded-lg focus-within:bg-white focus-within:ring-2 focus-within:ring-indigo-500/20 focus-within:border-indigo-500 transition-all min-h-[42px]">
+                      {(isEditing ? formData.tags : tagsFormData).map((tag: string, idx: number) => (
+                        <span
+                          key={tag}
+                          className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-100 uppercase tracking-wide"
+                        >
+                          {tag}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (isEditing) {
+                                setFormData({
+                                  ...formData,
+                                  tags: formData.tags.filter((_, i) => i !== idx),
+                                });
+                              } else {
+                                setTagsFormData(tagsFormData.filter((_, i) => i !== idx));
+                              }
+                            }}
+                            className="text-indigo-400 hover:text-indigo-600 focus:outline-none transition-colors"
+                          >
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                        </span>
+                      ))}
+                      <input
+                        type="text"
+                        value={tagInput}
+                        onChange={e => setTagInput(e.target.value)}
+                        onKeyDown={e => {
+                          if (e.key === "Enter" || e.key === ",") {
+                            e.preventDefault();
+                            const val = tagInput.replace(/,/g, "").trim();
+                            if (val) {
+                              if (isEditing) {
+                                if (!formData.tags.includes(val)) {
+                                  setFormData({
+                                    ...formData,
+                                    tags: [...formData.tags, val],
+                                  });
+                                }
+                              } else {
+                                if (!tagsFormData.includes(val)) {
+                                  setTagsFormData([...tagsFormData, val]);
+                                }
+                              }
+                            }
+                            setTagInput("");
+                          }
+                        }}
+                        placeholder={(isEditing ? formData.tags : tagsFormData).length === 0 ? "Type tag name and press Enter..." : "Add tag..."}
+                        className="flex-1 bg-transparent border-none p-0 text-sm focus:ring-0 outline-none placeholder:text-slate-400 min-w-[100px]"
+                      />
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex flex-wrap gap-1.5">
+                    {order.tags && order.tags.length > 0 ? (
+                      order.tags.map((tag: string) => (
+                        <span
+                          key={tag}
+                          className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-bold uppercase tracking-wider bg-slate-50 text-slate-600 border border-slate-200/60"
+                        >
+                          {tag}
+                        </span>
+                      ))
+                    ) : (
+                      <span className="text-xs text-slate-400 italic">No tags associated with this order.</span>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Customer Info Card */}
+            <div className="bg-white border border-slate-200/80 rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.02)] overflow-hidden">
+              <div className="px-4 py-3.5 border-b border-slate-150 bg-slate-50/50 flex items-center justify-between">
+                <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2">
+                  <User className="w-4 h-4 text-slate-500" />
+                  Customer Info
+                </h3>
+                {!isEditing && (
+                  <button onClick={() => setIsEditing(true)} className="text-xs font-bold text-indigo-600 hover:text-[#800020] transition-colors flex items-center gap-1">
+                    <Edit2 className="w-3 h-3" /> Edit
+                  </button>
+                )}
+              </div>
+              <div className="p-4 space-y-3">
+                {isEditing ? (
+                  <>
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Name</label>
+                      <input
+                        type="text"
+                        value={formData.customerName}
+                        onChange={(e) => setFormData({ ...formData, customerName: e.target.value })}
+                        className="w-full text-sm px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:border-slate-400 text-slate-800 font-medium"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Phone</label>
+                      <input
+                        type="text"
+                        value={formData.phone}
+                        onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                        className="w-full text-sm px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:border-slate-400 text-slate-800 font-mono"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Salesman (Incentive Owner)</label>
+                      <CustomSelect
+                        options={[
+                          { value: "", label: "System / eCommerce (None)" },
+                          ...staff.map((s: StaffMember) => ({
+                            value: s.id,
+                            label: `${s.username} (${s.role?.name || "Staff"})`
+                          }))
+                        ]}
+                        value={formData.createdById || ""}
+                        onChange={(val) => setFormData({ ...formData, createdById: val })}
+                        searchable={true}
+                      />
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <p className="text-sm font-semibold text-slate-900">{order.customerName}</p>
+                    <a href={`tel:${order.phone}`} className="text-sm text-indigo-600 hover:text-indigo-800 font-medium transition-colors block">
+                      {order.phone}
+                    </a>
+                  </>
+                )}
+                <div className="pt-2 border-t border-slate-100">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1.5">Created by</span>
+                  {order.createdBy ? (
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold text-indigo-700 bg-indigo-50 border border-indigo-100 rounded-lg">👤 {order.createdBy.username}</span>
+                  ) : order.orderSource === "eCommerce" ? (
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-100 rounded-lg">🌐 eCommerce</span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold text-violet-700 bg-violet-50 border border-violet-100 rounded-lg">👤 Salesman</span>
+                  )}
+                </div>
+              </div>
+            </div>
+
+
+            {/* Order Source / Exchange Tag Card (if applicable) */}
+            {(order.isExchange || order.exchangeRefOrderId) && (
+              <div className="bg-white border border-slate-200/80 rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.02)] overflow-hidden">
+                <div className="px-4 py-3.5 border-b border-slate-150 bg-slate-50/50">
+                  <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2">
+                    <ArrowRightLeft className="w-4 h-4 text-amber-500" />
+                    Exchange Order
+                  </h3>
+                </div>
+                <div className="p-4">
+                  {order.exchangeRefOrderId && (
+                    <div className="text-xs text-slate-600 space-y-1">
+                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Reference Order</span>
+                      <span className="font-mono font-bold text-slate-800">{order.exchangeRefOrderId}</span>
+                    </div>
+                  )}
+                  {order.exchangeItemNote && (
+                    <p className="text-xs text-slate-600 mt-2 leading-relaxed">{order.exchangeItemNote}</p>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
         </div>
-      </div>
-      <HoldReasonModal
-        isOpen={isHoldModalOpen}
-        onClose={handleHoldClose}
-        onConfirm={handleHoldConfirm}
-      />
+        {/* Activity Log Section */}
+        <div className="bg-white border border-slate-200/80 rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.02)] overflow-hidden mt-4">
+          <div className="px-5 py-4 border-b border-slate-150 bg-slate-50/50 flex items-center justify-between">
+            <h2 className="text-sm font-bold text-slate-800 flex items-center gap-2">
+              <Activity className="w-4 h-4 text-slate-500 animate-pulse" />
+              Order Activity History
+              <span className="text-[11px] font-semibold bg-slate-200/60 text-slate-600 px-2 py-0.5 rounded-full ml-1">
+                {activityLogs.length}
+              </span>
+            </h2>
+          </div>
+          <div className="p-6">
+            {activityLogs.length === 0 ? (
+              <p className="text-xs text-slate-400 italic">No activity logs recorded for this order.</p>
+            ) : (
+              <div className="relative border-l-2 border-slate-100 ml-4 pl-6 space-y-6">
+                {activityLogs.map((log: any) => {
+                  const isCreate = log.action === "CREATE";
+                  const isUpdate = log.action === "UPDATE";
+                  const isDelete = log.action === "DELETE";
+
+                  return (
+                    <div key={log.id} className="relative group/log">
+                      {/* Timeline Dot Indicator */}
+                      <span className={`absolute -left-[33px] top-1 w-4 h-4 rounded-full border-2 bg-white flex items-center justify-center ${isCreate ? "border-emerald-500 text-emerald-500" :
+                        isUpdate ? "border-indigo-500 text-indigo-500" :
+                          "border-rose-500 text-rose-500"
+                        }`}>
+                        <span className={`w-1.5 h-1.5 rounded-full ${isCreate ? "bg-emerald-500" :
+                          isUpdate ? "bg-indigo-500" :
+                            "bg-rose-500"
+                          }`} />
+                      </span>
+
+                      {/* Content */}
+                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                        <div>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className={`text-[9px] font-black px-1.5 py-0.5 rounded border ${isCreate ? "bg-emerald-50 border-emerald-100 text-emerald-700" :
+                              isUpdate ? "bg-indigo-50 border-indigo-100 text-indigo-700" :
+                                "bg-rose-50 border-rose-100 text-rose-700"
+                              }`}>
+                              {log.action}
+                            </span>
+                            <span className="text-xs font-bold text-slate-700">{log.description}</span>
+                            {log.changedFields && log.changedFields.length > 0 && (
+                              <span className="text-[9px] font-semibold text-slate-400">
+                                (fields: {log.changedFields.join(", ")})
+                              </span>
+                            )}
+                          </div>
+                          <div className="text-[10px] text-slate-400 mt-1 flex items-center gap-1.5">
+                            <span className="font-semibold text-slate-500">{log.userEmail || "System/eCommerce"}</span>
+                            <span className="uppercase text-[9px] px-1 bg-slate-100 rounded text-slate-500 font-bold">{log.userRole || "System"}</span>
+                            <span>•</span>
+                            <span>{new Date(log.timestamp).toLocaleString("en-GB", {
+                              day: "numeric", month: "short", year: "numeric",
+                              hour: "2-digit", minute: "2-digit"
+                            })}</span>
+                          </div>
+                        </div>
+
+                        {/* View Changes Action button */}
+                        {isUpdate && log.dataBefore && log.dataAfter && (
+                          <button
+                            type="button"
+                            onClick={() => toggleLogExpanded(log.id)}
+                            className="self-start sm:self-center p-1.5 hover:bg-slate-100 text-indigo-600 hover:text-[#800020] rounded-lg transition-colors focus:outline-none cursor-pointer"
+                            title={expandedLogs[log.id] ? "Hide Changes" : "View Changes"}
+                          >
+                            {expandedLogs[log.id] ? (
+                              <EyeOff className="w-4 h-4" />
+                            ) : (
+                              <Eye className="w-4 h-4" />
+                            )}
+                          </button>
+                        )}
+                      </div>
+
+                      {/* Expanded Diff Block */}
+                      {isUpdate && expandedLogs[log.id] && (
+                        <div className="mt-3 p-4 bg-slate-50/50 border border-slate-150 rounded-xl text-xs space-y-2 animate-in slide-in-from-top-2 duration-200 max-w-3xl">
+                          <div className="font-bold text-slate-400 uppercase tracking-wider text-[9px] mb-1">State Modifications</div>
+                          {getDiffDetails(log)?.map((d: any) => (
+                            <div key={d.field} className="grid grid-cols-1 sm:grid-cols-[120px_1fr] gap-2 py-1.5 border-b border-slate-100 last:border-0 items-start">
+                              <span className="font-mono font-bold text-slate-600 block py-0.5">{d.field}</span>
+                              <div className="flex flex-col gap-2 min-w-0 w-full">
+                                <div className="px-2.5 py-1.5 rounded bg-rose-50 text-rose-600 border border-rose-100 line-through text-[11px] font-mono leading-relaxed whitespace-pre-wrap break-words">
+                                  {formatValue(d.oldVal, d.field)}
+                                </div>
+                                <div className="text-slate-400 font-bold text-[10px] pl-2 flex items-center gap-1">
+                                  <span>↓</span> Changed To
+                                </div>
+                                <div className="px-2.5 py-1.5 rounded bg-emerald-50 text-emerald-600 border border-emerald-100 font-bold text-[11px] font-mono leading-relaxed whitespace-pre-wrap break-words">
+                                  {formatValue(d.newVal, d.field)}
+                                </div>
+                              </div>
+                            </div>
+                          )) || <span className="text-slate-400 italic">No field differences detected.</span>}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+
+        <HoldReasonModal
+          isOpen={isHoldModalOpen}
+          onClose={handleHoldClose}
+          onConfirm={handleHoldConfirm}
+        />
       </div>
     </>
   );

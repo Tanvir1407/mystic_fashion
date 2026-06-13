@@ -36,7 +36,7 @@ export default async function StaffOrderDetailPage({ params }: { params: { id: s
   const session = await getStaffSession();
   if (!session) redirect("/staff/login");
 
-  const [order, deliverySettings, products, rate] = await Promise.all([
+  const [order, deliverySettings, products, rate, activityLogs] = await Promise.all([
     prisma.order.findFirst({
       where: { id: params.id, createdById: session.staffId, deletedAt: null },
       include: {
@@ -47,6 +47,15 @@ export default async function StaffOrderDetailPage({ params }: { params: { id: s
     getDeliverySettings(),
     getProductsForOrder(),
     getEffectiveCommissionRate(session.staffId),
+    prisma.activityLog.findMany({
+      where: {
+        entityType: "Order",
+        entityId: params.id,
+      },
+      orderBy: {
+        timestamp: "desc",
+      },
+    }),
   ]);
 
   if (!order) notFound();
@@ -65,6 +74,7 @@ export default async function StaffOrderDetailPage({ params }: { params: { id: s
         amount: commission,
         orderStatus: order.status,
       }}
+      activityLogs={activityLogs}
     />
   );
 }

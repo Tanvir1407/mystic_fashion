@@ -29,6 +29,47 @@ import {
 } from "lucide-react";
 import { useAdminAuth } from "@/app/admin/AdminAuthContext";
 
+const formatValue = (val: any, fieldKey?: string) => {
+  if (val === null || val === undefined) return "None";
+  if (Array.isArray(val)) {
+    if (val.length === 0) return "None";
+    if (fieldKey === "items" || (val[0] && typeof val[0] === "object" && "productId" in val[0])) {
+      return val.map((item: any) => {
+        const name = item.product?.name || item.productName || `Product (${item.productId?.slice(0, 8) || "Unknown"})`;
+        const sizeInfo = item.size ? ` (${item.size})` : "";
+        const printInfo = item.requiresPrint ? ` [Print: ${item.printName || "No Name"}/${item.printNumber || "No No"}]` : "";
+        return `${item.quantity}x ${name}${sizeInfo} @ ৳${item.price}${printInfo}`;
+      }).join("\n");
+    }
+    if (typeof val[0] === "object") {
+      return JSON.stringify(val, null, 2);
+    }
+    return val.join(", ");
+  }
+  if (typeof val === "object") {
+    return JSON.stringify(val, null, 2);
+  }
+  return String(val);
+};
+
+const cleanForCompare = (val: any): any => {
+  if (val === null || val === undefined) return val;
+  if (Array.isArray(val)) {
+    return val.map(cleanForCompare);
+  }
+  if (typeof val === "object" && !(val instanceof Date)) {
+    const cleaned: any = {};
+    for (const key of Object.keys(val)) {
+      if (key === "id" || key === "createdAt" || key === "updatedAt" || key === "orderId") {
+        continue;
+      }
+      cleaned[key] = cleanForCompare(val[key]);
+    }
+    return cleaned;
+  }
+  return val;
+};
+
 export default function AuditLogsClient({
   initialSettings,
   distinctUsers,
@@ -239,9 +280,12 @@ export default function AuditLogsClient({
       } else if (!hasBefore && hasAfter) {
         diff.push({ key, before: null, after: valAfter, type: "ADD" });
       } else {
-        const match = isStringBefore && isStringAfter
-          ? String(valBefore) === String(valAfter)
-          : JSON.stringify(valBefore) === JSON.stringify(valAfter);
+        const cleanBefore = cleanForCompare(valBefore);
+        const cleanAfter = cleanForCompare(valAfter);
+
+        const match = typeof cleanBefore !== "object" && typeof cleanAfter !== "object"
+          ? String(cleanBefore) === String(cleanAfter)
+          : JSON.stringify(cleanBefore) === JSON.stringify(cleanAfter);
 
         if (!match) {
           diff.push({ key, before: valBefore, after: valAfter, type: "UPDATE" });
@@ -832,11 +876,11 @@ export default function AuditLogsClient({
                             </div>
 
                             {/* Before change */}
-                            <div className="md:col-span-4 bg-rose-50/50 border border-rose-100/50 p-2.5 rounded text-xs flex flex-col justify-center min-h-[50px] overflow-x-auto">
+                            <div className="md:col-span-4 bg-rose-50/50 border border-rose-100/50 p-2.5 rounded text-xs flex flex-col justify-center min-h-[50px]">
                               <span className="text-[9px] font-bold text-rose-500 uppercase tracking-wide mb-1">Before Mutation</span>
-                              <span className="font-mono text-[11px] text-rose-700 line-through truncate max-w-full">
-                                {item.before === null ? "null" : (typeof item.before === "object" ? JSON.stringify(item.before) : String(item.before))}
-                              </span>
+                              <div className="font-mono text-[11px] text-rose-700 line-through whitespace-pre-wrap break-words">
+                                {formatValue(item.before, item.key)}
+                              </div>
                             </div>
 
                             {/* Center Arrow */}
@@ -845,11 +889,11 @@ export default function AuditLogsClient({
                             </div>
 
                             {/* After change */}
-                            <div className="md:col-span-4 bg-emerald-50/50 border border-emerald-100/50 p-2.5 rounded text-xs flex flex-col justify-center min-h-[50px] overflow-x-auto">
+                            <div className="md:col-span-4 bg-emerald-50/50 border border-emerald-100/50 p-2.5 rounded text-xs flex flex-col justify-center min-h-[50px]">
                               <span className="text-[9px] font-bold text-emerald-500 uppercase tracking-wide mb-1">After Mutation</span>
-                              <span className="font-mono text-[11px] text-emerald-800 font-semibold truncate max-w-full">
-                                {item.after === null ? "null" : (typeof item.after === "object" ? JSON.stringify(item.after) : String(item.after))}
-                              </span>
+                              <div className="font-mono text-[11px] text-emerald-800 font-semibold whitespace-pre-wrap break-words">
+                                {formatValue(item.after, item.key)}
+                              </div>
                             </div>
                           </div>
                         ))}

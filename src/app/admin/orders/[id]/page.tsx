@@ -68,6 +68,16 @@ export default async function SingleOrderPage({ params }: { params: { id: string
         return status;
     }
   }
+  const activityLogs = await prisma.activityLog.findMany({
+    where: {
+      entityType: "Order",
+      entityId: params.id,
+    },
+    orderBy: {
+      timestamp: "desc",
+    },
+  });
+
   return (
     <OrderDetailsClient
       order={order}
@@ -76,6 +86,7 @@ export default async function SingleOrderPage({ params }: { params: { id: string
       pathaoInfo={pathaoInfo}
       dtfSetting={dtfSetting}
       staff={staff}
+      activityLogs={activityLogs}
     />
   );
 }
