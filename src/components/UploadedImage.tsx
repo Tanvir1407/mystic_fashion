@@ -1,3 +1,5 @@
+"use client";
+
 /**
  * UploadedImage — wrapper around next/image for runtime-uploaded files.
  *
