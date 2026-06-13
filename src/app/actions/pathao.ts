@@ -157,3 +157,13 @@ export async function trackCustomerOrder(query: string) {
         return { success: false, error: "An error occurred while fetching order details." };
     }
 }
+
+export async function getPathaoOrderInfoAction(consignmentId: string) {
+    try {
+        const info = await pathaoClient.getOrderInfo(consignmentId);
+        return { success: true, data: info };
+    } catch (error: any) {
+        console.error('[getPathaoOrderInfoAction] Error:', error);
+        return { success: false, error: error.message || "Failed to fetch Pathao consignment details" };
+    }
+}

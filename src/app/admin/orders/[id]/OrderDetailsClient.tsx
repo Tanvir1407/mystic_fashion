@@ -10,7 +10,8 @@ import {
   Eye, EyeOff
 } from "lucide-react";
 import { updateOrderDetails, updateOrderRemark, updateOrderStatus } from "../actions";
-import { getPathaoCities, getPathaoZones, getPathaoAreas } from "@/app/actions/pathao";
+import { getPathaoCities, getPathaoZones, getPathaoAreas, getPathaoOrderInfoAction } from "@/app/actions/pathao";
+import { getProductsForOrder } from "@/app/admin/products/actions";
 import { HoldReasonModal } from "@/components/HoldReasonModal";
 import InvoicePrintView from "../InvoicePrintView";
 import ThermalPrintView from "../ThermalPrintView";
@@ -113,6 +114,11 @@ export default function OrderDetailsClient({
   const [printType, setPrintType] = useState<"A4" | "80MM" | null>(null);
   const [expandedLogs, setExpandedLogs] = useState<Record<string, boolean>>({});
 
+  const [pathaoInfoState, setPathaoInfoState] = useState<any>(pathaoInfo);
+  const [loadingPathao, setLoadingPathao] = useState(false);
+  const [localProducts, setLocalProducts] = useState<any[]>(products || []);
+  const [loadingProducts, setLoadingProducts] = useState(false);
+
   const toggleLogExpanded = (logId: string) => {
     setExpandedLogs((prev) => ({ ...prev, [logId]: !prev[logId] }));
   };
@@ -157,6 +163,42 @@ export default function OrderDetailsClient({
   useEffect(() => {
     setStatus(order.status);
   }, [order.status]);
+
+  // Load products client-side when entering editing mode
+  useEffect(() => {
+    if (isEditing && localProducts.length === 0) {
+      async function fetchProducts() {
+        setLoadingProducts(true);
+        try {
+          const res = await getProductsForOrder();
+          setLocalProducts(res || []);
+        } catch (e) {
+          console.error("[OrderDetailsClient] Failed to fetch products client-side:", e);
+        }
+        setLoadingProducts(false);
+      }
+      fetchProducts();
+    }
+  }, [isEditing, localProducts.length]);
+
+  // Load Pathao consignment info client-side in the background
+  useEffect(() => {
+    if (order.status === "SHIPPED" && order.pathaoConsignmentId && !pathaoInfoState) {
+      async function fetchPathaoInfo() {
+        setLoadingPathao(true);
+        try {
+          const res = await getPathaoOrderInfoAction(order.pathaoConsignmentId);
+          if (res.success && res.data) {
+            setPathaoInfoState(res.data);
+          }
+        } catch (e) {
+          console.error("[OrderDetailsClient] Failed to fetch Pathao info client-side:", e);
+        }
+        setLoadingPathao(false);
+      }
+      fetchPathaoInfo();
+    }
+  }, [order.status, order.pathaoConsignmentId, pathaoInfoState]);
 
   useEffect(() => {
     if (printType !== null) {
@@ -469,7 +511,7 @@ export default function OrderDetailsClient({
 
   const handleAddNewProduct = () => {
     if (!newProductData.productId || !newProductData.size) { alert("Please select a product and size."); return; }
-    const product = products.find((p) => p.id === newProductData.productId);
+    const product = localProducts.find((p) => p.id === newProductData.productId);
     let price = product.price;
     if (product.discount) {
       price = product.discount.discountType === "PERCENTAGE"
@@ -521,7 +563,7 @@ export default function OrderDetailsClient({
   const hasPrint = order.items?.some((i: any) => i.requiresPrint);
   const filteredSteps = STATUS_STEPS.filter((s) => s.statusKey !== "PRINTING" || hasPrint || order.status === "PRINTING");
 
-  const pathaoStatus = pathaoInfo?.order_status || pathaoInfo?.order_status_slug || null;
+  const pathaoStatus = pathaoInfoState?.order_status || pathaoInfoState?.order_status_slug || null;
   const pathaoStatusLower = (pathaoStatus || "").toLowerCase();
 
   const DISTRICTS = ["Bagerhat", "Bandarban", "Barguna", "Barisal", "Bhola", "Bogra", "Brahmanbaria", "Chandpur", "Chapainawabganj", "Chattogram", "Chuadanga", "Comilla", "Cox's Bazar", "Dhaka", "Dinajpur", "Faridpur", "Feni", "Gaibandha", "Gazipur", "Gopalganj", "Habiganj", "Jamalpur", "Jashore", "Jhalokati", "Jhenaidah", "Joypurhat", "Khagrachhari", "Khulna", "Kishoreganj", "Kurigram", "Kushtia", "Lakshmipur", "Lalmonirhat", "Madaripur", "Magura", "Manikganj", "Meherpur", "Moulvibazar", "Munshiganj", "Mymensingh", "Naogaon", "Narail", "Narayanganj", "Narsingdi", "Natore", "Netrokona", "Nilphamari", "Noakhali", "Pabna", "Panchagarh", "Patuakhali", "Pirojpur", "Rajbari", "Rajshahi", "Rangamati", "Rangpur", "Satkhira", "Shariatpur", "Sherpur", "Sirajganj", "Sunamganj", "Sylhet", "Tangail", "Thakurgaon", "Self Pickup"].sort();
@@ -802,12 +844,23 @@ export default function OrderDetailsClient({
                       </div>
                       <div>
                         <label className="text-[10px] font-bold uppercase text-slate-500 block mb-1">Product</label>
-                        <CustomSelect options={products.map((p) => ({ value: p.id, label: p.name }))} value={newProductData.productId} onChange={(val) => setNewProductData({ ...newProductData, productId: val })} searchable />
+                        <CustomSelect
+                          options={loadingProducts ? [] : localProducts.map((p) => ({ value: p.id, label: p.name }))}
+                          value={newProductData.productId}
+                          onChange={(val) => setNewProductData({ ...newProductData, productId: val, size: "" })}
+                          placeholder={loadingProducts ? "Loading products..." : "Select Product"}
+                          searchable
+                        />
                       </div>
                       {newProductData.productId && (
                         <div>
                           <label className="text-[10px] font-bold uppercase text-slate-500 block mb-1">Size</label>
-                          <CustomSelect options={(products.find((p) => p.id === newProductData.productId)?.variants || []).map((v: any) => ({ value: v.size, label: `${v.size} (Stock: ${v.stock})` }))} value={newProductData.size} onChange={(val) => setNewProductData({ ...newProductData, size: val })} openUpwards />
+                          <CustomSelect
+                            options={(localProducts.find((p) => p.id === newProductData.productId)?.variants || []).map((v: any) => ({ value: v.size, label: `${v.size} (Stock: ${v.stock})` }))}
+                            value={newProductData.size}
+                            onChange={(val) => setNewProductData({ ...newProductData, size: val })}
+                            openUpwards
+                          />
                         </div>
                       )}
                       <div>
@@ -1021,9 +1074,9 @@ export default function OrderDetailsClient({
                                 ) : (
                                   <span className="text-[9px] text-slate-400 italic">Syncing…</span>
                                 )}
-                                {pathaoInfo?.updated_at && (
+                                {pathaoInfoState?.updated_at && (
                                   <span className="text-[8px] text-slate-400 text-center leading-tight">
-                                    {new Date(pathaoInfo.updated_at).toLocaleString("en-GB", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}
+                                    {new Date(pathaoInfoState.updated_at).toLocaleString("en-GB", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}
                                   </span>
                                 )}
                               </div>
