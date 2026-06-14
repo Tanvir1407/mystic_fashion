@@ -24,6 +24,7 @@ interface CustomSelectProps {
   textClass?: string;
   onSearchValueChange?: (value: string) => void;
   isLoading?: boolean;
+  onKeyDownDirect?: (e: React.KeyboardEvent, isOpen: boolean, closeSelect: () => void) => void;
 }
 
 export interface CustomSelectRef {
@@ -46,6 +47,7 @@ export const CustomSelect = forwardRef<CustomSelectRef, CustomSelectProps>(
       textClass = "text-sm",
       onSearchValueChange,
       isLoading = false,
+      onKeyDownDirect,
     },
     ref
   ) => {
@@ -98,6 +100,14 @@ export const CustomSelect = forwardRef<CustomSelectRef, CustomSelectProps>(
     }, [activeIndex, isOpen]);
 
     const handleKeyDown = (e: React.KeyboardEvent) => {
+      if (onKeyDownDirect) {
+        onKeyDownDirect(e, isOpen, () => {
+          setIsOpen(false);
+          setSearch("");
+        });
+        if (e.defaultPrevented) return;
+      }
+
       if (!isOpen) {
         if (e.key === "Enter" || e.key === " " || e.key === "ArrowDown") {
           e.preventDefault();

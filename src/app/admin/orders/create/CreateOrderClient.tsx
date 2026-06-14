@@ -719,7 +719,24 @@ export default function CreateOrderClient({
                 type="text"
                 value={phone}
                 onChange={e => setPhone(e.target.value)}
-                onKeyDown={(e) => { if (e.key === "Enter") { if (isStorePickup) { addressRef.current?.focus(); } else { citySelectRef.current?.focusAndOpen(); } } }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    if (isStorePickup) {
+                      addressRef.current?.focus();
+                    } else {
+                      citySelectRef.current?.focusAndOpen();
+                    }
+                  } else if (e.key === "ArrowUp") {
+                    e.preventDefault();
+                    customerNameRef.current?.focus();
+                  } else if (e.key === "ArrowLeft") {
+                    const el = e.currentTarget as HTMLInputElement;
+                    if (el.selectionStart === 0) {
+                      e.preventDefault();
+                      customerNameRef.current?.focus();
+                    }
+                  }
+                }}
                 placeholder="01XXXXXXXXX"
                 className="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded font-mono text-xs font-bold outline-none focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
               />
@@ -802,6 +819,38 @@ export default function CreateOrderClient({
                       const city = cities.find(c => c.value === val); if (city) setDistrict(city.label);
                     }
                   }}
+                  onKeyDownDirect={(e, isOpen, closeSelect) => {
+                    const isSearchInput = e.target instanceof HTMLInputElement;
+                    const searchVal = isSearchInput ? (e.target as HTMLInputElement).value : "";
+                    const cursorAtStart = isSearchInput ? (e.target as HTMLInputElement).selectionStart === 0 : true;
+
+                    if (e.key === "ArrowLeft" || e.key === "ArrowUp") {
+                      if (!isOpen || (isSearchInput && cursorAtStart && !searchVal)) {
+                        e.preventDefault();
+                        closeSelect();
+                        phoneRef.current?.focus();
+                      }
+                    } else if (e.key === "ArrowRight") {
+                      if (!isOpen || (isSearchInput && !searchVal)) {
+                        e.preventDefault();
+                        closeSelect();
+                        if (selectedCityId && zones.length > 0) {
+                          zoneSelectRef.current?.focusAndOpen();
+                        } else {
+                          addressRef.current?.focus();
+                        }
+                      }
+                    } else if (e.key === "Enter") {
+                      if (!isOpen) {
+                        e.preventDefault();
+                        if (selectedCityId && zones.length > 0) {
+                          zoneSelectRef.current?.focusAndOpen();
+                        } else {
+                          addressRef.current?.focus();
+                        }
+                      }
+                    }
+                  }}
                   heightClass="h-8"
                   textClass="text-xs"
                 />
@@ -817,6 +866,38 @@ export default function CreateOrderClient({
                   value={selectedZoneId?.toString() || ""}
                   onChange={(val) => {
                     setSelectedZoneId(parseInt(val)); setSelectedAreaId(null);
+                  }}
+                  onKeyDownDirect={(e, isOpen, closeSelect) => {
+                    const isSearchInput = e.target instanceof HTMLInputElement;
+                    const searchVal = isSearchInput ? (e.target as HTMLInputElement).value : "";
+                    const cursorAtStart = isSearchInput ? (e.target as HTMLInputElement).selectionStart === 0 : true;
+
+                    if (e.key === "ArrowLeft" || e.key === "ArrowUp") {
+                      if (!isOpen || (isSearchInput && cursorAtStart && !searchVal)) {
+                        e.preventDefault();
+                        closeSelect();
+                        citySelectRef.current?.focusAndOpen();
+                      }
+                    } else if (e.key === "ArrowRight") {
+                      if (!isOpen || (isSearchInput && !searchVal)) {
+                        e.preventDefault();
+                        closeSelect();
+                        if (selectedZoneId && areas.length > 0) {
+                          areaSelectRef.current?.focusAndOpen();
+                        } else {
+                          addressRef.current?.focus();
+                        }
+                      }
+                    } else if (e.key === "Enter") {
+                      if (!isOpen) {
+                        e.preventDefault();
+                        if (selectedZoneId && areas.length > 0) {
+                          areaSelectRef.current?.focusAndOpen();
+                        } else {
+                          addressRef.current?.focus();
+                        }
+                      }
+                    }
                   }}
                   heightClass="h-8"
                   textClass="text-xs"
@@ -835,6 +916,25 @@ export default function CreateOrderClient({
                     setSelectedAreaId(parseInt(val));
                     setTimeout(() => addressRef.current?.focus(), 100);
                   }}
+                  onKeyDownDirect={(e, isOpen, closeSelect) => {
+                    const isSearchInput = e.target instanceof HTMLInputElement;
+                    const searchVal = isSearchInput ? (e.target as HTMLInputElement).value : "";
+                    const cursorAtStart = isSearchInput ? (e.target as HTMLInputElement).selectionStart === 0 : true;
+
+                    if (e.key === "ArrowLeft" || e.key === "ArrowUp") {
+                      if (!isOpen || (isSearchInput && cursorAtStart && !searchVal)) {
+                        e.preventDefault();
+                        closeSelect();
+                        zoneSelectRef.current?.focusAndOpen();
+                      }
+                    } else if (e.key === "ArrowRight" || e.key === "Enter") {
+                      if (!isOpen || (isSearchInput && !searchVal)) {
+                        e.preventDefault();
+                        closeSelect();
+                        addressRef.current?.focus();
+                      }
+                    }
+                  }}
                   heightClass="h-8"
                   textClass="text-xs"
                 />
@@ -850,7 +950,36 @@ export default function CreateOrderClient({
               type="text"
               value={address}
               onChange={e => setAddress(e.target.value)}
-              onKeyDown={(e) => { if (e.key === "Enter") advancePaidRef.current?.focus(); }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  advancePaidRef.current?.focus();
+                } else if (e.key === "ArrowUp") {
+                  e.preventDefault();
+                  if (isStorePickup) {
+                    phoneRef.current?.focus();
+                  } else if (selectedZoneId && areas.length > 0) {
+                    areaSelectRef.current?.focusAndOpen();
+                  } else if (selectedCityId && zones.length > 0) {
+                    zoneSelectRef.current?.focusAndOpen();
+                  } else {
+                    citySelectRef.current?.focusAndOpen();
+                  }
+                } else if (e.key === "ArrowLeft") {
+                  const el = e.currentTarget as HTMLInputElement;
+                  if (el.selectionStart === 0) {
+                    e.preventDefault();
+                    if (isStorePickup) {
+                      phoneRef.current?.focus();
+                    } else if (selectedZoneId && areas.length > 0) {
+                      areaSelectRef.current?.focusAndOpen();
+                    } else if (selectedCityId && zones.length > 0) {
+                      zoneSelectRef.current?.focusAndOpen();
+                    } else {
+                      citySelectRef.current?.focusAndOpen();
+                    }
+                  }
+                }
+              }}
               placeholder="e.g., House 12, Road 4, Block C, Mirpur 2, Dhaka"
               className="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded font-semibold text-xs outline-none focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
             />
@@ -867,7 +996,20 @@ export default function CreateOrderClient({
                   type="number"
                   value={advancePaid || ""}
                   onChange={e => setAdvancePaid(parseFloat(e.target.value) || 0)}
-                  onKeyDown={(e) => { if (e.key === "Enter") discountRef.current?.focus(); }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      discountRef.current?.focus();
+                    } else if (e.key === "ArrowUp") {
+                      e.preventDefault();
+                      addressRef.current?.focus();
+                    } else if (e.key === "ArrowLeft") {
+                      const el = e.currentTarget as HTMLInputElement;
+                      if (el.selectionStart === 0) {
+                        e.preventDefault();
+                        addressRef.current?.focus();
+                      }
+                    }
+                  }}
                   className="w-full pl-6 pr-3 py-1 bg-red-50/40 border border-red-200 rounded font-mono text-xs font-bold text-red-600 outline-none focus:bg-white focus:ring-2 focus:ring-red-500/20 focus:border-red-500 transition-all"
                   placeholder="0"
                 />
@@ -887,7 +1029,21 @@ export default function CreateOrderClient({
                     type="number"
                     value={manualDiscountValue || ""}
                     onChange={e => setManualDiscountValue(parseFloat(e.target.value) || 0)}
-                    onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); discountTypeRef.current?.focus(); } }}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        discountTypeRef.current?.focus();
+                      } else if (e.key === "ArrowUp") {
+                        e.preventDefault();
+                        addressRef.current?.focus();
+                      } else if (e.key === "ArrowLeft") {
+                        const el = e.currentTarget as HTMLInputElement;
+                        if (el.selectionStart === 0) {
+                          e.preventDefault();
+                          advancePaidRef.current?.focus();
+                        }
+                      }
+                    }}
                     className="w-full pl-5 pr-2 py-1 bg-primary/5 border border-primary/20 rounded font-mono text-xs font-bold text-primary outline-none focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
                     placeholder="0"
                   />
@@ -896,7 +1052,15 @@ export default function CreateOrderClient({
                   ref={discountTypeRef}
                   value={manualDiscountType}
                   onChange={e => setManualDiscountType(e.target.value as "FLAT" | "PERCENTAGE")}
-                  onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); remarksRef.current?.focus(); } }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      remarksRef.current?.focus();
+                    } else if (e.key === "ArrowLeft" || e.key === "ArrowUp") {
+                      e.preventDefault();
+                      discountRef.current?.focus();
+                    }
+                  }}
                   className="px-1 py-1 bg-primary/5 border border-primary/20 rounded text-[9px] font-black uppercase outline-none focus:bg-white focus:border-primary cursor-pointer"
                 >
                   <option value="FLAT">FLAT</option>
@@ -913,7 +1077,18 @@ export default function CreateOrderClient({
               ref={remarksRef}
               value={remarks}
               onChange={e => setRemarks(e.target.value)}
-              onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); tagInputRef.current?.focus(); } }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  tagInputRef.current?.focus();
+                } else if (e.key === "ArrowUp") {
+                  const el = e.currentTarget as HTMLTextAreaElement;
+                  if (el.selectionStart === 0) {
+                    e.preventDefault();
+                    discountTypeRef.current?.focus();
+                  }
+                }
+              }}
               placeholder="Add any internal notes, packaging instructions, or customer requests..."
               rows={2}
               className="w-full px-2.5 py-1 bg-slate-50 border border-slate-200 rounded font-medium text-xs focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none resize-none transition-all"
@@ -942,6 +1117,11 @@ export default function CreateOrderClient({
                       addTag(tagInput);
                     } else {
                       createOrderBtnRef.current?.focus();
+                    }
+                  } else if (e.key === "ArrowUp" || e.key === "ArrowLeft") {
+                    if (!tagInput.trim()) {
+                      e.preventDefault();
+                      remarksRef.current?.focus();
                     }
                   }
                 }}
