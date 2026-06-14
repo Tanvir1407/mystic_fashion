@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter, Cormorant_Garamond } from "next/font/google";
 import "./globals.css";
+import Toaster from "@/components/Toaster";
 
 const inter = Inter({ subsets: ["latin"] });
 const cormorant = Cormorant_Garamond({
@@ -35,6 +36,7 @@ export default function RootLayout({
     <html lang="en">
       <body className={`${inter.className} ${cormorant.variable} antialiased`}>
         {children}
+        <Toaster />
       </body>
     </html>
   );

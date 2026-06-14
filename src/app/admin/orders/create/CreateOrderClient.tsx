@@ -5,9 +5,11 @@ import { Search, Plus, Trash2, User, Phone, ShoppingBag, CheckCircle, ArrowLeft,
 import Link from "next/link";
 import { createAdminOrder, createExchangeOrder } from "../actions";
 import { useRouter } from "next/navigation";
+import { motion, AnimatePresence } from "framer-motion";
 import { getPathaoCities, getPathaoZones, getPathaoAreas } from "@/app/actions/pathao";
 import { CustomSelect, CustomSelectRef } from "@/components/CustomSelect";
 import { formatBDT, roundPrice } from "@/utils/formatPrice";
+import { useToastStore } from "@/store/toastStore";
 
 interface Product {
   id: string;
@@ -89,6 +91,7 @@ export default function CreateOrderClient({
   const [deliveryCharge, setDeliveryCharge] = useState(0);
   const [createdById, setCreatedById] = useState("");
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
+  const showToast = useToastStore(state => state.showToast);
 
   // Tags & Exchange
   const [tags, setTags] = useState<string[]>([]);
@@ -125,6 +128,8 @@ export default function CreateOrderClient({
   useEffect(() => {
     productSearchRef.current?.focus();
   }, []);
+
+
 
   // Fetch Pathao Cities
   useEffect(() => {
@@ -374,7 +379,34 @@ export default function CreateOrderClient({
 
         if (res.success) {
           setIsConfirmModalOpen(false);
-          router.push(successUrl);
+          showToast("Order successfully created", "success");
+
+          // Reset all form states to empty for the next manual entry
+          setCustomerName("");
+          setPhone("");
+          setAddress("");
+          setAdvancePaid(0);
+          setRemarks("");
+          setManualDiscountValue(0);
+          setManualDiscountType("FLAT");
+          setIsStorePickup(false);
+          setDeliveryCharge(0);
+          setSelectedCityId(null);
+          setSelectedZoneId(null);
+          setSelectedAreaId(null);
+          setDistrict("Dhaka");
+          setOrderItems([]);
+          setTags([]);
+          setTagInput("");
+          setIsExchange(false);
+          setExchangeRefOrderId("");
+          setExchangeItemNote("");
+          setCreatedById("");
+
+          // Focus back on product search database to enable instant typing
+          setTimeout(() => {
+            productSearchRef.current?.focus();
+          }, 100);
         } else {
           alert(res.error || "Failed to create order.");
         }
@@ -1442,6 +1474,8 @@ export default function CreateOrderClient({
           </div>
         </div>
       )}
+
+
 
     </div>
   );
