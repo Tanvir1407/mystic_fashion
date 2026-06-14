@@ -1,12 +1,12 @@
 "use client";
 
-import { useState, useMemo, useTransition, useEffect } from "react";
-import { Search, Plus, Trash2, User, Phone, MapPin, ShoppingBag, CheckCircle, ArrowLeft, Loader2, X } from "lucide-react";
+import { useState, useMemo, useTransition, useEffect, useRef } from "react";
+import { Search, Plus, Trash2, User, Phone, ShoppingBag, CheckCircle, ArrowLeft, Loader2, X, Tags } from "lucide-react";
 import Link from "next/link";
 import { createAdminOrder, createExchangeOrder } from "../actions";
 import { useRouter } from "next/navigation";
 import { getPathaoCities, getPathaoZones, getPathaoAreas } from "@/app/actions/pathao";
-import { CustomSelect } from "@/components/CustomSelect";
+import { CustomSelect, CustomSelectRef } from "@/components/CustomSelect";
 import { formatBDT, roundPrice } from "@/utils/formatPrice";
 
 interface Product {
@@ -22,7 +22,7 @@ interface OrderItem {
   productName: string;
   size: string;
   quantity: number;
-  price: number; // Unit price at calculation
+  price: number;
   stock: number;
   requiresPrint?: boolean;
   printCost?: number;
@@ -57,7 +57,26 @@ export default function CreateOrderClient({
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
 
-  // Customer Info
+  // --- CORE SYSTEM REFS FOR KEYBOARD SEQUENCE ---
+  const productSearchRef = useRef<HTMLInputElement>(null);
+  const sizeContainerRef = useRef<HTMLDivElement>(null);
+  const qtyInputRef = useRef<HTMLInputElement>(null);
+  const addToOrderBtnRef = useRef<HTMLButtonElement>(null);
+
+  const customerNameRef = useRef<HTMLInputElement>(null);
+  const phoneRef = useRef<HTMLInputElement>(null);
+  const citySelectRef = useRef<CustomSelectRef>(null);
+  const zoneSelectRef = useRef<CustomSelectRef>(null);
+  const areaSelectRef = useRef<CustomSelectRef>(null);
+  const addressRef = useRef<HTMLInputElement>(null);
+  const advancePaidRef = useRef<HTMLInputElement>(null);
+  const discountRef = useRef<HTMLInputElement>(null);
+  const discountTypeRef = useRef<HTMLSelectElement>(null);
+  const remarksRef = useRef<HTMLTextAreaElement>(null);
+  const tagInputRef = useRef<HTMLInputElement>(null);
+  const createOrderBtnRef = useRef<HTMLButtonElement>(null);
+
+  // Customer Info States
   const [customerName, setCustomerName] = useState("");
   const [phone, setPhone] = useState("");
   const [district, setDistrict] = useState("Dhaka");
@@ -69,33 +88,19 @@ export default function CreateOrderClient({
   const [isStorePickup, setIsStorePickup] = useState(false);
   const [deliveryCharge, setDeliveryCharge] = useState(0);
   const [createdById, setCreatedById] = useState("");
+  const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
 
-  // Tags State & Helpers
+  // Tags & Exchange
   const [tags, setTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState("");
-
-  const addTag = (inputVal: string) => {
-    const trimmed = inputVal.replace(/,/g, "").trim();
-    if (trimmed && !tags.includes(trimmed)) {
-      setTags([...tags, trimmed]);
-    }
-    setTagInput("");
-  };
-
-  const removeTag = (indexToRemove: number) => {
-    setTags(tags.filter((_, idx) => idx !== indexToRemove));
-  };
-
-  // Exchange states
   const [isExchange, setIsExchange] = useState(false);
   const [exchangeRefOrderId, setExchangeRefOrderId] = useState("");
   const [exchangeItemNote, setExchangeItemNote] = useState("");
 
-  // Pathao Location States
+  // Pathao States
   const [cities, setCities] = useState<{ value: string, label: string }[]>([]);
   const [zones, setZones] = useState<{ value: string, label: string }[]>([]);
   const [areas, setAreas] = useState<{ value: string, label: string }[]>([]);
-
   const [selectedCityId, setSelectedCityId] = useState<number | null>(null);
   const [selectedZoneId, setSelectedZoneId] = useState<number | null>(null);
   const [selectedAreaId, setSelectedAreaId] = useState<number | null>(null);
@@ -104,74 +109,82 @@ export default function CreateOrderClient({
   const [loadingZones, setLoadingZones] = useState(false);
   const [loadingAreas, setLoadingAreas] = useState(false);
 
-  // Fetch Pathao Cities on mount
-  useEffect(() => {
-    async function fetchCities() {
-      setLoadingCities(true);
-      const res = await getPathaoCities();
-      if (res.success && res.data) {
-        const cityOptions = res.data.map((c: any) => ({ value: c.city_id.toString(), label: c.city_name }));
-        // Add Self Pickup as a special city option if needed, or just keep it separate.
-        // User asked to retain existing functionality, so I'll add "Self Pickup" as a special option.
-        setCities([
-          { value: "self-pickup", label: "Self Pickup" },
-          ...cityOptions
-        ]);
-      }
-      setLoadingCities(false);
-    }
-    fetchCities();
-  }, []);
-
-  // Fetch Zones when City changes
-  useEffect(() => {
-    async function fetchZones() {
-      if (!selectedCityId) {
-        setZones([]);
-        return;
-      }
-      setLoadingZones(true);
-      const res = await getPathaoZones(selectedCityId);
-      if (res.success && res.data) {
-        setZones(res.data.map((z: any) => ({ value: z.zone_id.toString(), label: z.zone_name })));
-      }
-      setLoadingZones(false);
-    }
-    fetchZones();
-  }, [selectedCityId]);
-
-  // Fetch Areas when Zone changes
-  useEffect(() => {
-    async function fetchAreas() {
-      if (!selectedZoneId) {
-        setAreas([]);
-        return;
-      }
-      setLoadingAreas(true);
-      const res = await getPathaoAreas(selectedZoneId);
-      if (res.success && res.data) {
-        setAreas(res.data.map((a: any) => ({ value: a.area_id.toString(), label: a.area_name })));
-      }
-      setLoadingAreas(false);
-    }
-    fetchAreas();
-  }, [selectedZoneId]);
-
-  // Items in current order
+  // Product Selection States
   const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
-
-  // Product Search State
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedProductId, setSelectedProductId] = useState("");
   const [selectedSize, setSelectedSize] = useState("");
   const [quantity, setQuantity] = useState(1);
   const [focusedIndex, setFocusedIndex] = useState(-1);
 
-  // DTF States for the pending item
+  // DTF Customization Info
   const [requiresPrint, setRequiresPrint] = useState(false);
   const [pendingPrintDetails, setPendingPrintDetails] = useState<{ name: string; number: string }[]>([]);
 
-  // Filtered products for search
+  // Page Load Initial Focus Hook
+  useEffect(() => {
+    productSearchRef.current?.focus();
+  }, []);
+
+  // Fetch Pathao Cities
+  useEffect(() => {
+    async function fetchCities() {
+      setLoadingCities(true);
+      const res = await getPathaoCities();
+      if (res.success && res.data) {
+        const cityOptions = res.data.map((c: any) => ({ value: c.city_id.toString(), label: c.city_name }));
+        setCities([{ value: "self-pickup", label: "Self Pickup" }, ...cityOptions]);
+      }
+      setLoadingCities(false);
+    }
+    fetchCities();
+  }, []);
+
+  // Fetch Zones with Cascading Autofocus Trigger
+  useEffect(() => {
+    async function fetchZones() {
+      if (!selectedCityId) { setZones([]); return; }
+      setLoadingZones(true);
+      const res = await getPathaoZones(selectedCityId);
+      if (res.success && res.data) {
+        setZones(res.data.map((z: any) => ({ value: z.zone_id.toString(), label: z.zone_name })));
+        setTimeout(() => zoneSelectRef.current?.focusAndOpen(), 100);
+      }
+      setLoadingZones(false);
+    }
+    fetchZones();
+  }, [selectedCityId]);
+
+  // Fetch Areas with Cascading Autofocus Trigger
+  useEffect(() => {
+    async function fetchAreas() {
+      if (!selectedZoneId) { setAreas([]); return; }
+      setLoadingAreas(true);
+      const res = await getPathaoAreas(selectedZoneId);
+      if (res.success && res.data) {
+        setAreas(res.data.map((a: any) => ({ value: a.area_id.toString(), label: a.area_name })));
+        setTimeout(() => areaSelectRef.current?.focusAndOpen(), 100);
+      }
+      setLoadingAreas(false);
+    }
+    fetchAreas();
+  }, [selectedZoneId]);
+
+  const fullDeliveryAddress = useMemo(() => {
+    const cityName = cities.find(c => c.value === selectedCityId?.toString())?.label || "";
+    const zoneName = zones.find(z => z.value === selectedZoneId?.toString())?.label || "";
+    const areaName = areas.find(a => a.value === selectedAreaId?.toString())?.label || "";
+
+    const addressParts = [address];
+    if (areaName) addressParts.push(areaName);
+    if (zoneName) addressParts.push(zoneName);
+    if (cityName) addressParts.push(cityName);
+
+    return isStorePickup
+      ? (address || "Store Pickup")
+      : (district === "Self Pickup" ? address : addressParts.filter(Boolean).map(p => p.trim()).join(", "));
+  }, [address, isStorePickup, district, cities, selectedCityId, zones, selectedZoneId, areas, selectedAreaId]);
+
   const filteredProducts = useMemo(() => {
     if (!searchQuery || selectedProductId === products.find(p => p.name === searchQuery)?.id) return [];
     return products.filter(p =>
@@ -181,8 +194,20 @@ export default function CreateOrderClient({
     ).slice(0, 8);
   }, [products, searchQuery, selectedProductId]);
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (filteredProducts.length === 0) return;
+  const handleProductSearchKeyDown = (e: React.KeyboardEvent) => {
+    if (!searchQuery.trim() && e.key === "ArrowDown") {
+      e.preventDefault();
+      customerNameRef.current?.focus();
+      return;
+    }
+
+    if (filteredProducts.length === 0) {
+      if (e.key === "Enter" && selectedProductId) {
+        e.preventDefault();
+        qtyInputRef.current?.focus();
+      }
+      return;
+    }
 
     if (e.key === "ArrowDown") {
       e.preventDefault();
@@ -190,28 +215,25 @@ export default function CreateOrderClient({
     } else if (e.key === "ArrowUp") {
       e.preventDefault();
       setFocusedIndex(prev => (prev - 1 + filteredProducts.length) % filteredProducts.length);
-    } else if (e.key === "Enter" && focusedIndex >= 0) {
+    } else if (e.key === "Enter") {
       e.preventDefault();
-      const p = filteredProducts[focusedIndex];
-      setSelectedProductId(p.id);
-      setSearchQuery(p.name);
-      setFocusedIndex(-1);
+      if (focusedIndex >= 0) {
+        const p = filteredProducts[focusedIndex];
+        setSelectedProductId(p.id);
+        setSearchQuery(p.name);
+        setFocusedIndex(-1);
+        // Instant target switch down to variant sizes element block
+        setTimeout(() => {
+          const firstSizeBtn = sizeContainerRef.current?.querySelector("button");
+          (firstSizeBtn as HTMLButtonElement)?.focus();
+        }, 50);
+      }
     }
   };
 
-  // Selected Product Details
-  const selectedProduct = useMemo(() =>
-    products.find(p => p.id === selectedProductId),
-    [products, selectedProductId]
-  );
+  const selectedProduct = useMemo(() => products.find(p => p.id === selectedProductId), [products, selectedProductId]);
+  const availableSizes = useMemo(() => selectedProduct?.variants || [], [selectedProduct]);
 
-  // Available sizes for selected product
-  const availableSizes = useMemo(() =>
-    selectedProduct?.variants || [],
-    [selectedProduct]
-  );
-
-  // Calculate unit price with discount
   const getDiscountedPrice = (product: Product) => {
     if (!product.discount) return product.price;
     if (product.discount.discountType === "PERCENTAGE") {
@@ -227,8 +249,6 @@ export default function CreateOrderClient({
     if (!variant) return;
 
     const unitPrice = getDiscountedPrice(selectedProduct);
-
-    // Check if item already exists (only merge if NEITHER requires print)
     const existingIndex = orderItems.findIndex(
       item => item.productId === selectedProductId && item.size === selectedSize && !item.requiresPrint && !requiresPrint
     );
@@ -251,31 +271,28 @@ export default function CreateOrderClient({
       }]);
     }
 
-    // Reset selection for next item
+    // Reset workflow selection context instantly & refocus search box
     setSearchQuery("");
     setSelectedProductId("");
     setSelectedSize("");
     setQuantity(1);
     setRequiresPrint(false);
     setPendingPrintDetails([]);
+    productSearchRef.current?.focus();
   };
 
   const removeItem = (index: number) => {
     setOrderItems(orderItems.filter((_, i) => i !== index));
   };
 
-  const subtotal = useMemo(() =>
-    orderItems.reduce((acc, item) => acc + (item.price * item.quantity), 0),
-    [orderItems]
-  );
-
+  // Calculations
+  const subtotal = useMemo(() => orderItems.reduce((acc, item) => acc + (item.price * item.quantity), 0), [orderItems]);
   const totalDTFCost = useMemo(() =>
     orderItems.reduce((acc, item) => {
       if (!item.requiresPrint) return acc;
       const count = item.printDetails && item.printDetails.length > 0 ? item.printDetails.length : 1;
       return acc + (count * (item.printCost || dtfCostPerItem));
-    }, 0),
-    [orderItems]
+    }, 0), [orderItems]
   );
 
   const finalDeliveryCharge = useMemo(() => {
@@ -286,110 +303,77 @@ export default function CreateOrderClient({
   }, [isStorePickup, deliveryCharge, district, deliverySettings]);
 
   const calculatedDiscount = useMemo(() => {
-    if (manualDiscountType === "PERCENTAGE") {
-      return (subtotal * manualDiscountValue) / 100;
-    }
+    if (manualDiscountType === "PERCENTAGE") return (subtotal * manualDiscountValue) / 100;
     return manualDiscountValue;
   }, [subtotal, manualDiscountValue, manualDiscountType]);
 
   const totalAmount = (subtotal + totalDTFCost + finalDeliveryCharge) - calculatedDiscount;
+  const hasBackorderItems = useMemo(() => orderItems.some(item => item.stock <= 0), [orderItems]);
 
-  // If any item was added from a 0 or negative stock variant, this is a backorder
-  const hasBackorderItems = useMemo(() =>
-    orderItems.some(item => item.stock <= 0),
-    [orderItems]
-  );
+  const addTag = (inputVal: string) => {
+    const trimmed = inputVal.replace(/,/g, "").trim();
+    if (trimmed && !tags.includes(trimmed)) setTags([...tags, trimmed]);
+    setTagInput("");
+  };
+
+  const removeTag = (index: number) => {
+    setTags(tags.filter((_, idx) => idx !== index));
+  };
+
+  const validateOrderForm = () => {
+    if (!customerName.trim() || !phone.trim() || (!isStorePickup && !address.trim()) || orderItems.length === 0) {
+      alert("Please fill in all customer details and add at least one item.");
+      return false;
+    }
+    if (!isStorePickup && selectedCityId && !selectedZoneId) {
+      alert("Please select a zone for the selected city.");
+      return false;
+    }
+    if (isExchange && (!exchangeRefOrderId.trim() || !exchangeItemNote.trim())) {
+      alert("Please fill in the Original Order ID and Exchange Note.");
+      return false;
+    }
+    return true;
+  };
+
+  const handlePreSubmit = () => {
+    if (validateOrderForm()) {
+      setIsConfirmModalOpen(true);
+    }
+  };
 
   const handleSubmit = () => {
-    if (!customerName || !phone || (!isStorePickup && !address) || orderItems.length === 0) {
-      return alert("Please fill in all customer details and add at least one item.");
-    }
-
-    if (!isStorePickup && selectedCityId && !selectedZoneId) {
-      return alert("Please select a zone for the selected city.");
-    }
-
-    if (isExchange) {
-      if (!exchangeRefOrderId.trim() || !exchangeItemNote.trim()) {
-        return alert("Please fill in the Original Order ID and Exchange Note.");
-      }
-    }
-
-    const cityName = cities.find(c => c.value === selectedCityId?.toString())?.label || "";
-    const zoneName = zones.find(z => z.value === selectedZoneId?.toString())?.label || "";
-    const areaName = areas.find(a => a.value === selectedAreaId?.toString())?.label || "";
-
-    const addressParts = [address];
-    if (areaName) addressParts.push(areaName);
-    if (zoneName) addressParts.push(zoneName);
-    if (cityName) addressParts.push(cityName);
-
-    const fullDeliveryAddress = isStorePickup
-      ? (address || "Store Pickup")
-      : (district === "Self Pickup"
-        ? address
-        : addressParts.filter(Boolean).map(p => p.trim()).join(", "));
+    if (!validateOrderForm()) return;
 
     startTransition(async () => {
       try {
         const res = isExchange
           ? await createExchangeOrder({
-            customerName,
-            phone,
-            district,
-            address: fullDeliveryAddress,
-            totalAmount,
-            advancePaid,
-            discountAmount: calculatedDiscount,
-            remarks,
-            pathaoCityId: selectedCityId || undefined,
-            pathaoZoneId: selectedZoneId || undefined,
-            pathaoAreaId: selectedAreaId || undefined,
-            isStorePickup,
-            deliveryCharge: isStorePickup ? deliveryCharge : finalDeliveryCharge,
+            customerName, phone, district, address: fullDeliveryAddress, totalAmount, advancePaid,
+            discountAmount: calculatedDiscount, remarks, pathaoCityId: selectedCityId || undefined,
+            pathaoZoneId: selectedZoneId || undefined, pathaoAreaId: selectedAreaId || undefined,
+            isStorePickup, deliveryCharge: isStorePickup ? deliveryCharge : finalDeliveryCharge,
             items: orderItems.map(item => ({
-              productId: item.productId,
-              size: item.size,
-              quantity: item.quantity,
-              price: item.price,
-              requiresPrint: item.requiresPrint,
-              printCost: item.printCost,
-              printDetails: item.printDetails
+              productId: item.productId, size: item.size, quantity: item.quantity, price: item.price,
+              requiresPrint: item.requiresPrint, printCost: item.printCost, printDetails: item.printDetails
             })),
-            exchangeRefOrderId: exchangeRefOrderId.trim(),
-            exchangeItemNote: exchangeItemNote.trim(),
-            tags,
-            createdById: createdById || undefined,
+            exchangeRefOrderId: exchangeRefOrderId.trim(), exchangeItemNote: exchangeItemNote.trim(),
+            tags, createdById: createdById || undefined,
           })
           : await (orderAction ?? createAdminOrder)({
-            customerName,
-            phone,
-            district,
-            address: fullDeliveryAddress,
-            totalAmount,
-            advancePaid,
-            discountAmount: calculatedDiscount,
-            remarks,
-            pathaoCityId: selectedCityId || undefined,
-            pathaoZoneId: selectedZoneId || undefined,
-            pathaoAreaId: selectedAreaId || undefined,
-            isStorePickup,
-            deliveryCharge: isStorePickup ? deliveryCharge : finalDeliveryCharge,
+            customerName, phone, district, address: fullDeliveryAddress, totalAmount, advancePaid,
+            discountAmount: calculatedDiscount, remarks, pathaoCityId: selectedCityId || undefined,
+            pathaoZoneId: selectedZoneId || undefined, pathaoAreaId: selectedAreaId || undefined,
+            isStorePickup, deliveryCharge: isStorePickup ? deliveryCharge : finalDeliveryCharge,
             items: orderItems.map(item => ({
-              productId: item.productId,
-              size: item.size,
-              quantity: item.quantity,
-              price: item.price,
-              requiresPrint: item.requiresPrint,
-              printCost: item.printCost,
-              printDetails: item.printDetails
+              productId: item.productId, size: item.size, quantity: item.quantity, price: item.price,
+              requiresPrint: item.requiresPrint, printCost: item.printCost, printDetails: item.printDetails
             })),
-            hasBackorderItems,
-            tags,
-            createdById: createdById || undefined,
+            hasBackorderItems, tags, createdById: createdById || undefined,
           });
 
         if (res.success) {
+          setIsConfirmModalOpen(false);
           router.push(successUrl);
         } else {
           alert(res.error || "Failed to create order.");
@@ -401,543 +385,634 @@ export default function CreateOrderClient({
     });
   };
 
+  // Hotkey Global Listener: Pressing Ctrl + Enter down shifts focus from anywhere to Customer Info block
+  // Pressing Shift + Enter opens the confirmation popup modal
+  useEffect(() => {
+    const handleGlobalHotkeys = (e: KeyboardEvent) => {
+      if (isConfirmModalOpen) {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          handleSubmit();
+        } else if (e.key === "Escape") {
+          e.preventDefault();
+          setIsConfirmModalOpen(false);
+        }
+        return;
+      }
+
+      if (e.ctrlKey && e.key === "Enter") {
+        e.preventDefault();
+        customerNameRef.current?.focus();
+      } else if (e.shiftKey && e.key === "Enter") {
+        e.preventDefault();
+        handlePreSubmit();
+      }
+    };
+    window.addEventListener("keydown", handleGlobalHotkeys);
+    return () => window.removeEventListener("keydown", handleGlobalHotkeys);
+  }, [
+    isConfirmModalOpen,
+    customerName,
+    phone,
+    address,
+    isStorePickup,
+    selectedCityId,
+    selectedZoneId,
+    isExchange,
+    exchangeRefOrderId,
+    exchangeItemNote,
+    orderItems,
+    fullDeliveryAddress,
+    totalAmount,
+    advancePaid,
+    calculatedDiscount,
+    remarks,
+    deliveryCharge,
+    finalDeliveryCharge,
+    createdById,
+    tags,
+    hasBackorderItems
+  ]);
+
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-      {/* Left Column: Form & Item Selection */}
-      <div className="lg:col-span-2 space-y-6">
+    <div className="grid grid-cols-1 xl:grid-cols-12 gap-8 text-xs font-sans select-none antialiased text-slate-900">
 
-        {/* Customer Details Card */}
-        <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-          <div className="px-6 py-4 border-b border-slate-100 bg-slate-50 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div className="flex items-center gap-2">
-              <User className="w-4 h-4 text-indigo-500" />
-              <h2 className="text-sm font-bold text-slate-800 uppercase tracking-wider">Customer Information</h2>
-            </div>
-            {/* Toggles on the right */}
-            <div className="flex items-center gap-6">
-              {/* Store Pickup Toggle */}
-              <label className="flex items-center gap-2 cursor-pointer select-none">
-                <input
-                  type="checkbox"
-                  checked={isStorePickup}
-                  onChange={(e) => {
-                    setIsStorePickup(e.target.checked);
-                    if (e.target.checked) {
-                      setDistrict("Self Pickup");
-                    } else {
-                      setDistrict("Dhaka");
-                    }
-                  }}
-                  className="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500 cursor-pointer"
-                />
-                <span className="text-xs font-bold text-slate-700 uppercase tracking-wide">Store Pickup</span>
-              </label>
+      {/* ====================================================
+          LEFT WORKSPACE PANEL: Inputs & Logistics (66.6%)
+         ==================================================== */}
+      <div className="xl:col-span-8 space-y-6">
 
-              {/* Exchange Order Toggle */}
-              <label className="flex items-center gap-2 cursor-pointer select-none">
-                <input
-                  type="checkbox"
-                  checked={isExchange}
-                  onChange={(e) => setIsExchange(e.target.checked)}
-                  className="w-4 h-4 rounded text-orange-600 focus:ring-orange-500 cursor-pointer"
-                />
-                <span className="text-xs font-bold text-orange-700 uppercase tracking-wide">Exchange Order</span>
-              </label>
-            </div>
+        {/* Product Engine Block */}
+        <div className="bg-white p-6 border border-slate-200 shadow-sm rounded-lg space-y-4">
+          <div className="flex justify-between items-center border-b border-slate-100 pb-2.5 mb-4">
+            <h2 className="font-bold text-sm uppercase tracking-wider text-slate-800 flex items-center gap-1.5">PRODUCT SELECTION</h2>
           </div>
-          <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-5">
-            <div className="space-y-1.5">
-              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Customer Name</label>
-              <div className="relative">
-                <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                <input
-                  type="text"
-                  value={customerName}
-                  onChange={e => setCustomerName(e.target.value)}
-                  placeholder="Enter name"
-                  className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
-                />
-              </div>
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Phone Number</label>
-              <div className="relative">
-                <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                <input
-                  type="text"
-                  value={phone}
-                  onChange={e => setPhone(e.target.value)}
-                  placeholder="01XXXXXXXXX"
-                  className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all font-mono"
-                />
-              </div>
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Salesman (Incentive Owner)</label>
-              <CustomSelect
-                options={[
-                  { value: "", label: "Current Logged-in User (Default)" },
-                  ...staff.map((s: StaffMember) => ({
-                    value: s.id,
-                    label: `${s.username} (${s.role?.name || "Staff"})`
-                  }))
-                ]}
-                value={createdById}
-                onChange={(val) => setCreatedById(val)}
-                searchable={true}
-              />
-            </div>
-            {isStorePickup && (
-              <div className="space-y-1.5 animate-in fade-in duration-200">
-                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Pickup Delivery Charge</label>
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-bold text-slate-400">৳</span>
-                  <input
-                    type="number"
-                    min="0"
-                    value={deliveryCharge}
-                    onChange={(e) => setDeliveryCharge(parseFloat(e.target.value) || 0)}
-                    className="w-full pl-8 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm font-bold text-slate-800 focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all outline-none"
-                    placeholder="0"
-                  />
-                </div>
-              </div>
-            )}
 
-            {isExchange && (
-              <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4 p-4 border border-orange-100 bg-orange-50/30 rounded-xl animate-in fade-in duration-200">
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-orange-700 uppercase tracking-wider font-bold">Original Order ID *</label>
-                  <input
-                    type="text"
-                    value={exchangeRefOrderId}
-                    onChange={(e) => setExchangeRefOrderId(e.target.value.toUpperCase())}
-                    placeholder="e.g. M-26052301"
-                    className="w-full px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm font-mono focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 outline-none transition-all"
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-orange-700 uppercase tracking-wider font-bold">Exchange Note *</label>
-                  <input
-                    type="text"
-                    value={exchangeItemNote}
-                    onChange={(e) => setExchangeItemNote(e.target.value)}
-                    placeholder="e.g. XL → XXL, Argentina Jersey"
-                    className="w-full px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 outline-none transition-all"
-                  />
-                </div>
-              </div>
-            )}
-
-            {!isStorePickup && (
-              <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-3 gap-4 animate-in fade-in duration-200">
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Select City *</label>
-                  <CustomSelect
-                    options={cities}
-                    value={selectedCityId?.toString() || (district === "Self Pickup" ? "self-pickup" : "")}
-                    onChange={(val) => {
-                      if (val === "self-pickup") {
-                        setSelectedCityId(null);
-                        setSelectedZoneId(null);
-                        setSelectedAreaId(null);
-                        setDistrict("Self Pickup");
-                      } else {
-                        const id = parseInt(val);
-                        setSelectedCityId(id);
-                        setSelectedZoneId(null);
-                        setSelectedAreaId(null);
-                        const city = cities.find(c => c.value === val);
-                        if (city) setDistrict(city.label);
-                      }
-                    }}
-                    placeholder={loadingCities ? "Loading..." : "-- Select City --"}
-                    searchable={true}
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Select Zone *</label>
-                  <CustomSelect
-                    options={zones}
-                    value={selectedZoneId?.toString() || ""}
-                    onChange={(val) => {
-                      setSelectedZoneId(parseInt(val));
-                      setSelectedAreaId(null);
-                    }}
-                    placeholder={loadingZones ? "Loading..." : (selectedCityId ? "-- Select Zone --" : "First select city")}
-                    disabled={!selectedCityId || loadingZones}
-                    searchable={true}
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Select Area </label>
-                  <CustomSelect
-                    options={areas}
-                    value={selectedAreaId?.toString() || ""}
-                    onChange={(val) => setSelectedAreaId(parseInt(val))}
-                    placeholder={loadingAreas ? "Loading..." : (selectedZoneId ? "-- Select Area --" : "First select zone")}
-                    disabled={!selectedZoneId || loadingAreas}
-                    searchable={true}
-                  />
-                </div>
-              </div>
-            )}
-            <div className="space-y-1.5 md:col-span-2">
-              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Full Address *</label>
-              <input
-                type="text"
-                value={address}
-                onChange={e => setAddress(e.target.value)}
-                placeholder="e.g., House 12, Road 4, Block C, Mirpur 2, Dhaka"
-                className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
-              />
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-[10px] font-bold text-red-500 uppercase tracking-wider">Advance Paid (BDT)</label>
+          <div className="space-y-4">
+            {/* Search Box Component - Full Width */}
+            <div className="relative">
+              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1.5">SEARCH DATABASE</label>
               <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-bold text-slate-400">৳</span>
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 font-bold" />
                 <input
-                  type="number"
-                  value={advancePaid}
-                  onChange={e => setAdvancePaid(parseFloat(e.target.value) || 0)}
-                  className="w-full pl-8 pr-4 py-2 bg-red-50/50 border border-red-100 rounded-lg text-sm font-bold text-red-600 focus:bg-white focus:ring-2 focus:ring-red-500/20 focus:border-red-500 transition-all outline-none"
-                  placeholder="0"
-                />
-              </div>
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-[10px] font-bold text-indigo-500 uppercase tracking-wider">Manual Discount</label>
-              <div className="flex gap-2">
-                <div className="relative flex-1">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-bold text-slate-400">
-                    {manualDiscountType === "FLAT" ? "৳" : "%"}
-                  </span>
-                  <input
-                    type="number"
-                    value={manualDiscountValue}
-                    onChange={e => setManualDiscountValue(parseFloat(e.target.value) || 0)}
-                    className="w-full pl-8 pr-4 py-2 bg-indigo-50/50 border border-indigo-100 rounded-lg text-sm font-bold text-indigo-600 focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all outline-none"
-                    placeholder="0"
-                  />
-                </div>
-                <select
-                  value={manualDiscountType}
-                  onChange={e => setManualDiscountType(e.target.value as "FLAT" | "PERCENTAGE")}
-                  className="px-2 py-2 bg-indigo-50/50 border border-indigo-100 rounded-lg text-[10px] font-bold uppercase focus:bg-white focus:ring-2 focus:ring-indigo-500/20 outline-none"
-                >
-                  <option value="FLAT">Flat</option>
-                  <option value="PERCENTAGE">%</option>
-                </select>
-              </div>
-            </div>
-            <div className="space-y-1.5 md:col-span-2">
-              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Administrative Remarks</label>
-              <textarea
-                value={remarks}
-                onChange={e => setRemarks(e.target.value)}
-                placeholder="Add any internal notes, packaging instructions, or customer requests..."
-                rows={3}
-                className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all resize-none"
-              />
-            </div>
-            <div className="space-y-1.5 md:col-span-2">
-              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Order Tags (Administrative)</label>
-              <div className="flex flex-wrap items-center gap-2 p-2 bg-slate-50 border border-slate-200 rounded-lg focus-within:bg-white focus-within:ring-2 focus-within:ring-indigo-500/20 focus-within:border-indigo-500 transition-all min-h-[42px]">
-                {tags.map((tag, idx) => (
-                  <span
-                    key={tag}
-                    className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-100 uppercase tracking-wide"
-                  >
-                    {tag}
-                    <button
-                      type="button"
-                      onClick={() => removeTag(idx)}
-                      className="text-indigo-400 hover:text-indigo-600 focus:outline-none transition-colors"
-                    >
-                      <X className="w-3 h-3" />
-                    </button>
-                  </span>
-                ))}
-                <input
+                  ref={productSearchRef}
                   type="text"
-                  value={tagInput}
-                  onChange={e => setTagInput(e.target.value)}
-                  onKeyDown={e => {
-                    if (e.key === "Enter" || e.key === ",") {
-                      e.preventDefault();
-                      addTag(tagInput);
-                    }
-                  }}
-                  placeholder={tags.length === 0 ? "Type tag name and press Enter or comma..." : "Add tag..."}
-                  className="flex-1 bg-transparent border-0 p-0 text-sm focus:ring-0 outline-none placeholder:text-slate-400 min-w-[120px]"
+                  value={searchQuery}
+                  onChange={e => { setSearchQuery(e.target.value); setFocusedIndex(-1); }}
+                  onKeyDown={handleProductSearchKeyDown}
+                  placeholder="Type product name, team, or category..."
+                  className="w-full pl-8 pr-3 py-1.5 bg-slate-50 border border-slate-200 rounded text-xs font-semibold focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all"
                 />
               </div>
-            </div>
-          </div>
-        </div>
 
-        {/* Product Selection Card */}
-        <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-          <div className="px-6 py-4 border-b border-slate-100 bg-slate-50 flex items-center gap-2">
-            <ShoppingBag className="w-4 h-4 text-emerald-500" />
-            <h2 className="text-sm font-bold text-slate-800 uppercase tracking-wider">Add Products</h2>
-          </div>
-          <div className="p-6 space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-12 items-start gap-4">
-              {/* Product Search */}
-              <div className="md:col-span-5 relative">
-                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1.5">Search Product</label>
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 font-bold" />
-                  <input
-                    type="text"
-                    value={searchQuery}
-                    onChange={e => {
-                      setSearchQuery(e.target.value);
-                      setFocusedIndex(-1);
-                    }}
-                    onKeyDown={handleKeyDown}
-                    placeholder="Search name, team, or category..."
-                    className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm font-medium focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all outline-none"
-                  />
-                </div>
-                {/* Search Results Dropdown */}
-                {filteredProducts.length > 0 && (
-                  <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-slate-200 rounded-xl shadow-2xl z-20 overflow-hidden ring-1 ring-black/5 animate-in fade-in slide-in-from-top-2 duration-200">
-                    <div className="max-h-[150px] overflow-y-auto custom-scrollbar">
-                      {filteredProducts.map((p, idx) => (
-                        <button
-                          key={p.id}
-                          type="button"
-                          onMouseEnter={() => setFocusedIndex(idx)}
-                          onClick={() => {
-                            setSelectedProductId(p.id);
-                            setSearchQuery(p.name);
-                            setFocusedIndex(-1);
-                          }}
-                          className={`w-full text-left px-4 py-3 flex items-center gap-3 transition-colors border-b last:border-0 border-slate-50 ${focusedIndex === idx ? "bg-indigo-50" : "hover:bg-slate-50"
-                            }`}
-                        >
-                          <div className="w-10 h-10 rounded bg-slate-100 flex-shrink-0 overflow-hidden border border-slate-200">
-                            {p.images?.[0] ? (
-                              <img src={p.images[0]} alt="" className="w-full h-full object-cover" />
-                            ) : (
-                              <div className="w-full h-full flex items-center justify-center text-[10px] text-slate-400 font-bold">NO IMG</div>
-                            )}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center justify-between gap-2">
-                              <span className="text-sm font-bold text-slate-800 truncate">{p.name}</span>
-                              <span className="text-sm font-mono font-black text-indigo-600">{formatBDT(p.price)}</span>
-                            </div>
-                            <div className="flex items-center gap-2 mt-0.5">
-                              <span className="text-[10px] text-slate-400 uppercase font-bold tracking-tight bg-slate-100 px-1.5 py-0.5 rounded leading-none">{p.team || "General"}</span>
-                              <span className="text-[10px] text-slate-400 font-medium">| {p.category}</span>
-                            </div>
-                          </div>
-                        </button>
-                      ))}
-                    </div>
+              {/* Dynamic Overlay Results list dropdown layout */}
+              {filteredProducts.length > 0 && (
+                <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-slate-200 rounded shadow-xl z-50 overflow-hidden">
+                  <div className="max-h-[180px] overflow-y-auto custom-scrollbar">
+                    {filteredProducts.map((p, idx) => (
+                      <button
+                        key={p.id}
+                        type="button"
+                        onMouseEnter={() => setFocusedIndex(idx)}
+                        onClick={() => {
+                          setSelectedProductId(p.id);
+                          setSearchQuery(p.name);
+                          setFocusedIndex(-1);
+                          setTimeout(() => {
+                            const firstBtn = sizeContainerRef.current?.querySelector("button");
+                            (firstBtn as HTMLButtonElement)?.focus();
+                          }, 50);
+                        }}
+                        className={`w-full text-left px-3 py-2 flex items-center justify-between transition-colors border-b last:border-0 border-slate-50 ${focusedIndex === idx ? "bg-primary text-white" : "hover:bg-slate-50 text-slate-800"
+                          }`}
+                      >
+                        <div className="truncate font-bold text-xs pr-2">{p.name}</div>
+                        <div className={`font-mono font-black text-xs shrink-0 ${focusedIndex === idx ? "text-white" : "text-primary"}`}>
+                          {formatBDT(p.price)}
+                        </div>
+                      </button>
+                    ))}
                   </div>
-                )}
-              </div>
+                </div>
+              )}
+            </div>
 
-              {/* Size Selection */}
-              <div className="md:col-span-4">
-                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1.5">Size & Stock</label>
-                <div className="flex flex-wrap gap-2">
+            {/* Stacked parameters row below */}
+            <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
+              {/* Matrix Variant Size Chips Wrapper Section */}
+              <div className="md:col-span-8">
+                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1.5">SIZE SELECTION (STOCK)</label>
+                <div ref={sizeContainerRef} className="flex flex-wrap gap-1.5 min-h-[28px] items-center">
                   {selectedProductId ? (
-                    availableSizes.map(v => {
+                    availableSizes.map((v, idx) => {
                       const isOutOfStock = v.stock <= 0;
                       return (
                         <button
                           key={v.id}
                           type="button"
-                          onClick={() => setSelectedSize(v.size)}
-                          className={`relative px-3 py-2 rounded-md border text-xs font-black transition-all ${selectedSize === v.size
-                            ? "bg-indigo-600 border-indigo-600 text-white shadow-lg shadow-indigo-200"
+                          onClick={() => {
+                            setSelectedSize(v.size);
+                            setTimeout(() => qtyInputRef.current?.focus(), 50);
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === "ArrowRight") {
+                              e.preventDefault();
+                              const nextBtn = sizeContainerRef.current?.querySelectorAll("button")[idx + 1];
+                              (nextBtn as HTMLButtonElement)?.focus();
+                            } else if (e.key === "ArrowLeft") {
+                              e.preventDefault();
+                              const prevBtn = sizeContainerRef.current?.querySelectorAll("button")[idx - 1];
+                              (prevBtn as HTMLButtonElement)?.focus();
+                            } else if (e.key === "ArrowUp") {
+                              e.preventDefault();
+                              productSearchRef.current?.focus();
+                            } else if (e.key === "Enter") {
+                              e.preventDefault();
+                              setSelectedSize(v.size);
+                              qtyInputRef.current?.focus();
+                            }
+                          }}
+                          className={`px-2.5 py-1 text-xs font-black rounded border tracking-tight transition-all uppercase ${selectedSize === v.size
+                            ? "bg-slate-900 border-slate-900 text-white shadow-sm"
                             : isOutOfStock
-                              ? "bg-orange-50 border-orange-200 text-orange-700 hover:border-orange-400 hover:bg-orange-100"
-                              : "bg-white border-slate-200 text-slate-700 hover:border-indigo-400"
+                              ? "bg-orange-50 border-orange-200 text-orange-700 hover:bg-orange-100"
+                              : "bg-slate-50 border-slate-200 text-slate-700 hover:border-slate-400 hover:bg-slate-100"
                             }`}
                         >
-                          {v.size}
-                          <span className={`ml-1 text-[9px] ${selectedSize === v.size ? "text-indigo-200" : isOutOfStock ? "text-orange-400" : "text-slate-400"
-                            }`}>
-                            ({v.stock})
-                          </span>
-                          {isOutOfStock && (
-                            <span className="absolute -top-1.5 -right-1.5 bg-orange-500 text-white text-[7px] font-black px-1 py-0 rounded-sm leading-tight">
-                              OUT
-                            </span>
-                          )}
+                          {v.size} <span className="font-normal text-[10px]">({v.stock})</span>
                         </button>
                       );
                     })
                   ) : (
-                    <div className="h-9 flex items-center text-slate-400 text-xs italic">Select a product first</div>
+                    <div className="text-slate-400 italic text-xs leading-6">Select a product first to view available attributes</div>
                   )}
                 </div>
-                {selectedSize && availableSizes.find(v => v.size === selectedSize)?.stock <= 0 && (
-                  <p className="mt-1.5 text-[10px] text-orange-600 font-bold flex items-center gap-1">
-                    <span>⚠</span> Out of stock — admin override active. Stock will go negative.
-                  </p>
-                )}
               </div>
 
-              {/* Quantity */}
+              {/* Quantity Counter Input field */}
               <div className="md:col-span-2">
-                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1.5">Qty</label>
+                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1.5">QTY</label>
                 <input
+                  ref={qtyInputRef}
                   type="number"
                   min="1"
                   value={quantity}
                   onChange={e => setQuantity(parseInt(e.target.value) || 1)}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm font-bold focus:bg-white focus:ring-2 focus:ring-indigo-500/20"
+                  onKeyDown={(e) => { if (e.key === "Enter") addToOrder(); }}
+                  className="w-full px-2 py-1 bg-slate-50 border border-slate-200 rounded font-bold text-center outline-none focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
                 />
               </div>
 
-              {/* Add Button */}
-              <div className="md:col-span-1 ">
-                <h1 className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1.5">Add</h1>
+              {/* Manual Dynamic Push Button Trigger */}
+              <div className="md:col-span-2">
                 <button
+                  ref={addToOrderBtnRef}
                   type="button"
                   onClick={addToOrder}
                   disabled={!selectedProductId || !selectedSize}
-                  className="w-full h-[38px] flex items-center justify-center bg-slate-900 text-white rounded-lg hover:bg-slate-700 disabled:bg-slate-100 disabled:text-slate-300 transition-all shadow-sm"
+                  className="w-full h-[28px] bg-slate-900 text-white font-bold rounded flex items-center justify-center hover:bg-slate-800 disabled:bg-slate-100 disabled:text-slate-300 transition-all text-xs uppercase tracking-wider gap-1.5"
                 >
-                  <Plus className="w-5 h-5" />
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>ADD</span>
                 </button>
               </div>
+            </div>
+          </div>
 
-              {/* DTF Print Section */}
-              {selectedProductId && selectedSize && (
-                <div className="md:col-span-12 pt-3 mt-2 border-t border-dashed border-slate-200">
-                  <label className="inline-flex items-center gap-2 cursor-pointer group mb-2">
-                    <input
-                      type="checkbox"
-                      checked={requiresPrint}
-                      onChange={(e) => {
-                        setRequiresPrint(e.target.checked);
-                        if (e.target.checked && pendingPrintDetails.length === 0) {
-                          setPendingPrintDetails([{ name: "", number: "" }]);
-                        }
-                      }}
-                      className="rounded text-indigo-600  focus:ring-indigo-500 w-4 h-4"
-                    />
-                    <span className="text-xs font-bold text-slate-700 group-hover:text-indigo-600 transition-colors uppercase tracking-wide">
-                      Add Jersey Customization (DTF) (+৳{dtfCostPerItem}/item)
-                    </span>
-                  </label>
+          {/* Out of Stock Override Notice area integration */}
+          {selectedSize && availableSizes.find(v => v.size === selectedSize)?.stock <= 0 && (
+            <div className="text-[10px] font-bold text-orange-600 bg-orange-50 border border-orange-100 p-2 rounded">
+              ⚠ Backorder: Item is out of stock.
+            </div>
+          )}
 
-                  {requiresPrint && (
-                    <div className="bg-slate-50 p-3 rounded-lg border border-slate-200 space-y-2 animate-in fade-in slide-in-from-top-1 duration-200">
-                      <div className="flex items-center justify-between">
-                        <span className="text-[9px] font-black text-indigo-500 uppercase tracking-widest">Customization Data</span>
-                        <span className="text-[9px] font-bold text-slate-500 italic">Limit: {quantity} items</span>
-                      </div>
-                      <div className="space-y-2">
-                        {pendingPrintDetails.map((detail, idx) => (
-                          <div key={idx} className="grid grid-cols-12 gap-2 items-center bg-white p-1.5 rounded border border-slate-100 shadow-sm">
-                            <div className="col-span-1 text-center">
-                              <span className="text-[9px] font-black bg-slate-100 text-slate-500 w-4 h-4 inline-flex items-center justify-center rounded-full">
-                                {idx + 1}
-                              </span>
-                            </div>
-                            <div className="col-span-6">
-                              <input
-                                type="text"
-                                placeholder="Name on jersey"
-                                value={detail.name}
-                                onChange={(e) => {
-                                  const updated = [...pendingPrintDetails];
-                                  updated[idx].name = e.target.value;
-                                  setPendingPrintDetails(updated);
-                                }}
-                                className="w-full px-2 py-1 text-xs border border-slate-200 rounded font-bold focus:outline-indigo-500"
-                              />
-                            </div>
-                            <div className="col-span-4">
-                              <input
-                                type="text"
-                                placeholder="00"
-                                value={detail.number}
-                                onChange={(e) => {
-                                  const updated = [...pendingPrintDetails];
-                                  updated[idx].number = e.target.value;
-                                  setPendingPrintDetails(updated);
-                                }}
-                                className="w-full px-2 py-1 text-xs border border-slate-200 rounded font-bold focus:outline-indigo-500"
-                              />
-                            </div>
-                            <div className="col-span-1 flex justify-end">
-                              <button
-                                type="button"
-                                onClick={() => setPendingPrintDetails(pendingPrintDetails.filter((_, i) => i !== idx))}
-                                className="text-red-400 hover:text-red-600"
-                              >
-                                <Trash2 className="w-3 h-3" />
-                              </button>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                      {pendingPrintDetails.length < quantity ? (
+          {/* Jersey Customization (DTF) Panel Area */}
+          {selectedProductId && selectedSize && (
+            <div className="pt-2 border-t border-dashed border-slate-200">
+              <label className="inline-flex items-center gap-1.5 font-bold text-slate-700 hover:text-primary cursor-pointer uppercase tracking-wide text-[10px]">
+                <input
+                  type="checkbox"
+                  checked={requiresPrint}
+                  onChange={(e) => {
+                    setRequiresPrint(e.target.checked);
+                    if (e.target.checked && pendingPrintDetails.length === 0) {
+                      setPendingPrintDetails([{ name: "", number: "" }]);
+                    }
+                  }}
+                  className="rounded text-primary focus:ring-primary w-3.5 h-3.5 cursor-pointer"
+                />
+                ADD JERSEY CUSTOMIZATION (+৳{dtfCostPerItem}/item)
+              </label>
+
+              {requiresPrint && (
+                <div className="mt-2 bg-slate-50 p-2 rounded border border-slate-200 space-y-1.5">
+                  <div className="flex justify-between items-center border-b pb-1 mb-1 text-[9px] uppercase font-black text-slate-400 tracking-wider">
+                    <span>PRINT DETAILS</span>
+                  </div>
+                  <div className="space-y-1.5">
+                    {pendingPrintDetails.map((detail, idx) => (
+                      <div key={idx} className="flex gap-2 items-center bg-white p-1 rounded border shadow-sm">
+                        <span className="font-mono font-black text-slate-400 text-[10px] px-1.5">{idx + 1}</span>
+                        <input
+                          type="text"
+                          placeholder="NAME ON JERSEY"
+                          value={detail.name}
+                          onChange={(e) => {
+                            const updated = [...pendingPrintDetails];
+                            updated[idx].name = e.target.value;
+                            setPendingPrintDetails(updated);
+                          }}
+                          className="flex-1 px-2 py-1 border border-slate-200 rounded font-bold text-xs outline-none focus:border-primary"
+                        />
+                        <input
+                          type="text"
+                          placeholder="NUMBER"
+                          value={detail.number}
+                          onChange={(e) => {
+                            const updated = [...pendingPrintDetails];
+                            updated[idx].number = e.target.value;
+                            setPendingPrintDetails(updated);
+                          }}
+                          className="w-16 px-2 py-1 border border-slate-200 rounded font-bold text-xs text-center outline-none focus:border-primary"
+                        />
                         <button
                           type="button"
-                          onClick={() => setPendingPrintDetails([...pendingPrintDetails, { name: "", number: "" }])}
-                          className="text-[9px] font-black text-indigo-600 bg-indigo-50/50 hover:bg-indigo-50 px-2 py-1.5 rounded border border-indigo-100 flex items-center gap-1 w-fit transition-all mt-1"
+                          onClick={() => setPendingPrintDetails(pendingPrintDetails.filter((_, i) => i !== idx))}
+                          className="p-1 text-red-400 hover:text-red-600"
                         >
-                          <Plus className="w-3 h-3" /> Add Customization
+                          <Trash2 className="w-3.5 h-3.5" />
                         </button>
-                      ) : null}
-                    </div>
+                      </div>
+                    ))}
+                  </div>
+                  {pendingPrintDetails.length < quantity && (
+                    <button
+                      type="button"
+                      onClick={() => setPendingPrintDetails([...pendingPrintDetails, { name: "", number: "" }])}
+                      className="text-[9px] font-black uppercase text-primary bg-primary/5 hover:bg-primary/10 px-2 py-1 border border-primary/20 rounded flex items-center gap-1 mt-1"
+                    >
+                      <Plus className="w-3 h-3" /> ADD SLOT
+                    </button>
                   )}
                 </div>
               )}
             </div>
+          )}
+        </div>
 
-            {/* Selected Items Table */}
-            <div className="border border-slate-100 rounded-lg overflow-hidden">
-              <table className="w-full text-left text-sm">
-                <thead className="bg-slate-50 text-[10px] font-bold text-slate-500 uppercase tracking-wider border-b border-slate-100">
-                  <tr>
-                    <th className="px-4 py-2.5">Product</th>
-                    <th className="px-4 py-2.5 text-center">Size</th>
-                    <th className="px-4 py-2.5 text-center">Quantity</th>
-                    <th className="px-4 py-2.5 text-right">Unit Price</th>
-                    <th className="px-4 py-2.5 text-right flex justify-end"><Trash2 className="w-3.5 h-3.5" /></th>
+        {/* Core Administrative Parameters Form */}
+        <div className="bg-white p-6 border border-slate-200 shadow-sm rounded-lg space-y-4">
+          <div className="flex justify-between items-center border-b border-slate-100 pb-2.5 mb-4">
+            <h2 className="font-bold text-sm uppercase tracking-wider text-slate-800 flex items-center gap-1.5">CUSTOMER INFORMATION</h2>
+
+            {/* Header Level Interactive Flags */}
+            <div className="flex gap-3 text-[10px] font-bold">
+              <label className="flex items-center gap-1 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={isStorePickup}
+                  onChange={(e) => {
+                    setIsStorePickup(e.target.checked);
+                    setDistrict(e.target.checked ? "Self Pickup" : "Dhaka");
+                  }}
+                  className="w-3.5 h-3.5 text-primary focus:ring-primary rounded"
+                />
+                <span>STORE PICKUP</span>
+              </label>
+              <label className="flex items-center gap-1 cursor-pointer text-orange-700">
+                <input
+                  type="checkbox"
+                  checked={isExchange}
+                  onChange={(e) => setIsExchange(e.target.checked)}
+                  className="w-3.5 h-3.5 text-orange-600 focus:ring-orange-500 rounded"
+                />
+                <span>EXCHANGE ORDER</span>
+              </label>
+            </div>
+          </div>
+
+          {/* Metadata Block inputs array */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-1">
+              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">CUSTOMER NAME</label>
+              <input
+                ref={customerNameRef}
+                type="text"
+                value={customerName}
+                onChange={e => setCustomerName(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    phoneRef.current?.focus();
+                  } else if (e.key === "ArrowUp") {
+                    e.preventDefault();
+                    productSearchRef.current?.focus();
+                  }
+                }}
+                placeholder="Enter name"
+                className="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded font-semibold text-xs outline-none focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">PHONE NUMBER</label>
+              <input
+                ref={phoneRef}
+                type="text"
+                value={phone}
+                onChange={e => setPhone(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter") { if (isStorePickup) { addressRef.current?.focus(); } else { citySelectRef.current?.focusAndOpen(); } } }}
+                placeholder="01XXXXXXXXX"
+                className="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded font-mono text-xs font-bold outline-none focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+              />
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            <div className="space-y-1">
+              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">SALESMAN (INCENTIVE OWNER)</label>
+              <CustomSelect
+                options={[
+                  { value: "", label: "Current Logged-in User (Default)" },
+                  ...staff.map((s: StaffMember) => ({ value: s.id, label: `${s.username} (${s.role?.name || "Staff"})` }))
+                ]}
+                value={createdById}
+                onChange={(val) => setCreatedById(val)}
+                searchable={true}
+                heightClass="h-8"
+                textClass="text-xs"
+              />
+            </div>
+
+            {isStorePickup && (
+              <div className="space-y-1 animate-in fade-in duration-150">
+                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">STORE PICKUP DELIVERY FEE</label>
+                <input
+                  type="number"
+                  value={deliveryCharge || ""}
+                  onChange={(e) => setDeliveryCharge(parseFloat(e.target.value) || 0)}
+                  placeholder="0"
+                  className="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded font-bold text-xs outline-none focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+                />
+              </div>
+            )}
+          </div>
+
+          {/* Exchange Logic Input Section */}
+          {isExchange && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-3 border border-orange-200 bg-orange-50/40 rounded animate-in fade-in duration-150">
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-orange-800 uppercase tracking-wider block mb-1">ORIGINAL ORDER ID *</label>
+                <input
+                  type="text"
+                  value={exchangeRefOrderId}
+                  onChange={(e) => setExchangeRefOrderId(e.target.value.toUpperCase())}
+                  placeholder="M-26052301"
+                  className="w-full px-2 py-1 bg-white border border-slate-200 rounded font-mono text-xs font-bold uppercase outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-orange-800 uppercase tracking-wider block mb-1">EXCHANGE NOTE *</label>
+                <input
+                  type="text"
+                  value={exchangeItemNote}
+                  onChange={(e) => setExchangeItemNote(e.target.value)}
+                  placeholder="e.g. XL → XXL"
+                  className="w-full px-2 py-1 bg-white border border-slate-200 rounded text-xs font-semibold outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all"
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Pathao Relational API Select Fields Row */}
+          {!isStorePickup && (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 border-t border-slate-200 pt-3">
+              <div>
+                <CustomSelect
+                  ref={citySelectRef}
+                  label="SELECT CITY *"
+                  placeholder={loadingCities ? "🔄" : "-- Select City --"}
+                  searchable
+                  options={cities}
+                  value={selectedCityId?.toString() || (district === "Self Pickup" ? "self-pickup" : "")}
+                  onChange={(val) => {
+                    if (val === "self-pickup") {
+                      setSelectedCityId(null); setSelectedZoneId(null); setSelectedAreaId(null); setDistrict("Self Pickup");
+                      setTimeout(() => addressRef.current?.focus(), 50);
+                    } else {
+                      const id = parseInt(val); setSelectedCityId(id); setSelectedZoneId(null); setSelectedAreaId(null);
+                      const city = cities.find(c => c.value === val); if (city) setDistrict(city.label);
+                    }
+                  }}
+                  heightClass="h-8"
+                  textClass="text-xs"
+                />
+              </div>
+              <div>
+                <CustomSelect
+                  ref={zoneSelectRef}
+                  label="SELECT ZONE *"
+                  placeholder={loadingZones ? "🔄" : (selectedCityId ? "-- Zone --" : "First select city")}
+                  searchable
+                  disabled={!selectedCityId || loadingZones}
+                  options={zones}
+                  value={selectedZoneId?.toString() || ""}
+                  onChange={(val) => {
+                    setSelectedZoneId(parseInt(val)); setSelectedAreaId(null);
+                  }}
+                  heightClass="h-8"
+                  textClass="text-xs"
+                />
+              </div>
+              <div>
+                <CustomSelect
+                  ref={areaSelectRef}
+                  label="SELECT AREA"
+                  placeholder={loadingAreas ? "🔄" : (selectedZoneId ? "-- Area --" : "First select zone")}
+                  searchable
+                  disabled={!selectedZoneId || loadingAreas}
+                  options={areas}
+                  value={selectedAreaId?.toString() || ""}
+                  onChange={(val) => {
+                    setSelectedAreaId(parseInt(val));
+                    setTimeout(() => addressRef.current?.focus(), 100);
+                  }}
+                  heightClass="h-8"
+                  textClass="text-xs"
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Full Street Address Line Field */}
+          <div className="space-y-1">
+            <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">FULL ADDRESS *</label>
+            <input
+              ref={addressRef}
+              type="text"
+              value={address}
+              onChange={e => setAddress(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") advancePaidRef.current?.focus(); }}
+              placeholder="e.g., House 12, Road 4, Block C, Mirpur 2, Dhaka"
+              className="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded font-semibold text-xs outline-none focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+            />
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border-t border-slate-200 pt-3">
+            {/* Advance Paid input structure */}
+            <div className="space-y-1">
+              <label className="text-[10px] font-bold text-red-600 uppercase tracking-wider block mb-1">ADVANCE PAID (BDT)</label>
+              <div className="relative">
+                <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs font-black text-slate-400">৳</span>
+                <input
+                  ref={advancePaidRef}
+                  type="number"
+                  value={advancePaid || ""}
+                  onChange={e => setAdvancePaid(parseFloat(e.target.value) || 0)}
+                  onKeyDown={(e) => { if (e.key === "Enter") discountRef.current?.focus(); }}
+                  className="w-full pl-6 pr-3 py-1 bg-red-50/40 border border-red-200 rounded font-mono text-xs font-bold text-red-600 outline-none focus:bg-white focus:ring-2 focus:ring-red-500/20 focus:border-red-500 transition-all"
+                  placeholder="0"
+                />
+              </div>
+            </div>
+
+            {/* Discount Section Component */}
+            <div className="space-y-1">
+              <label className="text-[10px] font-bold text-primary uppercase tracking-wider block mb-1">MANUAL DISCOUNT</label>
+              <div className="flex gap-1">
+                <div className="relative flex-1">
+                  <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs font-black text-primary/70">
+                    {manualDiscountType === "FLAT" ? "৳" : "%"}
+                  </span>
+                  <input
+                    ref={discountRef}
+                    type="number"
+                    value={manualDiscountValue || ""}
+                    onChange={e => setManualDiscountValue(parseFloat(e.target.value) || 0)}
+                    onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); discountTypeRef.current?.focus(); } }}
+                    className="w-full pl-5 pr-2 py-1 bg-primary/5 border border-primary/20 rounded font-mono text-xs font-bold text-primary outline-none focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+                    placeholder="0"
+                  />
+                </div>
+                <select
+                  ref={discountTypeRef}
+                  value={manualDiscountType}
+                  onChange={e => setManualDiscountType(e.target.value as "FLAT" | "PERCENTAGE")}
+                  onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); remarksRef.current?.focus(); } }}
+                  className="px-1 py-1 bg-primary/5 border border-primary/20 rounded text-[9px] font-black uppercase outline-none focus:bg-white focus:border-primary cursor-pointer"
+                >
+                  <option value="FLAT">FLAT</option>
+                  <option value="PERCENTAGE">%</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          {/* Internal Remarks Textarea component */}
+          <div className="space-y-1">
+            <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">ADMINISTRATIVE REMARKS</label>
+            <textarea
+              ref={remarksRef}
+              value={remarks}
+              onChange={e => setRemarks(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); tagInputRef.current?.focus(); } }}
+              placeholder="Add any internal notes, packaging instructions, or customer requests..."
+              rows={2}
+              className="w-full px-2.5 py-1 bg-slate-50 border border-slate-200 rounded font-medium text-xs focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none resize-none transition-all"
+            />
+          </div>
+
+          {/* Admin Tag Engine Input field */}
+          <div className="space-y-1">
+            <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1 mb-1"><Tags className="w-3 h-3" /> ORDER TAGS</label>
+            <div className="flex flex-wrap items-center gap-1 p-1 bg-slate-50 border border-slate-200 rounded min-h-[32px] focus-within:ring-2 focus-within:ring-primary/20 focus-within:border-primary focus-within:bg-white transition-all">
+              {tags.map((tag, idx) => (
+                <span key={tag} className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-black bg-slate-900 text-white uppercase tracking-wider">
+                  {tag}
+                  <button type="button" onClick={() => removeTag(idx)} className="text-slate-400 hover:text-white"><X className="w-2.5 h-2.5" /></button>
+                </span>
+              ))}
+              <input
+                ref={tagInputRef}
+                type="text"
+                value={tagInput}
+                onChange={e => setTagInput(e.target.value)}
+                onKeyDown={e => {
+                  if (e.key === "Enter" || e.key === ",") {
+                    e.preventDefault();
+                    if (tagInput.trim()) {
+                      addTag(tagInput);
+                    } else {
+                      createOrderBtnRef.current?.focus();
+                    }
+                  }
+                }}
+                placeholder="Type tag & hit enter..."
+                className="flex-1 bg-transparent border-0 p-0 text-xs focus:ring-0 outline-none placeholder:text-slate-400 font-semibold"
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* =======================================================
+          RIGHT WORKSPACE PANEL: Unified Order Summary Card (33.3%)
+         ======================================================= */}
+      <div className="xl:col-span-4 space-y-6">
+        <div className="bg-white border border-slate-200 rounded-lg shadow-sm overflow-hidden flex flex-col">
+          {/* Card Header */}
+          <div className="bg-slate-900 text-white font-bold text-xs uppercase px-4 py-3.5 flex items-center justify-between tracking-wider">
+            <span className="flex items-center gap-1.5">
+              <ShoppingBag className="w-4 h-4 text-white" />
+              ORDER SUMMARY
+            </span>
+          </div>
+
+          {/* Card Body */}
+          <div className="p-4 space-y-4">
+            {/* Basket Items List */}
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="border-b border-slate-200 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                    <th className="py-2 px-1">Item Details</th>
+                    <th className="py-2 px-1 text-center w-12">Size</th>
+                    <th className="py-2 px-1 text-center w-12">Qty</th>
+                    <th className="py-2 px-1 text-right w-20">Price</th>
+                    <th className="py-2 px-1 text-right w-8"></th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-50 text-slate-700">
+                <tbody className="divide-y divide-slate-100 font-medium">
                   {orderItems.length === 0 ? (
                     <tr>
-                      <td colSpan={5} className="px-4 py-8 text-center text-slate-400 italic">No products added yet.</td>
+                      <td colSpan={5} className="py-8 text-center text-slate-400 italic font-normal text-xs">
+                        Basket is empty. Scan barcode or query products above.
+                      </td>
                     </tr>
                   ) : (
                     orderItems.map((item, idx) => (
-                      <tr key={`${item.productId}-${item.size}`} className={`hover:bg-slate-50 transition-colors ${item.stock <= 0 ? "bg-orange-50/40" : ""}`}>
-                        <td className="px-4 py-3">
-                          <div className="font-bold text-slate-900">{item.productName}</div>
+                      <tr key={`${item.productId}-${item.size}-${idx}`} className={`hover:bg-slate-50/80 transition-colors ${item.stock <= 0 ? "bg-orange-50/30" : ""}`}>
+                        <td className="py-2 px-1">
+                          <div className="font-bold text-slate-800 text-xs">{item.productName}</div>
                           {item.stock <= 0 && (
-                            <div className="mt-0.5 inline-block text-[9px] font-black text-orange-500 bg-orange-100 px-1.5 py-0.5 rounded">⚠ BACKORDER</div>
+                            <span className="mt-0.5 inline-block text-[8px] font-black text-orange-600 bg-orange-100 px-1 py-0 rounded">BACKORDER</span>
                           )}
                           {item.requiresPrint && (
-                            <div className="mt-1 space-y-0.5">
+                            <div className="mt-1 flex flex-wrap gap-1">
                               {(item.printDetails || []).map((pd, pidx) => (
-                                <div key={pidx} className="text-[9px] font-bold text-indigo-700 bg-indigo-50 px-1.5 py-0.5 rounded inline-block mr-1">
-                                  {pd.name || "???"} {pd.number ? `${pd.number}` : ""}
-                                </div>
+                                <span key={pidx} className="text-[8px] font-black text-primary bg-primary/5 border border-primary/10 px-1.5 py-0 rounded">
+                                  👕 {pd.name || "???"} #{pd.number || "00"}
+                                </span>
                               ))}
                             </div>
                           )}
                         </td>
-                        <td className="px-4 py-3 text-center"><span className="px-2 py-0.5 bg-slate-100 rounded text-[10px] font-black">{item.size}</span></td>
-                        <td className="px-4 py-3 text-center font-semibold">{item.quantity}</td>
-                        <td className="px-4 py-3 text-right font-mono">{formatBDT(item.price)}</td>
-                        <td className="px-4 py-3 text-right">
-                          <button onClick={() => removeItem(idx)} className="p-1.5 text-slate-300 hover:text-red-500 transition-colors">
-                            <Trash2 className="w-4 h-4" />
+                        <td className="py-2 px-1 text-center">
+                          <span className="px-1.5 py-0.5 bg-slate-50 rounded font-black text-[10px] border border-slate-200">{item.size}</span>
+                        </td>
+                        <td className="py-2 px-1 text-center font-bold text-xs text-slate-700">{item.quantity}</td>
+                        <td className="py-2 px-1 text-right font-mono font-bold text-slate-700">{formatBDT(item.price)}</td>
+                        <td className="py-2 px-1 text-right">
+                          <button onClick={() => removeItem(idx)} className="p-1 text-slate-300 hover:text-red-500 transition-colors">
+                            <Trash2 className="w-3.5 h-3.5" />
                           </button>
                         </td>
                       </tr>
@@ -946,102 +1021,248 @@ export default function CreateOrderClient({
                 </tbody>
               </table>
             </div>
-          </div>
-        </div>
-      </div>
 
-      {/* Right Column: Order Summary & Action */}
-      <div className="lg:col-span-1 space-y-6">
-        <div className="bg-white rounded-xl border border-slate-200 shadow-md overflow-hidden sticky top-6">
-          <div className="px-6 py-4 border-b border-slate-100 bg-slate-900 text-white flex items-center justify-between">
-            <h2 className="text-sm font-black uppercase tracking-widest">Order Summary</h2>
-            <ShoppingBag className="w-4 h-4 text-gold" />
-          </div>
-
-          <div className="p-6 space-y-4">
-            <div className="flex justify-between text-sm text-slate-500">
-              <span>Subtotal ({orderItems.length} items)</span>
-              <span className="font-mono font-bold text-slate-800">{formatBDT(subtotal)}</span>
-            </div>
-            <div className="flex justify-between text-sm text-slate-500">
-              <span>Delivery Charge</span>
-              <span className="font-mono font-bold text-slate-800">{formatBDT(finalDeliveryCharge)}</span>
-            </div>
-            {totalDTFCost > 0 && (
-              <div className="flex justify-between text-sm text-indigo-600 font-medium">
-                <span>DTF Customization Cost</span>
-                <span className="font-mono font-bold">{formatBDT(totalDTFCost)}</span>
+            {/* Calculations Breakdown */}
+            <div className="border-t border-slate-200 pt-3 space-y-2 text-xs font-semibold">
+              <div className="flex justify-between text-slate-500">
+                <span>Subtotal ({orderItems.length} items)</span>
+                <span className="font-mono text-slate-800 font-bold">{formatBDT(subtotal)}</span>
               </div>
-            )}
 
-            <div className="pt-4 border-t border-dashed border-slate-200 space-y-2">
+              <div className="flex justify-between text-slate-500">
+                <span>Delivery Charge</span>
+                <span className="font-mono text-slate-800 font-bold">{formatBDT(finalDeliveryCharge)}</span>
+              </div>
 
-              {calculatedDiscount > 0 && (
-                <div className="flex justify-between items-center">
-                  <span className="text-sm ">Manual Discount</span>
-                  <span className="text-lg font-bold font-mono">
-                    - {formatBDT(calculatedDiscount)}
-                  </span>
+              {totalDTFCost > 0 && (
+                <div className="flex justify-between text-primary font-bold">
+                  <span>Customization Fee</span>
+                  <span className="font-mono text-primary">{formatBDT(totalDTFCost)}</span>
                 </div>
               )}
-              <div className="flex justify-between items-center">
-                <span className="text-sm">Advance Paid</span>
-                <span className="text-lg font-bold font-mono">
-                  - {formatBDT(advancePaid)}
-                </span>
+
+              {calculatedDiscount > 0 && (
+                <div className="flex justify-between text-emerald-600 font-bold">
+                  <span>Discount</span>
+                  <span className="font-mono text-emerald-700">- {formatBDT(calculatedDiscount)}</span>
+                </div>
+              )}
+
+              <div className="flex justify-between text-slate-500">
+                <span>Advance Paid</span>
+                <span className="font-mono text-slate-800 font-bold">- {formatBDT(advancePaid)}</span>
               </div>
-              <div className="flex justify-between items-center">
-                <span className="text-sm font-bold text-slate-500 uppercase tracking-tighter">Grand Total</span>
-                <span className="text-lg font-bold text-slate-800 font-mono">
-                  {formatBDT(totalAmount)}
-                </span>
+
+              <div className="flex justify-between text-slate-800 border-t border-slate-200 pt-2.5 font-bold uppercase tracking-wider text-xs">
+                <span>GRAND TOTAL</span>
+                <span className="font-mono text-slate-900 text-sm font-black">{formatBDT(totalAmount)}</span>
               </div>
-              <div className="pt-2 border-t border-slate-100">
-                <div className="flex justify-between items-center">
-                  <span className="text-sm font-black text-slate-900 uppercase tracking-widest">Net Due</span>
-                  <span className="text-2xl font-black text-indigo-600 font-mono tracking-tighter">
+
+              {/* Net Due Focus Area */}
+              <div className="border-t border-slate-100 pt-3 space-y-1">
+                <div className="flex justify-between items-baseline">
+                  <span className="text-xs font-black text-slate-800 uppercase tracking-wider">NET DUE</span>
+                  <span className="text-xl font-black font-mono text-primary tracking-tighter">
                     {formatBDT(totalAmount - advancePaid)}
                   </span>
                 </div>
+                <p className="text-[10px] text-slate-400 font-normal leading-tight normal-case">
+                  Inclusive of all applicable taxes and charges
+                </p>
               </div>
-              <p className="text-[10px] text-slate-400 font-medium pt-1">Inclusive of all applicable taxes and charges</p>
-            </div>
 
-            <div className="pt-6 space-y-3">
+              {/* Backorder warning injection panel */}
+              {hasBackorderItems && (
+                <div className="border border-dashed border-orange-200 bg-orange-50 p-2 rounded text-[10px] font-bold text-center text-orange-700 tracking-wide uppercase">
+                  ⚠ Invoice contains line items on Backorder status.
+                </div>
+              )}
 
-              {
-                hasBackorderItems && (
-                  <div className="border-2 border-dashed border-orange-200 p-2 rounded-lg text-xs font-bold text-center ">
-                    ⚠ This order contains backordered items.
-                  </div>
-                )
-              }
-              <button
-                onClick={handleSubmit}
-                disabled={isPending || orderItems.length === 0}
-                className="w-full text-white font-black py-4 rounded-xl shadow-lg shadow-indigo-200 bg-black hover:shadow-black/10 transition-all flex items-center justify-center gap-2 active:scale-[0.98] disabled:bg-slate-300 disabled:shadow-none disabled:cursor-not-allowed group">
-                <CheckCircle className="w-5 h-5 group-hover:scale-110 transition-transform" />
-                CREATE ORDER
-              </button>
+              {/* Actions Submission button wrapper area */}
+              <div className="pt-2 space-y-3">
+                <button
+                  ref={createOrderBtnRef}
+                  onClick={handlePreSubmit}
+                  disabled={isPending || orderItems.length === 0}
+                  className="w-full text-white font-black py-2.5 rounded text-xs uppercase tracking-wider bg-primary hover:bg-primary/90 disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed border border-transparent transition-all flex items-center justify-center gap-1.5 shadow-sm active:scale-[0.99]"
+                >
+                  {isPending ? (
+                    <>
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      Creating Order...
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle className="w-3.5 h-3.5" />
+                      CREATE ORDER
+                    </>
+                  )}
+                </button>
 
-              <Link
-                href={backUrl}
-                className="w-full h-12 flex items-center justify-center gap-2 text-slate-500 hover:text-slate-800 text-xs font-bold transition-colors"
-              >
-                <ArrowLeft className="w-4 h-4" />
-                Discard & Back to List
-              </Link>
-            </div>
-          </div>
+                <div className="flex justify-center pt-1">
+                  <Link
+                    href={backUrl}
+                    className="inline-flex items-center gap-1 text-slate-400 hover:text-slate-600 text-[10px] font-bold transition-colors uppercase tracking-wider"
+                  >
+                    <ArrowLeft className="w-3 h-3" /> Discard & Back to List
+                  </Link>
+                </div>
 
-          <div className="px-6 py-4 bg-slate-50 border-t border-slate-100">
-            <div className="flex items-center gap-3 text-[10px] text-slate-400">
-              <div className="w-2 h-2 rounded-full bg-green-500" />
-              <span>SYSTEM ONLINE & READY</span>
+
+              </div>
             </div>
           </div>
         </div>
       </div>
+
+      {isConfirmModalOpen && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[999] flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="bg-white w-full max-w-2xl border border-slate-200 rounded-lg shadow-2xl overflow-hidden flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-200 text-xs font-sans text-slate-900">
+            {/* Modal Header */}
+            <div className="bg-slate-900 text-white font-bold text-xs uppercase px-6 py-4 flex items-center justify-between tracking-wider">
+              <span>CONFIRM ORDER DETAILS</span>
+              <button
+                onClick={() => setIsConfirmModalOpen(false)}
+                className="text-slate-400 hover:text-white transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6 overflow-y-auto space-y-6">
+              {/* Customer Details Block */}
+              <div className="space-y-3">
+                <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-wider border-b border-slate-100 pb-1.5">
+                  CUSTOMER DETAILS
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-0.5">CUSTOMER NAME</span>
+                    <span className="font-bold text-slate-800 text-xs">{customerName}</span>
+                  </div>
+                  <div>
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-0.5">PHONE NUMBER</span>
+                    <span className="font-mono font-bold text-slate-800 text-xs">{phone}</span>
+                  </div>
+                  <div className="md:col-span-2">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-0.5">SHIPPING ADDRESS</span>
+                    <span className="font-bold text-slate-800 leading-relaxed block text-xs">{fullDeliveryAddress}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Items Block */}
+              <div className="space-y-3">
+                <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-wider border-b border-slate-100 pb-1.5">
+                  ORDERED PRODUCTS
+                </h3>
+                <div className="border border-slate-200 rounded overflow-hidden">
+                  <table className="w-full text-left border-collapse">
+                    <thead>
+                      <tr className="bg-slate-50 text-[10px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-200">
+                        <th className="py-2 px-3">Product Name</th>
+                        <th className="py-2 px-3 text-center w-16">Size</th>
+                        <th className="py-2 px-3 text-center w-16">Qty</th>
+                        <th className="py-2 px-3 text-right w-24">Price</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-150 font-medium text-xs">
+                      {orderItems.map((item, idx) => (
+                        <tr key={`${item.productId}-${item.size}-${idx}`} className="hover:bg-slate-50/50">
+                          <td className="py-2.5 px-3">
+                            <div className="font-bold text-slate-800">{item.productName}</div>
+                            {item.requiresPrint && (
+                              <div className="mt-1 flex flex-wrap gap-1">
+                                {(item.printDetails || []).map((pd, pidx) => (
+                                  <span key={pidx} className="text-[8px] font-black text-primary bg-primary/5 border border-primary/10 px-1.5 py-0.5 rounded">
+                                    👕 {pd.name || "???"} #{pd.number || "00"}
+                                  </span>
+                                ))}
+                              </div>
+                            )}
+                          </td>
+                          <td className="py-2.5 px-3 text-center">
+                            <span className="px-1.5 py-0.5 bg-slate-50 rounded font-black text-[10px] border border-slate-200">{item.size}</span>
+                          </td>
+                          <td className="py-2.5 px-3 text-center text-slate-700">{item.quantity}</td>
+                          <td className="py-2.5 px-3 text-right font-mono font-bold text-slate-700">{formatBDT(item.price)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* Financial Calculations Summary Block */}
+              <div className="bg-slate-50 p-4 rounded-lg border border-slate-200 space-y-2 text-xs font-semibold">
+                <div className="flex justify-between text-slate-500">
+                  <span>Subtotal ({orderItems.length} items)</span>
+                  <span className="font-mono text-slate-800 font-bold">{formatBDT(subtotal)}</span>
+                </div>
+                <div className="flex justify-between text-slate-500">
+                  <span>Delivery Charge</span>
+                  <span className="font-mono text-slate-800 font-bold">{formatBDT(isStorePickup ? deliveryCharge : finalDeliveryCharge)}</span>
+                </div>
+                {totalDTFCost > 0 && (
+                  <div className="flex justify-between text-primary font-bold">
+                    <span>Customization Fee</span>
+                    <span className="font-mono text-primary">{formatBDT(totalDTFCost)}</span>
+                  </div>
+                )}
+                {calculatedDiscount > 0 && (
+                  <div className="flex justify-between text-emerald-600 font-bold">
+                    <span>Discount</span>
+                    <span className="font-mono text-emerald-700">- {formatBDT(calculatedDiscount)}</span>
+                  </div>
+                )}
+                <div className="flex justify-between text-slate-500">
+                  <span>Advance Paid</span>
+                  <span className="font-mono text-slate-800 font-bold">- {formatBDT(advancePaid)}</span>
+                </div>
+                <div className="flex justify-between border-t border-slate-200 pt-2.5 text-slate-800 font-bold uppercase tracking-wider text-xs">
+                  <span>Grand Total</span>
+                  <span className="font-mono text-slate-900 font-black">{formatBDT(totalAmount)}</span>
+                </div>
+                <div className="flex justify-between border-t border-slate-200 pt-2 text-slate-800 font-bold uppercase tracking-wider text-xs">
+                  <span className="text-primary font-black">NET DUE</span>
+                  <span className="font-mono text-primary text-sm font-black">{formatBDT(totalAmount - advancePaid)}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="bg-slate-50 px-6 py-4 border-t border-slate-200 flex gap-3 justify-end">
+              <button
+                type="button"
+                onClick={() => setIsConfirmModalOpen(false)}
+                className="px-4 py-2 border border-slate-200 hover:bg-slate-100 text-slate-700 text-xs font-bold transition-all rounded uppercase tracking-wider"
+              >
+                Cancel (Esc)
+              </button>
+              <button
+                type="button"
+                onClick={handleSubmit}
+                disabled={isPending}
+                className="px-6 py-2 bg-primary hover:bg-primary/90 text-white text-xs font-black transition-all flex items-center gap-1.5 rounded uppercase tracking-wider shadow-sm"
+              >
+                {isPending ? (
+                  <>
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    Submitting...
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle className="w-3.5 h-3.5" />
+                    Done (Enter)
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
