@@ -9,6 +9,7 @@ import { useRouter } from "next/navigation";
 import { formatBDT, roundPrice } from "@/utils/formatPrice";
 
 import { Check, ShoppingCart, ShoppingBag, Plus, Minus, ChevronLeft, ChevronRight, Play } from "lucide-react";
+import ProductCard from "@/components/ProductCard";
 
 interface Product {
   id: string;
@@ -28,7 +29,7 @@ interface Product {
   } | null;
 }
 
-export default function ProductClient({ product, sizeChartData, deliveryData }: { product: Product, sizeChartData?: any, deliveryData?: { insideDhaka: number, outsideDhaka: number } }) {
+export default function ProductClient({ product, sizeChartData, deliveryData, relatedProducts }: { product: Product, sizeChartData?: any, deliveryData?: { insideDhaka: number, outsideDhaka: number }, relatedProducts: any[] }) {
   const router = useRouter();
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const selectedImage = product.images[selectedImageIndex] || "";
@@ -178,7 +179,7 @@ export default function ProductClient({ product, sizeChartData, deliveryData }: 
             <div className="flex items-center gap-4 mb-3">
             </div>
 
-            <h1 className="text-2xl font-black text-zinc-900 mb-2  leading-[1.1] ">
+            <h1 className="text-2xl font-semibold text-zinc-900 mb-2  leading-[1.1] ">
               {product.name}
             </h1>
             <p className="text-slate-500 font-medium mb-6 uppercase tracking-wider text-sm">{product.category} &bull; {product.team}</p>
@@ -359,6 +360,25 @@ export default function ProductClient({ product, sizeChartData, deliveryData }: 
             <p className="text-sm">Please make sure to record an unboxing video to claim any damages or missing items.</p>
           </div>
         </div>
+
+        {/* Related Products Section */}
+        {relatedProducts && relatedProducts.length > 0 && (
+          <section className="border-t border-slate-200 pt-16 mt-8">
+            <div className="container mx-auto">
+              <div className="text-center mb-12">
+                <h2 className="font-serif text-2xl md:text-3xl text-neutral-900 tracking-widest font-light uppercase">
+                  You may like this
+                </h2>
+                <div className="w-12 h-[1px] bg-[#800020] mx-auto mt-4"></div>
+              </div>
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6 lg:gap-8">
+                {relatedProducts.map((p) => (
+                  <ProductCard key={p.id} product={p} />
+                ))}
+              </div>
+            </div>
+          </section>
+        )}
 
       </div>
     </div>

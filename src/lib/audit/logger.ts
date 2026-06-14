@@ -260,33 +260,38 @@ export function withAuditLog<TArgs extends unknown[], TResult>(
               ? computeChangedFields(dataBefore, dataAfter)
               : [];
 
-        // Generate description
-        const rawDescription = config.describe
-          ? await config.describe(args, dataBefore, dataAfter)
-          : `${config.action} ${config.entityType} ${finalEntityId}`;
+        // Skip logging if this is an UPDATE but no fields actually changed
+        if (config.action === "UPDATE" && changedFields.length === 0) {
+          // Skip logging
+        } else {
+          // Generate description
+          const rawDescription = config.describe
+            ? await config.describe(args, dataBefore, dataAfter)
+            : `${config.action} ${config.entityType} ${finalEntityId}`;
 
-        const description = enhanceDescriptionWithHumanNames(
-          rawDescription,
-          finalEntityId,
-          dataBefore,
-          dataAfter
-        );
+          const description = enhanceDescriptionWithHumanNames(
+            rawDescription,
+            finalEntityId,
+            dataBefore,
+            dataAfter
+          );
 
-        // Fire-and-forget: write the log entry
-        logActivity({
-          userId: auditContext.userId,
-          userEmail: auditContext.userEmail,
-          userRole: auditContext.userRole,
-          action: config.action as AuditAction,
-          entityType: config.entityType,
-          entityId: finalEntityId,
-          description,
-          dataBefore,
-          dataAfter,
-          changedFields,
-          ipAddress: auditContext.ipAddress,
-          userAgent: auditContext.userAgent,
-        });
+          // Fire-and-forget: write the log entry
+          logActivity({
+            userId: auditContext.userId,
+            userEmail: auditContext.userEmail,
+            userRole: auditContext.userRole,
+            action: config.action as AuditAction,
+            entityType: config.entityType,
+            entityId: finalEntityId,
+            description,
+            dataBefore,
+            dataAfter,
+            changedFields,
+            ipAddress: auditContext.ipAddress,
+            userAgent: auditContext.userAgent,
+          });
+        }
       }
     } catch (err) {
       // Logging failure must NEVER affect the original operation

@@ -7,7 +7,7 @@ import {
   AlertCircle, Minus, VerifiedIcon, Loader2,
   CalendarDays, ArrowLeft, Download, Receipt, MapPin,
   ClipboardList, Tag, User, ArrowRightLeft, Activity,
-  Eye, EyeOff
+  ChevronDown, ChevronUp
 } from "lucide-react";
 import { updateOrderDetails, updateOrderRemark, updateOrderStatus } from "../actions";
 import { getPathaoCities, getPathaoZones, getPathaoAreas, getPathaoOrderInfoAction } from "@/app/actions/pathao";
@@ -1623,9 +1623,9 @@ export default function OrderDetailsClient({
                             title={expandedLogs[log.id] ? "Hide Changes" : "View Changes"}
                           >
                             {expandedLogs[log.id] ? (
-                              <EyeOff className="w-4 h-4" />
+                              <ChevronUp className="w-4 h-4" />
                             ) : (
-                              <Eye className="w-4 h-4" />
+                              <ChevronDown className="w-4 h-4" />
                             )}
                           </button>
                         )}
