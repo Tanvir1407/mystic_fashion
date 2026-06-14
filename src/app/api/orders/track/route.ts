@@ -11,6 +11,7 @@ const STATUS_LABELS: Record<string, string> = {
   DELIVERED: "Delivered",
   RETURNED: "Returned",
   CANCELLED: "Cancelled",
+  HOLD: "On Hold",
 };
 
 const STATUS_TIMELINE = ["PENDING", "CONFIRMED", "PRINTING", "PACKAGING", "SHIPPED", "DELIVERED"];

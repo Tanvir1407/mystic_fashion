@@ -411,7 +411,8 @@ export default function StaffDetailsClient({
     { key: "SHIPPED", label: "Shipped", color: "bg-indigo-500", text: "text-indigo-700", bg: "bg-indigo-50" },
     { key: "DELIVERED", label: "Delivered", color: "bg-green-500", text: "text-green-700", bg: "bg-green-50" },
     { key: "RETURNED", label: "Returned", color: "bg-rose-500", text: "text-rose-700", bg: "bg-rose-50" },
-    { key: "CANCELLED", label: "Cancelled", color: "bg-red-500", text: "text-red-700", bg: "bg-red-50" }
+    { key: "CANCELLED", label: "Cancelled", color: "bg-red-500", text: "text-red-700", bg: "bg-red-50" },
+    { key: "HOLD", label: "On Hold", color: "bg-pink-500", text: "text-pink-700", bg: "bg-pink-50" }
   ];
 
   const getStatusCount = (statusKey: string) => {
@@ -882,7 +883,8 @@ export default function StaffDetailsClient({
                             <span className={`inline-flex items-center  px-2.5 py-1 text-[10px] font-black uppercase tracking-wider ring-1 ring-inset ${o.status === "DELIVERED" ? "bg-green-50 text-green-700 ring-green-600/10" :
                               o.status === "CANCELLED" ? "bg-red-50 text-red-700 ring-red-600/10" :
                                 o.status === "PENDING" ? "bg-amber-50 text-amber-700 ring-amber-600/10" :
-                                  "bg-indigo-50 text-indigo-700 ring-indigo-600/10"
+                                  o.status === "HOLD" ? "bg-pink-50 text-pink-700 ring-pink-600/10" :
+                                    "bg-indigo-50 text-indigo-700 ring-indigo-600/10"
                               }`}>
                               {statusConf?.label || o.status}
                             </span>

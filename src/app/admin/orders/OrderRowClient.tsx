@@ -253,7 +253,7 @@ export default function OrderRowClient({
           ))}
         </div>
       </td>
-      <td className="px-2 py-2.5 text-sm text-slate-900 font-mono font-medium">
+      <td className="px-2 py-2.5 text-sm text-emerald-700 font-mono font-bold">
         {formatBDT(order.advancePaid)}
       </td>
       <td className="px-2 py-2.5 text-sm text-red-600 font-mono font-medium">

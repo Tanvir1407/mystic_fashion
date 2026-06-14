@@ -638,6 +638,7 @@ export default function OrderListClient({
                           { value: "PACKAGING", label: "Set Packaged" },
                           { value: "SHIPPED", label: "Set Shipped" },
                           { value: "DELIVERED", label: "Set Delivered" },
+                          { value: "HOLD", label: "Set On Hold" },
                           { value: "CANCELLED", label: "Set Cancelled" },
                           { value: "RETURNED", label: "Set Returned" },
                         ].map((opt) => (

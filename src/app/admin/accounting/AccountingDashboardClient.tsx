@@ -563,7 +563,9 @@ export default function AccountingDashboardClient({
                           ? "bg-emerald-50 text-emerald-700"
                           : order.status === "CANCELLED"
                             ? "bg-rose-50 text-rose-700"
-                            : "bg-amber-50 text-amber-700"
+                            : order.status === "HOLD"
+                              ? "bg-pink-50 text-pink-700"
+                              : "bg-amber-50 text-amber-700"
                         }`}>
                         {order.status}
                       </span>

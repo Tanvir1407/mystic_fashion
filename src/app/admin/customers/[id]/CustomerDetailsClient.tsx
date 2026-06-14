@@ -95,6 +95,7 @@ export default function CustomerDetailsClient({
     SHIPPED: "bg-indigo-50 text-indigo-700 border-indigo-100",
     CANCELLED: "bg-rose-50 text-rose-700 border-rose-100",
     RETURNED: "bg-slate-50 text-slate-600 border-slate-100",
+    HOLD: "bg-pink-50 text-pink-700 border-pink-100",
   };
 
   const modifyStatus = (status: string) => {
@@ -115,6 +116,8 @@ export default function CustomerDetailsClient({
         return "Cancelled";
       case "RETURNED":
         return "Returned";
+      case "HOLD":
+        return "On Hold";
       default:
         return status;
     }
