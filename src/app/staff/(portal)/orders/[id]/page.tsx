@@ -14,7 +14,7 @@ export default async function StaffOrderDetailPage({ params }: { params: { id: s
   // Fetch all necessary database records in parallel
   const [order, deliverySettings, rate, activityLogs] = await Promise.all([
     prisma.order.findFirst({
-      where: { id: params.id, createdById: session.staffId, deletedAt: null },
+      where: { id: params.id, deletedAt: null },
       include: {
         items: { include: { product: true } },
         createdBy: true,
@@ -35,7 +35,13 @@ export default async function StaffOrderDetailPage({ params }: { params: { id: s
 
   if (!order) notFound();
 
-  const commission = calcPotentialCommission(order as any, rate);
+  const isOwnOrder = order.createdById === session.staffId;
+  const commission = isOwnOrder ? calcPotentialCommission(order as any, rate) : 0;
+  const commissionInfo = isOwnOrder ? {
+    rate,
+    amount: commission,
+    orderStatus: order.status,
+  } : null;
 
   return (
     <OrderDetailsClient
@@ -44,11 +50,7 @@ export default async function StaffOrderDetailPage({ params }: { params: { id: s
       products={[]}
       pathaoInfo={null}
       backUrl="/staff/orders"
-      commissionInfo={{
-        rate,
-        amount: commission,
-        orderStatus: order.status,
-      }}
+      commissionInfo={commissionInfo}
       activityLogs={activityLogs}
     />
   );
