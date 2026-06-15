@@ -114,9 +114,21 @@ const prismaClientSingleton = () => {
           if (softDeletableModels.includes(modelKey)) {
             args.where = args.where || {};
             if (!('deletedAt' in args.where)) {
+              let selectAdded = false;
+              if (args.select) {
+                if (!args.select.deletedAt) {
+                  args.select.deletedAt = true;
+                  selectAdded = true;
+                }
+              }
               const result = await query(args);
-              if (result && result.deletedAt !== null) {
-                return null;
+              if (result) {
+                if (result.deletedAt !== null && result.deletedAt !== undefined) {
+                  return null;
+                }
+                if (selectAdded) {
+                  delete result.deletedAt;
+                }
               }
               return result;
             }
