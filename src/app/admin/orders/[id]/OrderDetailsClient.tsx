@@ -852,60 +852,75 @@ export default function OrderDetailsClient({
               </div>
 
               <div className="divide-y divide-slate-100">
-                {formData.items.map((item: any, index: number) => (
-                  <div key={item.id} className="flex items-start gap-4 px-5 py-4 hover:bg-slate-50/50 transition-colors">
-                    {/* Product Image */}
-                    <div className="w-14 h-16 relative bg-slate-100 rounded-lg overflow-hidden border border-slate-150 shrink-0">
-                      {item.product?.images?.[0] ? (
-                        <UploadedImage src={item.product.images[0]} alt={item.product.name} fill className="object-cover" />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center">
-                          <Package className="w-5 h-5 text-slate-300" />
-                        </div>
-                      )}
-                    </div>
+                {formData.items.map((item: any, index: number) => {
+                  const returnedQty = (order.salesReturns || [])
+                    .filter((r: any) => r.orderItemId === item.id)
+                    .reduce((sum: number, r: any) => sum + r.quantity, 0);
+                  const fullyReturned = returnedQty >= item.quantity;
 
-                    {/* Product Info */}
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-bold text-slate-800 truncate">{item.product?.name}</p>
-                      <div className="flex flex-wrap items-center gap-2 mt-1.5">
-                        <span className="text-[9px] font-extrabold bg-slate-800 text-white px-2 py-0.5 rounded tracking-widest uppercase">{item.size}</span>
-                        <span className="text-xs font-semibold text-slate-500">@ {formatBDT(item.price)}</span>
-                        {item.requiresPrint && (
-                          <span className="text-[9px] font-bold bg-indigo-50 text-indigo-600 border border-indigo-100 px-2 py-0.5 rounded uppercase tracking-wider flex items-center gap-1">
-                            🖨️ Print: {item.printName} (#{item.printNumber})
-                          </span>
+                  return (
+                    <div key={item.id} className={`flex items-start gap-4 px-5 py-4 hover:bg-slate-50/50 transition-colors ${fullyReturned ? "opacity-60" : ""}`}>
+                      {/* Product Image */}
+                      <div className="w-14 h-16 relative bg-slate-100 rounded-lg overflow-hidden border border-slate-150 shrink-0">
+                        {item.product?.images?.[0] ? (
+                          <UploadedImage src={item.product.images[0]} alt={item.product.name} fill className="object-cover" />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center">
+                            <Package className="w-5 h-5 text-slate-300" />
+                          </div>
                         )}
                       </div>
-                      {item.requiresPrint && (
-                        <p className="text-[10px] text-indigo-500 font-medium mt-0.5">
-                          + {formatBDT(item.printCost * item.quantity)} DTF cost
-                        </p>
-                      )}
-                    </div>
 
-                    {/* Qty + Price */}
-                    <div className="shrink-0 flex flex-col items-end gap-2">
-                      {isEditing ? (
-                        <div className="flex items-center border border-slate-200 rounded-lg overflow-hidden bg-white">
-                          <button onClick={() => updateItemQuantity(index, -1)} className="px-2.5 py-1.5 hover:bg-slate-100 text-slate-600 font-bold text-sm transition-colors">−</button>
-                          <span className="px-3 py-1.5 text-xs font-bold text-slate-800 bg-slate-50 min-w-[32px] text-center">{item.quantity}</span>
-                          <button onClick={() => updateItemQuantity(index, 1)} className="px-2.5 py-1.5 hover:bg-slate-100 text-slate-600 font-bold text-sm transition-colors">+</button>
+                      {/* Product Info */}
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-bold text-slate-800 truncate">{item.product?.name}</p>
+                        <div className="flex flex-wrap items-center gap-2 mt-1.5">
+                          <span className="text-[9px] font-extrabold bg-slate-800 text-white px-2 py-0.5 rounded tracking-widest uppercase">{item.size}</span>
+                          <span className="text-xs font-semibold text-slate-500">@ {formatBDT(item.price)}</span>
+                          {item.requiresPrint && (
+                            <span className="text-[9px] font-bold bg-indigo-50 text-indigo-600 border border-indigo-100 px-2 py-0.5 rounded uppercase tracking-wider flex items-center gap-1">
+                              🖨️ Print: {item.printName} (#{item.printNumber})
+                            </span>
+                          )}
+                          {returnedQty > 0 && (
+                            <span className={`text-[9px] font-black px-2 py-0.5 rounded uppercase tracking-wider flex items-center gap-1 ${fullyReturned
+                                ? "bg-red-100 text-red-700 border border-red-200"
+                                : "bg-rose-50 text-rose-600 border border-rose-150"
+                              }`}>
+                              {fullyReturned ? "Fully Returned" : `Returned: ${returnedQty}`}
+                            </span>
+                          )}
                         </div>
-                      ) : (
-                        <span className="text-xs font-semibold text-slate-600">Qty: {item.quantity}</span>
-                      )}
-                      <span className="text-sm font-bold text-slate-900">
-                        {formatBDT((item.price + (item.requiresPrint ? item.printCost : 0)) * item.quantity)}
-                      </span>
-                      {isEditing && (
-                        <button onClick={() => removeItem(index)} className="text-[10px] font-bold text-red-500 hover:text-red-700 flex items-center gap-0.5 transition-colors">
-                          <Trash2 className="w-3 h-3" /> Remove
-                        </button>
-                      )}
+                        {item.requiresPrint && (
+                          <p className="text-[10px] text-indigo-500 font-medium mt-0.5">
+                            + {formatBDT(item.printCost * item.quantity)} DTF cost
+                          </p>
+                        )}
+                      </div>
+
+                      {/* Qty + Price */}
+                      <div className="shrink-0 flex flex-col items-end gap-2">
+                        {isEditing ? (
+                          <div className="flex items-center border border-slate-200 rounded-lg overflow-hidden bg-white">
+                            <button onClick={() => updateItemQuantity(index, -1)} className="px-2.5 py-1.5 hover:bg-slate-100 text-slate-600 font-bold text-sm transition-colors">−</button>
+                            <span className="px-3 py-1.5 text-xs font-bold text-slate-800 bg-slate-50 min-w-[32px] text-center">{item.quantity}</span>
+                            <button onClick={() => updateItemQuantity(index, 1)} className="px-2.5 py-1.5 hover:bg-slate-100 text-slate-600 font-bold text-sm transition-colors">+</button>
+                          </div>
+                        ) : (
+                          <span className="text-xs font-semibold text-slate-600">Qty: {item.quantity}</span>
+                        )}
+                        <span className="text-sm font-bold text-slate-900">
+                          {formatBDT((item.price + (item.requiresPrint ? item.printCost : 0)) * item.quantity)}
+                        </span>
+                        {isEditing && (
+                          <button onClick={() => removeItem(index)} className="text-[10px] font-bold text-red-500 hover:text-red-700 flex items-center gap-0.5 transition-colors">
+                            <Trash2 className="w-3 h-3" /> Remove
+                          </button>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
 
               {/* Add Product (edit mode) */}

@@ -14,6 +14,7 @@ export default async function SingleOrderPage({ params }: { params: { id: string
       include: {
         items: { include: { product: true } },
         createdBy: true,
+        salesReturns: true,
       }
     }),
     getDeliverySettings(),
@@ -21,8 +22,18 @@ export default async function SingleOrderPage({ params }: { params: { id: string
     getStaff(),
     prisma.activityLog.findMany({
       where: {
-        entityType: "Order",
-        entityId: params.id,
+        OR: [
+          {
+            entityType: "Order",
+            entityId: params.id,
+          },
+          {
+            entityType: "SalesReturn",
+            description: {
+              contains: params.id,
+            },
+          },
+        ],
       },
       orderBy: {
         timestamp: "desc",
