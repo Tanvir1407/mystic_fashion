@@ -341,6 +341,7 @@ async function _updateOrderDetails(
     pathaoCityId?: number | null;
     pathaoZoneId?: number | null;
     pathaoAreaId?: number | null;
+    specialInstruction?: string | null;
     tags?: string[];
     createdById?: string | null;
     items?: {
@@ -504,6 +505,7 @@ async function _updateOrderDetails(
           pathaoCityId: data.pathaoCityId,
           pathaoZoneId: data.pathaoZoneId,
           pathaoAreaId: data.pathaoAreaId,
+          specialInstruction: data.specialInstruction,
           tags: data.tags,
           createdById: data.createdById !== undefined ? data.createdById : order.createdById,
           commissionRate: commissionRate,
@@ -597,6 +599,7 @@ async function _createAdminOrder(data: {
   advancePaid: number;
   discountAmount: number;
   remarks?: string;
+  specialInstruction?: string;
   pathaoCityId?: number;
   pathaoZoneId?: number;
   pathaoAreaId?: number;
@@ -664,6 +667,7 @@ async function _createAdminOrder(data: {
           advancePaid: data.advancePaid,
           discountAmount: data.discountAmount,
           remarks: data.remarks,
+          specialInstruction: data.specialInstruction,
           pathaoCityId: data.pathaoCityId,
           pathaoZoneId: data.pathaoZoneId,
           pathaoAreaId: data.pathaoAreaId,
@@ -756,6 +760,7 @@ async function _createExchangeOrder(data: {
   advancePaid: number;
   discountAmount: number;
   remarks?: string;
+  specialInstruction?: string;
   pathaoCityId?: number;
   pathaoZoneId?: number;
   pathaoAreaId?: number;
@@ -844,6 +849,7 @@ export async function bulkSendToPathaoAction(orderIds: string[]) {
           recipient_area: order.pathaoAreaId || undefined,
           delivery_type: 48,
           item_type: 2,
+          special_instruction: order.specialInstruction || undefined,
           item_quantity: totalQuantity,
           item_weight: 0.5,
           amount_to_collect: collectionAmount,

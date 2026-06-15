@@ -273,6 +273,7 @@ export default function OrderDetailsClient({
     pathaoCityId: order.pathaoCityId || null,
     pathaoZoneId: order.pathaoZoneId || null,
     pathaoAreaId: order.pathaoAreaId || null,
+    specialInstruction: order.specialInstruction || "",
   });
 
   const [cities, setCities] = useState<{ value: string; label: string }[]>([]);
@@ -411,6 +412,7 @@ export default function OrderDetailsClient({
       pathaoCityId: formData.pathaoCityId,
       pathaoZoneId: formData.pathaoZoneId,
       pathaoAreaId: formData.pathaoAreaId,
+      specialInstruction: formData.specialInstruction || null,
       tags: finalTags,
       createdById: formData.createdById || null,
       items: formData.items.map((i: any) => ({
@@ -484,6 +486,7 @@ export default function OrderDetailsClient({
       pathaoCityId: order.pathaoCityId || null,
       pathaoZoneId: order.pathaoZoneId || null,
       pathaoAreaId: order.pathaoAreaId || null,
+      specialInstruction: order.specialInstruction || "",
     });
   };
 
@@ -984,7 +987,7 @@ export default function OrderDetailsClient({
                 </div>
 
                 {/* Payment Due */}
-                <div className={`mt-4 p-4 rounded-xl border flex items-center justify-between transition-all duration-300 ${totalDue > 0 ? "bg-rose-50/40 border-rose-100 text-rose-800" : "bg-emerald-50/40 border-emerald-100 text-emerald-800"}`}>
+                <div className={`mt-4 flex items-center justify-between transition-all duration-300 ${totalDue > 0 ? "text-rose-800" : "text-emerald-800"}`}>
                   <div>
                     <span className="text-xs font-bold uppercase tracking-wider block opacity-75">Payment Due</span>
                     <span className="text-[10px] opacity-60 block mt-0.5">Collectable from Customer</span>
@@ -1244,6 +1247,16 @@ export default function OrderDetailsClient({
                         className="w-full text-sm px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:border-slate-400 text-slate-700 resize-none"
                       />
                     </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Pathao Special Instruction</label>
+                      <textarea
+                        value={formData.specialInstruction}
+                        onChange={(e) => setFormData({ ...formData, specialInstruction: e.target.value })}
+                        rows={2}
+                        placeholder="Add special instructions for Pathao delivery rider..."
+                        className="w-full text-sm px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:border-slate-400 text-slate-700 resize-none"
+                      />
+                    </div>
                   </>
                 ) : (
                   <div className="space-y-3.5">
@@ -1289,6 +1302,14 @@ export default function OrderDetailsClient({
                       <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block mb-1 select-none">Delivery Address</span>
                       <p className="text-xs text-slate-600 leading-relaxed font-medium bg-slate-50/50 p-2.5 rounded-lg border border-slate-100/70">{order.address}</p>
                     </div>
+
+                    {/* Pathao Special Instruction */}
+                    {order.specialInstruction && (
+                      <div>
+                        <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block mb-1 select-none">Pathao Special Instruction</span>
+                        <p className="text-xs text-slate-600 leading-relaxed font-medium bg-amber-50/55 p-2.5 rounded-lg border border-amber-100/60">{order.specialInstruction}</p>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>

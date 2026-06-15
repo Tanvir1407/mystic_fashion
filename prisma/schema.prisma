@@ -211,6 +211,7 @@ model Order {
   couponCode          String?
   discountAmount      Float         @default(0)
   remarks             String?
+  specialInstruction  String?
   bkashNumber         String?
   bkashTrxId          String?
   pathaoAreaId        Int?

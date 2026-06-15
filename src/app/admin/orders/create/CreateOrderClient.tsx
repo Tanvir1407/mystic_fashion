@@ -75,6 +75,7 @@ export default function CreateOrderClient({
   const discountRef = useRef<HTMLInputElement>(null);
   const discountTypeRef = useRef<HTMLSelectElement>(null);
   const remarksRef = useRef<HTMLTextAreaElement>(null);
+  const specialInstructionRef = useRef<HTMLTextAreaElement>(null);
   const tagInputRef = useRef<HTMLInputElement>(null);
   const createOrderBtnRef = useRef<HTMLButtonElement>(null);
 
@@ -85,6 +86,7 @@ export default function CreateOrderClient({
   const [address, setAddress] = useState("");
   const [advancePaid, setAdvancePaid] = useState(0);
   const [remarks, setRemarks] = useState("");
+  const [specialInstruction, setSpecialInstruction] = useState("");
   const [manualDiscountValue, setManualDiscountValue] = useState(0);
   const [manualDiscountType, setManualDiscountType] = useState<"FLAT" | "PERCENTAGE">("FLAT");
   const [isStorePickup, setIsStorePickup] = useState(false);
@@ -355,7 +357,7 @@ export default function CreateOrderClient({
         const res = isExchange
           ? await createExchangeOrder({
             customerName, phone, district, address: fullDeliveryAddress, totalAmount, advancePaid,
-            discountAmount: calculatedDiscount, remarks, pathaoCityId: selectedCityId || undefined,
+            discountAmount: calculatedDiscount, remarks, specialInstruction, pathaoCityId: selectedCityId || undefined,
             pathaoZoneId: selectedZoneId || undefined, pathaoAreaId: selectedAreaId || undefined,
             isStorePickup, deliveryCharge: isStorePickup ? deliveryCharge : finalDeliveryCharge,
             items: orderItems.map(item => ({
@@ -367,7 +369,7 @@ export default function CreateOrderClient({
           })
           : await (orderAction ?? createAdminOrder)({
             customerName, phone, district, address: fullDeliveryAddress, totalAmount, advancePaid,
-            discountAmount: calculatedDiscount, remarks, pathaoCityId: selectedCityId || undefined,
+            discountAmount: calculatedDiscount, remarks, specialInstruction, pathaoCityId: selectedCityId || undefined,
             pathaoZoneId: selectedZoneId || undefined, pathaoAreaId: selectedAreaId || undefined,
             isStorePickup, deliveryCharge: isStorePickup ? deliveryCharge : finalDeliveryCharge,
             items: orderItems.map(item => ({
@@ -387,6 +389,7 @@ export default function CreateOrderClient({
           setAddress("");
           setAdvancePaid(0);
           setRemarks("");
+          setSpecialInstruction("");
           setManualDiscountValue(0);
           setManualDiscountType("FLAT");
           setIsStorePickup(false);
@@ -459,6 +462,7 @@ export default function CreateOrderClient({
     advancePaid,
     calculatedDiscount,
     remarks,
+    specialInstruction,
     deliveryCharge,
     finalDeliveryCharge,
     createdById,
@@ -1112,7 +1116,7 @@ export default function CreateOrderClient({
               onKeyDown={(e) => {
                 if (e.key === "Enter") {
                   e.preventDefault();
-                  tagInputRef.current?.focus();
+                  specialInstructionRef.current?.focus();
                 } else if (e.key === "ArrowUp") {
                   const el = e.currentTarget as HTMLTextAreaElement;
                   if (el.selectionStart === 0) {
@@ -1122,6 +1126,31 @@ export default function CreateOrderClient({
                 }
               }}
               placeholder="Add any internal notes, packaging instructions, or customer requests..."
+              rows={2}
+              className="w-full px-2.5 py-1 bg-slate-50 border border-slate-200 rounded font-medium text-xs focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none resize-none transition-all"
+            />
+          </div>
+
+          {/* Pathao Special Instructions component */}
+          <div className="space-y-1">
+            <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">PATHAO SPECIAL INSTRUCTIONS</label>
+            <textarea
+              ref={specialInstructionRef}
+              value={specialInstruction}
+              onChange={e => setSpecialInstruction(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  tagInputRef.current?.focus();
+                } else if (e.key === "ArrowUp") {
+                  const el = e.currentTarget as HTMLTextAreaElement;
+                  if (el.selectionStart === 0) {
+                    e.preventDefault();
+                    remarksRef.current?.focus();
+                  }
+                }
+              }}
+              placeholder="Add special instructions for Pathao delivery rider..."
               rows={2}
               className="w-full px-2.5 py-1 bg-slate-50 border border-slate-200 rounded font-medium text-xs focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none resize-none transition-all"
             />
@@ -1153,7 +1182,7 @@ export default function CreateOrderClient({
                   } else if (e.key === "ArrowUp" || e.key === "ArrowLeft") {
                     if (!tagInput.trim()) {
                       e.preventDefault();
-                      remarksRef.current?.focus();
+                      specialInstructionRef.current?.focus();
                     }
                   }
                 }}
