@@ -608,7 +608,7 @@ export default function OrderDetailsClient({
   return (
     <>
       {printType === "A4" && <InvoicePrintView orders={[order]} />}
-      {printType === "80MM" && <ThermalPrintView orders={[order]} />}
+      {printType === "80MM" && <ThermalPrintView orders={[order]} posFooter={deliverySettings?.posFooter} />}
 
       <div className="no-print flex flex-col gap-5 max-w-7xl mx-auto pb-10 px-4 sm:px-6">
         {/* Sticky Page Header */}

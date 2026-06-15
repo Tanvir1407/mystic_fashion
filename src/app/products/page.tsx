@@ -5,21 +5,9 @@ import SidebarCart from "@/components/SidebarCart";
 import prisma from "@/lib/prisma";
 import { getFooterData } from "@/lib/footer";
 import ProductsClient from "./ProductsClient";
+import { getFilteredProductsList } from "./actions";
 
 export const dynamic = "force-dynamic";
-
-// Helper to calculate product final price after active discount on server
-const getFinalPrice = (product: any): number => {
-  let finalPrice = product.price;
-  if (product.discount && product.discount.active) {
-    if (product.discount.discountType === "PERCENTAGE") {
-      finalPrice = product.price - (product.price * (product.discount.value / 100));
-    } else {
-      finalPrice = Math.max(0, product.price - product.discount.value);
-    }
-  }
-  return Math.round(finalPrice);
-};
 
 export default async function ProductsPage({
   searchParams,
@@ -43,89 +31,15 @@ export default async function ProductsPage({
   const pageParam = Number(searchParams.page) || 1;
   const limit = 12; // 12 products per page
 
-  // Build the database query clauses dynamically
-  const whereClause: any = { isPublished: true };
-
-  // Category filter (match name case-insensitively or match direct categoryRel ID)
-  if (categoryParam) {
-    const isUuid = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(categoryParam);
-    if (isUuid) {
-      whereClause.categoryId = categoryParam;
-    } else {
-      whereClause.categoryRel = {
-        name: { equals: categoryParam, mode: "insensitive" }
-      };
-    }
-  }
-
-  // Subcategory filter (match name case-insensitively or match direct subcategory ID)
-  if (subcategoryParam) {
-    const isUuid = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(subcategoryParam);
-    if (isUuid) {
-      whereClause.subcategoryId = subcategoryParam;
-    } else {
-      whereClause.subcategory = {
-        name: { equals: subcategoryParam, mode: "insensitive" }
-      };
-    }
-  }
-
-  // Brand filter (supports comma-separated list of IDs or a brand name)
-  if (brandParam) {
-    const brandsList = brandParam.split(",");
-    const isUuid = (str: string) => /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(str);
-    
-    if (brandsList.every(isUuid)) {
-      whereClause.brandId = { in: brandsList };
-    } else {
-      whereClause.brand = {
-        name: { in: brandsList, mode: "insensitive" }
-      };
-    }
-  }
-
   // Fetch all filtered products, categories (active), brands (active), and footerData in concurrent queries
-  const [productsRes, categoriesRes, brandsRes, footerData] = await Promise.all([
-    prisma.product.findMany({
-      where: whereClause,
-      select: {
-        id: true,
-        slug: true,
-        name: true,
-        description: true,
-        price: true,
-        purchasePrice: true,
-        images: true,
-        team: true,
-        category: true,
-        brandId: true,
-        categoryId: true,
-        subcategoryId: true,
-        createdAt: true,
-        isFeatured: true,
-        featuredOrder: true,
-        isPublished: true,
-        trackStock: true,
-        brand: true,
-        categoryRel: true,
-        subcategory: true,
-        discount: true,
-        variants: {
-          select: {
-            id: true,
-            size: true,
-            color: true,
-            colorCode: true,
-            sku: true,
-            stock: true,
-            order: true,
-          }
-        }
-      },
-      orderBy: { createdAt: "desc" },
-    }).catch((e) => {
-      console.error("Failed to fetch products:", e);
-      return [];
+  const [allProductsResult, categoriesRes, brandsRes, footerData] = await Promise.all([
+    getFilteredProductsList({
+      category: categoryParam,
+      subcategory: subcategoryParam,
+      brand: brandParam,
+      minPrice: minPriceParam,
+      maxPrice: maxPriceParam,
+      sort: sortParam,
     }),
     prisma.category.findMany({
       where: { active: true },
@@ -153,58 +67,7 @@ export default async function ProductsPage({
     }),
   ]);
 
-  // Sort product variants by the order field in place
-  const rawProducts = productsRes || [];
-  rawProducts.forEach((product) => {
-    if (product.variants) {
-      product.variants.sort((a, b) => (a.order || 0) - (b.order || 0));
-    }
-  });
-
-  // Apply Price Range filtering in-memory on the server side (to fully support active dynamic discounts in Prisma without RAW SQL)
-  const minPrice = Number(minPriceParam) || 0;
-  const maxPrice = Number(maxPriceParam) || Infinity;
-
-  const priceFilteredProducts = rawProducts.filter((product) => {
-    const finalPrice = getFinalPrice(product);
-    return finalPrice >= minPrice && finalPrice <= maxPrice;
-  });
-
-  // Calculate the global min/max price range strictly for the filtered set (used to set the bounds of the sidebar price range UI)
-  const allFinalPrices = priceFilteredProducts.map(getFinalPrice);
-  const globalMinPrice = allFinalPrices.length > 0 ? Math.min(...allFinalPrices) : 0;
-  const globalMaxPrice = allFinalPrices.length > 0 ? Math.max(...allFinalPrices) : 10000;
-
-  // Apply selected Sorting options
-  const sortedProducts = [...priceFilteredProducts];
-  if (categoryParam && sortParam === "newest") {
-    // Category filtered page and default sort: featured products first by featuredOrder, then regular products by newest
-    const featuredProducts = sortedProducts.filter((p) => p.isFeatured);
-    const regularProducts = sortedProducts.filter((p) => !p.isFeatured);
-
-    featuredProducts.sort((a, b) => {
-      const orderA = a.featuredOrder ?? 0;
-      const orderB = b.featuredOrder ?? 0;
-      if (orderA !== orderB) {
-        return orderA - orderB;
-      }
-      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-    });
-
-    regularProducts.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-
-    sortedProducts.splice(0, sortedProducts.length, ...featuredProducts, ...regularProducts);
-  } else {
-    // Mixed sorting for custom sort choices (e.g. price) or general catalog list
-    if (sortParam === "price-asc") {
-      sortedProducts.sort((a, b) => getFinalPrice(a) - getFinalPrice(b));
-    } else if (sortParam === "price-desc") {
-      sortedProducts.sort((a, b) => getFinalPrice(b) - getFinalPrice(a));
-    } else {
-      // default: newest
-      sortedProducts.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-    }
-  }
+  const { products: sortedProducts, globalMinPrice, globalMaxPrice } = allProductsResult;
 
   // Paginate products
   const totalCount = sortedProducts.length;

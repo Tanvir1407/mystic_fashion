@@ -81,9 +81,9 @@ const NAV_LINKS = [
     label: "Setup",
     icon: <Settings className="w-4 h-4 shrink-0" />,
     children: [
-      { href: "/admin/settings", label: "General Settings", exact: true, action: "VIEW", subject: "GENERAL_SETTINGS" },
-      { href: "/admin/settings/commission", label: "Commission Settings", action: "VIEW", subject: "GENERAL_SETTINGS" },
-      { href: "/admin/settings/footer", label: "Footer Settings", action: "VIEW", subject: "FOOTER_SETTINGS" },
+      { href: "/admin/settings?tab=general", label: "General Settings", exact: false, action: "VIEW", subject: "GENERAL_SETTINGS" },
+      { href: "/admin/settings?tab=commission", label: "Commission Settings", action: "VIEW", subject: "GENERAL_SETTINGS" },
+      { href: "/admin/settings?tab=footer", label: "Footer Settings", action: "VIEW", subject: "FOOTER_SETTINGS" },
       { href: "/admin/settings/audit-logs", label: "Activity Logs", action: "VIEW", subject: "ACTIVITY_LOGS" },
       { href: "/admin/staff", label: "Staff Members", action: "VIEW", subject: "STAFF_MEMBERS" },
       { href: "/admin/setup/roles", label: "Role Management", action: "VIEW", subject: "ROLE_MANAGEMENT" },
@@ -284,7 +284,7 @@ export default function AdminLayoutClient({ children, session }: { children: Rea
                         const currentTab = searchParams?.get("tab");
                         let isChildActive = false;
                         if (childTab) {
-                          isChildActive = pathname === childPath && currentTab === childTab;
+                          isChildActive = pathname === childPath && (currentTab === childTab || (!currentTab && childTab === "general"));
                         } else if (childPath === "/admin/accounting") {
                           isChildActive = pathname === childPath && (!currentTab || currentTab === "overview");
                         } else {

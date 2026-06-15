@@ -40,6 +40,14 @@ export function isRouteAllowed(pathname: string, session: any): boolean {
   if (!session) return false;
   if (session.roleName === "SUPERADMIN") return true;
 
+  // Custom check for settings path
+  if (pathname === "/admin/settings" || pathname === "/admin/settings/") {
+    return session.permissions?.some(
+      (p: any) => (p.action === "VIEW" && p.subject === "GENERAL_SETTINGS") ||
+                  (p.action === "VIEW" && p.subject === "FOOTER_SETTINGS")
+    ) || false;
+  }
+
   // Find the matching permission rule for this route
   const rule = ROUTE_PERMISSIONS.find(r => {
     if (r.exact) {
@@ -91,8 +99,8 @@ export function getRedirectUrlForSession(session: any): string {
     { href: "/admin/hero", action: "VIEW", subject: "HERO_SLIDES" },
     { href: "/admin/size-charts", action: "VIEW", subject: "SIZE_CHARTS" },
     { href: "/admin/settings/audit-logs", action: "VIEW", subject: "ACTIVITY_LOGS" },
-    { href: "/admin/settings", action: "VIEW", subject: "GENERAL_SETTINGS" },
-    { href: "/admin/settings/footer", action: "VIEW", subject: "FOOTER_SETTINGS" },
+    { href: "/admin/settings?tab=general", action: "VIEW", subject: "GENERAL_SETTINGS" },
+    { href: "/admin/settings?tab=footer", action: "VIEW", subject: "FOOTER_SETTINGS" },
     { href: "/admin/staff", action: "VIEW", subject: "STAFF_MEMBERS" },
     { href: "/admin/setup/roles", action: "VIEW", subject: "ROLE_MANAGEMENT" },
   ];

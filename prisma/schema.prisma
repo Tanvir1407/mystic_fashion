@@ -333,6 +333,7 @@ model DeliverySetting {
   id           String   @id @default("default")
   insideDhaka  Int      @default(80)
   outsideDhaka Int      @default(150)
+  posFooter    String   @default("Thank you for shopping with Mystic. We hope you love your purchase!")
   updatedAt    DateTime @updatedAt
 }
 

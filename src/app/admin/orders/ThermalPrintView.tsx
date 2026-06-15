@@ -38,14 +38,16 @@ interface ThermalPrintViewProps {
   orders: Order[];
   storePhone?: string;
   storeAddress?: string;
+  posFooter?: string;
 }
 
-export default function ThermalPrintView({ orders, storePhone, storeAddress }: ThermalPrintViewProps) {
+export default function ThermalPrintView({ orders, storePhone, storeAddress, posFooter }: ThermalPrintViewProps) {
   if (!orders || orders.length === 0) return null;
 
   // Use values from props or fall back to requested default values
   const activePhone = storePhone || "01920240230";
   const activeAddress = storeAddress || "H# 68, R# 12, Sector 10, Uttara, Dhaka - 1230, Bangladesh";
+  const activeFooter = posFooter || "Thank you for shopping with Mystic. We hope you love your purchase!";
 
   const formatTime = (dateString: string | Date) => {
     const d = new Date(dateString);
@@ -286,8 +288,8 @@ export default function ThermalPrintView({ orders, storePhone, storeAddress }: T
 
             {/* Footer */}
             <div className="w-full text-center mt-2.5">
-              <p className="text-[8px] text-black/80 font-sans leading-tight font-medium">
-                Thank you for shopping with Mystic. We hope you love your purchase!
+              <p className="text-[8px] text-black/80 font-sans leading-tight font-medium whitespace-pre-line">
+                {activeFooter}
               </p>
               <p className="text-[8px] text-black/80 font-sans leading-normal font-normal mt-1 tracking-wider uppercase">
                 Software By: Omega Solution

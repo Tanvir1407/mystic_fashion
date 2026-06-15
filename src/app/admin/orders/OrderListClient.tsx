@@ -28,6 +28,7 @@ export default function OrderListClient({
   availableTags = [],
   storePhone = "01920240230",
   storeAddress = "H# 68, R# 12, Sector 10, Uttara, Dhaka - 1230, Bangladesh",
+  posFooter = "Thank you for shopping with Mystic. We hope you love your purchase!",
   canCreate,
   canEdit,
   canDelete,
@@ -45,6 +46,7 @@ export default function OrderListClient({
   availableTags?: string[];
   storePhone?: string;
   storeAddress?: string;
+  posFooter?: string;
   canCreate: boolean;
   canEdit: boolean;
   canDelete: boolean;
@@ -261,6 +263,7 @@ export default function OrderListClient({
           orders={selectedOrdersToPrint}
           storePhone={storePhone}
           storeAddress={storeAddress}
+          posFooter={posFooter}
         />
       )}
 

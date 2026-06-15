@@ -104,12 +104,22 @@ export async function getDeliverySettings() {
   });
 }
 
-async function _updateDeliverySettings(insideDhaka: number, outsideDhaka: number) {
+async function _updateDeliverySettings(insideDhaka?: number, outsideDhaka?: number, posFooter?: string) {
   try {
+    const updateData: any = {};
+    if (insideDhaka !== undefined) updateData.insideDhaka = insideDhaka;
+    if (outsideDhaka !== undefined) updateData.outsideDhaka = outsideDhaka;
+    if (posFooter !== undefined) updateData.posFooter = posFooter;
+
     const settings = await prisma.deliverySetting.upsert({
       where: { id: "default" },
-      update: { insideDhaka, outsideDhaka },
-      create: { id: "default", insideDhaka, outsideDhaka },
+      update: updateData,
+      create: { 
+        id: "default", 
+        insideDhaka: insideDhaka ?? 80, 
+        outsideDhaka: outsideDhaka ?? 150, 
+        posFooter: posFooter ?? "Thank you for shopping with Mystic. We hope you love your purchase!" 
+      },
     });
     revalidatePath("/admin/settings");
     revalidatePath("/");
@@ -131,7 +141,13 @@ export const updateDeliverySettings = withAuditLog(_updateDeliverySettings, {
   getEntityId: () => "default",
   fetchBefore: (id) => prisma.deliverySetting.findUnique({ where: { id } }),
   fetchAfter: (id) => prisma.deliverySetting.findUnique({ where: { id } }),
-  describe: (args) => `Updated delivery settings (Inside: ৳${args[0]}, Outside: ৳${args[1]})`,
+  describe: (args) => {
+    const parts = [];
+    if (args[0] !== undefined) parts.push(`Inside: ৳${args[0]}`);
+    if (args[1] !== undefined) parts.push(`Outside: ৳${args[1]}`);
+    if (args[2] !== undefined) parts.push(`POS Footer updated`);
+    return `Updated delivery settings (${parts.join(", ")})`;
+  },
 });
 
 // ─── INVENTORY SETTINGS ───────────────────────────────────────────────────────

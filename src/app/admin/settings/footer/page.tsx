@@ -1,8 +1,5 @@
-import { getFooterConfig } from "./actions";
-import FooterSettingsClient from "./FooterSettingsClient";
+import { redirect } from "next/navigation";
 
-export default async function FooterSettingsPage() {
-  const initialData = await getFooterConfig();
-  
-  return <FooterSettingsClient initialData={initialData} />;
+export default function FooterSettingsPageRedirect() {
+  redirect("/admin/settings?tab=footer");
 }

@@ -74,10 +74,11 @@ export default async function AdminOrdersPage({ searchParams }: { searchParams: 
   let totalCount = 0;
   let storePhone = "01920240230";
   let storeAddress = "H# 68, R# 12, Sector 10, Uttara, Dhaka - 1230, Bangladesh";
+  let posFooter = "Thank you for shopping with Mystic. We hope you love your purchase!";
   let uniqueTags: string[] = [];
 
   try {
-    const [fetchedOrders, fetchedCount, footerConfig, ordersWithTags] = await Promise.all([
+    const [fetchedOrders, fetchedCount, footerConfig, ordersWithTags, deliverySetting] = await Promise.all([
       prisma.order.findMany({
         where: whereClause,
         skip: (page - 1) * PER_PAGE,
@@ -98,7 +99,8 @@ export default async function AdminOrdersPage({ searchParams }: { searchParams: 
       getFooterData(),
       prisma.order.findMany({
         select: { tags: true }
-      })
+      }),
+      prisma.deliverySetting.findUnique({ where: { id: "default" } })
     ]);
     orders = fetchedOrders;
     totalCount = fetchedCount;
@@ -112,6 +114,10 @@ export default async function AdminOrdersPage({ searchParams }: { searchParams: 
       if (footerConfig.contactAddress && footerConfig.contactAddress !== "Dhaka, Bangladesh" && footerConfig.contactAddress.trim() !== "") {
         storeAddress = footerConfig.contactAddress;
       }
+    }
+
+    if (deliverySetting?.posFooter) {
+      posFooter = deliverySetting.posFooter;
     }
   } catch (error) {
     console.error("Error fetching orders:", error);
@@ -132,6 +138,7 @@ export default async function AdminOrdersPage({ searchParams }: { searchParams: 
       availableTags={uniqueTags}
       storePhone={storePhone}
       storeAddress={storeAddress}
+      posFooter={posFooter}
       canCreate={canCreate}
       canEdit={canEdit}
       canDelete={canDelete}
