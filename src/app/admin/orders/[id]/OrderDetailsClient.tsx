@@ -730,23 +730,6 @@ export default function OrderDetailsClient({
           </div>
         </div>
 
-        {/* Pathao Consignment ID */}
-        {order.pathaoConsignmentId && (
-          <div className="flex items-center justify-between bg-indigo-50 border border-indigo-100 px-4 py-2.5 rounded-xl">
-            <div>
-              <span className="block text-[10px] uppercase font-bold text-indigo-400 tracking-wider mb-0.5">Pathao Consignment ID</span>
-              <span className="text-sm font-black text-indigo-700 tracking-widest font-mono">{order.pathaoConsignmentId}</span>
-            </div>
-            <button
-              onClick={() => handleCopy(order.pathaoConsignmentId)}
-              className="p-2 bg-white border border-indigo-200 rounded-lg text-indigo-500 hover:border-indigo-300 transition-all shadow-sm"
-              title="Copy"
-            >
-              {copied ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
-            </button>
-          </div>
-        )}
-
         {/* Main 2-column layout */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
 
@@ -760,15 +743,30 @@ export default function OrderDetailsClient({
                   <Compass className="w-4 h-4 text-[#800020]" />
                   Shipment Status
                 </h2>
-                {order.status === "SHIPPED" && order.pathaoConsignmentId && (
-                  <div className="flex items-center gap-1.5">
-                    <span className="relative flex h-2 w-2">
-                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75" />
-                      <span className="relative inline-flex rounded-full h-2 w-2 bg-indigo-500" />
-                    </span>
-                    <span className="text-[10px] font-bold text-indigo-500 uppercase tracking-wider">Live</span>
-                  </div>
-                )}
+                <div className="flex items-center gap-3">
+                  {order.status === "SHIPPED" && order.pathaoConsignmentId && (
+                    <div className="flex items-center gap-1.5">
+                      <span className="relative flex h-2 w-2">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75" />
+                        <span className="relative inline-flex rounded-full h-2 w-2 bg-indigo-500" />
+                      </span>
+                      <span className="text-[10px] font-bold text-indigo-500 uppercase tracking-wider">Live</span>
+                    </div>
+                  )}
+                  {order.pathaoConsignmentId && (
+                    <div className="flex items-center gap-1.5 px-2 py-0.5">
+                      <span className="text-[10px] font-bold">Pathao ID:</span>
+                      <span className="text-xs font-mono font-semibold text-indigo-600 select-all">{order.pathaoConsignmentId}</span>
+                      <button
+                        onClick={() => handleCopy(order.pathaoConsignmentId)}
+                        className="p-1 hover:bg-indigo-100 text-indigo-500 rounded transition-colors"
+                        title="Copy"
+                      >
+                        {copied ? <Check className="w-3 h-3 text-emerald-500" /> : <Copy className="w-3 h-3" />}
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
               <div className="px-5 py-5">
                 {isSpecial ? (
@@ -884,8 +882,8 @@ export default function OrderDetailsClient({
                           )}
                           {returnedQty > 0 && (
                             <span className={`text-[9px] font-black px-2 py-0.5 rounded uppercase tracking-wider flex items-center gap-1 ${fullyReturned
-                                ? "bg-red-100 text-red-700 border border-red-200"
-                                : "bg-rose-50 text-rose-600 border border-rose-150"
+                              ? "bg-red-100 text-red-700 border border-red-200"
+                              : "bg-rose-50 text-rose-600 border border-rose-150"
                               }`}>
                               {fullyReturned ? "Fully Returned" : `Returned: ${returnedQty}`}
                             </span>
