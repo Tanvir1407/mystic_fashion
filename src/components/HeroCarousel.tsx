@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import Link from "next/link";
 import { Swiper, SwiperSlide } from "swiper/react";
 import { Autoplay, Navigation, Pagination } from "swiper/modules";
@@ -11,20 +12,20 @@ interface Slide {
 }
 
 export default function HeroCarousel({ slides }: { slides: Slide[] }) {
+  useEffect(() => {
+    const href = '/css/swiper/swiper-bundle.min.css';
+    if (!document.querySelector(`link[href="${href}"]`)) {
+      const link = document.createElement('link');
+      link.rel = 'stylesheet';
+      link.href = href;
+      document.head.appendChild(link);
+    }
+  }, []);
+
   if (slides.length === 0) return null;
 
   return (
     <div className="container mx-auto relative overflow-hidden mt-0 md:mt-2 px-4 md:px-0">
-      {/* Async Loader for Swiper CSS */}
-      <link 
-        rel="stylesheet" 
-        href="/css/swiper/swiper-bundle.min.css" 
-        media="print" 
-        onLoad={(e) => { e.currentTarget.media = 'all'; }} 
-      />
-      <noscript>
-        <link rel="stylesheet" href="/css/swiper/swiper-bundle.min.css" />
-      </noscript>
 
       {/* Critical CSS for uninitialized slider to prevent FOUC */}
       <style dangerouslySetInnerHTML={{ __html: `
