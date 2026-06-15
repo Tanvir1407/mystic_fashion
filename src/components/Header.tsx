@@ -131,12 +131,14 @@ export default function Header() {
             <button
               className="p-1 text-foreground"
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+              aria-label="Toggle navigation menu"
             >
               {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
             </button>
             <button
               onClick={() => setIsSearchOpen(true)}
               className="p-1 text-foreground hover:text-primary transition-colors flex items-center justify-center"
+              aria-label="Search products"
             >
               <Search className="w-4 h-6" />
             </button>
@@ -194,6 +196,7 @@ export default function Header() {
             <button
               onClick={toggleCart}
               className="relative p-2 text-foreground rounded-full transition-colors flex items-center justify-center group"
+              aria-label="Open cart"
             >
               <svg width="21" height="22" viewBox="0 0 21 22" fill="none" xmlns="http://www.w3.org/2000/svg" className="group-hover:scale-110 transition-transform">
                 <path fill-rule="evenodd" clip-rule="evenodd" d="M6.48626 20.5H14.8341C17.9004 20.5 20.2528 19.3924 19.5847 14.9348L18.8066 8.89359C18.3947 6.66934 16.976 5.81808 15.7311 5.81808H5.55262C4.28946 5.81808 2.95308 6.73341 2.4771 8.89359L1.69907 14.9348C1.13157 18.889 3.4199 20.5 6.48626 20.5Z" stroke="currentColor" stroke-width="1.5" strokeLinecap="round" strokeLinejoin="round"></path>
@@ -211,6 +214,7 @@ export default function Header() {
               <button
                 onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
                 className="p-1 text-foreground hover:text-primary transition-colors flex items-center justify-center"
+                aria-label="Toggle user menu"
               >
                 <User className="w-6 h-6" />
               </button>

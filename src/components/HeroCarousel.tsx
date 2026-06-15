@@ -1,11 +1,9 @@
 "use client";
 
+import { useEffect } from "react";
 import Link from "next/link";
 import { Swiper, SwiperSlide } from "swiper/react";
 import { Autoplay, Navigation, Pagination } from "swiper/modules";
-import "swiper/css";
-import "swiper/css/navigation";
-import "swiper/css/pagination";
 
 interface Slide {
   id: string;
@@ -14,13 +12,42 @@ interface Slide {
 }
 
 export default function HeroCarousel({ slides }: { slides: Slide[] }) {
+  useEffect(() => {
+    const href = '/css/swiper/swiper-bundle.min.css';
+    if (!document.querySelector(`link[href="${href}"]`)) {
+      const link = document.createElement('link');
+      link.rel = 'stylesheet';
+      link.href = href;
+      document.head.appendChild(link);
+    }
+  }, []);
+
   if (slides.length === 0) return null;
 
   return (
-    // 1. Added `container mx-auto` to align with page content
-    // 2. Maintained mt-0 md:mt-2 for consistent spacing
     <div className="container mx-auto relative overflow-hidden mt-0 md:mt-2 px-4 md:px-0">
+
+      {/* Critical CSS for uninitialized slider to prevent FOUC */}
+      <style dangerouslySetInnerHTML={{ __html: `
+        .swiper:not(.swiper-initialized) {
+          display: flex;
+          overflow: hidden;
+        }
+        .swiper:not(.swiper-initialized) .swiper-wrapper {
+          display: flex;
+          width: 100%;
+        }
+        .swiper:not(.swiper-initialized) .swiper-slide {
+          flex-shrink: 0;
+          width: 100%;
+        }
+        .swiper:not(.swiper-initialized) .swiper-slide:not(:first-child) {
+          display: none !important;
+        }
+      `}} />
+
       <Swiper
+
         modules={[Autoplay, Navigation, Pagination]}
         spaceBetween={0}
         slidesPerView={1}

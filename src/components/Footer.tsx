@@ -33,6 +33,7 @@ export default function Footer({ config }: { config: FooterData | null }) {
                   target="_blank"
                   rel="noopener noreferrer"
                   className="w-9 h-9 rounded-full border border-slate-300 flex items-center justify-center text-zinc-400 hover:border-primary hover:text-primary transition-colors duration-200"
+                  aria-label="Follow us on Facebook"
                 >
                   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M18 2h-3a5 5 0 00-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 011-1h3z" />
@@ -45,6 +46,7 @@ export default function Footer({ config }: { config: FooterData | null }) {
                   target="_blank"
                   rel="noopener noreferrer"
                   className="w-9 h-9 rounded-full border border-slate-300 flex items-center justify-center text-zinc-400 hover:border-primary hover:text-primary transition-colors duration-200"
+                  aria-label="Follow us on Instagram"
                 >
                   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M16 2H8a6 6 0 00-6 6v8a6 6 0 006 6h8a6 6 0 006-6V8a6 6 0 00-6-6zm-4 15a5 5 0 110-10 5 5 0 010 10zm5.5-10a1.5 1.5 0 110-3 1.5 1.5 0 010 3z" />
@@ -57,6 +59,7 @@ export default function Footer({ config }: { config: FooterData | null }) {
                   target="_blank"
                   rel="noopener noreferrer"
                   className="w-9 h-9 rounded-full border border-slate-300 flex items-center justify-center text-zinc-400 hover:border-primary hover:text-primary transition-colors duration-200"
+                  aria-label="Contact us on WhatsApp"
                 >
                   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M12 21a9 9 0 1 00-18 9 9 0 000 18zm0 0L8 8m8 8l-4-4" /> {/* Simplified WhatsApp placeholder icon */}

@@ -1,0 +1,96 @@
+@config "../../tailwind.admin.config.ts";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
+  --primary: #800020;
+  --primary-foreground: #ffffff;
+  color-scheme: light;
+}
+
+body {
+  color: var(--foreground);
+  background: var(--background);
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+/* ==========================================================================
+   GLOBAL PRINT OVERRIDES (Admin Layout Only)
+   ========================================================================== */
+@media print {
+  html,
+  body {
+    height: auto !important;
+    min-height: 100% !important;
+    max-height: none !important;
+    overflow: visible !important;
+    overflow-x: visible !important;
+    overflow-y: visible !important;
+    position: static !important;
+    display: block !important;
+    contain: none !important;
+  }
+
+  #__next,
+  [data-nextjs-scroll-focus-boundary] {
+    height: auto !important;
+    min-height: 100% !important;
+    max-height: none !important;
+    overflow: visible !important;
+    position: static !important;
+    display: block !important;
+    contain: none !important;
+  }
+
+  body>div,
+  body>main,
+  body>section,
+  body>aside,
+  body>div>div,
+  body>div>main {
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    overflow: visible !important;
+    position: static !important;
+    display: block !important;
+    contain: none !important;
+  }
+
+  .h-screen {
+    height: auto !important;
+  }
+
+  .overflow-hidden {
+    overflow: visible !important;
+  }
+
+  .overflow-x-hidden {
+    overflow-x: visible !important;
+  }
+
+  .overflow-y-auto {
+    overflow: visible !important;
+  }
+
+  .overflow-clip {
+    overflow: visible !important;
+  }
+
+  .flex-1 {
+    flex: none !important;
+  }
+
+  aside,
+  header,
+  nav,
+  footer,
+  .print\:hidden,
+  [class*="print:hidden"],
+  .no-print {
+    display: none !important;
+  }
+}

@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import { Inter, Cormorant_Garamond } from "next/font/google";
-import "./globals.css";
+import "./globals-storefront.css";
 import Toaster from "@/components/Toaster";
+
 
 const inter = Inter({ subsets: ["latin"] });
 const cormorant = Cormorant_Garamond({
