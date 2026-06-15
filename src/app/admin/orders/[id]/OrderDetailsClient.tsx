@@ -274,6 +274,7 @@ export default function OrderDetailsClient({
     pathaoZoneId: order.pathaoZoneId || null,
     pathaoAreaId: order.pathaoAreaId || null,
     specialInstruction: order.specialInstruction || "",
+    isStorePickup: order.isStorePickup,
   });
 
   const [cities, setCities] = useState<{ value: string; label: string }[]>([]);
@@ -408,7 +409,7 @@ export default function OrderDetailsClient({
       advancePaid: formData.advancePaid,
       discountAmount: formData.discountAmount,
       deliveryCharge: formData.deliveryCharge,
-      isStorePickup: order.isStorePickup,
+      isStorePickup: formData.isStorePickup,
       pathaoCityId: formData.pathaoCityId,
       pathaoZoneId: formData.pathaoZoneId,
       pathaoAreaId: formData.pathaoAreaId,
@@ -487,6 +488,7 @@ export default function OrderDetailsClient({
       pathaoZoneId: order.pathaoZoneId || null,
       pathaoAreaId: order.pathaoAreaId || null,
       specialInstruction: order.specialInstruction || "",
+      isStorePickup: order.isStorePickup,
     });
   };
 
@@ -540,7 +542,7 @@ export default function OrderDetailsClient({
   const baseSubtotal = formData.items.reduce((acc: number, item: any) => acc + item.price * item.quantity, 0);
   const totalDTFCost = formData.items.reduce((acc: number, item: any) => acc + (item.requiresPrint ? item.printCost * item.quantity : 0), 0);
   const discount = formData.discountAmount || 0;
-  const deliveryCharge = order.isStorePickup
+  const deliveryCharge = formData.isStorePickup
     ? (isEditing ? formData.deliveryCharge : order.deliveryCharge)
     : formData.district === "Dhaka"
       ? deliverySettings.insideDhaka
@@ -1021,8 +1023,8 @@ export default function OrderDetailsClient({
 
                 {/* Delivery */}
                 <div className="flex justify-between items-center text-sm">
-                  <span className="text-slate-500">Shipping {!order.isStorePickup && formData.district && <span className="text-[10px] text-slate-400 ml-1">({formData.district})</span>}</span>
-                  {isEditing && order.isStorePickup ? (
+                  <span className="text-slate-500">Shipping {!formData.isStorePickup && formData.district && <span className="text-[10px] text-slate-400 ml-1">({formData.district})</span>}</span>
+                  {isEditing && formData.isStorePickup ? (
                     <div className="relative">
                       <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-slate-400 font-bold">৳</span>
                       <input
@@ -1174,72 +1176,101 @@ export default function OrderDetailsClient({
               <div className="p-4 space-y-3">
                 {isEditing ? (
                   <>
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Select City</label>
-                      <CustomSelect
-                        options={[
-                          { value: "", label: "-- None / Direct Address --" },
-                          ...cities
-                        ]}
-                        value={formData.pathaoCityId?.toString() || ""}
-                        onChange={(val) => {
-                          const valNum = val ? parseInt(val) : null;
-                          const city = cities.find((c) => c.value === val);
-                          setFormData({
-                            ...formData,
-                            pathaoCityId: valNum,
-                            pathaoZoneId: null,
-                            pathaoAreaId: null,
-                            district: city ? city.label : formData.district,
-                          });
-                        }}
-                        placeholder={loadingCities ? "Loading cities..." : "Select City"}
-                        searchable
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
-                        Pathao Zone {formData.pathaoCityId ? <span className="text-red-500">*</span> : ""}
+                    <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+                      <span className="text-xs font-bold text-slate-700">Store Pickup</span>
+                      <label className="relative inline-flex items-center cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={formData.isStorePickup}
+                          onChange={(e) => {
+                            const checked = e.target.checked;
+                            setFormData({
+                              ...formData,
+                              isStorePickup: checked,
+                              district: checked ? "Self Pickup" : (formData.district === "Self Pickup" ? "Dhaka" : formData.district),
+                              deliveryCharge: checked ? 0 : formData.deliveryCharge,
+                              // Clear Pathao values if it's store pickup
+                              pathaoCityId: checked ? null : formData.pathaoCityId,
+                              pathaoZoneId: checked ? null : formData.pathaoZoneId,
+                              pathaoAreaId: checked ? null : formData.pathaoAreaId,
+                            });
+                          }}
+                          className="w-3.5 h-3.5 text-indigo-600 focus:ring-indigo-500 rounded border-slate-300 cursor-pointer"
+                        />
                       </label>
-                      <CustomSelect
-                        options={[
-                          { value: "", label: "-- Select Zone --" },
-                          ...zones
-                        ]}
-                        value={formData.pathaoZoneId?.toString() || ""}
-                        onChange={(val) => {
-                          const valNum = val ? parseInt(val) : null;
-                          setFormData({
-                            ...formData,
-                            pathaoZoneId: valNum,
-                            pathaoAreaId: null,
-                          });
-                        }}
-                        disabled={!formData.pathaoCityId || loadingZones}
-                        placeholder={loadingZones ? "Loading zones..." : (!formData.pathaoCityId ? "First select Pathao City" : "Select Zone")}
-                        searchable
-                      />
                     </div>
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Pathao Area</label>
-                      <CustomSelect
-                        options={[
-                          { value: "", label: "-- Select Area --" },
-                          ...areas
-                        ]}
-                        value={formData.pathaoAreaId?.toString() || ""}
-                        onChange={(val) => {
-                          const valNum = val ? parseInt(val) : null;
-                          setFormData({
-                            ...formData,
-                            pathaoAreaId: valNum,
-                          });
-                        }}
-                        disabled={!formData.pathaoZoneId || loadingAreas}
-                        placeholder={loadingAreas ? "Loading areas..." : (!formData.pathaoZoneId ? "First select Pathao Zone" : "Select Area")}
-                        searchable
-                      />
-                    </div>
+
+                    {!formData.isStorePickup && (
+                      <>
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Select City</label>
+                          <CustomSelect
+                            options={[
+                              { value: "", label: "-- None / Direct Address --" },
+                              ...cities
+                            ]}
+                            value={formData.pathaoCityId?.toString() || ""}
+                            onChange={(val) => {
+                              const valNum = val ? parseInt(val) : null;
+                              const city = cities.find((c) => c.value === val);
+                              setFormData({
+                                ...formData,
+                                pathaoCityId: valNum,
+                                pathaoZoneId: null,
+                                pathaoAreaId: null,
+                                district: city ? city.label : formData.district,
+                              });
+                            }}
+                            placeholder={loadingCities ? "Loading cities..." : "Select City"}
+                            searchable
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                            Pathao Zone {formData.pathaoCityId ? <span className="text-red-500">*</span> : ""}
+                          </label>
+                          <CustomSelect
+                            options={[
+                              { value: "", label: "-- Select Zone --" },
+                              ...zones
+                            ]}
+                            value={formData.pathaoZoneId?.toString() || ""}
+                            onChange={(val) => {
+                              const valNum = val ? parseInt(val) : null;
+                              setFormData({
+                                ...formData,
+                                pathaoZoneId: valNum,
+                                pathaoAreaId: null,
+                              });
+                            }}
+                            disabled={!formData.pathaoCityId || loadingZones}
+                            placeholder={loadingZones ? "Loading zones..." : (!formData.pathaoCityId ? "First select Pathao City" : "Select Zone")}
+                            searchable
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Pathao Area</label>
+                          <CustomSelect
+                            options={[
+                              { value: "", label: "-- Select Area --" },
+                              ...areas
+                            ]}
+                            value={formData.pathaoAreaId?.toString() || ""}
+                            onChange={(val) => {
+                              const valNum = val ? parseInt(val) : null;
+                              setFormData({
+                                ...formData,
+                                pathaoAreaId: valNum,
+                              });
+                            }}
+                            disabled={!formData.pathaoZoneId || loadingAreas}
+                            placeholder={loadingAreas ? "Loading areas..." : (!formData.pathaoZoneId ? "First select Pathao Zone" : "Select Area")}
+                            searchable
+                          />
+                        </div>
+                      </>
+                    )}
+
                     <div className="space-y-1">
                       <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Address</label>
                       <textarea
@@ -1249,16 +1280,19 @@ export default function OrderDetailsClient({
                         className="w-full text-sm px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:border-slate-400 text-slate-700 resize-none"
                       />
                     </div>
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Pathao Special Instruction</label>
-                      <textarea
-                        value={formData.specialInstruction}
-                        onChange={(e) => setFormData({ ...formData, specialInstruction: e.target.value })}
-                        rows={2}
-                        placeholder="Add special instructions for Pathao delivery rider..."
-                        className="w-full text-sm px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:border-slate-400 text-slate-700 resize-none"
-                      />
-                    </div>
+
+                    {!formData.isStorePickup && (
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Pathao Special Instruction</label>
+                        <textarea
+                          value={formData.specialInstruction}
+                          onChange={(e) => setFormData({ ...formData, specialInstruction: e.target.value })}
+                          rows={2}
+                          placeholder="Add special instructions for Pathao delivery rider..."
+                          className="w-full text-sm px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:border-slate-400 text-slate-700 resize-none"
+                        />
+                      </div>
+                    )}
                   </>
                 ) : (
                   <div className="space-y-3.5">
