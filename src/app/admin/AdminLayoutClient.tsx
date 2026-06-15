@@ -34,6 +34,22 @@ import {
 
 const NAV_LINKS = [
   { href: "/admin", icon: <LayoutDashboard className="w-4 h-4 shrink-0" />, label: "Dashboard", exact: true, action: "VIEW", subject: "DASHBOARD" },
+
+  {
+    label: "Sales & Finance",
+    icon: <ShoppingCart className="w-4 h-4 shrink-0" />,
+    children: [
+      { href: "/admin/orders", label: "Orders", action: "VIEW", subject: "ORDERS" },
+      { href: "/admin/orders/analytics", label: "Order Analytics", action: "VIEW", subject: "ORDERS" },
+      { href: "/admin/orders/returns", label: "Sales Returns", action: "VIEW", subject: "SALES_RETURNS" },
+      { href: "/admin/customers", label: "Customers", action: "VIEW", subject: "ORDERS" },
+      { href: "/admin/purchases", label: "Purchases", action: "VIEW", subject: "PURCHASES" },
+      { href: "/admin/suppliers", label: "Suppliers", action: "VIEW", subject: "PURCHASES" },
+      { href: "/admin/accounting", label: "Accounting Dashboard", action: "VIEW", subject: "ACCOUNTING" },
+      { href: "/admin/accounting?tab=sales", label: "Sales Journal", action: "VIEW", subject: "ACCOUNTING" },
+      { href: "/admin/accounting?tab=ledger", label: "General Ledger", action: "VIEW", subject: "ACCOUNTING" },
+    ]
+  },
   {
     label: "Inventory",
     icon: <Boxes className="w-4 h-4 shrink-0" />,
@@ -44,20 +60,6 @@ const NAV_LINKS = [
       { href: "/admin/inventory/subcategories", label: "Subcategories", action: "VIEW", subject: "PRODUCTS" },
       { href: "/admin/inventory/adjustments", label: "Stock Adjustments", action: "VIEW", subject: "STOCK_ADJUSTMENTS" },
       { href: "/admin/inventory/low-stock", label: "Low Stock Alerts", action: "VIEW", subject: "LOW_STOCK_ALERTS" },
-    ]
-  },
-  {
-    label: "Sales & Finance",
-    icon: <ShoppingCart className="w-4 h-4 shrink-0" />,
-    children: [
-      { href: "/admin/orders", label: "Orders", action: "VIEW", subject: "ORDERS" },
-      { href: "/admin/orders/returns", label: "Sales Returns", action: "VIEW", subject: "SALES_RETURNS" },
-      { href: "/admin/customers", label: "Customers", action: "VIEW", subject: "ORDERS" },
-      { href: "/admin/purchases", label: "Purchases", action: "VIEW", subject: "PURCHASES" },
-      { href: "/admin/suppliers", label: "Suppliers", action: "VIEW", subject: "PURCHASES" },
-      { href: "/admin/accounting", label: "Accounting Dashboard", action: "VIEW", subject: "ACCOUNTING" },
-      { href: "/admin/accounting?tab=sales", label: "Sales Journal", action: "VIEW", subject: "ACCOUNTING" },
-      { href: "/admin/accounting?tab=ledger", label: "General Ledger", action: "VIEW", subject: "ACCOUNTING" },
     ]
   },
   {
@@ -295,8 +297,8 @@ export default function AdminLayoutClient({ children, session }: { children: Rea
                             key={child.href}
                             href={child.href}
                             className={`flex items-center gap-3 px-3 py-2 text-xs font-medium transition-colors whitespace-nowrap rounded-r-md border-l-2 ${isChildActive
-                                ? "text-gold border-gold bg-gold/5"
-                                : "text-slate-500 border-transparent hover:text-slate-300 hover:bg-slate-800/50"
+                              ? "text-gold border-gold bg-gold/5"
+                              : "text-slate-500 border-transparent hover:text-slate-300 hover:bg-slate-800/50"
                               }`}
                           >
                             {child.label}
@@ -397,7 +399,7 @@ export default function AdminLayoutClient({ children, session }: { children: Rea
                     <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">Logged in as</p>
                     <p className="text-sm font-bold text-slate-800 truncate mt-0.5">{session?.roleName || "Staff"}</p>
                   </div>
-                  
+
                   {session?.userId && (
                     <Link
                       href={`/admin/staff/${session.userId}`}
@@ -438,7 +440,7 @@ export default function AdminLayoutClient({ children, session }: { children: Rea
               ) : (
                 <div className="flex flex-col items-center justify-center min-h-[70vh] px-4">
                   <div className="w-full max-w-md bg-white dark:bg-zinc-900 shadow-[0_4px_20px_rgba(0,0,0,0.05)] border border-slate-100 dark:border-zinc-800 rounded-xl p-8 md:p-10 text-center flex flex-col items-center">
-                    
+
                     {/* Sleek Refined Lock Icon */}
                     <div className="w-12 h-12 bg-[#800020]/5 rounded-full flex items-center justify-center mb-6">
                       <Lock className="w-5 h-5 text-[#800020]" />
@@ -461,7 +463,7 @@ export default function AdminLayoutClient({ children, session }: { children: Rea
                           Go to Working Area
                         </button>
                       )}
-                      
+
                       <button
                         onClick={() => adminLogout()}
                         className="w-full sm:w-auto h-10 px-5 border border-slate-200 hover:bg-slate-50 dark:border-zinc-800 dark:hover:bg-zinc-800 text-slate-600 dark:text-zinc-300 text-xs font-semibold rounded-lg transition-colors flex items-center justify-center"
