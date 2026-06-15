@@ -1,0 +1,41 @@
+@config "../../tailwind.storefront.config.ts";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
+  --primary: #800020;
+  --primary-foreground: #ffffff;
+  color-scheme: light;
+}
+
+body {
+  color: var(--foreground);
+  background: var(--background);
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+@layer components {
+  /* Modern Swiper Pagination */
+  .swiper-pagination-custom .swiper-pagination-bullet {
+    background-color: rgba(255, 255, 255, 0.7);
+    opacity: 1;
+    width: 24px;
+    height: 4px;
+    border-radius: 4px;
+    transition: all 0.3s ease;
+  }
+
+  .swiper-pagination-custom .swiper-pagination-bullet-active {
+    background-color: var(--primary);
+    width: 48px;
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+}

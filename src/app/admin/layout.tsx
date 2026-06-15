@@ -1,5 +1,7 @@
 import { getSession } from "@/lib/auth";
 import AdminLayoutClient from "./AdminLayoutClient";
+import "../globals-admin.css";
+
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const session = await getSession();
