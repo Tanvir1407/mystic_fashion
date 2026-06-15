@@ -751,6 +751,83 @@ export default function OrderDetailsClient({
           {/* ── Left Main Column ── */}
           <div className="lg:col-span-2 space-y-4">
 
+            {/* Live Shipment Milestone Card */}
+            <div className="bg-white border border-slate-200/80 rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.02)] overflow-hidden">
+              <div className="px-5 py-4 border-b border-slate-150 bg-slate-50/50 flex items-center justify-between">
+                <h2 className="text-sm font-bold text-slate-800 flex items-center gap-2">
+                  <Compass className="w-4 h-4 text-[#800020]" />
+                  Shipment Status
+                </h2>
+                {order.status === "SHIPPED" && order.pathaoConsignmentId && (
+                  <div className="flex items-center gap-1.5">
+                    <span className="relative flex h-2 w-2">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75" />
+                      <span className="relative inline-flex rounded-full h-2 w-2 bg-indigo-500" />
+                    </span>
+                    <span className="text-[10px] font-bold text-indigo-500 uppercase tracking-wider">Live</span>
+                  </div>
+                )}
+              </div>
+              <div className="px-5 py-5">
+                {isSpecial ? (
+                  <div className={`flex items-center gap-2 px-4 py-3 rounded-lg text-sm font-bold ${order.status === "CANCELLED"
+                    ? "bg-red-50 text-red-700 border border-red-100"
+                    : order.status === "HOLD"
+                      ? "bg-pink-50 text-pink-700 border border-pink-100"
+                      : "bg-slate-50 text-slate-700 border border-slate-200"
+                    }`}>
+                    <AlertCircle className={`w-4 h-4 shrink-0 ${order.status === "HOLD" ? "text-pink-500" : "text-slate-500"}`} />
+                    Order {order.status === "HOLD" ? "On Hold" : order.status}
+                  </div>
+                ) : (
+                  <div className="relative flex items-start">
+                    <div className="absolute top-4 left-0 right-0 h-[2px] bg-slate-105" style={{ zIndex: 0 }}>
+                      <div
+                        className="h-full bg-emerald-500 transition-all duration-500 ease-in-out"
+                        style={{ width: `${filteredSteps.length > 1 ? (currentIndex / (filteredSteps.length - 1)) * 100 : 0}%` }}
+                      />
+                    </div>
+                    <div className="flex w-full relative">
+                      {filteredSteps.map((step) => {
+                        const stepIdx = STATUS_ORDER.indexOf(step.statusKey);
+                        const isCompleted = stepIdx < currentIndex;
+                        const isActive = stepIdx === currentIndex;
+                        const showPathao = step.statusKey === "SHIPPED" && order.pathaoConsignmentId;
+                        const Icon = step.icon;
+                        return (
+                          <div key={step.statusKey} className="flex flex-col items-center flex-1 min-w-0">
+                            <div className={`relative z-10 w-8 h-8 rounded-full border-2 flex items-center justify-center shrink-0 transition-all duration-300 ${isActive ? "bg-[#800020] border-[#800020] text-white ring-4 ring-[#800020]/15 shadow-md scale-110" : isCompleted ? "bg-emerald-500 border-emerald-500 text-white shadow-sm" : "bg-white border-slate-200 text-slate-400"}`}>
+                              {isCompleted ? <Check className="w-3.5 h-3.5 stroke-[3px]" /> : <Icon className="w-3.5 h-3.5 stroke-[2.5px]" />}
+                            </div>
+                            <span className={`mt-2 text-[10px] font-bold text-center leading-tight px-0.5 uppercase tracking-wide ${isActive ? "text-[#800020]" : isCompleted ? "text-emerald-600" : "text-slate-400"}`}>
+                              {step.title}
+                            </span>
+                            {showPathao && (
+                              <div className="mt-1.5 flex flex-col items-center gap-1">
+                                {pathaoStatus ? (
+                                  <span className={`inline-flex items-center gap-1 text-[9px] font-black px-2 py-0.5 rounded-full border tracking-wider uppercase ${pathaoStatusLower.includes("delivered") ? "bg-emerald-50 text-emerald-600 border-emerald-200" : pathaoStatusLower.includes("cancel") ? "bg-red-50 text-red-500 border-red-200" : "bg-indigo-50 text-indigo-600 border-indigo-200"}`}>
+                                    <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${pathaoStatusLower.includes("delivered") ? "bg-emerald-500" : pathaoStatusLower.includes("cancel") ? "bg-red-500" : "bg-indigo-500"}`} />
+                                    {pathaoStatus}
+                                  </span>
+                                ) : (
+                                  <span className="text-[9px] text-slate-400 italic">Syncing…</span>
+                                )}
+                                {pathaoInfoState?.updated_at && (
+                                  <span className="text-[8px] text-slate-400 text-center leading-tight">
+                                    {new Date(pathaoInfoState.updated_at).toLocaleString("en-GB", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}
+                                  </span>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
             {/* Products Card */}
             <div className="bg-white border border-slate-200/80 rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.02)] overflow-hidden">
               <div className="px-5 py-4 border-b border-slate-150 rounded-t-xl bg-slate-50/50 flex items-center justify-between">
@@ -1016,82 +1093,7 @@ export default function OrderDetailsClient({
               </div>
             </div>
 
-            {/* Live Shipment Milestone Card */}
-            <div className="bg-white border border-slate-200/80 rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.02)] overflow-hidden">
-              <div className="px-5 py-4 border-b border-slate-150 bg-slate-50/50 flex items-center justify-between">
-                <h2 className="text-sm font-bold text-slate-800 flex items-center gap-2">
-                  <Compass className="w-4 h-4 text-[#800020]" />
-                  Shipment Status
-                </h2>
-                {order.status === "SHIPPED" && order.pathaoConsignmentId && (
-                  <div className="flex items-center gap-1.5">
-                    <span className="relative flex h-2 w-2">
-                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75" />
-                      <span className="relative inline-flex rounded-full h-2 w-2 bg-indigo-500" />
-                    </span>
-                    <span className="text-[10px] font-bold text-indigo-500 uppercase tracking-wider">Live</span>
-                  </div>
-                )}
-              </div>
-              <div className="px-5 py-5">
-                {isSpecial ? (
-                  <div className={`flex items-center gap-2 px-4 py-3 rounded-lg text-sm font-bold ${order.status === "CANCELLED"
-                    ? "bg-red-50 text-red-700 border border-red-100"
-                    : order.status === "HOLD"
-                      ? "bg-pink-50 text-pink-700 border border-pink-100"
-                      : "bg-slate-50 text-slate-700 border border-slate-200"
-                    }`}>
-                    <AlertCircle className={`w-4 h-4 shrink-0 ${order.status === "HOLD" ? "text-pink-500" : "text-slate-500"}`} />
-                    Order {order.status === "HOLD" ? "On Hold" : order.status}
-                  </div>
-                ) : (
-                  <div className="relative flex items-start">
-                    <div className="absolute top-4 left-0 right-0 h-[2px] bg-slate-105" style={{ zIndex: 0 }}>
-                      <div
-                        className="h-full bg-emerald-500 transition-all duration-500 ease-in-out"
-                        style={{ width: `${filteredSteps.length > 1 ? (currentIndex / (filteredSteps.length - 1)) * 100 : 0}%` }}
-                      />
-                    </div>
-                    <div className="flex w-full relative">
-                      {filteredSteps.map((step) => {
-                        const stepIdx = STATUS_ORDER.indexOf(step.statusKey);
-                        const isCompleted = stepIdx < currentIndex;
-                        const isActive = stepIdx === currentIndex;
-                        const showPathao = step.statusKey === "SHIPPED" && order.pathaoConsignmentId;
-                        const Icon = step.icon;
-                        return (
-                          <div key={step.statusKey} className="flex flex-col items-center flex-1 min-w-0">
-                            <div className={`relative z-10 w-8 h-8 rounded-full border-2 flex items-center justify-center shrink-0 transition-all duration-300 ${isActive ? "bg-[#800020] border-[#800020] text-white ring-4 ring-[#800020]/15 shadow-md scale-110" : isCompleted ? "bg-emerald-500 border-emerald-500 text-white shadow-sm" : "bg-white border-slate-200 text-slate-400"}`}>
-                              {isCompleted ? <Check className="w-3.5 h-3.5 stroke-[3px]" /> : <Icon className="w-3.5 h-3.5 stroke-[2.5px]" />}
-                            </div>
-                            <span className={`mt-2 text-[10px] font-bold text-center leading-tight px-0.5 uppercase tracking-wide ${isActive ? "text-[#800020]" : isCompleted ? "text-emerald-600" : "text-slate-400"}`}>
-                              {step.title}
-                            </span>
-                            {showPathao && (
-                              <div className="mt-1.5 flex flex-col items-center gap-1">
-                                {pathaoStatus ? (
-                                  <span className={`inline-flex items-center gap-1 text-[9px] font-black px-2 py-0.5 rounded-full border tracking-wider uppercase ${pathaoStatusLower.includes("delivered") ? "bg-emerald-50 text-emerald-600 border-emerald-200" : pathaoStatusLower.includes("cancel") ? "bg-red-50 text-red-500 border-red-200" : "bg-indigo-50 text-indigo-600 border-indigo-200"}`}>
-                                    <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${pathaoStatusLower.includes("delivered") ? "bg-emerald-500" : pathaoStatusLower.includes("cancel") ? "bg-red-500" : "bg-indigo-500"}`} />
-                                    {pathaoStatus}
-                                  </span>
-                                ) : (
-                                  <span className="text-[9px] text-slate-400 italic">Syncing…</span>
-                                )}
-                                {pathaoInfoState?.updated_at && (
-                                  <span className="text-[8px] text-slate-400 text-center leading-tight">
-                                    {new Date(pathaoInfoState.updated_at).toLocaleString("en-GB", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}
-                                  </span>
-                                )}
-                              </div>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
+
           </div>
 
           {/* ── Right Sidebar ── */}
@@ -1141,7 +1143,7 @@ export default function OrderDetailsClient({
                   </p>
                 ) : (
                   <p className="text-[10px] text-slate-400 font-medium">
-                    Select a status to update. Some transitions are restricted based on business rules.
+                    Select a status to update.
                   </p>
                 )}
               </div>
