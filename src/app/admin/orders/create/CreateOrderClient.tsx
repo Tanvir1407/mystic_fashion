@@ -1104,7 +1104,7 @@ export default function CreateOrderClient({
 
           {/* Internal Remarks Textarea component */}
           <div className="space-y-1">
-            <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">ADMINISTRATIVE REMARKS</label>
+            <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">NOTES</label>
             <textarea
               ref={remarksRef}
               value={remarks}
