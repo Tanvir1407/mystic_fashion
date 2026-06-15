@@ -40,11 +40,11 @@ model Staff {
   createdAt          DateTime            @default(now())
   updatedAt          DateTime            @updatedAt
   roleId             String?
-  hasPortalAccess    Boolean             @default(false)
   commissionRate     Float?
-  role               Role?               @relation(fields: [roleId], references: [id])
-  orders             Order[]
+  hasPortalAccess    Boolean             @default(false)
   commissionPayments CommissionPayment[]
+  orders             Order[]
+  role               Role?               @relation(fields: [roleId], references: [id])
 }
 
 model CommissionSetting {
@@ -54,15 +54,15 @@ model CommissionSetting {
 }
 
 model CommissionPayment {
-  id        String   @id @default(uuid())
-  staffId   String
-  amount    Float
-  month     Int
-  year      Int
-  note      String?
-  paidAt    DateTime @default(now())
-  paidById  String?
-  staff     Staff    @relation(fields: [staffId], references: [id], onDelete: Cascade)
+  id       String   @id @default(uuid())
+  staffId  String
+  amount   Float
+  month    Int
+  year     Int
+  note     String?
+  paidAt   DateTime @default(now())
+  paidById String?
+  staff    Staff    @relation(fields: [staffId], references: [id], onDelete: Cascade)
 
   @@index([staffId])
   @@index([year, month])
@@ -98,9 +98,9 @@ model SizeChart {
 model Brand {
   id        String    @id @default(uuid())
   name      String    @unique
-  active    Boolean   @default(true)
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
+  active    Boolean   @default(true)
   deletedAt DateTime?
   products  Product[]
 
@@ -110,29 +110,28 @@ model Brand {
 model Category {
   id            String        @id @default(uuid())
   name          String        @unique
-  active        Boolean       @default(true)
-  image         String?       // Custom homepage image URL (uploaded via admin)
-  sortOrder     Int           @default(0) // Homepage display order (lower = first)
+  image         String?
+  sortOrder     Int           @default(0)
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
+  active        Boolean       @default(true)
   deletedAt     DateTime?
   products      Product[]
   subcategories Subcategory[]
 
   @@index([deletedAt])
-  @@index([sortOrder])
 }
 
 model Subcategory {
   id         String    @id @default(uuid())
   name       String
   categoryId String
-  active     Boolean   @default(true)
   createdAt  DateTime  @default(now())
   updatedAt  DateTime  @updatedAt
+  active     Boolean   @default(true)
   deletedAt  DateTime?
-  category   Category  @relation(fields: [categoryId], references: [id], onDelete: Restrict)
   products   Product[]
+  category   Category  @relation(fields: [categoryId], references: [id])
 
   @@unique([name, categoryId])
   @@index([categoryId])
@@ -142,32 +141,32 @@ model Subcategory {
 model Product {
   id            String           @id @default(uuid())
   name          String
-  slug          String?          @unique
   description   String
   price         Float
   purchasePrice Float?
   images        String[]
   team          String?
   category      String
-  brandId       String?
-  categoryId    String?
-  subcategoryId String?
   sizeChartId   String?
   discountId    String?
   createdAt     DateTime         @default(now())
   updatedAt     DateTime         @updatedAt
-  deletedAt     DateTime?
   isFeatured    Boolean          @default(false)
-  featuredOrder Int              @default(0)
+  featuredOrder  Int              @default(0)
   isPublished   Boolean          @default(true)
+  brandId       String?
+  categoryId    String?
+  subcategoryId String?
   isCustomize   Boolean?         @default(false)
+  slug          String?          @unique
+  deletedAt     DateTime?
   trackStock    Boolean?         @default(false)
   orderItems    OrderItem[]
   brand         Brand?           @relation(fields: [brandId], references: [id])
   categoryRel   Category?        @relation(fields: [categoryId], references: [id])
-  subcategory   Subcategory?     @relation(fields: [subcategoryId], references: [id])
   discount      Discount?        @relation(fields: [discountId], references: [id])
   sizeChart     SizeChart?       @relation(fields: [sizeChartId], references: [id])
+  subcategory   Subcategory?     @relation(fields: [subcategoryId], references: [id])
   variants      ProductVariant[]
   purchaseItems PurchaseItem[]
 
@@ -181,11 +180,11 @@ model ProductVariant {
   id               String            @id @default(uuid())
   productId        String
   size             String
+  stock            Int               @default(0)
+  order            Int               @default(0)
   color            String            @default("Default")
   colorCode        String?
   sku              String?           @unique
-  stock            Int               @default(0)
-  order            Int               @default(0)
   product          Product           @relation(fields: [productId], references: [id], onDelete: Cascade)
   purchaseItems    PurchaseItem[]
   salesReturns     SalesReturn[]
@@ -203,10 +202,8 @@ model Order {
   address             String
   totalAmount         Float
   status              OrderStatus   @default(PENDING)
-  orderSource         OrderSource   @default(Salesman)
   createdAt           DateTime      @default(now())
   updatedAt           DateTime      @updatedAt
-  deletedAt           DateTime?
   advancePaid         Float         @default(0)
   couponCode          String?
   discountAmount      Float         @default(0)
@@ -217,23 +214,25 @@ model Order {
   pathaoCityId        Int?
   pathaoConsignmentId String?
   pathaoZoneId        Int?
-  isStorePickup   Boolean @default(false)
-  deliveryCharge  Float   @default(0)
-  isExchange         Boolean @default(false)
-  exchangeRefOrderId String?
-  exchangeItemNote   String?
-  tags               String[]      @default([])
+  orderSource         OrderSource   @default(Salesman)
   createdById         String?
   customerId          String?
+  deliveryCharge      Float         @default(0)
+  exchangeItemNote    String?
+  exchangeRefOrderId  String?
+  isExchange          Boolean       @default(false)
+  isStorePickup       Boolean       @default(false)
+  deletedAt           DateTime?
   commissionRate      Float?
-  createdBy           Staff?        @relation(fields: [createdById], references: [id], onDelete: SetNull)
-  customer            Customer?     @relation(fields: [customerId], references: [id], onDelete: SetNull)
-  coupon              Coupon?       @relation(fields: [couponCode], references: [code])
+  tags                String[]      @default([])
   couponUsage         CouponUsage?
+  coupon              Coupon?       @relation(fields: [couponCode], references: [code])
+  createdBy           Staff?        @relation(fields: [createdById], references: [id])
+  customer            Customer?     @relation(fields: [customerId], references: [id])
+  exchangeRefOrder    Order?        @relation("ExchangeOrders", fields: [exchangeRefOrderId], references: [id])
+  exchangeOrders      Order[]       @relation("ExchangeOrders")
   items               OrderItem[]
   salesReturns        SalesReturn[]
-  exchangeRefOrder   Order?  @relation("ExchangeOrders", fields: [exchangeRefOrderId], references: [id], onDelete: SetNull)
-  exchangeOrders     Order[] @relation("ExchangeOrders")
 
   @@index([status])
   @@index([createdAt])
@@ -253,41 +252,35 @@ model Coupon {
   createdAt           DateTime      @default(now())
   updatedAt           DateTime      @updatedAt
   deletedAt           DateTime?
-  orders              Order[]
-
-  // Advanced Limits & Conditions
-  minCartValue        Float?
-  maxCartValue        Float?
-  maxDiscountAmount   Float?
+  customerSegment     String?
   excludeSaleItems    Boolean       @default(false)
-  usageLimitTotal     Int?
-  usageLimitPerUser   Int           @default(1)
-  customerSegment     String?       // 'ALL', 'NEW_USER', 'VIP'
-
-  // Whitelists & Blacklists
-  includedProductIds  String[]      @default([])
+  excludedCategoryIds String[]      @default([])
   excludedProductIds  String[]      @default([])
   includedCategoryIds String[]      @default([])
-  excludedCategoryIds String[]      @default([])
-
-  usages              CouponUsage[]
+  includedProductIds  String[]      @default([])
+  maxCartValue        Float?
+  maxDiscountAmount   Float?
+  minCartValue        Float?
+  usageLimitPerUser   Int           @default(1)
+  usageLimitTotal     Int?
   locks               CouponLock[]
+  usages              CouponUsage[]
+  orders              Order[]
 
   @@index([deletedAt])
 }
 
 model CouponUsage {
-  id             String   @id @default(uuid())
+  id             String    @id @default(uuid())
   couponId       String
   customerId     String?
   phone          String
-  orderId        String   @unique
+  orderId        String    @unique
   discountAmount Float
-  usedAt         DateTime @default(now())
-
-  coupon   Coupon    @relation(fields: [couponId], references: [id], onDelete: Restrict)
-  customer Customer? @relation(fields: [customerId], references: [id], onDelete: SetNull)
-  order    Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  usedAt         DateTime  @default(now())
+  coupon         Coupon    @relation(fields: [couponId], references: [id])
+  customer       Customer? @relation(fields: [customerId], references: [id])
+  order          Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
 
   @@index([couponId])
   @@index([customerId])
@@ -301,8 +294,7 @@ model CouponLock {
   sessionId String
   expiresAt DateTime
   createdAt DateTime @default(now())
-
-  coupon Coupon @relation(fields: [couponId], references: [id], onDelete: Cascade)
+  coupon    Coupon   @relation(fields: [couponId], references: [id], onDelete: Cascade)
 
   @@index([couponId])
   @@index([expiresAt])
@@ -322,7 +314,7 @@ model OrderItem {
   printNumber   String?
   requiresPrint Boolean       @default(false)
   order         Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  product       Product       @relation(fields: [productId], references: [id], onDelete: Restrict)
+  product       Product       @relation(fields: [productId], references: [id])
   salesReturns  SalesReturn[]
 
   @@index([orderId])
@@ -349,14 +341,14 @@ model DTFPrintSetting {
 }
 
 model HeroSlide {
-  id        String   @id @default(uuid())
+  id        String    @id @default(uuid())
   image     String
-  link      String   @default("/shop")
+  link      String    @default("/shop")
   label     String?
-  sortOrder Int      @default(0)
-  active    Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  sortOrder Int       @default(0)
+  active    Boolean   @default(true)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
   deletedAt DateTime?
 
   @@index([deletedAt])
@@ -365,31 +357,31 @@ model HeroSlide {
 model Purchase {
   id             String         @id @default(uuid())
   supplierName   String
-  supplierId     String?
   invoiceNumber  String?
   totalAmount    Float
   status         String         @default("PENDING")
   createdAt      DateTime       @default(now())
   updatedAt      DateTime       @updatedAt
-  deletedAt      DateTime?
   discountAmount Float          @default(0)
+  supplierId     String?
+  deletedAt      DateTime?
+  supplier       Supplier?      @relation(fields: [supplierId], references: [id])
   items          PurchaseItem[]
-  supplier       Supplier?      @relation(fields: [supplierId], references: [id], onDelete: SetNull)
 
   @@index([deletedAt])
   @@index([supplierId])
 }
 
 model Supplier {
-  id         String     @id @default(uuid())
-  name       String     @unique
-  phone      String?
-  address    String?
-  active     Boolean    @default(true)
-  createdAt  DateTime   @default(now())
-  updatedAt  DateTime   @updatedAt
-  deletedAt  DateTime?
-  purchases  Purchase[]
+  id        String     @id @default(uuid())
+  name      String     @unique
+  phone     String?
+  address   String?
+  active    Boolean    @default(true)
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  deletedAt DateTime?
+  purchases Purchase[]
 
   @@index([deletedAt])
 }
@@ -401,7 +393,7 @@ model PurchaseItem {
   variantId  String
   quantity   Int
   unitPrice  Float
-  product    Product        @relation(fields: [productId], references: [id], onDelete: Restrict)
+  product    Product        @relation(fields: [productId], references: [id])
   purchase   Purchase       @relation(fields: [purchaseId], references: [id], onDelete: Cascade)
   variant    ProductVariant @relation(fields: [variantId], references: [id])
 
@@ -438,8 +430,8 @@ model ChartOfAccount {
   status       AccountStatus @default(ACTIVE)
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
-  transactions Transaction[]
   journalLines JournalLine[]
+  transactions Transaction[]
 
   @@index([name])
 }
@@ -455,7 +447,7 @@ model Transaction {
   referenceType String?
   createdAt     DateTime        @default(now())
   updatedAt     DateTime        @updatedAt
-  account       ChartOfAccount  @relation(fields: [accountId], references: [id], onDelete: Restrict)
+  account       ChartOfAccount  @relation(fields: [accountId], references: [id])
 
   @@index([accountId])
   @@index([referenceId])
@@ -480,8 +472,8 @@ model JournalLine {
   type           TransactionType
   createdAt      DateTime        @default(now())
   updatedAt      DateTime        @updatedAt
+  account        ChartOfAccount  @relation(fields: [accountId], references: [id])
   journalEntry   JournalEntry    @relation(fields: [journalEntryId], references: [id], onDelete: Cascade)
-  account        ChartOfAccount  @relation(fields: [accountId], references: [id], onDelete: Restrict)
 
   @@index([accountId])
   @@index([journalEntryId])
@@ -509,23 +501,23 @@ model StockAdjustment {
 }
 
 model SalesReturn {
-  id           String         @id @default(uuid())
-  orderId      String
-  orderItemId  String
-  variantId    String
-  quantity     Int
-  returnReason String
-  status       ReturnStatus
-  deliveryLoss Float          @default(0)
-  productLoss  Float          @default(0)
-  printingLoss Float          @default(0)
-  returnCost     Float   @default(0)
-  returnCostPaid Boolean @default(false)
-  processedBy  String?
-  createdAt    DateTime       @default(now())
-  order        Order          @relation(fields: [orderId], references: [id])
-  orderItem    OrderItem      @relation(fields: [orderItemId], references: [id])
-  variant      ProductVariant @relation(fields: [variantId], references: [id])
+  id             String         @id @default(uuid())
+  orderId        String
+  orderItemId    String
+  variantId      String
+  quantity       Int
+  returnReason   String
+  status         ReturnStatus
+  deliveryLoss   Float          @default(0)
+  productLoss    Float          @default(0)
+  printingLoss   Float          @default(0)
+  processedBy    String?
+  createdAt      DateTime       @default(now())
+  returnCost     Float          @default(0)
+  returnCostPaid Boolean        @default(false)
+  order          Order          @relation(fields: [orderId], references: [id])
+  orderItem      OrderItem      @relation(fields: [orderItemId], references: [id])
+  variant        ProductVariant @relation(fields: [variantId], references: [id])
 
   @@index([orderId])
   @@index([orderItemId])
@@ -542,6 +534,69 @@ model LabelSetting {
   showQR      Boolean  @default(false)
   fontSize    Int      @default(8)
   updatedAt   DateTime
+}
+
+model ActivityLog {
+  id            String      @id @default(uuid())
+  userId        String
+  userEmail     String?
+  userRole      String?
+  action        AuditAction
+  entityType    String
+  entityId      String
+  description   String?
+  dataBefore    Json?
+  dataAfter     Json?
+  changedFields String[]
+  timestamp     DateTime    @default(now())
+  ipAddress     String?
+  userAgent     String?
+
+  @@index([userId])
+  @@index([entityType, entityId])
+  @@index([timestamp])
+  @@index([action])
+}
+
+model AuditLogSetting {
+  id            String   @id @default("default")
+  retentionDays Int?
+  updatedAt     DateTime @updatedAt
+}
+
+model Customer {
+  id           String            @id @default(uuid())
+  name         String
+  phone        String            @unique
+  address      String?
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+  email        String?           @unique
+  isActive     Boolean           @default(true)
+  otpCode      String?
+  otpExpiresAt DateTime?
+  passwordHash String?
+  couponUsages CouponUsage[]
+  addresses    CustomerAddress[]
+  orders       Order[]
+}
+
+model CustomerAddress {
+  id           String   @id @default(uuid())
+  customerId   String
+  label        String
+  fullName     String
+  phone        String
+  district     String
+  address      String
+  pathaoCityId Int?
+  pathaoZoneId Int?
+  pathaoAreaId Int?
+  isDefault    Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  customer     Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@index([customerId])
 }
 
 enum DiscountType {
@@ -564,7 +619,6 @@ enum OrderStatus {
   CANCELLED
   RETURNED
   PRINTING
-  HOLD
 }
 
 enum OrderSource {
@@ -605,83 +659,8 @@ enum ReturnStatus {
   WASTAGE
 }
 
-// ─── AUDIT TRAIL ──────────────────────────────────────────────────────────────
-
-model ActivityLog {
-  id            String      @id @default(uuid())
-
-  // ─── WHO ─────────────────────────────────────────────────
-  userId        String                    // Staff/Admin UUID
-  userEmail     String?                   // Denormalized for quick display
-  userRole      String?                   // e.g. "SUPERADMIN", "MANAGER"
-
-  // ─── WHAT ────────────────────────────────────────────────
-  action        AuditAction               // CREATE, UPDATE, DELETE
-  entityType    String                    // e.g. "Product", "Order", "Transaction"
-  entityId      String                    // The UUID/ID of the affected record
-  description   String?                   // Human-readable summary
-  dataBefore    Json?                     // JSONB snapshot BEFORE mutation (null for CREATE)
-  dataAfter     Json?                     // JSONB snapshot AFTER mutation (null for DELETE)
-  changedFields String[]                  // Array of field names that changed (for UPDATE)
-
-  // ─── WHEN ────────────────────────────────────────────────
-  timestamp     DateTime    @default(now())
-
-  // ─── WHERE ───────────────────────────────────────────────
-  ipAddress     String?                   // Extracted from request headers
-  userAgent     String?                   // Browser/device info
-
-  // ─── INDEXING ────────────────────────────────────────────
-  @@index([userId])
-  @@index([entityType, entityId])
-  @@index([timestamp])
-  @@index([action])
-}
-
-model AuditLogSetting {
-  id                String   @id @default("default")
-  retentionDays     Int?                  // null = keep indefinitely (default)
-  updatedAt         DateTime @updatedAt
-}
-
 enum AuditAction {
   CREATE
   UPDATE
   DELETE
-}
-
-model Customer {
-  id           String            @id @default(uuid())
-  name         String
-  phone        String            @unique
-  address      String?
-  email        String?           @unique
-  passwordHash String?
-  isActive     Boolean           @default(true)
-  otpCode      String?
-  otpExpiresAt DateTime?
-  createdAt    DateTime          @default(now())
-  updatedAt    DateTime          @updatedAt
-  orders       Order[]
-  addresses    CustomerAddress[]
-  couponUsages CouponUsage[]
-}
-
-model CustomerAddress {
-  id           String   @id @default(uuid())
-  customerId   String
-  label        String   // e.g., 'Home', 'Office'
-  fullName     String
-  phone        String
-  district     String
-  address      String
-  pathaoCityId Int?
-  pathaoZoneId Int?
-  pathaoAreaId Int?
-  isDefault    Boolean  @default(false)
-  createdAt    DateTime @default(now())
-
-  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
-
-  @@index([customerId])
 }
