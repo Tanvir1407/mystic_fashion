@@ -28,7 +28,8 @@ export default function HeroCarousel({ slides }: { slides: Slide[] }) {
     <div className="container mx-auto relative overflow-hidden mt-0 md:mt-2 px-4 md:px-0">
 
       {/* Critical CSS for uninitialized slider to prevent FOUC */}
-      <style dangerouslySetInnerHTML={{ __html: `
+      <style dangerouslySetInnerHTML={{
+        __html: `
         .swiper:not(.swiper-initialized) {
           display: flex;
           overflow: hidden;
