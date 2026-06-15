@@ -1,10 +1,17 @@
 import Header from "@/components/Header";
-import HeroCarousel from "@/components/HeroCarousel";
 import Footer from "@/components/Footer";
 import SidebarCart from "@/components/SidebarCart";
 import HomepageMain from "@/components/HomepageMain";
 import prisma from "@/lib/prisma";
 import { getFooterData } from "@/lib/footer";
+import nextDynamic from "next/dynamic";
+
+const HeroCarousel = nextDynamic(() => import("@/components/HeroCarousel"), {
+  ssr: false,
+  loading: () => (
+    <div className="container mx-auto mt-0 md:mt-2 px-4 md:px-0 w-full h-[250px] sm:h-[350px] md:h-[450px] lg:h-[550px] xl:h-[650px] bg-slate-100 dark:bg-zinc-900 animate-pulse" />
+  ),
+});
 
 export const dynamic = "force-dynamic";
 
