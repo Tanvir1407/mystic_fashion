@@ -9,7 +9,7 @@ import {
   ClipboardList, Tag, User, ArrowRightLeft, Activity,
   ChevronDown, ChevronUp
 } from "lucide-react";
-import { updateOrderDetails, updateOrderRemark, updateOrderStatus } from "../actions";
+import { updateOrderDetails, updateOrderRemark, updateOrderStatus, requestOrderCancellation } from "../actions";
 import { getPathaoCities, getPathaoZones, getPathaoAreas, getPathaoOrderInfoAction } from "@/app/actions/pathao";
 import { getProductsForOrder } from "@/app/admin/products/actions";
 import { HoldReasonModal } from "@/components/HoldReasonModal";
@@ -83,6 +83,8 @@ export default function OrderDetailsClient({
   backUrl = "/admin/orders",
   commissionInfo = null,
   activityLogs = [],
+  cancellationRequest = null,
+  staffSession = null,
 }: {
   order: any;
   deliverySettings: any;
@@ -93,6 +95,8 @@ export default function OrderDetailsClient({
   backUrl?: string;
   commissionInfo?: { rate: number; amount: number; orderStatus: string } | null;
   activityLogs?: any[];
+  cancellationRequest?: any;
+  staffSession?: any;
 }) {
   const router = useRouter();
   const [isEditing, setIsEditing] = useState(false);
@@ -118,6 +122,8 @@ export default function OrderDetailsClient({
   const [loadingPathao, setLoadingPathao] = useState(false);
   const [localProducts, setLocalProducts] = useState<any[]>(products || []);
   const [loadingProducts, setLoadingProducts] = useState(false);
+  const [cancelRequest, setCancelRequest] = useState<any>(cancellationRequest);
+  const [cancelRequestLoading, setCancelRequestLoading] = useState(false);
 
   const toggleLogExpanded = (logId: string) => {
     setExpandedLogs((prev) => ({ ...prev, [logId]: !prev[logId] }));
@@ -256,6 +262,22 @@ export default function OrderDetailsClient({
   const handleHoldClose = () => {
     setIsHoldModalOpen(false);
     setPendingStatus(null);
+  };
+
+  const handleRequestCancellation = async () => {
+    const reason = prompt("Enter reason for cancellation (optional):");
+    if (reason === null) return; // user cancelled the prompt
+
+    setCancelRequestLoading(true);
+    const staffName = staffSession?.username || "Staff";
+    const result = await requestOrderCancellation(order.id, staffName, reason || undefined);
+    if (result.success) {
+      setCancelRequest({ orderId: order.id, staffName, reason: reason || null, createdAt: new Date() });
+      alert("Cancellation request submitted successfully.");
+    } else {
+      alert(result.error || "Failed to submit cancellation request.");
+    }
+    setCancelRequestLoading(false);
   };
 
   const [formData, setFormData] = useState({
@@ -739,6 +761,8 @@ export default function OrderDetailsClient({
           {/* ── Left Main Column ── */}
           <div className="lg:col-span-2 space-y-4">
 
+
+
             {/* Live Shipment Milestone Card */}
             <div className="bg-white border border-slate-200/80 rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.02)] overflow-hidden">
               <div className="px-5 py-4 border-b border-slate-150 bg-slate-50/50 flex items-center justify-between">
@@ -785,23 +809,23 @@ export default function OrderDetailsClient({
                 ) : (
                   <div className="relative flex items-start">
                     {/* Horizontal progress bar background */}
-                    <div 
-                      className="absolute top-4 h-[2px] bg-slate-200" 
-                      style={{ 
+                    <div
+                      className="absolute top-4 h-[2px] bg-slate-200"
+                      style={{
                         zIndex: 0,
                         left: `${halfStepWidth}%`,
                         right: `${halfStepWidth}%`
-                      }} 
+                      }}
                     />
-                    
+
                     {/* Horizontal progress bar active fill */}
-                    <div 
-                      className="absolute top-4 h-[2px] bg-emerald-500 transition-all duration-500 ease-in-out" 
-                      style={{ 
+                    <div
+                      className="absolute top-4 h-[2px] bg-emerald-500 transition-all duration-500 ease-in-out"
+                      style={{
                         zIndex: 0,
                         left: `${halfStepWidth}%`,
                         width: `${activeWidth}%`
-                      }} 
+                      }}
                     />
                     <div className="flex w-full relative">
                       {filteredSteps.map((step, idx) => {
@@ -1140,27 +1164,48 @@ export default function OrderDetailsClient({
               </div>
               <div className="p-4 space-y-3">
                 {backUrl?.includes("/staff") ? (
-                  <div
-                    className={`w-full text-center text-xs font-black uppercase tracking-wider px-3.5 py-2.5 rounded-lg border ${status === "PENDING" ? "bg-amber-50 text-amber-700 border-amber-200" :
-                      status === "CONFIRMED" ? "bg-blue-50 text-blue-700 border-blue-200" :
-                        status === "PRINTING" ? "bg-cyan-50 text-cyan-700 border-cyan-200" :
-                          status === "PACKAGING" ? "bg-purple-50 text-purple-700 border-purple-200" :
-                            status === "SHIPPED" ? "bg-indigo-50 text-indigo-700 border-indigo-200" :
-                              status === "DELIVERED" ? "bg-green-50 text-green-700 border-green-200" :
-                                status === "RETURNED" ? "bg-rose-50 text-rose-700 border-rose-200" :
-                                  status === "HOLD" ? "bg-pink-50 text-pink-700 border-pink-200" :
-                                    "bg-red-50 text-red-700 border-red-200"
-                      }`}
-                  >
-                    {status === "PENDING" ? "Placed" :
-                     status === "CONFIRMED" ? "Confirmed" :
-                     status === "PRINTING" ? "Printing" :
-                     status === "PACKAGING" ? "Packaged" :
-                     status === "SHIPPED" ? "Shipped" :
-                     status === "DELIVERED" ? "Delivered" :
-                     status === "HOLD" ? "On Hold" :
-                     status === "RETURNED" ? "Returned" :
-                     "Cancelled"}
+                  <div className="space-y-3">
+                    <div
+                      className={`w-full text-center text-xs font-black uppercase tracking-wider px-3.5 py-2.5 rounded-lg border ${status === "PENDING" ? "bg-amber-50 text-amber-700 border-amber-200" :
+                        status === "CONFIRMED" ? "bg-blue-50 text-blue-700 border-blue-200" :
+                          status === "PRINTING" ? "bg-cyan-50 text-cyan-700 border-cyan-200" :
+                            status === "PACKAGING" ? "bg-purple-50 text-purple-700 border-purple-200" :
+                              status === "SHIPPED" ? "bg-indigo-50 text-indigo-700 border-indigo-200" :
+                                status === "DELIVERED" ? "bg-green-50 text-green-700 border-green-200" :
+                                  status === "RETURNED" ? "bg-rose-50 text-rose-700 border-rose-200" :
+                                    status === "HOLD" ? "bg-pink-50 text-pink-700 border-pink-200" :
+                                      "bg-red-50 text-red-700 border-red-200"
+                        }`}
+                    >
+                      {status === "PENDING" ? "Placed" :
+                        status === "CONFIRMED" ? "Confirmed" :
+                          status === "PRINTING" ? "Printing" :
+                            status === "PACKAGING" ? "Packaged" :
+                              status === "SHIPPED" ? "Shipped" :
+                                status === "DELIVERED" ? "Delivered" :
+                                  status === "HOLD" ? "On Hold" :
+                                    status === "RETURNED" ? "Returned" :
+                                      "Cancelled"}
+                    </div>
+
+                    {/* Cancellation Request Section for Staff */}
+                    {status !== "CANCELLED" && status !== "RETURNED" && (
+                      cancelRequest ? (
+                        <div className="flex items-center gap-1.5 px-3 py-2 bg-rose-50 border border-rose-100 rounded-lg text-[10px] text-rose-700 font-semibold justify-center shadow-sm">
+                          <AlertCircle className="w-3.5 h-3.5 text-rose-500 shrink-0" />
+                          <span>Cancellation Requested</span>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={handleRequestCancellation}
+                          disabled={cancelRequestLoading}
+                          className="w-full flex items-center justify-center gap-1.5 px-3.5 py-2.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-lg text-xs font-bold transition duration-200 cursor-pointer shadow-sm disabled:opacity-50"
+                        >
+                          {cancelRequestLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <AlertCircle className="w-3.5 h-3.5" />}
+                          Request Cancellation
+                        </button>
+                      )
+                    )}
                   </div>
                 ) : (
                   <>

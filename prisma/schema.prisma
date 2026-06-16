@@ -687,3 +687,13 @@ model CustomerAddress {
 
   @@index([customerId])
 }
+
+
+
+model CancellationRequest {
+  id        String   @id @default(uuid())
+  orderId   String   @unique
+  staffName String
+  reason    String?
+  createdAt DateTime @default(now())
+}

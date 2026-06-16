@@ -17,6 +17,7 @@ import {
   ImagePlay,
   Tag,
   AlertTriangle,
+  AlertCircle,
   TicketIcon,
   Banknote,
   Menu,
@@ -96,6 +97,7 @@ const NAV_LINKS = [
 
 import { AdminAuthProvider } from "./AdminAuthContext";
 import { isRouteAllowed, getRedirectUrlForSession } from "@/lib/permissions";
+import { getActiveCancellationRequests } from "./orders/actions";
 
 export default function AdminLayoutClient({ children, session }: { children: React.ReactNode; session: any }) {
   const pathname = usePathname();
@@ -105,6 +107,37 @@ export default function AdminLayoutClient({ children, session }: { children: Rea
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [openGroups, setOpenGroups] = useState<string[]>([]);
+  const [notifications, setNotifications] = useState<any[]>([]);
+  const [showNotifications, setShowNotifications] = useState(false);
+
+  const fetchNotifications = async () => {
+    try {
+      const res = await getActiveCancellationRequests();
+      if (res.success && res.data) {
+        setNotifications(res.data);
+      }
+    } catch (err) {
+      console.error("Failed to fetch notifications:", err);
+    }
+  };
+
+  useEffect(() => {
+    if (!session) return;
+    fetchNotifications();
+    const interval = setInterval(fetchNotifications, 30000);
+    return () => clearInterval(interval);
+  }, [session]);
+
+  useEffect(() => {
+    const handleOutsideClick = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (!target.closest(".notifications-dropdown-container")) {
+        setShowNotifications(false);
+      }
+    };
+    document.addEventListener("click", handleOutsideClick);
+    return () => document.removeEventListener("click", handleOutsideClick);
+  }, []);
 
   const isAllowed = isRouteAllowed(pathname, session);
   const hasAnyPermission = useMemo(() => {
@@ -187,13 +220,13 @@ export default function AdminLayoutClient({ children, session }: { children: Rea
         {/* Mobile Backdrop */}
         {isSidebarOpen && (
           <div
-            className="fixed inset-0 z-40 bg-black/50 md:hidden transition-opacity duration-300"
+            className="fixed inset-0 z-[60] bg-black/50 md:hidden transition-opacity duration-300"
             onClick={() => setIsSidebarOpen(false)}
           />
         )}
 
         {/* Sidebar - Dark Enterprise Theme */}
-        <aside className={`fixed inset-y-0 left-0 z-50 bg-slate-900 border-r border-slate-800 text-slate-300 flex flex-col flex-shrink-0 shadow-lg transform transition-all duration-300 ease-in-out print:hidden overflow-x-hidden ${isSidebarOpen ? "translate-x-0 w-64" : "-translate-x-full w-64"
+        <aside className={`fixed inset-y-0 left-0 z-[70] bg-slate-900 border-r border-slate-800 text-slate-300 flex flex-col flex-shrink-0 shadow-lg transform transition-all duration-300 ease-in-out print:hidden overflow-x-hidden ${isSidebarOpen ? "translate-x-0 w-64" : "-translate-x-full w-64"
           } md:relative md:translate-x-0 ${isCollapsed ? "md:w-[4.5rem]" : "md:w-64"}`}>
           <div className="h-16 flex items-center justify-between px-5 border-b border-slate-800 shrink-0">
             <Link href="/admin" className="font-bold text-lg tracking-tight text-white flex items-center gap-3 overflow-hidden whitespace-nowrap">
@@ -330,7 +363,7 @@ export default function AdminLayoutClient({ children, session }: { children: Rea
         {/* Main Content Area */}
         <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
           {/* Topbar */}
-          <header className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-4 md:px-6 flex-shrink-0 z-10 print:hidden">
+          <header className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-4 md:px-6 flex-shrink-0 z-[45] print:hidden">
             <div className="flex items-center gap-4 flex-1">
               <button
                 className="p-2 -ml-2 text-slate-600 hover:bg-slate-100 rounded-md md:hidden transition-colors"
@@ -378,10 +411,78 @@ export default function AdminLayoutClient({ children, session }: { children: Rea
               </div>
             </div>
             <div className="flex items-center gap-4">
-              <button className="text-slate-400 hover:text-slate-600 transition-colors relative">
-                <Bell className="w-5 h-5" />
-                <span className="absolute top-0 right-0 w-2 h-2 bg-red-500 rounded-full border border-white"></span>
-              </button>
+              {/* Notifications Dropdown */}
+              <div className="relative notifications-dropdown-container">
+                <button
+                  onClick={() => setShowNotifications(!showNotifications)}
+                  className="text-slate-400 hover:text-slate-600 transition-colors relative p-1.5 rounded-full hover:bg-slate-100 cursor-pointer focus:outline-none flex items-center justify-center"
+                >
+                  <Bell className="w-5 h-5" />
+                  {notifications.length > 0 && (
+                    <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-rose-500 rounded-full border border-white"></span>
+                  )}
+                </button>
+
+                {/* Dropdown Card */}
+                {showNotifications && (
+                  <div className="absolute right-0 top-full mt-2 w-80 bg-white border border-slate-200/80 shadow-[0_10px_30px_rgba(0,0,0,0.08)] rounded-xl py-1.5 z-50 transition-all duration-200 transform origin-top-right">
+                    <div className="px-4 py-2 border-b border-slate-100 flex items-center justify-between">
+                      <p className="text-xs font-bold text-slate-800">Pending Requests</p>
+                      {notifications.length > 0 && (
+                        <span className="text-[10px] font-bold px-1.5 py-0.5 bg-rose-50 text-rose-600 rounded-full border border-rose-100">
+                          {notifications.length} new
+                        </span>
+                      )}
+                    </div>
+                    <div className="max-h-80 overflow-y-auto py-1">
+                      {notifications.length === 0 ? (
+                        <div className="px-4 py-6 text-center text-slate-400">
+                          <AlertCircle className="w-8 h-8 mx-auto mb-2 text-slate-300" />
+                          <p className="text-xs font-medium">No pending requests</p>
+                          <p className="text-[10px] text-slate-400/80 mt-0.5">Staff cancellation requests will show here.</p>
+                        </div>
+                      ) : (
+                        notifications.map((req: any) => (
+                          <Link
+                            key={req.id}
+                            href={`/admin/orders/${req.orderId}`}
+                            onClick={() => setShowNotifications(false)}
+                            className="flex items-start gap-3 px-4 py-3 hover:bg-slate-50 transition-colors border-b border-slate-50 last:border-0"
+                          >
+                            <div className="p-1 bg-rose-50 rounded-lg text-rose-500 mt-0.5">
+                              <AlertCircle className="w-4 h-4" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-xs font-bold text-slate-800">
+                                Cancellation Requested
+                              </p>
+                              <p className="text-[10px] font-semibold text-slate-500 mt-0.5">
+                                Order:{req.orderId}
+                              </p>
+                              <p className="text-[10px] text-slate-500 mt-0.5">
+                                Requested by: <span className="font-semibold text-slate-700">{req.staffName}</span>
+                              </p>
+                              {req.reason && (
+                                <p className="text-[10px] text-slate-500 italic mt-1 bg-slate-50 p-1.5 rounded border border-slate-100 truncate">
+                                  "{req.reason}"
+                                </p>
+                              )}
+                              <p className="text-[9px] text-slate-400 mt-1">
+                                {new Date(req.createdAt).toLocaleDateString("en-US", {
+                                  month: "short",
+                                  day: "numeric",
+                                  hour: "2-digit",
+                                  minute: "2-digit",
+                                })}
+                              </p>
+                            </div>
+                          </Link>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
               {/* User Dropdown with Hover Trigger */}
               <div className="relative group py-2">
                 <div className="w-8 h-8 rounded-full bg-slate-100 border border-slate-200 hover:border-slate-300 hover:bg-slate-200 flex items-center justify-center text-slate-600 cursor-pointer overflow-hidden transition-all duration-200">
