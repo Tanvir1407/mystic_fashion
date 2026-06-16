@@ -723,7 +723,7 @@ model VariantPricingMatrix {
   variantId String @unique // ProductVariant 
 
   costPrice  Decimal? @db.Decimal(10, 2) // WAC calculated,  
-  basePrice  Decimal  @db.Decimal(10, 2)
+  basePrice  Decimal? @db.Decimal(10, 2)
   msrp       Decimal? @db.Decimal(10, 2) //  MRP
   b2bPrice   Decimal? @db.Decimal(10, 2)
   tierPrices Json?
