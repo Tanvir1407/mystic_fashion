@@ -119,6 +119,8 @@ model Category {
   products      Product[]
   subcategories Subcategory[]
 
+  categoryAttributeMappings CategoryAttributeMapping[]
+
   @@index([deletedAt])
 }
 
@@ -152,7 +154,7 @@ model Product {
   createdAt     DateTime         @default(now())
   updatedAt     DateTime         @updatedAt
   isFeatured    Boolean          @default(false)
-  featuredOrder  Int              @default(0)
+  featuredOrder Int              @default(0)
   isPublished   Boolean          @default(true)
   brandId       String?
   categoryId    String?
@@ -189,6 +191,10 @@ model ProductVariant {
   purchaseItems    PurchaseItem[]
   salesReturns     SalesReturn[]
   stockAdjustments StockAdjustment[]
+
+  //Relation
+  attributes    Json?                 @default("{}")
+  pricingMatrix VariantPricingMatrix?
 
   @@unique([productId, size, color])
   @@index([productId])
@@ -663,4 +669,70 @@ enum AuditAction {
   CREATE
   UPDATE
   DELETE
+}
+
+//PIM ENUMS
+enum AttributeType {
+  TEXT
+  NUMBER
+  DROPDOWN
+  COLOR
+  BOOLEAN
+}
+
+// ──   AttributeRegistry ──────────────────────────────────────────────────
+
+model AttributeRegistry {
+  id        String        @id @default(uuid())
+  code      String        @unique
+  name      String
+  type      AttributeType @default(DROPDOWN)
+  presets   Json?
+  active    Boolean       @default(true)
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+
+  // Relations
+  categoryMappings CategoryAttributeMapping[]
+
+  @@index([code])
+}
+
+// ──  CategoryAttributeMapping ───────────────────────────────────────────
+
+model CategoryAttributeMapping {
+  id          String   @id @default(uuid())
+  categoryId  String
+  attributeId String
+  isRequired  Boolean  @default(false)
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+
+  // Relations
+  category  Category          @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  attribute AttributeRegistry @relation(fields: [attributeId], references: [id], onDelete: Cascade)
+
+  @@unique([categoryId, attributeId])
+  @@index([categoryId])
+}
+
+// ──  VariantPricingMatrix ────────────────────────────────────────────────
+
+model VariantPricingMatrix {
+  id        String @id @default(uuid())
+  variantId String @unique // ProductVariant 
+
+  costPrice  Decimal? @db.Decimal(10, 2) // WAC calculated,  
+  basePrice  Decimal  @db.Decimal(10, 2)
+  msrp       Decimal? @db.Decimal(10, 2) //  MRP
+  b2bPrice   Decimal? @db.Decimal(10, 2)
+  tierPrices Json?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  variant ProductVariant @relation(fields: [variantId], references: [id], onDelete: Cascade)
+
+  @@index([variantId])
 }
