@@ -40,8 +40,8 @@ const NAV_LINKS = [
     icon: <ShoppingCart className="w-4 h-4 shrink-0" />,
     children: [
       { href: "/admin/orders", label: "Orders", action: "VIEW", subject: "ORDERS" },
-      { href: "/admin/orders/analytics", label: "Order Analytics", action: "VIEW", subject: "ORDERS" },
-      { href: "/admin/orders/returns", label: "Sales Returns", action: "VIEW", subject: "SALES_RETURNS" },
+      { href: "/admin/odr_analytics", label: "Order Analytics", action: "VIEW", subject: "ORDERS" },
+      { href: "/admin/odr_returns", label: "Sales Returns", action: "VIEW", subject: "SALES_RETURNS" },
       { href: "/admin/customers", label: "Customers", action: "VIEW", subject: "ORDERS" },
       { href: "/admin/purchases", label: "Purchases", action: "VIEW", subject: "PURCHASES" },
       { href: "/admin/suppliers", label: "Suppliers", action: "VIEW", subject: "PURCHASES" },

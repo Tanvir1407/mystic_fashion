@@ -19,7 +19,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import UploadedImage from "@/components/UploadedImage";
-import { processSalesReturn, processFullSalesReturn, searchOrdersForReturn } from "../actions";
+import { processSalesReturn, processFullSalesReturn, searchOrdersForReturn } from "../orders/actions";
 import { StatusAlertModal } from "@/components/StatusAlertModal";
 import { ReturnStatus } from "@/generated/prisma";
 import { CustomSelect } from "@/components/CustomSelect";

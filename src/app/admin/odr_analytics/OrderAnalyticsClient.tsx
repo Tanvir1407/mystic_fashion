@@ -338,7 +338,7 @@ export default function OrderAnalyticsClient({
 
     return (
       <span className={`inline-flex items-center gap-0.5 text-[10px] font-bold px-1.5 py-0.5 rounded-md ${isZero ? "bg-slate-100 text-slate-500" :
-          isSuccess ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400" : "bg-rose-500/10 text-rose-600 dark:text-rose-400"
+        isSuccess ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400" : "bg-rose-500/10 text-rose-600 dark:text-rose-400"
         }`}>
         {isZero ? null : isUp ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
         {isZero ? "0%" : `${Math.abs(val).toFixed(1)}${label}`}
@@ -369,10 +369,10 @@ export default function OrderAnalyticsClient({
           ].map(f => (
             <button
               key={f.value}
-              onClick={() => router.push(`/admin/orders/analytics?filter=${f.value}`)}
+              onClick={() => router.push(`/admin/odr_analytics?filter=${f.value}`)}
               className={`px-4 py-1.5 text-xs font-bold rounded-lg transition-all ${filter === f.value
-                  ? "bg-slate-900 text-white dark:bg-zinc-800 shadow"
-                  : "text-slate-500 hover:text-slate-800 dark:hover:text-zinc-200"
+                ? "bg-slate-900 text-white dark:bg-zinc-800 shadow"
+                : "text-slate-500 hover:text-slate-800 dark:hover:text-zinc-200"
                 }`}
             >
               {f.label}
@@ -486,8 +486,8 @@ export default function OrderAnalyticsClient({
               <button
                 onClick={() => setShowRevenue(!showRevenue)}
                 className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all border ${showRevenue
-                    ? "bg-indigo-50 text-indigo-600 border-indigo-200 dark:bg-indigo-950/40 dark:text-indigo-400 dark:border-indigo-800"
-                    : "bg-slate-50 text-slate-400 border-slate-200 dark:bg-zinc-800/40 dark:text-zinc-600 dark:border-zinc-800"
+                  ? "bg-indigo-50 text-indigo-600 border-indigo-200 dark:bg-indigo-950/40 dark:text-indigo-400 dark:border-indigo-800"
+                  : "bg-slate-50 text-slate-400 border-slate-200 dark:bg-zinc-800/40 dark:text-zinc-600 dark:border-zinc-800"
                   }`}
               >
                 <span className={`w-2 h-2 rounded-full ${showRevenue ? "bg-indigo-500" : "bg-slate-300 dark:bg-zinc-600"}`} />
@@ -496,8 +496,8 @@ export default function OrderAnalyticsClient({
               <button
                 onClick={() => setShowCogs(!showCogs)}
                 className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all border ${showCogs
-                    ? "bg-amber-50 text-amber-600 border-amber-200 dark:bg-amber-950/40 dark:text-amber-400 dark:border-amber-800"
-                    : "bg-slate-50 text-slate-400 border-slate-200 dark:bg-zinc-800/40 dark:text-zinc-600 dark:border-zinc-800"
+                  ? "bg-amber-50 text-amber-600 border-amber-200 dark:bg-amber-950/40 dark:text-amber-400 dark:border-amber-800"
+                  : "bg-slate-50 text-slate-400 border-slate-200 dark:bg-zinc-800/40 dark:text-zinc-600 dark:border-zinc-800"
                   }`}
               >
                 <span className={`w-2 h-2 rounded-full ${showCogs ? "bg-amber-500" : "bg-slate-300 dark:bg-zinc-600"}`} />
@@ -506,8 +506,8 @@ export default function OrderAnalyticsClient({
               <button
                 onClick={() => setShowProfit(!showProfit)}
                 className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all border ${showProfit
-                    ? "bg-emerald-50 text-emerald-600 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-800"
-                    : "bg-slate-50 text-slate-400 border-slate-200 dark:bg-zinc-800/40 dark:text-zinc-600 dark:border-zinc-800"
+                  ? "bg-emerald-50 text-emerald-600 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-800"
+                  : "bg-slate-50 text-slate-400 border-slate-200 dark:bg-zinc-800/40 dark:text-zinc-600 dark:border-zinc-800"
                   }`}
               >
                 <span className={`w-2 h-2 rounded-full ${showProfit ? "bg-emerald-500" : "bg-slate-300 dark:bg-zinc-600"}`} />
@@ -922,7 +922,7 @@ export default function OrderAnalyticsClient({
                 const stats = divisionMetrics?.[name] || { count: 0, revenue: 0 };
                 // Only render labels for active divisions to keep the map clean and focused
                 if (stats.count === 0) return null;
-                
+
                 return (
                   <g key={name} className="pointer-events-none select-none">
                     {/* Pill Background Card */}
@@ -1141,7 +1141,7 @@ export default function OrderAnalyticsClient({
 
             {/* Split Top Spenders vs Top Loyalists */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2 border-t border-slate-100 dark:border-zinc-800/50">
-              
+
               {/* Top High Spenders */}
               <div className="flex flex-col gap-3">
                 <h3 className="text-[10px] font-bold text-slate-400 dark:text-zinc-500 uppercase tracking-widest pb-1 border-b border-slate-50 dark:border-zinc-800/30">Top 5 Spenders</h3>
@@ -1195,7 +1195,7 @@ export default function OrderAnalyticsClient({
           </div>
 
           <div className="p-6 flex-1 flex flex-col gap-6">
-            
+
             {/* Visual stacked distribution bar */}
             <div>
               <div className="flex justify-between text-[10px] font-bold text-slate-400 dark:text-zinc-500 uppercase tracking-wider mb-2">

@@ -1,5 +1,5 @@
 import prisma from "@/lib/prisma";
-import { getRecentSalesReturns } from "../actions";
+import { getRecentSalesReturns } from "../orders/actions";
 import ReturnsClient from "./ReturnsClient";
 import { Suspense } from "react";
 

@@ -1165,7 +1165,7 @@ async function _processSalesReturn(data: {
     });
 
     revalidatePath("/admin/orders");
-    revalidatePath("/admin/orders/returns");
+    revalidatePath("/admin/odr_returns");
     revalidatePath("/admin/inventory");
     revalidatePath("/admin/inventory/adjustments");
     revalidatePath("/admin/accounting");
@@ -1291,7 +1291,7 @@ async function _processFullSalesReturn(data: {
     });
 
     revalidatePath("/admin/orders");
-    revalidatePath("/admin/orders/returns");
+    revalidatePath("/admin/odr_returns");
     return { success: true };
   } catch (error: any) {
     console.error("Full return error:", error);

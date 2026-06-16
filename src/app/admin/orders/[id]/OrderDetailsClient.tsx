@@ -213,9 +213,8 @@ export default function OrderDetailsClient({
   const handleStatusChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
     const newStatus = e.target.value as OrderStatus;
     const oldStatus = status;
-
     if (newStatus === "RETURNED") {
-      router.push(`/admin/orders/returns?orderId=${order.id}`);
+      router.push(`/admin/odr_returns?orderId=${order.id}`);
       return;
     }
 
