@@ -12,6 +12,7 @@ export const ROUTE_PERMISSIONS = [
   { prefix: "/admin/inventory/subcategories", action: "VIEW", subject: "PRODUCTS" },
   { prefix: "/admin/inventory/adjustments", action: "VIEW", subject: "STOCK_ADJUSTMENTS" },
   { prefix: "/admin/inventory/low-stock", action: "VIEW", subject: "LOW_STOCK_ALERTS" },
+  { prefix: "/admin/prod_analytics", action: "VIEW", subject: "PRODUCTS" },
   { prefix: "/admin/products", action: "VIEW", subject: "PRODUCTS" },
   { prefix: "/admin/odr_returns", action: "VIEW", subject: "SALES_RETURNS" },
   { prefix: "/admin/orders", action: "VIEW", subject: "ORDERS" },

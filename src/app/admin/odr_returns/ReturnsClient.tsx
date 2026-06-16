@@ -795,7 +795,7 @@ export default function ReturnsClient({
                             </p>
                           </td>
                           <td className="px-5 py-4">
-                            <p className="text-xs text-slate-500 max-w-[160px] truncate" title={ret.returnReason}>
+                            <p className="text-xs text-slate-500 max-w-[240px] break-words whitespace-normal" title={ret.returnReason}>
                               {ret.returnReason}
                             </p>
                           </td>

@@ -55,6 +55,7 @@ const NAV_LINKS = [
     icon: <Boxes className="w-4 h-4 shrink-0" />,
     children: [
       { href: "/admin/products", label: "Products", action: "VIEW", subject: "PRODUCTS" },
+      { href: "/admin/prod_analytics", label: "Product Analytics", action: "VIEW", subject: "PRODUCTS" },
       { href: "/admin/inventory/brands", label: "Brands", action: "VIEW", subject: "PRODUCTS" },
       { href: "/admin/inventory/categories", label: "Categories", action: "VIEW", subject: "PRODUCTS" },
       { href: "/admin/inventory/subcategories", label: "Subcategories", action: "VIEW", subject: "PRODUCTS" },
