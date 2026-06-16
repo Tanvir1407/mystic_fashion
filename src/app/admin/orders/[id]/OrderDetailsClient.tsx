@@ -1123,42 +1123,69 @@ export default function OrderDetailsClient({
                 {statusLoading && <Loader2 className="w-4 h-4 animate-spin text-slate-400" />}
               </div>
               <div className="p-4 space-y-3">
-                <div className="relative">
-                  <select
-                    value={status}
-                    onChange={handleStatusChange}
-                    disabled={statusLoading || status === "CANCELLED" || status === "RETURNED"}
-                    className={`w-full text-xs font-black uppercase tracking-wider px-3.5 py-2.5 rounded-lg border transition-all cursor-pointer outline-none focus:ring-2 focus:ring-opacity-50 ${status === "PENDING" ? "bg-amber-50 text-amber-700 border-amber-200 focus:ring-amber-500" :
-                      status === "CONFIRMED" ? "bg-blue-50 text-blue-700 border-blue-200 focus:ring-blue-500" :
-                        status === "PRINTING" ? "bg-cyan-50 text-cyan-700 border-cyan-200 focus:ring-cyan-500" :
-                          status === "PACKAGING" ? "bg-purple-50 text-purple-700 border-purple-200 focus:ring-purple-500" :
-                            status === "SHIPPED" ? "bg-indigo-50 text-indigo-700 border-indigo-200 focus:ring-indigo-500" :
-                              status === "DELIVERED" ? "bg-green-50 text-green-700 border-green-200 focus:ring-green-500" :
-                                status === "RETURNED" ? "bg-rose-50 text-rose-700 border-rose-200 focus:ring-rose-500" :
-                                  status === "HOLD" ? "bg-pink-50 text-pink-700 border-pink-200 focus:ring-pink-500" :
-                                    "bg-red-50 text-red-700 border-red-200 focus:ring-red-500"
+                {backUrl?.includes("/staff") ? (
+                  <div
+                    className={`w-full text-center text-xs font-black uppercase tracking-wider px-3.5 py-2.5 rounded-lg border ${status === "PENDING" ? "bg-amber-50 text-amber-700 border-amber-200" :
+                      status === "CONFIRMED" ? "bg-blue-50 text-blue-700 border-blue-200" :
+                        status === "PRINTING" ? "bg-cyan-50 text-cyan-700 border-cyan-200" :
+                          status === "PACKAGING" ? "bg-purple-50 text-purple-700 border-purple-200" :
+                            status === "SHIPPED" ? "bg-indigo-50 text-indigo-700 border-indigo-200" :
+                              status === "DELIVERED" ? "bg-green-50 text-green-700 border-green-200" :
+                                status === "RETURNED" ? "bg-rose-50 text-rose-700 border-rose-200" :
+                                  status === "HOLD" ? "bg-pink-50 text-pink-700 border-pink-200" :
+                                    "bg-red-50 text-red-700 border-red-200"
                       }`}
                   >
-                    <option value="PENDING" disabled={!validateStatusTransition(status, "PENDING").isValid}>Placed</option>
-                    <option value="CONFIRMED" disabled={!validateStatusTransition(status, "CONFIRMED").isValid}>Confirmed</option>
-                    <option value="PRINTING" disabled={!validateStatusTransition(status, "PRINTING").isValid}>Printing</option>
-                    <option value="PACKAGING" disabled={!validateStatusTransition(status, "PACKAGING").isValid}>Packaged</option>
-                    <option value="SHIPPED" disabled={!validateStatusTransition(status, "SHIPPED").isValid}>Shipped</option>
-                    <option value="DELIVERED" disabled={!validateStatusTransition(status, "DELIVERED").isValid}>Delivered</option>
-                    <option value="HOLD" disabled={!validateStatusTransition(status, "HOLD").isValid}>On Hold</option>
-                    <option value="RETURNED" disabled={!validateStatusTransition(status, "RETURNED").isValid}>Returned</option>
-                    <option value="CANCELLED" disabled={!validateStatusTransition(status, "CANCELLED").isValid}>Cancelled</option>
-                  </select>
-                </div>
-
-                {status === "CANCELLED" || status === "RETURNED" ? (
-                  <p className="text-[10px] text-slate-400 font-medium">
-                    Orders in {status} status cannot be further transitioned.
-                  </p>
+                    {status === "PENDING" ? "Placed" :
+                     status === "CONFIRMED" ? "Confirmed" :
+                     status === "PRINTING" ? "Printing" :
+                     status === "PACKAGING" ? "Packaged" :
+                     status === "SHIPPED" ? "Shipped" :
+                     status === "DELIVERED" ? "Delivered" :
+                     status === "HOLD" ? "On Hold" :
+                     status === "RETURNED" ? "Returned" :
+                     "Cancelled"}
+                  </div>
                 ) : (
-                  <p className="text-[10px] text-slate-400 font-medium">
-                    Select a status to update.
-                  </p>
+                  <>
+                    <div className="relative">
+                      <select
+                        value={status}
+                        onChange={handleStatusChange}
+                        disabled={statusLoading || status === "CANCELLED" || status === "RETURNED"}
+                        className={`w-full text-xs font-black uppercase tracking-wider px-3.5 py-2.5 rounded-lg border transition-all cursor-pointer outline-none focus:ring-2 focus:ring-opacity-50 ${status === "PENDING" ? "bg-amber-50 text-amber-700 border-amber-200 focus:ring-amber-500" :
+                          status === "CONFIRMED" ? "bg-blue-50 text-blue-700 border-blue-200 focus:ring-blue-500" :
+                            status === "PRINTING" ? "bg-cyan-50 text-cyan-700 border-cyan-200 focus:ring-cyan-500" :
+                              status === "PACKAGING" ? "bg-purple-50 text-purple-700 border-purple-200 focus:ring-purple-500" :
+                                status === "SHIPPED" ? "bg-indigo-50 text-indigo-700 border-indigo-200 focus:ring-indigo-500" :
+                                  status === "DELIVERED" ? "bg-green-50 text-green-700 border-green-200 focus:ring-green-500" :
+                                    status === "RETURNED" ? "bg-rose-50 text-rose-700 border-rose-200 focus:ring-rose-500" :
+                                      status === "HOLD" ? "bg-pink-50 text-pink-700 border-pink-200 focus:ring-pink-500" :
+                                        "bg-red-50 text-red-700 border-red-200 focus:ring-red-500"
+                          }`}
+                      >
+                        <option value="PENDING" disabled={!validateStatusTransition(status, "PENDING").isValid}>Placed</option>
+                        <option value="CONFIRMED" disabled={!validateStatusTransition(status, "CONFIRMED").isValid}>Confirmed</option>
+                        <option value="PRINTING" disabled={!validateStatusTransition(status, "PRINTING").isValid}>Printing</option>
+                        <option value="PACKAGING" disabled={!validateStatusTransition(status, "PACKAGING").isValid}>Packaged</option>
+                        <option value="SHIPPED" disabled={!validateStatusTransition(status, "SHIPPED").isValid}>Shipped</option>
+                        <option value="DELIVERED" disabled={!validateStatusTransition(status, "DELIVERED").isValid}>Delivered</option>
+                        <option value="HOLD" disabled={!validateStatusTransition(status, "HOLD").isValid}>On Hold</option>
+                        <option value="RETURNED" disabled={!validateStatusTransition(status, "RETURNED").isValid}>Returned</option>
+                        <option value="CANCELLED" disabled={!validateStatusTransition(status, "CANCELLED").isValid}>Cancelled</option>
+                      </select>
+                    </div>
+
+                    {status === "CANCELLED" || status === "RETURNED" ? (
+                      <p className="text-[10px] text-slate-400 font-medium">
+                        Orders in {status} status cannot be further transitioned.
+                      </p>
+                    ) : (
+                      <p className="text-[10px] text-slate-400 font-medium">
+                        Select a status to update.
+                      </p>
+                    )}
+                  </>
                 )}
               </div>
             </div>
