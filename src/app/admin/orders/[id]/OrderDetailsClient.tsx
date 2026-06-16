@@ -554,7 +554,7 @@ export default function OrderDetailsClient({
 
   // Status tracker
   const STATUS_STEPS = [
-    { statusKey: "PENDING", title: "Order Placed", icon: Package },
+    { statusKey: "PENDING", title: "Placed", icon: Package },
     { statusKey: "CONFIRMED", title: "Confirmed", icon: CheckCircle2 },
     { statusKey: "PRINTING", title: "Printing", icon: Printer },
     { statusKey: "PACKAGING", title: "Packaged", icon: PackageCheck },
@@ -563,9 +563,13 @@ export default function OrderDetailsClient({
   ];
   const STATUS_ORDER = ["PENDING", "CONFIRMED", "PRINTING", "PACKAGING", "SHIPPED", "DELIVERED"];
   const isSpecial = order.status === "CANCELLED" || order.status === "RETURNED" || order.status === "HOLD";
-  const currentIndex = STATUS_ORDER.indexOf(order.status);
   const hasPrint = order.items?.some((i: any) => i.requiresPrint);
   const filteredSteps = STATUS_STEPS.filter((s) => s.statusKey !== "PRINTING" || hasPrint || order.status === "PRINTING");
+
+  const timelineIndex = filteredSteps.findIndex(s => s.statusKey === order.status);
+  const safeCurrentIndex = timelineIndex !== -1 ? timelineIndex : 0;
+  const halfStepWidth = 100 / (filteredSteps.length * 2);
+  const activeWidth = (safeCurrentIndex / (filteredSteps.length - 1)) * (100 - 2 * halfStepWidth);
 
   const pathaoStatus = pathaoInfoState?.order_status || pathaoInfoState?.order_status_slug || null;
   const pathaoStatusLower = (pathaoStatus || "").toLowerCase();
@@ -780,17 +784,29 @@ export default function OrderDetailsClient({
                   </div>
                 ) : (
                   <div className="relative flex items-start">
-                    <div className="absolute top-4 left-0 right-0 h-[2px] bg-slate-105" style={{ zIndex: 0 }}>
-                      <div
-                        className="h-full bg-emerald-500 transition-all duration-500 ease-in-out"
-                        style={{ width: `${filteredSteps.length > 1 ? (currentIndex / (filteredSteps.length - 1)) * 100 : 0}%` }}
-                      />
-                    </div>
+                    {/* Horizontal progress bar background */}
+                    <div 
+                      className="absolute top-4 h-[2px] bg-slate-200" 
+                      style={{ 
+                        zIndex: 0,
+                        left: `${halfStepWidth}%`,
+                        right: `${halfStepWidth}%`
+                      }} 
+                    />
+                    
+                    {/* Horizontal progress bar active fill */}
+                    <div 
+                      className="absolute top-4 h-[2px] bg-emerald-500 transition-all duration-500 ease-in-out" 
+                      style={{ 
+                        zIndex: 0,
+                        left: `${halfStepWidth}%`,
+                        width: `${activeWidth}%`
+                      }} 
+                    />
                     <div className="flex w-full relative">
-                      {filteredSteps.map((step) => {
-                        const stepIdx = STATUS_ORDER.indexOf(step.statusKey);
-                        const isCompleted = stepIdx < currentIndex;
-                        const isActive = stepIdx === currentIndex;
+                      {filteredSteps.map((step, idx) => {
+                        const isCompleted = idx < safeCurrentIndex;
+                        const isActive = idx === safeCurrentIndex;
                         const showPathao = step.statusKey === "SHIPPED" && order.pathaoConsignmentId;
                         const Icon = step.icon;
                         return (
@@ -798,7 +814,7 @@ export default function OrderDetailsClient({
                             <div className={`relative z-10 w-8 h-8 rounded-full border-2 flex items-center justify-center shrink-0 transition-all duration-300 ${isActive ? "bg-[#800020] border-[#800020] text-white ring-4 ring-[#800020]/15 shadow-md scale-110" : isCompleted ? "bg-emerald-500 border-emerald-500 text-white shadow-sm" : "bg-white border-slate-200 text-slate-400"}`}>
                               {isCompleted ? <Check className="w-3.5 h-3.5 stroke-[3px]" /> : <Icon className="w-3.5 h-3.5 stroke-[2.5px]" />}
                             </div>
-                            <span className={`mt-2 text-[10px] font-bold text-center leading-tight px-0.5 uppercase tracking-wide ${isActive ? "text-[#800020]" : isCompleted ? "text-emerald-600" : "text-slate-400"}`}>
+                            <span className={`mt-2 text-[10px] font-bold text-center leading-tight px-0.5 uppercase tracking-wide transition-colors ${isActive ? "text-[#800020] font-extrabold" : isCompleted ? "text-emerald-600" : "text-slate-400"}`}>
                               {step.title}
                             </span>
                             {showPathao && (
