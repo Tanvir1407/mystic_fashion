@@ -19,7 +19,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import UploadedImage from "@/components/UploadedImage";
-import { processSalesReturn, processFullSalesReturn, searchOrdersForReturn } from "../actions";
+import { processSalesReturn, processFullSalesReturn, searchOrdersForReturn } from "../orders/actions";
 import { StatusAlertModal } from "@/components/StatusAlertModal";
 import { ReturnStatus } from "@/generated/prisma";
 import { CustomSelect } from "@/components/CustomSelect";
@@ -795,7 +795,7 @@ export default function ReturnsClient({
                             </p>
                           </td>
                           <td className="px-5 py-4">
-                            <p className="text-xs text-slate-500 max-w-[160px] truncate" title={ret.returnReason}>
+                            <p className="text-xs text-slate-500 max-w-[240px] break-words whitespace-normal" title={ret.returnReason}>
                               {ret.returnReason}
                             </p>
                           </td>

@@ -579,6 +579,30 @@ export default async function OrderAnalyticsPage({ searchParams }: { searchParam
     .sort((a, b) => b.count - a.count)
     .slice(0, 5);
 
+  // -------------------------------------------------------------
+  // HOURLY ORDER DISTRIBUTION (eCommerce vs Salesman)
+  // -------------------------------------------------------------
+  const hourlyData = Array.from({ length: 24 }, (_, hour) => {
+    const ampm = hour >= 12 ? "PM" : "AM";
+    const displayHour = hour % 12 === 0 ? 12 : hour % 12;
+    const label = `${displayHour} ${ampm}`;
+    return {
+      hour,
+      label,
+      ecommerce: 0,
+      salesman: 0,
+    };
+  });
+
+  orders.forEach(order => {
+    const hour = order.createdAt.getHours();
+    if (order.orderSource === "eCommerce") {
+      hourlyData[hour].ecommerce++;
+    } else {
+      hourlyData[hour].salesman++;
+    }
+  });
+
   return (
     <Suspense fallback={<div className="p-8 text-sm text-slate-500 font-medium animate-pulse">Loading analytics dashboard...</div>}>
       <OrderAnalyticsClient
@@ -638,6 +662,7 @@ export default async function OrderAnalyticsPage({ searchParams }: { searchParam
           manualDiscountTotal,
           couponSummary
         }}
+        hourlyData={hourlyData}
       />
     </Suspense>
   );

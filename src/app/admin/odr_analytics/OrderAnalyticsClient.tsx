@@ -110,6 +110,13 @@ interface DiscountCouponMetrics {
   couponSummary: { code: string; count: number; discount: number; revenue: number }[];
 }
 
+interface HourlyPoint {
+  hour: number;
+  label: string;
+  ecommerce: number;
+  salesman: number;
+}
+
 interface OrderAnalyticsClientProps {
   filter: string;
   summary: SummaryMetrics;
@@ -128,6 +135,7 @@ interface OrderAnalyticsClientProps {
   recentReturns: any[];
   customerRetention?: CustomerRetentionMetrics;
   discountCouponImpact?: DiscountCouponMetrics;
+  hourlyData: HourlyPoint[];
 }
 
 const STATUS_COLORS: Record<string, string> = {
@@ -181,7 +189,8 @@ export default function OrderAnalyticsClient({
     couponDiscountTotal: 0,
     manualDiscountTotal: 0,
     couponSummary: []
-  }
+  },
+  hourlyData = []
 }: OrderAnalyticsClientProps) {
   const router = useRouter();
 
@@ -190,6 +199,35 @@ export default function OrderAnalyticsClient({
   const [showProfit, setShowProfit] = useState(true);
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
   const [hoveredDivision, setHoveredDivision] = useState<{ name: string; count: number; revenue: number; x: number; y: number } | null>(null);
+
+  // Hourly Order Distribution States & Calculations
+  const [showHourlyEcommerce, setShowHourlyEcommerce] = useState(true);
+  const [showHourlySalesman, setShowHourlySalesman] = useState(true);
+  const [hoveredHourlyIndex, setHoveredHourlyIndex] = useState<number | null>(null);
+
+  const hourlyChartW = 900;
+  const hourlyChartH = 300;
+  const hourlyPadX = 55;
+  const hourlyPadY = 25;
+
+  const maxHourlyVal = useMemo(() => {
+    let maxVal = 1;
+    hourlyData.forEach(d => {
+      let sum = 0;
+      if (showHourlyEcommerce) sum += d.ecommerce;
+      if (showHourlySalesman) sum += d.salesman;
+      if (sum > maxVal) maxVal = sum;
+    });
+    return maxVal;
+  }, [hourlyData, showHourlyEcommerce, showHourlySalesman]);
+
+  const yHourlyMax = Math.max(Math.ceil(maxHourlyVal * 1.15), 1);
+
+  const getRoundedTopBarPath = (x: number, y: number, w: number, h: number, r: number) => {
+    if (h <= 0) return "";
+    const realR = Math.min(r, h, w / 2);
+    return `M ${x},${y + h} L ${x},${y + realR} A ${realR},${realR} 0 0 1 ${x + realR},${y} L ${x + w - realR},${y} A ${realR},${realR} 0 0 1 ${x + w},${y + realR} L ${x + w},${y + h} Z`;
+  };
 
   const maxDivisionRevenue = useMemo(() => {
     const values = Object.values(divisionMetrics || {}).map(d => d.revenue);
@@ -338,7 +376,7 @@ export default function OrderAnalyticsClient({
 
     return (
       <span className={`inline-flex items-center gap-0.5 text-[10px] font-bold px-1.5 py-0.5 rounded-md ${isZero ? "bg-slate-100 text-slate-500" :
-          isSuccess ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400" : "bg-rose-500/10 text-rose-600 dark:text-rose-400"
+        isSuccess ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400" : "bg-rose-500/10 text-rose-600 dark:text-rose-400"
         }`}>
         {isZero ? null : isUp ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
         {isZero ? "0%" : `${Math.abs(val).toFixed(1)}${label}`}
@@ -369,10 +407,10 @@ export default function OrderAnalyticsClient({
           ].map(f => (
             <button
               key={f.value}
-              onClick={() => router.push(`/admin/orders/analytics?filter=${f.value}`)}
+              onClick={() => router.push(`/admin/odr_analytics?filter=${f.value}`)}
               className={`px-4 py-1.5 text-xs font-bold rounded-lg transition-all ${filter === f.value
-                  ? "bg-slate-900 text-white dark:bg-zinc-800 shadow"
-                  : "text-slate-500 hover:text-slate-800 dark:hover:text-zinc-200"
+                ? "bg-slate-900 text-white dark:bg-zinc-800 shadow"
+                : "text-slate-500 hover:text-slate-800 dark:hover:text-zinc-200"
                 }`}
             >
               {f.label}
@@ -486,8 +524,8 @@ export default function OrderAnalyticsClient({
               <button
                 onClick={() => setShowRevenue(!showRevenue)}
                 className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all border ${showRevenue
-                    ? "bg-indigo-50 text-indigo-600 border-indigo-200 dark:bg-indigo-950/40 dark:text-indigo-400 dark:border-indigo-800"
-                    : "bg-slate-50 text-slate-400 border-slate-200 dark:bg-zinc-800/40 dark:text-zinc-600 dark:border-zinc-800"
+                  ? "bg-indigo-50 text-indigo-600 border-indigo-200 dark:bg-indigo-950/40 dark:text-indigo-400 dark:border-indigo-800"
+                  : "bg-slate-50 text-slate-400 border-slate-200 dark:bg-zinc-800/40 dark:text-zinc-600 dark:border-zinc-800"
                   }`}
               >
                 <span className={`w-2 h-2 rounded-full ${showRevenue ? "bg-indigo-500" : "bg-slate-300 dark:bg-zinc-600"}`} />
@@ -496,8 +534,8 @@ export default function OrderAnalyticsClient({
               <button
                 onClick={() => setShowCogs(!showCogs)}
                 className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all border ${showCogs
-                    ? "bg-amber-50 text-amber-600 border-amber-200 dark:bg-amber-950/40 dark:text-amber-400 dark:border-amber-800"
-                    : "bg-slate-50 text-slate-400 border-slate-200 dark:bg-zinc-800/40 dark:text-zinc-600 dark:border-zinc-800"
+                  ? "bg-amber-50 text-amber-600 border-amber-200 dark:bg-amber-950/40 dark:text-amber-400 dark:border-amber-800"
+                  : "bg-slate-50 text-slate-400 border-slate-200 dark:bg-zinc-800/40 dark:text-zinc-600 dark:border-zinc-800"
                   }`}
               >
                 <span className={`w-2 h-2 rounded-full ${showCogs ? "bg-amber-500" : "bg-slate-300 dark:bg-zinc-600"}`} />
@@ -506,8 +544,8 @@ export default function OrderAnalyticsClient({
               <button
                 onClick={() => setShowProfit(!showProfit)}
                 className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all border ${showProfit
-                    ? "bg-emerald-50 text-emerald-600 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-800"
-                    : "bg-slate-50 text-slate-400 border-slate-200 dark:bg-zinc-800/40 dark:text-zinc-600 dark:border-zinc-800"
+                  ? "bg-emerald-50 text-emerald-600 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-800"
+                  : "bg-slate-50 text-slate-400 border-slate-200 dark:bg-zinc-800/40 dark:text-zinc-600 dark:border-zinc-800"
                   }`}
               >
                 <span className={`w-2 h-2 rounded-full ${showProfit ? "bg-emerald-500" : "bg-slate-300 dark:bg-zinc-600"}`} />
@@ -851,6 +889,209 @@ export default function OrderAnalyticsClient({
 
       </div>
 
+      {/* ── Hourly Order Distribution Section ── */}
+      <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 p-6 shadow-sm flex flex-col gap-6">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-100 dark:border-zinc-800 pb-4">
+          <div>
+            <h2 className="text-sm font-extrabold text-slate-900 dark:text-white">Hourly Order Distribution</h2>
+            <p className="text-[10px] text-slate-400 dark:text-zinc-500 mt-0.5">Distribution of order volume created per hour of the day.</p>
+          </div>
+
+          {/* Series Toggles */}
+          <div className="flex flex-wrap items-center gap-3">
+            <button
+              onClick={() => setShowHourlyEcommerce(!showHourlyEcommerce)}
+              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all border ${showHourlyEcommerce
+                ? "bg-indigo-50 text-indigo-600 border-indigo-200 dark:bg-indigo-950/40 dark:text-indigo-400 dark:border-indigo-800"
+                : "bg-slate-50 text-slate-400 border-slate-200 dark:bg-zinc-800/40 dark:text-zinc-600 dark:border-zinc-800"
+                }`}
+            >
+              <span className={`w-2 h-2 rounded-full ${showHourlyEcommerce ? "bg-indigo-500" : "bg-slate-300 dark:bg-zinc-600"}`} />
+              eCommerce Website
+            </button>
+            <button
+              onClick={() => setShowHourlySalesman(!showHourlySalesman)}
+              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all border ${showHourlySalesman
+                ? "bg-amber-50 text-amber-600 border-amber-200 dark:bg-amber-950/40 dark:text-amber-400 dark:border-amber-800"
+                : "bg-slate-50 text-slate-400 border-slate-200 dark:bg-zinc-800/40 dark:text-zinc-600 dark:border-zinc-800"
+                }`}
+            >
+              <span className={`w-2 h-2 rounded-full ${showHourlySalesman ? "bg-amber-500" : "bg-slate-300 dark:bg-zinc-600"}`} />
+              Salesman Portal
+            </button>
+          </div>
+        </div>
+
+        {hourlyData.length === 0 ? (
+          <div className="h-64 flex items-center justify-center text-xs text-slate-400 font-semibold">
+            No orders for this period.
+          </div>
+        ) : (
+          <div className="relative">
+            {/* Y Gridlines and Labels */}
+            <div className="absolute inset-0 flex flex-col justify-between pointer-events-none" style={{ padding: `${hourlyPadY}px 0`, bottom: `${hourlyPadY}px` }}>
+              {[1.0, 0.75, 0.5, 0.25, 0].map((ratio, i) => {
+                const val = yHourlyMax * ratio;
+                return (
+                  <div key={i} className="w-full flex items-center relative">
+                    <div className="flex-1 border-t border-dashed border-slate-100 dark:border-zinc-800" style={{ marginLeft: `${hourlyPadX}px` }}></div>
+                    <span className="absolute left-0 text-[9px] font-black text-slate-400 dark:text-zinc-600 text-right pr-2" style={{ width: `${hourlyPadX}px`, transform: "translateY(-50%)" }}>
+                      {Math.round(val)}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* SVG stacked bar chart */}
+            <svg viewBox={`0 0 ${hourlyChartW} ${hourlyChartH}`} className="w-full h-72 relative z-10 overflow-visible" preserveAspectRatio="none">
+              {/* Highlight Background on Hover */}
+              {hourlyData.map((d, i) => {
+                const step = (hourlyChartW - hourlyPadX * 2) / 24;
+                const barWidth = step * 0.7;
+                const x = hourlyPadX + i * step + (step - barWidth) / 2;
+                return (
+                  <rect
+                    key={`hover-bg-${i}`}
+                    x={x - (step - barWidth) / 2}
+                    y={hourlyPadY}
+                    width={step}
+                    height={hourlyChartH - hourlyPadY * 2}
+                    fill="#f1f5f9"
+                    className="opacity-0 dark:fill-zinc-800 transition-opacity duration-150"
+                    style={{ opacity: hoveredHourlyIndex === i ? 0.35 : 0 }}
+                  />
+                );
+              })}
+
+              {/* Stacked Bars */}
+              {hourlyData.map((d, i) => {
+                const step = (hourlyChartW - hourlyPadX * 2) / 24;
+                const barWidth = step * 0.7;
+                const x = hourlyPadX + i * step + (step - barWidth) / 2;
+
+                const ecommerceVal = showHourlyEcommerce ? d.ecommerce : 0;
+                const salesmanVal = showHourlySalesman ? d.salesman : 0;
+
+                const ecommerceHeight = (ecommerceVal / yHourlyMax) * (hourlyChartH - hourlyPadY * 2);
+                const salesmanHeight = (salesmanVal / yHourlyMax) * (hourlyChartH - hourlyPadY * 2);
+
+                const ecommerceY = hourlyChartH - hourlyPadY - ecommerceHeight;
+                const salesmanY = ecommerceY - salesmanHeight;
+
+                return (
+                  <g key={`bar-group-${i}`}>
+                    {/* eCommerce bar */}
+                    {ecommerceHeight > 0 && (
+                      <path
+                        d={
+                          salesmanHeight > 0
+                            ? `M ${x},${ecommerceY + ecommerceHeight} L ${x},${ecommerceY} L ${x + barWidth},${ecommerceY} L ${x + barWidth},${ecommerceY + ecommerceHeight} Z`
+                            : getRoundedTopBarPath(x, ecommerceY, barWidth, ecommerceHeight, 3)
+                        }
+                        fill="#6366f1"
+                        className="transition-all duration-300 opacity-90 hover:opacity-100"
+                      />
+                    )}
+
+                    {/* Salesman bar */}
+                    {salesmanHeight > 0 && (
+                      <path
+                        d={getRoundedTopBarPath(x, salesmanY, barWidth, salesmanHeight, 3)}
+                        fill="#f59e0b"
+                        className="transition-all duration-300 opacity-90 hover:opacity-100"
+                      />
+                    )}
+                  </g>
+                );
+              })}
+            </svg>
+
+            {/* X Labels */}
+            <div className="flex justify-between mt-3 px-1" style={{ paddingLeft: `${hourlyPadX}px`, paddingRight: `${hourlyPadX}px` }}>
+              {hourlyData.map((d, i) => {
+                const showLabel = i % 2 === 0;
+                return (
+                  <span
+                    key={i}
+                    className={`text-[9px] font-bold text-slate-400 dark:text-zinc-500 transition-colors duration-200 ${hoveredHourlyIndex === i ? "text-slate-900 font-extrabold dark:text-zinc-200" : ""
+                      }`}
+                    style={{
+                      width: "0",
+                      whiteSpace: "nowrap",
+                      display: "flex",
+                      justifyContent: "center",
+                      transform: "translateX(-50%)",
+                      visibility: showLabel ? "visible" : "hidden",
+                    }}
+                  >
+                    {d.label}
+                  </span>
+                );
+              })}
+            </div>
+
+            {/* Hover detection regions */}
+            <div className="absolute inset-0 flex z-30" style={{ left: `${hourlyPadX}px`, right: `${hourlyPadX}px`, bottom: `${hourlyPadY}px`, top: `${hourlyPadY}px` }}>
+              {hourlyData.map((d, i) => (
+                <div
+                  key={i}
+                  className="flex-1 h-full cursor-crosshair"
+                  onMouseEnter={() => setHoveredHourlyIndex(i)}
+                  onMouseLeave={() => setHoveredHourlyIndex(null)}
+                />
+              ))}
+            </div>
+
+            {/* High Fidelity Tooltip Card */}
+            {hoveredHourlyIndex !== null && (
+              <div
+                className="absolute z-40 bg-white/95 dark:bg-zinc-900/95 backdrop-blur-md rounded-2xl border border-slate-200/90 dark:border-zinc-800/90 p-4 shadow-xl pointer-events-none flex flex-col gap-2 transition-all duration-200"
+                style={{
+                  left: `${hourlyPadX + (hoveredHourlyIndex / 24) * (hourlyChartW - hourlyPadX * 2) * 100 / hourlyChartW}%`,
+                  transform: `translate(${hoveredHourlyIndex < 12 ? "16px" : "-108%"}, -50%)`,
+                  top: "45%",
+                  minWidth: "220px",
+                }}
+              >
+                <div className="flex items-center justify-between border-b border-slate-100 dark:border-zinc-800 pb-1.5">
+                  <span className="text-[10px] font-black text-slate-400 dark:text-zinc-500 uppercase tracking-widest">
+                    {hourlyData[hoveredHourlyIndex].label}
+                  </span>
+                  <span className="text-[9px] font-black text-indigo-500 bg-indigo-500/10 px-1.5 py-0.5 rounded">
+                    {((showHourlyEcommerce ? hourlyData[hoveredHourlyIndex].ecommerce : 0) + (showHourlySalesman ? hourlyData[hoveredHourlyIndex].salesman : 0))} {(((showHourlyEcommerce ? hourlyData[hoveredHourlyIndex].ecommerce : 0) + (showHourlySalesman ? hourlyData[hoveredHourlyIndex].salesman : 0)) === 1 ? "Order" : "Orders")}
+                  </span>
+                </div>
+
+                {showHourlyEcommerce && (
+                  <div className="flex items-center justify-between text-xs mt-1">
+                    <span className="text-slate-500 font-semibold flex items-center gap-1.5">
+                      <span className="w-1.5 h-1.5 rounded-full bg-indigo-500" />
+                      eCommerce:
+                    </span>
+                    <span className="font-extrabold text-slate-800 dark:text-zinc-200">
+                      {hourlyData[hoveredHourlyIndex].ecommerce} orders
+                    </span>
+                  </div>
+                )}
+
+                {showHourlySalesman && (
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-slate-500 font-semibold flex items-center gap-1.5">
+                      <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                      Salesman:
+                    </span>
+                    <span className="font-extrabold text-slate-800 dark:text-zinc-200">
+                      {hourlyData[hoveredHourlyIndex].salesman} orders
+                    </span>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
       {/* ── Regional Demand Index (Bangladesh map + Top Districts/Divisions) ── */}
       <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 shadow-sm overflow-hidden">
         <div className="px-5 py-4 border-b border-slate-100 dark:border-zinc-800 flex items-center justify-between">
@@ -922,7 +1163,7 @@ export default function OrderAnalyticsClient({
                 const stats = divisionMetrics?.[name] || { count: 0, revenue: 0 };
                 // Only render labels for active divisions to keep the map clean and focused
                 if (stats.count === 0) return null;
-                
+
                 return (
                   <g key={name} className="pointer-events-none select-none">
                     {/* Pill Background Card */}
@@ -1141,7 +1382,7 @@ export default function OrderAnalyticsClient({
 
             {/* Split Top Spenders vs Top Loyalists */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2 border-t border-slate-100 dark:border-zinc-800/50">
-              
+
               {/* Top High Spenders */}
               <div className="flex flex-col gap-3">
                 <h3 className="text-[10px] font-bold text-slate-400 dark:text-zinc-500 uppercase tracking-widest pb-1 border-b border-slate-50 dark:border-zinc-800/30">Top 5 Spenders</h3>
@@ -1195,7 +1436,7 @@ export default function OrderAnalyticsClient({
           </div>
 
           <div className="p-6 flex-1 flex flex-col gap-6">
-            
+
             {/* Visual stacked distribution bar */}
             <div>
               <div className="flex justify-between text-[10px] font-bold text-slate-400 dark:text-zinc-500 uppercase tracking-wider mb-2">

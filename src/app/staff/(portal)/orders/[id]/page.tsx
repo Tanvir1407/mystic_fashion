@@ -12,7 +12,7 @@ export default async function StaffOrderDetailPage({ params }: { params: { id: s
   if (!session) redirect("/staff/login");
 
   // Fetch all necessary database records in parallel
-  const [order, deliverySettings, rate, activityLogs] = await Promise.all([
+  const [order, deliverySettings, rate, activityLogs, cancellationRequest] = await Promise.all([
     prisma.order.findFirst({
       where: { id: params.id, deletedAt: null },
       include: {
@@ -30,6 +30,9 @@ export default async function StaffOrderDetailPage({ params }: { params: { id: s
       orderBy: {
         timestamp: "desc",
       },
+    }),
+    prisma.cancellationRequest.findUnique({
+      where: { orderId: params.id },
     }),
   ]);
 
@@ -52,6 +55,8 @@ export default async function StaffOrderDetailPage({ params }: { params: { id: s
       backUrl="/staff/orders"
       commissionInfo={commissionInfo}
       activityLogs={activityLogs}
+      cancellationRequest={cancellationRequest}
+      staffSession={session}
     />
   );
 }

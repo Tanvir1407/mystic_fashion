@@ -60,7 +60,7 @@ export default function OrderRowClient({
     const oldStatus = status;
 
     if (newStatus === "RETURNED") {
-      router.push(`/admin/orders/returns?orderId=${order.id}`);
+      router.push(`/admin/odr_returns?orderId=${order.id}`);
       return;
     }
 

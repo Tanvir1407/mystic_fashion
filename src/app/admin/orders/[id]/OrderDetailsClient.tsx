@@ -9,10 +9,11 @@ import {
   ClipboardList, Tag, User, ArrowRightLeft, Activity,
   ChevronDown, ChevronUp
 } from "lucide-react";
-import { updateOrderDetails, updateOrderRemark, updateOrderStatus } from "../actions";
+import { updateOrderDetails, updateOrderRemark, updateOrderStatus, requestOrderCancellation } from "../actions";
 import { getPathaoCities, getPathaoZones, getPathaoAreas, getPathaoOrderInfoAction } from "@/app/actions/pathao";
 import { getProductsForOrder } from "@/app/admin/products/actions";
 import { HoldReasonModal } from "@/components/HoldReasonModal";
+import { CancelReasonModal } from "@/components/CancelReasonModal";
 import InvoicePrintView from "../InvoicePrintView";
 import ThermalPrintView from "../ThermalPrintView";
 import { useRouter } from "next/navigation";
@@ -83,6 +84,8 @@ export default function OrderDetailsClient({
   backUrl = "/admin/orders",
   commissionInfo = null,
   activityLogs = [],
+  cancellationRequest = null,
+  staffSession = null,
 }: {
   order: any;
   deliverySettings: any;
@@ -93,6 +96,8 @@ export default function OrderDetailsClient({
   backUrl?: string;
   commissionInfo?: { rate: number; amount: number; orderStatus: string } | null;
   activityLogs?: any[];
+  cancellationRequest?: any;
+  staffSession?: any;
 }) {
   const router = useRouter();
   const [isEditing, setIsEditing] = useState(false);
@@ -118,6 +123,9 @@ export default function OrderDetailsClient({
   const [loadingPathao, setLoadingPathao] = useState(false);
   const [localProducts, setLocalProducts] = useState<any[]>(products || []);
   const [loadingProducts, setLoadingProducts] = useState(false);
+  const [cancelRequest, setCancelRequest] = useState<any>(cancellationRequest);
+  const [cancelRequestLoading, setCancelRequestLoading] = useState(false);
+  const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
 
   const toggleLogExpanded = (logId: string) => {
     setExpandedLogs((prev) => ({ ...prev, [logId]: !prev[logId] }));
@@ -213,9 +221,8 @@ export default function OrderDetailsClient({
   const handleStatusChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
     const newStatus = e.target.value as OrderStatus;
     const oldStatus = status;
-
     if (newStatus === "RETURNED") {
-      router.push(`/admin/orders/returns?orderId=${order.id}`);
+      router.push(`/admin/odr_returns?orderId=${order.id}`);
       return;
     }
 
@@ -257,6 +264,18 @@ export default function OrderDetailsClient({
   const handleHoldClose = () => {
     setIsHoldModalOpen(false);
     setPendingStatus(null);
+  };
+
+  const handleRequestCancellationConfirm = async (reason: string) => {
+    const staffName = staffSession?.username || "Staff";
+    const result = await requestOrderCancellation(order.id, staffName, reason || undefined);
+    if (result.success) {
+      setCancelRequest({ orderId: order.id, staffName, reason: reason || null, createdAt: new Date() });
+      setIsCancelModalOpen(false);
+      alert("Cancellation request submitted successfully.");
+    } else {
+      alert(result.error || "Failed to submit cancellation request.");
+    }
   };
 
   const [formData, setFormData] = useState({
@@ -555,7 +574,7 @@ export default function OrderDetailsClient({
 
   // Status tracker
   const STATUS_STEPS = [
-    { statusKey: "PENDING", title: "Order Placed", icon: Package },
+    { statusKey: "PENDING", title: "Placed", icon: Package },
     { statusKey: "CONFIRMED", title: "Confirmed", icon: CheckCircle2 },
     { statusKey: "PRINTING", title: "Printing", icon: Printer },
     { statusKey: "PACKAGING", title: "Packaged", icon: PackageCheck },
@@ -564,9 +583,13 @@ export default function OrderDetailsClient({
   ];
   const STATUS_ORDER = ["PENDING", "CONFIRMED", "PRINTING", "PACKAGING", "SHIPPED", "DELIVERED"];
   const isSpecial = order.status === "CANCELLED" || order.status === "RETURNED" || order.status === "HOLD";
-  const currentIndex = STATUS_ORDER.indexOf(order.status);
   const hasPrint = order.items?.some((i: any) => i.requiresPrint);
   const filteredSteps = STATUS_STEPS.filter((s) => s.statusKey !== "PRINTING" || hasPrint || order.status === "PRINTING");
+
+  const timelineIndex = filteredSteps.findIndex(s => s.statusKey === order.status);
+  const safeCurrentIndex = timelineIndex !== -1 ? timelineIndex : 0;
+  const halfStepWidth = 100 / (filteredSteps.length * 2);
+  const activeWidth = (safeCurrentIndex / (filteredSteps.length - 1)) * (100 - 2 * halfStepWidth);
 
   const pathaoStatus = pathaoInfoState?.order_status || pathaoInfoState?.order_status_slug || null;
   const pathaoStatusLower = (pathaoStatus || "").toLowerCase();
@@ -736,6 +759,8 @@ export default function OrderDetailsClient({
           {/* ── Left Main Column ── */}
           <div className="lg:col-span-2 space-y-4">
 
+
+
             {/* Live Shipment Milestone Card */}
             <div className="bg-white border border-slate-200/80 rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.02)] overflow-hidden">
               <div className="px-5 py-4 border-b border-slate-150 bg-slate-50/50 flex items-center justify-between">
@@ -781,17 +806,29 @@ export default function OrderDetailsClient({
                   </div>
                 ) : (
                   <div className="relative flex items-start">
-                    <div className="absolute top-4 left-0 right-0 h-[2px] bg-slate-105" style={{ zIndex: 0 }}>
-                      <div
-                        className="h-full bg-emerald-500 transition-all duration-500 ease-in-out"
-                        style={{ width: `${filteredSteps.length > 1 ? (currentIndex / (filteredSteps.length - 1)) * 100 : 0}%` }}
-                      />
-                    </div>
+                    {/* Horizontal progress bar background */}
+                    <div
+                      className="absolute top-4 h-[2px] bg-slate-200"
+                      style={{
+                        zIndex: 0,
+                        left: `${halfStepWidth}%`,
+                        right: `${halfStepWidth}%`
+                      }}
+                    />
+
+                    {/* Horizontal progress bar active fill */}
+                    <div
+                      className="absolute top-4 h-[2px] bg-emerald-500 transition-all duration-500 ease-in-out"
+                      style={{
+                        zIndex: 0,
+                        left: `${halfStepWidth}%`,
+                        width: `${activeWidth}%`
+                      }}
+                    />
                     <div className="flex w-full relative">
-                      {filteredSteps.map((step) => {
-                        const stepIdx = STATUS_ORDER.indexOf(step.statusKey);
-                        const isCompleted = stepIdx < currentIndex;
-                        const isActive = stepIdx === currentIndex;
+                      {filteredSteps.map((step, idx) => {
+                        const isCompleted = idx < safeCurrentIndex;
+                        const isActive = idx === safeCurrentIndex;
                         const showPathao = step.statusKey === "SHIPPED" && order.pathaoConsignmentId;
                         const Icon = step.icon;
                         return (
@@ -799,7 +836,7 @@ export default function OrderDetailsClient({
                             <div className={`relative z-10 w-8 h-8 rounded-full border-2 flex items-center justify-center shrink-0 transition-all duration-300 ${isActive ? "bg-[#800020] border-[#800020] text-white ring-4 ring-[#800020]/15 shadow-md scale-110" : isCompleted ? "bg-emerald-500 border-emerald-500 text-white shadow-sm" : "bg-white border-slate-200 text-slate-400"}`}>
                               {isCompleted ? <Check className="w-3.5 h-3.5 stroke-[3px]" /> : <Icon className="w-3.5 h-3.5 stroke-[2.5px]" />}
                             </div>
-                            <span className={`mt-2 text-[10px] font-bold text-center leading-tight px-0.5 uppercase tracking-wide ${isActive ? "text-[#800020]" : isCompleted ? "text-emerald-600" : "text-slate-400"}`}>
+                            <span className={`mt-2 text-[10px] font-bold text-center leading-tight px-0.5 uppercase tracking-wide transition-colors ${isActive ? "text-[#800020] font-extrabold" : isCompleted ? "text-emerald-600" : "text-slate-400"}`}>
                               {step.title}
                             </span>
                             {showPathao && (
@@ -1124,42 +1161,92 @@ export default function OrderDetailsClient({
                 {statusLoading && <Loader2 className="w-4 h-4 animate-spin text-slate-400" />}
               </div>
               <div className="p-4 space-y-3">
-                <div className="relative">
-                  <select
-                    value={status}
-                    onChange={handleStatusChange}
-                    disabled={statusLoading || status === "CANCELLED" || status === "RETURNED"}
-                    className={`w-full text-xs font-black uppercase tracking-wider px-3.5 py-2.5 rounded-lg border transition-all cursor-pointer outline-none focus:ring-2 focus:ring-opacity-50 ${status === "PENDING" ? "bg-amber-50 text-amber-700 border-amber-200 focus:ring-amber-500" :
-                      status === "CONFIRMED" ? "bg-blue-50 text-blue-700 border-blue-200 focus:ring-blue-500" :
-                        status === "PRINTING" ? "bg-cyan-50 text-cyan-700 border-cyan-200 focus:ring-cyan-500" :
-                          status === "PACKAGING" ? "bg-purple-50 text-purple-700 border-purple-200 focus:ring-purple-500" :
-                            status === "SHIPPED" ? "bg-indigo-50 text-indigo-700 border-indigo-200 focus:ring-indigo-500" :
-                              status === "DELIVERED" ? "bg-green-50 text-green-700 border-green-200 focus:ring-green-500" :
-                                status === "RETURNED" ? "bg-rose-50 text-rose-700 border-rose-200 focus:ring-rose-500" :
-                                  status === "HOLD" ? "bg-pink-50 text-pink-700 border-pink-200 focus:ring-pink-500" :
-                                    "bg-red-50 text-red-700 border-red-200 focus:ring-red-500"
-                      }`}
-                  >
-                    <option value="PENDING" disabled={!validateStatusTransition(status, "PENDING").isValid}>Placed</option>
-                    <option value="CONFIRMED" disabled={!validateStatusTransition(status, "CONFIRMED").isValid}>Confirmed</option>
-                    <option value="PRINTING" disabled={!validateStatusTransition(status, "PRINTING").isValid}>Printing</option>
-                    <option value="PACKAGING" disabled={!validateStatusTransition(status, "PACKAGING").isValid}>Packaged</option>
-                    <option value="SHIPPED" disabled={!validateStatusTransition(status, "SHIPPED").isValid}>Shipped</option>
-                    <option value="DELIVERED" disabled={!validateStatusTransition(status, "DELIVERED").isValid}>Delivered</option>
-                    <option value="HOLD" disabled={!validateStatusTransition(status, "HOLD").isValid}>On Hold</option>
-                    <option value="RETURNED" disabled={!validateStatusTransition(status, "RETURNED").isValid}>Returned</option>
-                    <option value="CANCELLED" disabled={!validateStatusTransition(status, "CANCELLED").isValid}>Cancelled</option>
-                  </select>
-                </div>
+                {backUrl?.includes("/staff") ? (
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between border border-slate-100 rounded-lg p-3 bg-slate-50/50">
+                      <span className="text-xs font-bold text-slate-500">Current Status</span>
+                      <span
+                        className={`text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-full border ${status === "PENDING" ? "bg-amber-50 text-amber-700 border-amber-200" :
+                          status === "CONFIRMED" ? "bg-blue-50 text-blue-700 border-blue-200" :
+                            status === "PRINTING" ? "bg-cyan-50 text-cyan-700 border-cyan-200" :
+                              status === "PACKAGING" ? "bg-purple-50 text-purple-700 border-purple-200" :
+                                status === "SHIPPED" ? "bg-indigo-50 text-indigo-700 border-indigo-200" :
+                                  status === "DELIVERED" ? "bg-green-50 text-green-700 border-green-200" :
+                                    status === "RETURNED" ? "bg-rose-50 text-rose-700 border-rose-200" :
+                                      status === "HOLD" ? "bg-pink-50 text-pink-700 border-pink-200" :
+                                        "bg-red-50 text-red-700 border-red-200"
+                          }`}
+                      >
+                        {status === "PENDING" ? "Placed" :
+                          status === "CONFIRMED" ? "Confirmed" :
+                            status === "PRINTING" ? "Printing" :
+                              status === "PACKAGING" ? "Packaged" :
+                                status === "SHIPPED" ? "Shipped" :
+                                  status === "DELIVERED" ? "Delivered" :
+                                    status === "HOLD" ? "On Hold" :
+                                      status === "RETURNED" ? "Returned" :
+                                        "Cancelled"}
+                      </span>
+                    </div>
 
-                {status === "CANCELLED" || status === "RETURNED" ? (
-                  <p className="text-[10px] text-slate-400 font-medium">
-                    Orders in {status} status cannot be further transitioned.
-                  </p>
+                    {/* Cancellation Request Section for Staff */}
+                    {status !== "CANCELLED" && status !== "RETURNED" && (
+                      cancelRequest ? (
+                        <div className="flex items-center gap-1.5 px-3 py-2 bg-rose-50 border border-rose-100 rounded-lg text-[10px] text-rose-700 font-semibold justify-center shadow-sm">
+                          <AlertCircle className="w-3.5 h-3.5 text-rose-500 shrink-0" />
+                          <span>Cancellation Requested</span>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => setIsCancelModalOpen(true)}
+                          className="w-full flex items-center justify-center gap-1.5 px-3.5 py-2.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-lg text-xs font-bold transition duration-200 cursor-pointer shadow-sm"
+                        >
+                          <AlertCircle className="w-3.5 h-3.5" />
+                          Request Cancellation
+                        </button>
+                      )
+                    )}
+                  </div>
                 ) : (
-                  <p className="text-[10px] text-slate-400 font-medium">
-                    Select a status to update.
-                  </p>
+                  <>
+                    <div className="relative">
+                      <select
+                        value={status}
+                        onChange={handleStatusChange}
+                        disabled={statusLoading || status === "CANCELLED" || status === "RETURNED"}
+                        className={`w-full text-xs font-black uppercase tracking-wider px-3.5 py-2.5 rounded-lg border transition-all cursor-pointer outline-none focus:ring-2 focus:ring-opacity-50 ${status === "PENDING" ? "bg-amber-50 text-amber-700 border-amber-200 focus:ring-amber-500" :
+                          status === "CONFIRMED" ? "bg-blue-50 text-blue-700 border-blue-200 focus:ring-blue-500" :
+                            status === "PRINTING" ? "bg-cyan-50 text-cyan-700 border-cyan-200 focus:ring-cyan-500" :
+                              status === "PACKAGING" ? "bg-purple-50 text-purple-700 border-purple-200 focus:ring-purple-500" :
+                                status === "SHIPPED" ? "bg-indigo-50 text-indigo-700 border-indigo-200 focus:ring-indigo-500" :
+                                  status === "DELIVERED" ? "bg-green-50 text-green-700 border-green-200 focus:ring-green-500" :
+                                    status === "RETURNED" ? "bg-rose-50 text-rose-700 border-rose-200 focus:ring-rose-500" :
+                                      status === "HOLD" ? "bg-pink-50 text-pink-700 border-pink-200 focus:ring-pink-500" :
+                                        "bg-red-50 text-red-700 border-red-200 focus:ring-red-500"
+                          }`}
+                      >
+                        <option value="PENDING" disabled={!validateStatusTransition(status, "PENDING").isValid}>Placed</option>
+                        <option value="CONFIRMED" disabled={!validateStatusTransition(status, "CONFIRMED").isValid}>Confirmed</option>
+                        <option value="PRINTING" disabled={!validateStatusTransition(status, "PRINTING").isValid}>Printing</option>
+                        <option value="PACKAGING" disabled={!validateStatusTransition(status, "PACKAGING").isValid}>Packaged</option>
+                        <option value="SHIPPED" disabled={!validateStatusTransition(status, "SHIPPED").isValid}>Shipped</option>
+                        <option value="DELIVERED" disabled={!validateStatusTransition(status, "DELIVERED").isValid}>Delivered</option>
+                        <option value="HOLD" disabled={!validateStatusTransition(status, "HOLD").isValid}>On Hold</option>
+                        <option value="RETURNED" disabled={!validateStatusTransition(status, "RETURNED").isValid}>Returned</option>
+                        <option value="CANCELLED" disabled={!validateStatusTransition(status, "CANCELLED").isValid}>Cancelled</option>
+                      </select>
+                    </div>
+
+                    {status === "CANCELLED" || status === "RETURNED" ? (
+                      <p className="text-[10px] text-slate-400 font-medium">
+                        Orders in {status} status cannot be further transitioned.
+                      </p>
+                    ) : (
+                      <p className="text-[10px] text-slate-400 font-medium">
+                        Select a status to update.
+                      </p>
+                    )}
+                  </>
                 )}
               </div>
             </div>
@@ -1735,6 +1822,12 @@ export default function OrderDetailsClient({
           isOpen={isHoldModalOpen}
           onClose={handleHoldClose}
           onConfirm={handleHoldConfirm}
+        />
+
+        <CancelReasonModal
+          isOpen={isCancelModalOpen}
+          onClose={() => setIsCancelModalOpen(false)}
+          onConfirm={handleRequestCancellationConfirm}
         />
       </div>
     </>

@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 
 export default async function SingleOrderPage({ params }: { params: { id: string } }) {
   // Fetch all database records in parallel
-  const [order, deliverySettings, dtfSetting, staffRes, activityLogs] = await Promise.all([
+  const [order, deliverySettings, dtfSetting, staffRes, activityLogs, cancellationRequest] = await Promise.all([
     prisma.order.findUnique({
       where: { id: params.id },
       include: {
@@ -38,7 +38,10 @@ export default async function SingleOrderPage({ params }: { params: { id: string
       orderBy: {
         timestamp: "desc",
       },
-    })
+    }),
+    prisma.cancellationRequest.findUnique({
+      where: { orderId: params.id },
+    }),
   ]);
 
   if (!order) notFound();
@@ -54,6 +57,7 @@ export default async function SingleOrderPage({ params }: { params: { id: string
       dtfSetting={dtfSetting}
       staff={staff}
       activityLogs={activityLogs}
+      cancellationRequest={cancellationRequest}
     />
   );
 }

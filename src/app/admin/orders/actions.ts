@@ -87,6 +87,11 @@ async function _updateOrderStatus(orderId: string, status: OrderStatus, holdReas
         },
       });
 
+      // Clean up any pending cancellation requests
+      await tx.cancellationRequest.deleteMany({
+        where: { orderId },
+      });
+
       if (oldStatus === "PENDING" && newStatus === "CONFIRMED") {
         const account = await getOrCreateSystemAccount(tx, "Sales Revenue", "INCOME");
         await createDoubleEntryJournal(tx, {
@@ -1165,7 +1170,7 @@ async function _processSalesReturn(data: {
     });
 
     revalidatePath("/admin/orders");
-    revalidatePath("/admin/orders/returns");
+    revalidatePath("/admin/odr_returns");
     revalidatePath("/admin/inventory");
     revalidatePath("/admin/inventory/adjustments");
     revalidatePath("/admin/accounting");
@@ -1291,7 +1296,7 @@ async function _processFullSalesReturn(data: {
     });
 
     revalidatePath("/admin/orders");
-    revalidatePath("/admin/orders/returns");
+    revalidatePath("/admin/odr_returns");
     return { success: true };
   } catch (error: any) {
     console.error("Full return error:", error);
@@ -1380,5 +1385,33 @@ export async function searchOrdersForReturn(searchQuery: string) {
   } catch (error: any) {
     console.error("Search orders for return error:", error);
     return { success: false, error: error.message || "Failed to search orders." };
+  }
+}
+
+export async function requestOrderCancellation(orderId: string, staffName: string, reason?: string) {
+  try {
+    await prisma.cancellationRequest.create({
+      data: {
+        orderId,
+        staffName,
+        reason,
+      },
+    });
+    return { success: true };
+  } catch (error: any) {
+    console.error("Request order cancellation error:", error);
+    return { success: false, error: error.message || "Failed to submit cancellation request." };
+  }
+}
+
+export async function getActiveCancellationRequests() {
+  try {
+    const requests = await prisma.cancellationRequest.findMany({
+      orderBy: { createdAt: "desc" },
+    });
+    return { success: true, data: requests };
+  } catch (error: any) {
+    console.error("Get active cancellation requests error:", error);
+    return { success: false, error: error.message || "Failed to fetch cancellation requests." };
   }
 }
