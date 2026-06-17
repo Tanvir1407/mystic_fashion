@@ -12,7 +12,10 @@ interface OrderItem {
   id: string;
   quantity: number;
   price: number;
-  size: string;
+  size?: string;
+  variant?: {
+    size: string;
+  };
   product: {
     name: string;
   };
@@ -174,7 +177,7 @@ export default function InvoicePrintView({ orders }: { orders: Order[] }) {
                         <tr key={idx} className="border-b border-transparent">
                           <td className="py-1 px-2 text-center align-top">{idx + 1}</td>
                           <td className="py-1 px-2 align-top">
-                            <p className="font-bold leading-tight">{item.product.name} - Size {item.size}</p>
+                            <p className="font-bold leading-tight">{item.product.name} - Size {item.variant?.size || item.size}</p>
                             {item.requiresPrint && (
                               <div className="mt-1 text-[9px] font-bold text-gray-700 bg-gray-50 border border-gray-100 p-1 rounded-sm">
                                 CUSTOM PRINTING: {item.printName} (#{item.printNumber})

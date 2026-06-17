@@ -48,7 +48,7 @@ export default function CheckoutClient({
   const [phone, setPhone] = useState("");
   // DTF Modal State
   const [showDTFModal, setShowDTFModal] = useState(false);
-  const [activeItem, setActiveItem] = useState<{ id: string, size: string | undefined, editIndex: number } | null>(null);
+  const [activeItem, setActiveItem] = useState<{ id: string, size: string | undefined, color: string | undefined, editIndex: number } | null>(null);
   const [dtfForm, setDtfForm] = useState({
     type: "messi" as "messi" | "ronaldo" | "neymar" | "custom",
     name: "",
@@ -72,12 +72,12 @@ export default function CheckoutClient({
 
   useEffect(() => {
     if (items.length > 0) {
-      const productIds = items.map(i => i.id);
-      syncCartPrices(productIds).then((updatedPrices) => {
+      const cartItemsPayload = items.map(i => ({ id: i.id, size: i.size, color: i.color }));
+      syncCartPrices(cartItemsPayload).then((updatedPrices) => {
         updatedPrices.forEach(updated => {
           items.forEach(item => {
-            if (item.id === updated.id && item.price !== updated.price) {
-              updateItem(item.id, item.size, { price: updated.price });
+            if (item.id === updated.id && item.size === updated.size && item.color === updated.color && item.price !== updated.price) {
+              updateItem(item.id, item.size, item.color, { price: updated.price });
             }
           });
         });
@@ -303,13 +303,13 @@ export default function CheckoutClient({
     });
   };
 
-  const handleDTFToggle = (id: string, size: string | undefined, checked: boolean) => {
+  const handleDTFToggle = (id: string, size: string | undefined, color: string | undefined, checked: boolean) => {
     if (checked) {
-      setActiveItem({ id, size, editIndex: -1 });
+      setActiveItem({ id, size, color, editIndex: -1 });
       setDtfForm({ type: "messi", name: "Messi", number: "10" });
       setShowDTFModal(true);
     } else {
-      updateItem(id, size, {
+      updateItem(id, size, color, {
         requiresPrint: false,
         printName: "",
         printNumber: "",
@@ -329,7 +329,7 @@ export default function CheckoutClient({
     if (type === "ronaldo") { finalName = "Ronaldo"; finalNumber = "7"; }
     if (type === "neymar") { finalName = "Neymar"; finalNumber = "10"; }
 
-    const currentItem = items.find(i => i.id === activeItem.id && i.size === activeItem.size);
+    const currentItem = items.find(i => i.id === activeItem.id && i.size === activeItem.size && i.color === activeItem.color);
     let newDetails = currentItem?.printDetails ? [...currentItem.printDetails] : [];
 
     if (activeItem.editIndex >= 0) {
@@ -338,7 +338,7 @@ export default function CheckoutClient({
       newDetails.push({ name: finalName, number: finalNumber });
     }
 
-    updateItem(activeItem.id, activeItem.size, {
+    updateItem(activeItem.id, activeItem.size, activeItem.color, {
       requiresPrint: true,
       printName: finalName,
       printNumber: finalNumber,
@@ -622,7 +622,7 @@ export default function CheckoutClient({
                             <input
                               type="checkbox"
                               checked={item.requiresPrint}
-                              onChange={(e) => handleDTFToggle(item.id, item.size, e.target.checked)}
+                              onChange={(e) => handleDTFToggle(item.id, item.size, item.color, e.target.checked)}
                               className="w-4 h-4  border-slate-300 text-primary focus:ring-primary"
                             />
                             <span className="text-[10px] font-bold text-slate-600 uppercase">Add DTF Print (+৳{dtfCostPerItem})</span>
@@ -639,7 +639,7 @@ export default function CheckoutClient({
                                     <button
                                       onClick={(e) => {
                                         e.preventDefault();
-                                        setActiveItem({ id: item.id, size: item.size, editIndex: idx });
+                                        setActiveItem({ id: item.id, size: item.size, color: item.color, editIndex: idx });
                                         setDtfForm({ type: "custom", name: detail.name, number: detail.number });
                                         setShowDTFModal(true);
                                       }}
@@ -651,7 +651,7 @@ export default function CheckoutClient({
                                       onClick={(e) => {
                                         e.preventDefault();
                                         const newDetails = item.printDetails!.filter((_, i) => i !== idx);
-                                        updateItem(item.id, item.size, {
+                                        updateItem(item.id, item.size, item.color, {
                                           printDetails: newDetails,
                                           requiresPrint: newDetails.length > 0
                                         });
@@ -667,7 +667,7 @@ export default function CheckoutClient({
                                 <button
                                   onClick={(e) => {
                                     e.preventDefault();
-                                    setActiveItem({ id: item.id, size: item.size, editIndex: -1 });
+                                    setActiveItem({ id: item.id, size: item.size, color: item.color, editIndex: -1 });
                                     setDtfForm({ type: "custom", name: "", number: "" });
                                     setShowDTFModal(true);
                                   }}

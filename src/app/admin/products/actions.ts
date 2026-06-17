@@ -1,11 +1,56 @@
 "use server";
 
 import prisma from "@/lib/prisma";
+import { Prisma } from "@/generated/prisma/client";
 import { withAuditLog } from "@/lib/audit";
 import { revalidatePath } from "next/cache";
 import { writeFile, mkdir } from "fs/promises";
 import { join } from "path";
 import { slugify } from "@/utils/slugify";
+
+function formatPrismaError(error: any): string {
+  if (!(error instanceof Error)) {
+    return "An unexpected error occurred.";
+  }
+
+  // Handle Prisma Client Validation Error (e.g. invalid arguments/types)
+  if (error.name === "PrismaClientValidationError") {
+    const lines = error.message.split("\n");
+    const details = lines
+      .map((line) => line.trim())
+      .filter((line) =>
+        line.startsWith("Argument") ||
+        line.startsWith("Unknown arg") ||
+        line.includes("is missing") ||
+        line.includes("must be") ||
+        line.includes("Expected ") ||
+        line.includes("Required field")
+      );
+
+    if (details.length > 0) {
+      const cleanDetails = details.map((d) => d.replace(/`/g, "'")).join(". ");
+      return `Database validation error: ${cleanDetails}`;
+    }
+
+    return "Database validation error: One or more fields have invalid values or types. Please check your inputs.";
+  }
+
+  // Handle Prisma Client Known Request Error (e.g. constraints)
+  if (error.name === "PrismaClientKnownRequestError") {
+    const code = (error as any).code;
+    const meta = (error as any).meta;
+    if (code === "P2002") {
+      const target = Array.isArray(meta?.target) ? meta.target.join(", ") : String(meta?.target || "unique field");
+      return `Database constraint error: A record already exists with this ${target.replace(/`/g, "'")}. Please use a unique value.`;
+    }
+    if (code === "P2025") {
+      return "Database error: The requested record could not be found.";
+    }
+    return `Database error (${code}): ${error.message.replace(/`/g, "'")}`;
+  }
+
+  return error.message.replace(/`/g, "'");
+}
 
 // ─── PRODUCT CRUD ─────────────────────────────────────────────────────────────
 
@@ -14,7 +59,7 @@ async function _createProduct(data: {
   slug?: string | null;
   description: string;
   price: number;
-  images: string[];
+  images: (string | { url: string; boundAttributes?: any })[];
   team?: string;
   category: string;
   brandId?: string | null;
@@ -27,7 +72,7 @@ async function _createProduct(data: {
   isPublished: boolean;
   isCustomize?: boolean | null;
   trackStock: boolean;
-  variants: { size: string; color: string; colorCode?: string; sku?: string; stock: number }[];
+  variants: { size: string; color: string; colorCode?: string; sku?: string; stock: number; price?: number; attributes?: any }[];
 }) {
   try {
     if (data.images.length > 20) {
@@ -49,36 +94,129 @@ async function _createProduct(data: {
       };
     }
 
-    const product = await prisma.product.create({
-      data: {
-        name: data.name,
-        slug: finalSlug,
-        description: data.description,
-        price: data.price,
-        images: data.images,
-        team: data.team,
-        category: data.category,
-        brandId: data.brandId || null,
-        categoryId: data.categoryId || null,
-        subcategoryId: data.subcategoryId || null,
-        isFeatured: data.isFeatured,
-        featuredOrder: data.featuredOrder ?? 0,
-        isPublished: data.isPublished,
-        isCustomize: data.isCustomize ?? false,
-        trackStock: data.trackStock,
-        sizeChartId: data.sizeChartId || null,
-        discountId: data.discountId || null,
-        variants: {
-          create: data.variants.map((v, idx) => ({
-            size: v.size,
-            color: v.color,
-            colorCode: v.colorCode,
-            sku: v.sku,
-            stock: v.stock,
-            order: idx,
-          })),
+    // Proactive SKU uniqueness validation check
+    const incomingSkus = data.variants.map(v => v.sku).filter(Boolean) as string[];
+    if (incomingSkus.length > 0) {
+      const duplicateSkuVariant = await prisma.productVariant.findFirst({
+        where: { sku: { in: incomingSkus } },
+        include: { product: true }
+      });
+
+      if (duplicateSkuVariant) {
+        return {
+          success: false,
+          error: `SKU "${duplicateSkuVariant.sku}" is already in use by product "${duplicateSkuVariant.product.name}". Please ensure all SKUs are unique.`
+        };
+      }
+    }
+
+    const product = await prisma.$transaction(async (tx) => {
+      const warehouseCode = "WH-MAIN";
+      let warehouse = await tx.warehouse.findUnique({ where: { code: warehouseCode } });
+      if (!warehouse) {
+        warehouse = await tx.warehouse.create({
+          data: {
+            code: warehouseCode,
+            name: "Main Warehouse Hub",
+            address: "Central fulfillment Center",
+            isActive: true,
+          },
+        });
+      }
+
+      const prod = await tx.product.create({
+        data: {
+          name: data.name,
+          slug: finalSlug,
+          description: data.description,
+
+          team: data.team || null,
+          category: data.category,
+          brandId: data.brandId || null,
+          categoryId: data.categoryId || null,
+          subcategoryId: data.subcategoryId || null,
+          isFeatured: data.isFeatured,
+          featuredOrder: data.featuredOrder ?? 0,
+          isPublished: data.isPublished,
+          isCustomize: data.isCustomize ?? false,
+          trackStock: data.trackStock,
+          sizeChartId: data.sizeChartId || null,
+          discountId: data.discountId || null,
+          variants: {
+            create: data.variants.map((v, idx) => ({
+              size: v.size,
+              color: v.color,
+              colorCode: v.colorCode,
+              sku: v.sku,
+              order: idx,
+              attributes: v.attributes || {},
+            })),
+          },
         },
-      },
+        include: { variants: true },
+      }) as any;
+
+      for (let idx = 0; idx < data.images.length; idx++) {
+        const img = data.images[idx];
+        const imageUrl = typeof img === "string" ? img : img.url;
+        const boundAttrs = typeof img === "string" ? {} : (img.boundAttributes || {});
+        await tx.mediaAsset.create({
+          data: {
+            productId: prod.id,
+            url: imageUrl,
+            sortOrder: idx,
+            boundAttributes: boundAttrs,
+          },
+        });
+      }
+
+      for (const variant of prod.variants) {
+        const inputVariant = data.variants.find(
+          v => v.size === variant.size && v.color === variant.color
+        );
+        const stockQty = inputVariant?.stock ?? 0;
+        const variantPrice = inputVariant?.price !== undefined && inputVariant.price > 0
+          ? inputVariant.price
+          : data.price;
+
+        await tx.variantPricingMatrix.create({
+          data: {
+            variantId: variant.id,
+            basePrice: new Prisma.Decimal(variantPrice),
+            costPrice: null,
+            tierPrices: {},
+          },
+        });
+
+        const stock = await tx.stock.create({
+          data: {
+            variantId: variant.id,
+            warehouseId: warehouse.id,
+            physicalQuantity: stockQty,
+            availableQuantity: stockQty,
+            reservedQuantity: 0,
+            version: 0,
+          },
+        });
+
+        if (stockQty > 0) {
+          await tx.stockLedgerEntry.create({
+            data: {
+              stockId: stock.id,
+              movementType: "RECEIPT",
+              quantity: stockQty,
+              previousPhysicalQuantity: 0,
+              previousAvailableQuantity: 0,
+              newPhysicalQuantity: stockQty,
+              newAvailableQuantity: stockQty,
+              referenceId: prod.id,
+              referenceType: "PRODUCT_CREATE",
+            },
+          });
+        }
+      }
+
+      return prod;
     });
 
     revalidatePath("/admin/products");
@@ -95,7 +233,7 @@ async function _createProduct(data: {
     console.error("Error in createProduct:", error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : "An unexpected error occurred.",
+      error: formatPrismaError(error),
     };
   }
 }
@@ -116,7 +254,7 @@ async function _updateProduct(
     slug?: string | null;
     description: string;
     price: number;
-    images: string[];
+    images: (string | { url: string; boundAttributes?: any })[];
     team?: string;
     category: string;
     brandId?: string | null;
@@ -129,7 +267,7 @@ async function _updateProduct(
     isPublished: boolean;
     isCustomize?: boolean | null;
     trackStock: boolean;
-    variants: { size: string; color: string; colorCode?: string; sku?: string; stock: number }[];
+    variants: { size: string; color: string; colorCode?: string; sku?: string; stock: number; price?: number; attributes?: any }[];
   }
 ) {
   try {
@@ -154,50 +292,179 @@ async function _updateProduct(
       };
     }
 
-    const product = await prisma.product.update({
-      where: { id },
-      data: {
-        name: data.name,
-        slug: finalSlug,
-        description: data.description,
-        price: data.price,
-        images: data.images,
-        team: data.team,
-        category: data.category,
-        brandId: data.brandId || null,
-        categoryId: data.categoryId || null,
-        subcategoryId: data.subcategoryId || null,
-        isFeatured: data.isFeatured,
-        featuredOrder: data.featuredOrder ?? 0,
-        isPublished: data.isPublished,
-        isCustomize: data.isCustomize ?? false,
-        trackStock: data.trackStock,
-        sizeChartId: data.sizeChartId || null,
-        discountId: data.discountId || null,
-      },
-    });
+    // Proactive SKU uniqueness validation check (excluding current product being updated)
+    const incomingSkus = data.variants.map(v => v.sku).filter(Boolean) as string[];
+    if (incomingSkus.length > 0) {
+      const duplicateSkuVariant = await prisma.productVariant.findFirst({
+        where: {
+          sku: { in: incomingSkus },
+          productId: { not: id }
+        },
+        include: { product: true }
+      });
 
-    const upsertedVariants = await prisma.$transaction(
-      data.variants.map((v, idx) =>
-        prisma.productVariant.upsert({
+      if (duplicateSkuVariant) {
+        return {
+          success: false,
+          error: `SKU "${duplicateSkuVariant.sku}" is already in use by product "${duplicateSkuVariant.product.name}". Please ensure all SKUs are unique.`
+        };
+      }
+    }
+
+    const product = await prisma.$transaction(async (tx) => {
+      const warehouseCode = "WH-MAIN";
+      let warehouse = await tx.warehouse.findUnique({ where: { code: warehouseCode } });
+      if (!warehouse) {
+        warehouse = await tx.warehouse.create({
+          data: {
+            code: warehouseCode,
+            name: "Main Warehouse Hub",
+            address: "Central fulfillment Center",
+            isActive: true,
+          },
+        });
+      }
+
+      const prod = await tx.product.update({
+        where: { id },
+        data: {
+          name: data.name,
+          slug: finalSlug,
+          description: data.description,
+
+          team: data.team || null,
+          category: data.category,
+          brandId: data.brandId || null,
+          categoryId: data.categoryId || null,
+          subcategoryId: data.subcategoryId || null,
+          isFeatured: data.isFeatured,
+          featuredOrder: data.featuredOrder ?? 0,
+          isPublished: data.isPublished,
+          isCustomize: data.isCustomize ?? false,
+          trackStock: data.trackStock,
+          sizeChartId: data.sizeChartId || null,
+          discountId: data.discountId || null,
+        },
+      });
+
+      await tx.mediaAsset.deleteMany({ where: { productId: id } });
+      for (let idx = 0; idx < data.images.length; idx++) {
+        const img = data.images[idx];
+        const imageUrl = typeof img === "string" ? img : img.url;
+        const boundAttrs = typeof img === "string" ? {} : (img.boundAttributes || {});
+        await tx.mediaAsset.create({
+          data: {
+            productId: id,
+            url: imageUrl,
+            sortOrder: idx,
+            boundAttributes: boundAttrs,
+          },
+        });
+      }
+
+      const upserted = [];
+      for (let idx = 0; idx < data.variants.length; idx++) {
+        const v = data.variants[idx];
+        const variant = await tx.productVariant.upsert({
           where: { productId_size_color: { productId: id, size: v.size, color: v.color } },
-          update: { sku: v.sku, stock: v.stock, order: idx, colorCode: v.colorCode },
+          update: { sku: v.sku, order: idx, colorCode: v.colorCode, attributes: v.attributes || {} },
           create: {
             productId: id,
             size: v.size,
             color: v.color,
             colorCode: v.colorCode,
             sku: v.sku,
-            stock: v.stock,
             order: idx,
+            attributes: v.attributes || {},
           },
-        })
-      )
-    );
+        });
+        upserted.push(variant);
 
-    const keptVariantIds = upsertedVariants.map((v) => v.id);
-    await prisma.productVariant.deleteMany({
-      where: { productId: id, id: { notIn: keptVariantIds } },
+        const variantPrice = v.price !== undefined && v.price > 0
+          ? v.price
+          : data.price;
+
+        await tx.variantPricingMatrix.upsert({
+          where: { variantId: variant.id },
+          update: { basePrice: new Prisma.Decimal(variantPrice) },
+          create: {
+            variantId: variant.id,
+            basePrice: new Prisma.Decimal(variantPrice),
+            tierPrices: {},
+          },
+        });
+
+        const existingStock = await tx.stock.findUnique({
+          where: {
+            variantId_warehouseId: {
+              variantId: variant.id,
+              warehouseId: warehouse.id,
+            },
+          },
+        });
+
+        if (existingStock) {
+          const diff = v.stock - existingStock.physicalQuantity;
+          if (diff !== 0) {
+            await tx.stock.update({
+              where: { id: existingStock.id },
+              data: {
+                physicalQuantity: v.stock,
+                availableQuantity: v.stock,
+                version: { increment: 1 },
+              },
+            });
+
+            await tx.stockLedgerEntry.create({
+              data: {
+                stockId: existingStock.id,
+                movementType: "ADJUSTMENT",
+                quantity: diff,
+                previousPhysicalQuantity: existingStock.physicalQuantity,
+                previousAvailableQuantity: existingStock.availableQuantity,
+                newPhysicalQuantity: v.stock,
+                newAvailableQuantity: v.stock,
+                referenceId: prod.id,
+                referenceType: "PRODUCT_UPDATE",
+              },
+            });
+          }
+        } else {
+          const stock = await tx.stock.create({
+            data: {
+              variantId: variant.id,
+              warehouseId: warehouse.id,
+              physicalQuantity: v.stock,
+              availableQuantity: v.stock,
+              reservedQuantity: 0,
+              version: 0,
+            },
+          });
+
+          if (v.stock > 0) {
+            await tx.stockLedgerEntry.create({
+              data: {
+                stockId: stock.id,
+                movementType: "RECEIPT",
+                quantity: v.stock,
+                previousPhysicalQuantity: 0,
+                previousAvailableQuantity: 0,
+                newPhysicalQuantity: v.stock,
+                newAvailableQuantity: v.stock,
+                referenceId: prod.id,
+                referenceType: "PRODUCT_UPDATE",
+              },
+            });
+          }
+        }
+      }
+
+      const keptVariantIds = upserted.map((v) => v.id);
+      await tx.productVariant.deleteMany({
+        where: { productId: id, id: { notIn: keptVariantIds } },
+      });
+
+      return prod;
     });
 
     revalidatePath("/admin/products");
@@ -216,7 +483,7 @@ async function _updateProduct(
     console.error("Error in updateProduct:", error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : "An unexpected error occurred.",
+      error: formatPrismaError(error),
     };
   }
 }
@@ -287,7 +554,7 @@ export async function uploadImage(formData: FormData) {
   const publicUploadsDir = join(process.cwd(), "public", "uploads");
   try {
     await mkdir(publicUploadsDir, { recursive: true });
-  } catch (e) {}
+  } catch (e) { }
 
   const filePath = join(publicUploadsDir, uniqueName);
   await writeFile(filePath, buffer);
@@ -298,9 +565,40 @@ export async function uploadImage(formData: FormData) {
 // ─── PRODUCT QUERIES ──────────────────────────────────────────────────────────
 
 export async function getProductsForOrder() {
-  return await prisma.product.findMany({
-    include: { variants: true, discount: true },
+  const products = await prisma.product.findMany({
+    include: {
+      mediaAssets: { orderBy: { sortOrder: "asc" } },
+      discount: true,
+      variants: {
+        include: {
+          pricingMatrix: true,
+          stocks: {
+            where: { warehouse: { code: "WH-MAIN" } }
+          }
+        }
+      }
+    },
     orderBy: { name: "asc" },
+  });
+
+  return products.map(p => {
+    const basePrice = p.variants?.[0]?.pricingMatrix?.basePrice
+      ? Number(p.variants[0].pricingMatrix.basePrice)
+      : 0;
+
+    const displayImages = (p.mediaAssets && p.mediaAssets.length > 0)
+      ? p.mediaAssets.map((asset: any) => asset.url)
+      : ((p as any).images || []);
+
+    return {
+      ...p,
+      price: basePrice,
+      images: displayImages,
+      variants: p.variants.map(v => ({
+        ...v,
+        stock: v.stocks?.[0]?.availableQuantity ?? 0
+      }))
+    };
   });
 }
 

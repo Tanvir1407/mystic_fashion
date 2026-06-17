@@ -161,7 +161,14 @@ export default async function OrderAnalyticsPage({ searchParams }: { searchParam
       items: {
         include: {
           product: {
-            select: { id: true, name: true, purchasePrice: true, categoryId: true, categoryRel: { select: { name: true } } }
+            select: { id: true, name: true, categoryId: true, categoryRel: { select: { name: true } } }
+          },
+          variant: {
+            include: {
+              pricingMatrix: {
+                select: { costPrice: true }
+              }
+            }
           }
         }
       },
@@ -179,7 +186,13 @@ export default async function OrderAnalyticsPage({ searchParams }: { searchParam
     include: {
       items: {
         include: {
-          product: { select: { purchasePrice: true } }
+          variant: {
+            include: {
+              pricingMatrix: {
+                select: { costPrice: true }
+              }
+            }
+          }
         }
       },
       salesReturns: true,
@@ -280,7 +293,7 @@ export default async function OrderAnalyticsPage({ searchParams }: { searchParam
       // Calculate COGS
       order.items.forEach(item => {
         const itemSales = item.price * item.quantity;
-        const purchasePrice = item.product?.purchasePrice ?? (item.price * 0.6); // Smart business fallback
+        const purchasePrice = item.variant?.pricingMatrix?.costPrice ? Number(item.variant.pricingMatrix.costPrice) : (item.price * 0.6); // Smart business fallback
         const itemCost = purchasePrice * item.quantity;
         totalCogs += itemCost;
 
@@ -385,7 +398,7 @@ export default async function OrderAnalyticsPage({ searchParams }: { searchParam
     if (isDelivered) {
       prevNetSales += order.totalAmount;
       order.items.forEach(item => {
-        const purchasePrice = item.product?.purchasePrice ?? (item.price * 0.6);
+        const purchasePrice = item.variant?.pricingMatrix?.costPrice ? Number(item.variant.pricingMatrix.costPrice) : (item.price * 0.6);
         prevCogs += (purchasePrice * item.quantity);
       });
     }
@@ -456,7 +469,7 @@ export default async function OrderAnalyticsPage({ searchParams }: { searchParam
 
       let orderCogs = 0;
       order.items.forEach(item => {
-        const purchasePrice = item.product?.purchasePrice ?? (item.price * 0.6);
+        const purchasePrice = item.variant?.pricingMatrix?.costPrice ? Number(item.variant.pricingMatrix.costPrice) : (item.price * 0.6);
         orderCogs += (purchasePrice * item.quantity);
       });
       b.cogs += orderCogs;

@@ -25,7 +25,16 @@ export default async function AccountPage() {
               product: {
                 select: {
                   name: true,
-                  images: true
+                  mediaAssets: {
+                    select: { url: true },
+                    orderBy: { sortOrder: "asc" },
+                    take: 1
+                  }
+                }
+              },
+              variant: {
+                select: {
+                  size: true
                 }
               }
             }
@@ -83,7 +92,7 @@ export default async function AccountPage() {
     createdAt: order.createdAt.toISOString(),
     items: order.items.map((item) => ({
       id: item.id,
-      size: item.size,
+      size: item.variant?.size || "M",
       quantity: item.quantity,
       price: item.price,
       requiresPrint: item.requiresPrint,
@@ -91,7 +100,7 @@ export default async function AccountPage() {
       printNumber: item.printNumber,
       product: {
         name: item.product?.name || "Product",
-        image: item.product?.images?.[0] || null
+        image: item.product?.mediaAssets?.[0]?.url || null
       }
     }))
   }));

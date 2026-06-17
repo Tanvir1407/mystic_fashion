@@ -17,131 +17,192 @@ export default async function ProductPage({ params }: { params: { slug: string }
   // Match UUID pattern (standard Prisma UUID format)
   const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(identifier);
 
-  let product = null;
+  let productRes = null;
 
   if (isUuid) {
-    product = await prisma.product.findUnique({
+    productRes = await prisma.product.findUnique({
       where: { id: identifier },
       include: {
-        variants: true,
+        variants: {
+          include: {
+            pricingMatrix: true,
+            stocks: { where: { warehouse: { code: "WH-MAIN" } } }
+          }
+        },
         sizeChart: true,
         discount: true,
+        mediaAssets: { orderBy: { sortOrder: "asc" } },
+        categoryRel: {
+          include: {
+            attributeMappings: {
+              include: {
+                attribute: true
+              },
+              orderBy: {
+                sortOrder: "asc"
+              }
+            }
+          }
+        },
       }
     });
 
     // If found by ID and has a slug, do a 301 redirect to the slug-based URL!
-    if (product && product.slug) {
-      redirect(`/product/${product.slug}`);
+    if (productRes && productRes.slug) {
+      redirect(`/product/${productRes.slug}`);
     }
   } else {
-    product = await prisma.product.findUnique({
+    productRes = await prisma.product.findUnique({
       where: { slug: identifier },
       include: {
-        variants: true,
+        variants: {
+          include: {
+            pricingMatrix: true,
+            stocks: { where: { warehouse: { code: "WH-MAIN" } } }
+          }
+        },
         sizeChart: true,
         discount: true,
+        mediaAssets: { orderBy: { sortOrder: "asc" } },
+        categoryRel: {
+          include: {
+            attributeMappings: {
+              include: {
+                attribute: true
+              },
+              orderBy: {
+                sortOrder: "asc"
+              }
+            }
+          }
+        },
       }
     });
   }
 
-  // Fallback: If not found by slug, maybe check if it's an ID (non-standard format fallback)
-  if (!product) {
-    product = await prisma.product.findUnique({
+  // Fallback: If not found by slug, check ID
+  if (!productRes) {
+    productRes = await prisma.product.findUnique({
       where: { id: identifier },
       include: {
-        variants: true,
+        variants: {
+          include: {
+            pricingMatrix: true,
+            stocks: { where: { warehouse: { code: "WH-MAIN" } } }
+          }
+        },
         sizeChart: true,
         discount: true,
+        mediaAssets: { orderBy: { sortOrder: "asc" } },
+        categoryRel: {
+          include: {
+            attributeMappings: {
+              include: {
+                attribute: true
+              },
+              orderBy: {
+                sortOrder: "asc"
+              }
+            }
+          }
+        },
       }
     });
-    if (product && product.slug) {
-      redirect(`/product/${product.slug}`);
+    if (productRes && productRes.slug) {
+      redirect(`/product/${productRes.slug}`);
     }
   }
 
-  if (!product || (!product.isPublished && !isAdmin)) {
+  if (!productRes || (!productRes.isPublished && !isAdmin)) {
     notFound();
   }
 
-  // Sort variants in-memory to prevent Prisma Client caching issues
-  product.variants.sort((a, b) => (a.order || 0) - (b.order || 0));
+  // Sort variants in-memory
+  productRes.variants.sort((a: any, b: any) => (a.order || 0) - (b.order || 0));
 
-  const [delivery, footerData, relatedProducts] = await Promise.all([
+  const basePrice = productRes.variants?.[0]?.pricingMatrix?.basePrice
+    ? Number(productRes.variants[0].pricingMatrix.basePrice)
+    : productRes.price;
+
+  const displayImages = (productRes.mediaAssets && productRes.mediaAssets.length > 0)
+    ? productRes.mediaAssets.map((asset: any) => asset.url)
+    : ((productRes as any).images || []);
+
+  const product = {
+    ...productRes,
+    price: basePrice,
+    images: displayImages,
+    variants: productRes.variants.map((v: any) => {
+      const { pricingMatrix, ...rest } = v;
+      return {
+        ...rest,
+        stock: v.stocks?.[0]?.availableQuantity ?? v.stock ?? 0,
+        price: pricingMatrix?.basePrice ? Number(pricingMatrix.basePrice) : basePrice
+      };
+    })
+  };
+
+  let relatedProductsRes = await prisma.product.findMany({
+    where: {
+      isPublished: true,
+      categoryId: productRes.categoryId,
+      id: { not: productRes.id }
+    },
+    take: 4,
+    include: {
+      variants: {
+        include: { pricingMatrix: true }
+      },
+      discount: true,
+      mediaAssets: { orderBy: { sortOrder: "asc" } }
+    }
+  });
+
+  // Fallback to random if not enough related products
+  if (relatedProductsRes.length < 4) {
+    const additional = await prisma.product.findMany({
+      where: {
+        isPublished: true,
+        id: { notIn: [productRes.id, ...relatedProductsRes.map(p => p.id)] }
+      },
+      take: 4 - relatedProductsRes.length,
+      include: {
+        variants: {
+          include: { pricingMatrix: true }
+        },
+        discount: true,
+        mediaAssets: { orderBy: { sortOrder: "asc" } }
+      }
+    });
+    relatedProductsRes = [...relatedProductsRes, ...additional];
+  }
+
+  const relatedProducts = relatedProductsRes.map((rp: any) => {
+    const rpBasePrice = rp.variants?.[0]?.pricingMatrix?.basePrice
+      ? Number(rp.variants[0].pricingMatrix.basePrice)
+      : rp.price;
+    const rpDisplayImages = (rp.mediaAssets && rp.mediaAssets.length > 0)
+      ? rp.mediaAssets.map((asset: any) => asset.url)
+      : (rp.images || []);
+    return {
+      ...rp,
+      price: rpBasePrice,
+      images: rpDisplayImages,
+      variants: rp.variants?.map((v: any) => {
+        const { pricingMatrix, ...rest } = v;
+        return {
+          ...rest,
+          price: pricingMatrix?.basePrice ? Number(pricingMatrix.basePrice) : rpBasePrice
+        };
+      })
+    };
+  });
+
+  const [delivery, footerData] = await Promise.all([
     prisma.deliverySetting.findUnique({
       where: { id: "default" }
     }),
-    getFooterData(),
-    (async () => {
-      // Fetch up to 12 potential related products matching subcategory, category, or brand
-      const relatedCandidates = await prisma.product.findMany({
-        where: {
-          isPublished: true,
-          deletedAt: null,
-          id: { not: product.id },
-          OR: [
-            product.subcategoryId ? { subcategoryId: product.subcategoryId } : undefined,
-            product.categoryId ? { categoryId: product.categoryId } : undefined,
-            product.brandId ? { brandId: product.brandId } : undefined,
-            { category: { equals: product.category, mode: "insensitive" } },
-          ].filter(Boolean) as any,
-        },
-        take: 12,
-        orderBy: { createdAt: "desc" },
-        include: {
-          discount: true,
-          variants: true,
-        },
-      });
-
-      // Score candidates based on matching attributes
-      const scoredProducts = relatedCandidates.map((p) => {
-        let score = 0;
-        if (product.subcategoryId && p.subcategoryId === product.subcategoryId) score += 4;
-        if (product.categoryId && p.categoryId === product.categoryId) score += 3;
-        if (product.brandId && p.brandId === product.brandId) score += 1;
-        if (product.category && p.category && p.category.toLowerCase() === product.category.toLowerCase()) score += 2;
-
-        return { product: p, score };
-      });
-
-      // Sort by score desc, then by createdAt desc
-      scoredProducts.sort((a, b) => {
-        if (b.score !== a.score) {
-          return b.score - a.score;
-        }
-        return new Date(b.product.createdAt).getTime() - new Date(a.product.createdAt).getTime();
-      });
-
-      let selected = scoredProducts.map((sp) => sp.product).slice(0, 4);
-
-      // Fallback: if fewer than 4 related products, fetch latest products to fill
-      if (selected.length < 4) {
-        const excludedIds = [product.id, ...selected.map((p) => p.id)];
-        const fallbackProducts = await prisma.product.findMany({
-          where: {
-            isPublished: true,
-            deletedAt: null,
-            id: { notIn: excludedIds },
-          },
-          take: 4 - selected.length,
-          orderBy: { createdAt: "desc" },
-          include: {
-            discount: true,
-            variants: true,
-          },
-        });
-        selected = [...selected, ...fallbackProducts];
-      }
-
-      // Sort variants of related products
-      selected.forEach((p) => {
-        if (p.variants) {
-          p.variants.sort((a, b) => (a.order || 0) - (b.order || 0));
-        }
-      });
-
-      return selected;
-    })()
+    getFooterData()
   ]);
 
   const deliveryData = delivery || { insideDhaka: 80, outsideDhaka: 150 };
@@ -150,12 +211,7 @@ export default async function ProductPage({ params }: { params: { slug: string }
     <div className="min-h-screen bg-white">
       <Header />
       <main className="w-full">
-        <ProductClient 
-          product={product} 
-          sizeChartData={product.sizeChart || null} 
-          deliveryData={deliveryData} 
-          relatedProducts={relatedProducts}
-        />
+        <ProductClient product={product as any} sizeChartData={product.sizeChart || null} deliveryData={deliveryData} relatedProducts={relatedProducts} />
       </main>
       <Footer config={footerData} />
       <SidebarCart />

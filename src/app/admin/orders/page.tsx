@@ -88,6 +88,7 @@ export default async function AdminOrdersPage({ searchParams }: { searchParams: 
           items: {
             include: {
               product: true,
+              variant: true,
             },
           },
           createdBy: true,

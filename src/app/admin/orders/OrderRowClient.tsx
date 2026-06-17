@@ -248,7 +248,7 @@ export default function OrderRowClient({
         <div className="flex flex-col gap-0.5">
           {items.map((item) => (
             <div key={item.id} className="text-xs font-medium text-slate-600">
-              <span className="text-slate-400">{item.quantity}x</span> {item.product.name} <span className="font-bold text-[#800020]">({item.size})</span>
+              <span className="text-slate-400">{item.quantity}x</span> {item.product.name} <span className="font-bold text-[#800020]">({item.variant?.size || item.size})</span>
             </div>
           ))}
         </div>

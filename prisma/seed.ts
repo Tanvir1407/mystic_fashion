@@ -49,16 +49,28 @@ async function main() {
     console.log("Clean complete! Seeding fresh test data...");
 
     // Step 2: Seed Fresh Test Data
+    // Create Warehouse if not exists
+    let warehouse = await tx.warehouse.findUnique({
+      where: { code: "WH-MAIN" },
+    });
+    if (!warehouse) {
+      warehouse = await tx.warehouse.create({
+        data: {
+          code: "WH-MAIN",
+          name: "Main Warehouse",
+          address: "Dhaka, Bangladesh",
+          isActive: true,
+        },
+      });
+    }
+
     // 1. Create a Product
     const product = await tx.product.create({
       data: {
         name: "Argentina 2024 Home Kit",
         category: "Jersey",
         description: "Premium Quality Authentics",
-        price: 1200,
-        purchasePrice: 800,
         team: "Argentina",
-        images: [],
       },
     });
     console.log(`- Created Product: ${product.name}`);
@@ -68,10 +80,29 @@ async function main() {
       data: {
         productId: product.id,
         size: "XL",
-        stock: 10,
+        sku: "ARG-2024-HOME-XL",
+        pricingMatrix: {
+          create: {
+            costPrice: 800,
+            basePrice: 1200,
+          }
+        },
+        stocks: {
+          create: {
+            warehouseId: warehouse.id,
+            physicalQuantity: 10,
+            availableQuantity: 10,
+            reservedQuantity: 0,
+            version: 0
+          }
+        }
       },
+      include: {
+        stocks: true
+      }
     });
-    console.log(`- Created Variant: Size ${variant.size}, Stock ${variant.stock}`);
+    const mainStock = variant.stocks[0]?.physicalQuantity ?? 0;
+    console.log(`- Created Variant: Size ${variant.size}, Stock ${mainStock}`);
 
     // 3. Create a Purchase Record
     const purchase = await tx.purchase.create({

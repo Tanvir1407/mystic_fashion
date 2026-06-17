@@ -1,12 +1,11 @@
 "use client";
 
-import { useState, useMemo, useEffect, useRef } from "react";
+import { useState, useMemo, useEffect } from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { ChevronDown, ChevronUp, SlidersHorizontal, X, Check } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import ProductCard from "@/components/ProductCard";
-import { fetchProductsAction } from "./actions";
 
 interface Subcategory {
   id: string;
@@ -329,79 +328,8 @@ export default function ProductsClient({
     );
   }, [selectedCategory, selectedSubcategory, selectedBrands, initialMinPrice, initialMaxPrice, initialSort]);
 
-  const [visibleProducts, setVisibleProducts] = useState<Product[]>(products);
-  const [loadedPage, setLoadedPage] = useState(currentPage);
-  const [hasMore, setHasMore] = useState(currentPage < totalPages);
-  const [loadingMore, setLoadingMore] = useState(false);
-  const sentinelRef = useRef<HTMLDivElement | null>(null);
-
-  // Sync state with prop changes when filters change
-  useEffect(() => {
-    setVisibleProducts(products);
-    setLoadedPage(currentPage);
-    setHasMore(currentPage < totalPages);
-    setLoadingMore(false);
-  }, [products, currentPage, totalPages]);
-
-  const loadMoreProducts = async () => {
-    if (loadingMore || !hasMore) return;
-    setLoadingMore(true);
-
-    try {
-      const nextPage = loadedPage + 1;
-      const res = await fetchProductsAction({
-        category: initialCategory,
-        subcategory: initialSubcategory,
-        brand: initialBrand,
-        minPrice: initialMinPrice,
-        maxPrice: initialMaxPrice,
-        sort: sortBy,
-        page: nextPage,
-      });
-
-      if (res.products && res.products.length > 0) {
-        setVisibleProducts((prev) => {
-          const existingIds = new Set(prev.map((p) => p.id));
-          const newProducts = res.products.filter((p: any) => !existingIds.has(p.id)) as Product[];
-          return [...prev, ...newProducts];
-        });
-        setLoadedPage(nextPage);
-        setHasMore(nextPage < res.totalPages);
-      } else {
-        setHasMore(false);
-      }
-    } catch (error) {
-      console.error("Failed to load more products:", error);
-    } finally {
-      setLoadingMore(false);
-    }
-  };
-
-  useEffect(() => {
-    if (!hasMore) return;
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting) {
-          loadMoreProducts();
-        }
-      },
-      {
-        rootMargin: "200px",
-      }
-    );
-
-    const currentSentinel = sentinelRef.current;
-    if (currentSentinel) {
-      observer.observe(currentSentinel);
-    }
-
-    return () => {
-      if (currentSentinel) {
-        observer.unobserve(currentSentinel);
-      }
-    };
-  }, [hasMore, loadedPage, loadingMore, initialCategory, initialSubcategory, initialBrand, initialMinPrice, initialMaxPrice, sortBy]);
+  // Products are already fully filtered, sorted and sliced on the server component!
+  const filteredProducts = products;
 
   // Active Category/Subcategory text for heading
   const activeHeadingText = useMemo(() => {
@@ -415,6 +343,29 @@ export default function ProductsClient({
     }
     return "All Products";
   }, [selectedCategory, selectedSubcategory, categories]);
+
+  // Calculate pages list for pagination component
+  const getPageNumbers = () => {
+    const pages = [];
+    const maxVisible = 5;
+    if (totalPages <= maxVisible) {
+      for (let i = 1; i <= totalPages; i++) pages.push(i);
+    } else {
+      let start = Math.max(1, currentPage - 2);
+      let end = Math.min(totalPages, currentPage + 2);
+      
+      if (start === 1) {
+        end = maxVisible;
+      } else if (end === totalPages) {
+        start = totalPages - maxVisible + 1;
+      }
+      
+      for (let i = start; i <= end; i++) {
+        pages.push(i);
+      }
+    }
+    return pages;
+  };
 
   return (
     <div className="w-full bg-slate-50 dark:bg-zinc-950 py-6 border-t border-slate-200 dark:border-zinc-800">
@@ -605,21 +556,44 @@ export default function ProductsClient({
 
           {/* RIGHT SIDE: PRODUCT GRID */}
           <section className="flex-1 w-full">
-            {visibleProducts.length > 0 ? (
+            {filteredProducts.length > 0 ? (
               <div>
                 <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2 md:gap-4">
-                  {visibleProducts.map((product) => (
+                  {filteredProducts.map((product) => (
                     <ProductCard key={product.id} product={product as any} />
                   ))}
                 </div>
 
-                {/* Infinite Scroll Sentinel / Loader */}
-                {hasMore && (
-                  <div ref={sentinelRef} className="mt-12 flex justify-center py-6">
-                    <div className="flex items-center gap-2.5 text-slate-500 dark:text-zinc-400">
-                      <div className="w-5 h-5 border-2 border-slate-300 dark:border-zinc-700 border-t-slate-800 dark:border-t-zinc-200 rounded-full animate-spin" />
-                      <span className="text-xs font-bold uppercase tracking-wider">Loading more products...</span>
-                    </div>
+                {/* Premium Pagination Component */}
+                {totalPages > 1 && (
+                  <div className="mt-12 flex items-center justify-center gap-1.5 border-t border-slate-200 dark:border-zinc-900 pt-8">
+                    <button
+                      disabled={currentPage === 1}
+                      onClick={() => updateQueryParams({ page: (currentPage - 1).toString() })}
+                      className="px-3.5 py-2 border border-slate-200 dark:border-zinc-800 text-xs font-bold text-slate-800 dark:text-zinc-200 bg-white dark:bg-zinc-900 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-50 dark:hover:bg-zinc-800 transition-colors rounded-none"
+                    >
+                      Prev
+                    </button>
+                    {getPageNumbers().map((p) => (
+                      <button
+                        key={p}
+                        onClick={() => updateQueryParams({ page: p.toString() })}
+                        className={`px-3.5 py-2 text-xs font-bold transition-all border rounded-none ${
+                          currentPage === p
+                            ? "bg-primary border-primary text-white"
+                            : "border-slate-200 dark:border-zinc-800 text-slate-800 dark:text-zinc-200 bg-white dark:bg-zinc-900 hover:bg-slate-50 dark:hover:bg-zinc-800"
+                        }`}
+                      >
+                        {p}
+                      </button>
+                    ))}
+                    <button
+                      disabled={currentPage === totalPages}
+                      onClick={() => updateQueryParams({ page: (currentPage + 1).toString() })}
+                      className="px-3.5 py-2 border border-slate-200 dark:border-zinc-800 text-xs font-bold text-slate-800 dark:text-zinc-200 bg-white dark:bg-zinc-900 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-50 dark:hover:bg-zinc-800 transition-colors rounded-none"
+                    >
+                      Next
+                    </button>
                   </div>
                 )}
               </div>

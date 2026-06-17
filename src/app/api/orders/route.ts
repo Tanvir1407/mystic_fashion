@@ -110,27 +110,57 @@ export async function POST(req: NextRequest) {
         }
       }
 
-      // Recalculate subtotal securely from DB
-      const productIds = items.map((item: any) => item.id);
-      const dbProducts = await tx.product.findMany({
-        where: { id: { in: productIds } },
-        include: { discount: true }
-      });
-      const dbProductMap = new Map(dbProducts.map(p => [p.id, p]));
-
+      // Recalculate subtotal securely from DB & check stock
       let calculatedSubtotal = 0;
+      const variantMap = new Map<string, { id: string; availableStock: number; trackStock: boolean }>();
+
       for (const item of items) {
-        const dbProd = dbProductMap.get(item.id);
-        if (!dbProd) throw new Error(`Product not found: ${item.name || item.id}`);
-        let finalPrice = dbProd.price;
-        if (dbProd.discount && dbProd.discount.active) {
-          if (dbProd.discount.discountType === "PERCENTAGE") {
-            finalPrice = finalPrice - (finalPrice * (dbProd.discount.value / 100));
+        const targetColor = item.color || "Default";
+        const variant = await tx.productVariant.findUnique({
+          where: {
+            productId_size_color: {
+              productId: item.id,
+              size: item.size || "M",
+              color: targetColor,
+            },
+          },
+          include: {
+            product: {
+              include: { discount: true },
+            },
+            pricingMatrix: true,
+            stocks: {
+              where: { warehouse: { code: "WH-MAIN" } },
+            },
+          },
+        });
+
+        if (!variant) {
+          throw new Error(`Variant not found for Product "${item.name || item.id}" (Size: ${item.size || "M"}, Color: ${targetColor})`);
+        }
+
+        const basePrice = variant.pricingMatrix?.basePrice
+          ? Number(variant.pricingMatrix.basePrice)
+          : variant.product.price;
+
+        let finalPrice = basePrice;
+        const discount = variant.product.discount;
+        if (discount && discount.active) {
+          if (discount.discountType === "PERCENTAGE") {
+            finalPrice = finalPrice - (finalPrice * (discount.value / 100));
           } else {
-            finalPrice = finalPrice - dbProd.discount.value;
+            finalPrice = finalPrice - discount.value;
           }
         }
+
         calculatedSubtotal += roundPrice(finalPrice) * item.quantity;
+
+        const availableStock = variant.stocks?.[0]?.availableQuantity ?? variant.stock ?? 0;
+        variantMap.set(`${item.id}_${item.size || "M"}_${targetColor}`, {
+          id: variant.id,
+          availableStock,
+          trackStock: variant.product.trackStock ?? false,
+        });
       }
 
       const secureTotalAmount = roundPrice(
@@ -139,27 +169,13 @@ export async function POST(req: NextRequest) {
 
       // Validate variants exist and check stock
       for (const item of items) {
-        if (!item.size) throw new Error(`Size not selected for ${item.name || item.id}`);
-        const variant = await tx.productVariant.findUnique({
-          where: {
-            productId_size_color: {
-              productId: item.id,
-              size: item.size,
-              color: item.color || "Default",
-            },
-          },
-          include: {
-            product: {
-              select: {
-                trackStock: true
-              }
-            }
-          }
-        });
-        if (!variant) throw new Error(`Variant not found for product ${item.name || item.id} (${item.size})`);
-
-        if (variant.product.trackStock && variant.stock < item.quantity) {
-          throw new Error(`Variant for product "${item.name || item.id}" (${item.size}) does not have enough stock (Available: ${variant.stock}).`);
+        const key = `${item.id}_${item.size || "M"}_${item.color || "Default"}`;
+        const vInfo = variantMap.get(key);
+        if (!vInfo) {
+          throw new Error(`Variant not resolved for product ${item.name || item.id}`);
+        }
+        if (vInfo.trackStock && vInfo.availableStock < item.quantity) {
+          throw new Error(`Variant for product "${item.name || item.id}" (${item.size || "M"}) does not have enough stock (Available: ${vInfo.availableStock}).`);
         }
       }
 
@@ -186,10 +202,14 @@ export async function POST(req: NextRequest) {
           customerId,
           items: {
             create: items.flatMap((item: any) => {
+              const key = `${item.id}_${item.size || "M"}_${item.color || "Default"}`;
+              const variantId = variantMap.get(key)?.id || null;
+
               if (item.requiresPrint && item.printDetails?.length > 0) {
                 const printed = item.printDetails.map((pd: any) => ({
                   productId: item.id,
                   size: item.size || "M",
+                  variantId,
                   quantity: 1,
                   price: item.price,
                   requiresPrint: true,
@@ -202,6 +222,7 @@ export async function POST(req: NextRequest) {
                   printed.push({
                     productId: item.id,
                     size: item.size || "M",
+                    variantId,
                     quantity: remaining,
                     price: item.price,
                     requiresPrint: false,
@@ -216,6 +237,7 @@ export async function POST(req: NextRequest) {
                 {
                   productId: item.id,
                   size: item.size || "M",
+                  variantId,
                   quantity: item.quantity,
                   price: item.price,
                   requiresPrint: item.requiresPrint || false,

@@ -9,7 +9,7 @@ interface ProductCardProps {
     slug?: string | null;
     name: string;
     price: number;
-    images: string[];
+    images?: string[];
     team: string;
     variants: any[];
     trackStock?: boolean | null;
@@ -21,11 +21,10 @@ interface ProductCardProps {
   };
 }
 
-
-
 export default function ProductCard({ product }: ProductCardProps) {
   let finalPrice = product.price;
   let isDiscounted = false;
+  const productImages = product.images || [];
 
   if (product.discount && product.discount.active) {
     isDiscounted = true;
@@ -36,7 +35,62 @@ export default function ProductCard({ product }: ProductCardProps) {
     }
   }
 
-  const totalStock = product.variants ? product.variants.reduce((acc, v) => acc + (v.stock || 0), 0) : 0;
+  let hasMultiplePrices = false;
+  let minPrice = finalPrice;
+  let maxPrice = finalPrice;
+  let originalMinPrice = product.price;
+  let originalMaxPrice = product.price;
+
+  if (product.variants && product.variants.length > 0) {
+    const variantPrices = product.variants.map((v: any) => {
+      let vPrice = product.price;
+      if (v.price !== undefined) {
+         vPrice = Number(v.price);
+      } else if (v.pricingMatrix?.basePrice !== undefined) {
+         vPrice = Number(v.pricingMatrix.basePrice);
+      }
+      return vPrice;
+    });
+
+    const vMin = Math.min(...variantPrices);
+    const vMax = Math.max(...variantPrices);
+    
+    if (vMax > vMin) {
+       hasMultiplePrices = true;
+       originalMinPrice = vMin;
+       originalMaxPrice = vMax;
+       
+       minPrice = vMin;
+       maxPrice = vMax;
+       
+       if (product.discount && product.discount.active) {
+         if (product.discount.discountType === "PERCENTAGE") {
+           minPrice = roundPrice(vMin - (vMin * (product.discount.value / 100)));
+           maxPrice = roundPrice(vMax - (vMax * (product.discount.value / 100)));
+         } else {
+           minPrice = roundPrice(Math.max(0, vMin - product.discount.value));
+           maxPrice = roundPrice(Math.max(0, vMax - product.discount.value));
+         }
+       }
+    } else if (vMin > 0) {
+       originalMinPrice = vMin;
+       finalPrice = vMin;
+       if (product.discount && product.discount.active) {
+         if (product.discount.discountType === "PERCENTAGE") {
+           finalPrice = roundPrice(vMin - (vMin * (product.discount.value / 100)));
+         } else {
+           finalPrice = roundPrice(Math.max(0, vMin - product.discount.value));
+         }
+       }
+    }
+  }
+
+  const totalStock = product.variants 
+    ? product.variants.reduce((acc, v) => {
+        const stockQty = v.stocks?.[0]?.availableQuantity ?? v.stock ?? 0;
+        return acc + stockQty;
+      }, 0) 
+    : 0;
   const isOutOfStock = !!(product.trackStock && totalStock <= 0);
 
   return (
@@ -60,9 +114,9 @@ export default function ProductCard({ product }: ProductCardProps) {
 
         {/* Image Section */}
         <div className="relative w-full aspect-[3/4] bg-[#F5F5F5] dark:bg-zinc-800 overflow-hidden">
-          {product.images[0] ? (
+          {productImages[0] ? (
             <Image
-              src={product.images[0]}
+              src={productImages[0]}
               alt={product.name}
               unoptimized={true}
               fill
@@ -77,33 +131,20 @@ export default function ProductCard({ product }: ProductCardProps) {
 
         {/* Product Info */}
         <div className="px-3 pb-4 pt-3 flex flex-col gap-1.5 flex-1">
-          <div className="flex items-center gap-2 mt-auto min-h-[28px]">
+          <div className="flex items-baseline gap-2 mt-auto">
             {isDiscounted && (
               <span className="text-zinc-400 dark:text-zinc-500 font-medium text-sm line-through">
-                {formatBDT(product.price)}
+                {hasMultiplePrices ? `${formatBDT(originalMinPrice)} - ${formatBDT(originalMaxPrice)}` : formatBDT(originalMinPrice)}
               </span>
             )}
             <span className="text-[#800020] font-black text-base md:text-lg">
-              {formatBDT(finalPrice)}
+              {hasMultiplePrices ? `${formatBDT(minPrice)} - ${formatBDT(maxPrice)}` : formatBDT(finalPrice)}
             </span>
           </div>
           <h3 className="text-xs mm:text-sm md:text-[13px] font-medium text-zinc-800 dark:text-zinc-100 leading-snug line-clamp-2 group-hover:text-[#800020] transition-colors duration-300">
             {product.name}
           </h3>
         </div>
-
-        {/* Add to Bag */}
-        {/* <div className="px-3 pb-3 md:px-4 md:pb-4 mt-auto">
-          <AddToBagButton product={{
-            id: product.id,
-            name: product.name,
-            price: finalPrice,
-            originalPrice: isDiscounted ? product.price : undefined,
-            team: product.team,
-            image: product.images[0] || "",
-            variants: product.variants
-          }} />
-        </div> */}
       </div>
     </Link>
   );

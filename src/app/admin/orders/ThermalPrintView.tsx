@@ -9,7 +9,10 @@ interface OrderItem {
   id: string;
   quantity: number;
   price: number;
-  size: string;
+  size?: string;
+  variant?: {
+    size: string;
+  };
   product: {
     name: string;
   };
@@ -221,7 +224,7 @@ export default function ThermalPrintView({ orders, storePhone, storeAddress, pos
                     <tr key={idx} className="align-top leading-tight">
                       <td className="font-normal py-1 text-left" style={{ width: "10%" }}>{item.quantity}x</td>
                       <td className="py-1 text-left pr-1" style={{ width: "70%" }}>
-                        <p className="font-normal">{item.product.name} - Size {item.size}</p>
+                        <p className="font-normal">{item.product.name} - Size {item.variant?.size || item.size}</p>
                         {item.requiresPrint && (
                           <div className="mt-0.5 text-[8.5px] font-black text-black/80 leading-normal italic">
                             Print Name: {item.printName} (#{item.printNumber})

@@ -50,7 +50,7 @@ export async function trackCustomerOrder(query: string) {
 
         if (isOrderId) {
             // ── Order ID search ─────────────────────────────────────
-            const order = await prisma.order.findFirst({
+            const orderData = await prisma.order.findFirst({
                 where: {
                     id: rawQuery.toUpperCase(),
                     deletedAt: null,
@@ -71,22 +71,46 @@ export async function trackCustomerOrder(query: string) {
                     items: {
                         select: {
                             id: true,
-                            size: true,
                             quantity: true,
                             price: true,
                             requiresPrint: true,
                             printName: true,
                             printNumber: true,
                             printCost: true,
-                            product: { select: { name: true, images: true, slug: true } },
+                            product: {
+                                select: {
+                                    name: true,
+                                    slug: true,
+                                    mediaAssets: {
+                                        select: { url: true },
+                                        orderBy: { sortOrder: 'asc' }
+                                    }
+                                }
+                            },
+                            variant: {
+                                select: { size: true }
+                            }
                         }
                     }
                 }
             });
 
-            if (!order) {
+            if (!orderData) {
                 return { success: false, error: "Order not found. Please check your Order ID." };
             }
+
+            const order = {
+                ...orderData,
+                items: orderData.items.map(item => ({
+                    ...item,
+                    size: item.variant?.size || 'M',
+                    product: {
+                        name: item.product.name,
+                        slug: item.product.slug,
+                        images: item.product.mediaAssets.map(ma => ma.url)
+                    }
+                }))
+            };
 
             let pathaoInfo = null;
             if (order.status === 'SHIPPED' && order.pathaoConsignmentId) {
@@ -107,7 +131,7 @@ export async function trackCustomerOrder(query: string) {
                 return { success: false, error: "Please enter a valid phone number (at least 9 digits)." };
             }
 
-            const orders = await prisma.order.findMany({
+            const ordersData = await prisma.order.findMany({
                 where: {
                     deletedAt: null,
                     OR: [
@@ -133,22 +157,46 @@ export async function trackCustomerOrder(query: string) {
                     items: {
                         select: {
                             id: true,
-                            size: true,
                             quantity: true,
                             price: true,
                             requiresPrint: true,
                             printName: true,
                             printNumber: true,
                             printCost: true,
-                            product: { select: { name: true, images: true, slug: true } },
+                            product: {
+                                select: {
+                                    name: true,
+                                    slug: true,
+                                    mediaAssets: {
+                                        select: { url: true },
+                                        orderBy: { sortOrder: 'asc' }
+                                    }
+                                }
+                            },
+                            variant: {
+                                select: { size: true }
+                            }
                         }
                     }
                 }
             });
 
-            if (orders.length === 0) {
+            if (ordersData.length === 0) {
                 return { success: false, error: "No orders found for this phone number." };
             }
+
+            const orders = ordersData.map(order => ({
+                ...order,
+                items: order.items.map(item => ({
+                    ...item,
+                    size: item.variant?.size || 'M',
+                    product: {
+                        name: item.product.name,
+                        slug: item.product.slug,
+                        images: item.product.mediaAssets.map(ma => ma.url)
+                    }
+                }))
+            }));
 
             return { success: true, data: { orders } };
         }

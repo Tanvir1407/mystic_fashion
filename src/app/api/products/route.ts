@@ -59,16 +59,19 @@ export async function GET(req: NextRequest) {
     }
 
     if (minPrice !== null || maxPrice !== null) {
-      where.price = {};
-      if (minPrice !== null) where.price.gte = minPrice;
-      if (maxPrice !== null) where.price.lte = maxPrice;
+      where.variants = {
+        some: {
+          pricingMatrix: {
+            basePrice: {}
+          }
+        }
+      };
+      if (minPrice !== null) where.variants.some.pricingMatrix.basePrice.gte = minPrice;
+      if (maxPrice !== null) where.variants.some.pricingMatrix.basePrice.lte = maxPrice;
     }
 
     const orderBy: any =
-      sort === "price_asc" ? { price: "asc" } :
-      sort === "price_desc" ? { price: "desc" } :
       sort === "oldest" ? { createdAt: "asc" } :
-      sort === "featured" ? [{ isFeatured: "desc" }, { createdAt: "desc" }] :
       [{ isFeatured: "desc" }, { createdAt: "desc" }]; // newest (default)
 
     const [total, products] = await Promise.all([
@@ -83,35 +86,57 @@ export async function GET(req: NextRequest) {
           brand: { select: { id: true, name: true } },
           categoryRel: { select: { id: true, name: true } },
           subcategory: { select: { id: true, name: true } },
-          variants: { orderBy: { order: "asc" } },
+          mediaAssets: { orderBy: { sortOrder: "asc" } },
+          variants: {
+            orderBy: { order: "asc" },
+            include: {
+              pricingMatrix: true,
+              stocks: { where: { warehouse: { code: "WH-MAIN" } } }
+            }
+          },
         },
       }),
     ]);
 
-    const data = products.map((p) => ({
-      id: p.id,
-      name: p.name,
-      slug: p.slug,
-      price: p.price,
-      finalPrice: calcFinalPrice(p),
-      images: p.images,
-      isFeatured: p.isFeatured,
-      isCustomize: p.isCustomize,
-      trackStock: p.trackStock,
-      brand: p.brand,
-      category: p.categoryRel,
-      subcategory: p.subcategory,
-      discount: p.discount
-        ? { type: p.discount.discountType, value: p.discount.value }
-        : null,
-      variants: p.variants.map((v) => ({
-        id: v.id,
-        size: v.size,
-        color: v.color,
-        colorCode: v.colorCode,
-        stock: v.stock,
-      })),
-    }));
+    const data = products.map((p) => {
+      const basePrice = p.variants?.[0]?.pricingMatrix?.basePrice
+        ? Number(p.variants[0].pricingMatrix.basePrice)
+        : 0;
+
+      const displayImages = (p.mediaAssets && p.mediaAssets.length > 0)
+        ? p.mediaAssets.map((asset: any) => asset.url)
+        : ((p as any).images || []);
+
+      return {
+        id: p.id,
+        name: p.name,
+        slug: p.slug,
+        price: basePrice,
+        finalPrice: calcFinalPrice({ ...p, price: basePrice }),
+        images: displayImages,
+        isFeatured: p.isFeatured,
+        isCustomize: p.isCustomize,
+        brand: p.brand,
+        category: p.categoryRel,
+        subcategory: p.subcategory,
+        discount: p.discount
+          ? { type: p.discount.discountType, value: p.discount.value }
+          : null,
+        variants: p.variants.map((v) => ({
+          id: v.id,
+          size: v.size,
+          color: v.color,
+          colorCode: v.colorCode,
+          stock: v.stocks?.[0]?.availableQuantity ?? 0,
+        })),
+      };
+    });
+
+    if (sort === "price_asc") {
+      data.sort((a, b) => a.price - b.price);
+    } else if (sort === "price_desc") {
+      data.sort((a, b) => b.price - a.price);
+    }
 
     return NextResponse.json({
       success: true,

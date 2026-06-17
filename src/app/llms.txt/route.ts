@@ -47,7 +47,16 @@ export async function GET() {
         name: true,
         slug: true,
         description: true,
-        price: true,
+        variants: {
+          take: 1,
+          select: {
+            pricingMatrix: {
+              select: {
+                basePrice: true
+              }
+            }
+          }
+        }
       },
       orderBy: {
         createdAt: "desc",
@@ -62,7 +71,10 @@ export async function GET() {
           const plainDesc = product.description
             ? product.description.replace(/<[^>]*>/g, "").replace(/\s+/g, " ").trim().substring(0, 120) + "..."
             : "Premium authentic jersey";
-          markdown += `- [${product.name}](${baseUrl}/product/${product.slug}) : Price: BDT ${product.price}. ${plainDesc}\n`;
+          const basePrice = (product.variants?.[0]?.pricingMatrix as any)?.basePrice 
+            ? Number((product.variants[0].pricingMatrix as any).basePrice)
+            : 0;
+          markdown += `- [${product.name}](${baseUrl}/product/${product.slug}) : Price: BDT ${basePrice}. ${plainDesc}\n`;
         }
       });
     }

@@ -67,7 +67,12 @@ export default async function ProductAnalyticsPage({ searchParams }: { searchPar
   const products = await prisma.product.findMany({
     where: { deletedAt: null },
     include: {
-      variants: true,
+      variants: {
+        include: {
+          stocks: true,
+          pricingMatrix: true
+        }
+      },
       categoryRel: { select: { name: true } },
       brand: { select: { name: true } }
     }
@@ -86,12 +91,17 @@ export default async function ProductAnalyticsPage({ searchParams }: { searchPar
             select: {
               id: true,
               name: true,
-              purchasePrice: true,
-              price: true,
               categoryId: true,
               categoryRel: { select: { name: true } },
               brandId: true,
               brand: { select: { name: true } }
+            }
+          },
+          variant: {
+            include: {
+              pricingMatrix: {
+                select: { costPrice: true }
+              }
             }
           }
         }
@@ -114,11 +124,11 @@ export default async function ProductAnalyticsPage({ searchParams }: { searchPar
     include: {
       items: {
         include: {
-          product: {
-            select: {
-              id: true,
-              purchasePrice: true,
-              price: true
+          variant: {
+            include: {
+              pricingMatrix: {
+                select: { costPrice: true }
+              }
             }
           }
         }
@@ -147,24 +157,29 @@ export default async function ProductAnalyticsPage({ searchParams }: { searchPar
 
   products.forEach(p => {
     let productStock = 0;
-    const prodPurchasePrice = p.purchasePrice ?? (p.price * 0.6);
     const itemVariants: typeof inventoryHealthList[0]["variants"] = [];
+    let productValuation = 0;
 
     p.variants.forEach(v => {
-      productStock += v.stock;
-      totalStockQty += v.stock;
-      totalStockValuation += (v.stock * prodPurchasePrice);
+      const variantStock = v.stocks.reduce((sum, s) => sum + s.physicalQuantity, 0);
+      productStock += variantStock;
+      totalStockQty += variantStock;
 
-      if (v.stock === 0) {
+      const variantCostPrice = v.pricingMatrix?.costPrice ? Number(v.pricingMatrix.costPrice) : (v.pricingMatrix?.basePrice ? Number(v.pricingMatrix.basePrice) * 0.6 : 0);
+      const variantValuation = variantStock * variantCostPrice;
+      totalStockValuation += variantValuation;
+      productValuation += variantValuation;
+
+      if (variantStock === 0) {
         outOfStockVariantsCount++;
-      } else if (v.stock <= lowStockThreshold) {
+      } else if (variantStock <= lowStockThreshold) {
         lowStockVariantsCount++;
       }
 
       itemVariants.push({
         size: v.size,
         color: v.color,
-        stock: v.stock,
+        stock: variantStock,
         sku: v.sku
       });
     });
@@ -172,7 +187,7 @@ export default async function ProductAnalyticsPage({ searchParams }: { searchPar
     let status: "OUT_OF_STOCK" | "LOW_STOCK" | "HEALTHY" = "HEALTHY";
     if (productStock === 0) {
       status = "OUT_OF_STOCK";
-    } else if (p.variants.some(v => v.stock <= lowStockThreshold)) {
+    } else if (itemVariants.some(iv => iv.stock <= lowStockThreshold)) {
       status = "LOW_STOCK";
     }
 
@@ -183,7 +198,7 @@ export default async function ProductAnalyticsPage({ searchParams }: { searchPar
       brand: p.brand?.name || "Unknown Brand",
       variants: itemVariants,
       totalStock: productStock,
-      valuation: productStock * prodPurchasePrice,
+      valuation: productValuation,
       status
     });
   });
@@ -246,7 +261,7 @@ export default async function ProductAnalyticsPage({ searchParams }: { searchPar
     if (isDelivered) {
       order.items.forEach(item => {
         const itemSales = item.price * item.quantity;
-        const purchasePrice = item.product?.purchasePrice ?? (item.price * 0.6);
+        const purchasePrice = item.variant?.pricingMatrix?.costPrice ? Number(item.variant.pricingMatrix.costPrice) : (item.price * 0.6);
         const itemCost = purchasePrice * item.quantity;
         const itemProfit = itemSales - itemCost;
 
@@ -262,7 +277,7 @@ export default async function ProductAnalyticsPage({ searchParams }: { searchPar
         }
 
         // Aggregate sizes & colors
-        const sz = item.size || "M";
+        const sz = item.variant?.size || "M";
         sizeMap.set(sz, (sizeMap.get(sz) || 0) + item.quantity);
 
         const col = item.product ? "Default" : "Default"; // Fallback/Default color identifier
@@ -413,7 +428,7 @@ export default async function ProductAnalyticsPage({ searchParams }: { searchPar
     if (b) {
       order.items.forEach(item => {
         const itemSales = item.price * item.quantity;
-        const purchasePrice = item.product?.purchasePrice ?? (item.price * 0.6);
+        const purchasePrice = item.variant?.pricingMatrix?.costPrice ? Number(item.variant.pricingMatrix.costPrice) : (item.price * 0.6);
         const itemCost = purchasePrice * item.quantity;
 
         b!.soldQty += item.quantity;
@@ -447,7 +462,7 @@ export default async function ProductAnalyticsPage({ searchParams }: { searchPar
   prevOrders.forEach(order => {
     if (order.status === "DELIVERED") {
       order.items.forEach(item => {
-        const purchasePrice = item.product?.purchasePrice ?? (item.price * 0.6);
+        const purchasePrice = item.variant?.pricingMatrix?.costPrice ? Number(item.variant.pricingMatrix.costPrice) : (item.price * 0.6);
         prevSoldQty += item.quantity;
         prevRevenue += (item.price * item.quantity);
         prevCogs += (purchasePrice * item.quantity);
