@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { trackCustomerOrder } from "@/app/actions/pathao";
 import { formatBDT } from "@/utils/formatPrice";
+import { formatVariant } from "@/utils/formatVariant";
 import { validateStatusTransition } from "@/lib/utils";
 import type { OrderStatus } from "@/generated/prisma/client";
 import { bulkUpdateOrderStatus } from "./actions";
@@ -382,7 +383,7 @@ export default function ScanScreen() {
                           <div className="flex flex-wrap gap-1.5 mt-1.5">
                             {order.items.map((item: any, i: number) => (
                               <span key={i} className="text-[10px] bg-slate-100 text-slate-600 border border-slate-200 px-1.5 py-0.5 rounded font-medium">
-                                {item.product?.name || "Item"} x{item.quantity} ({item.variant?.size || item.size})
+                                {item.product?.name || "Item"} x{item.quantity}{formatVariant(item) ? ` (${formatVariant(item)})` : ""}
                               </span>
                             ))}
                           </div>

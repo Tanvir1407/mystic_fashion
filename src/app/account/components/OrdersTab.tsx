@@ -7,11 +7,13 @@ import { useSearchParams } from "next/navigation";
 import { Calendar, Truck, AlertCircle, ChevronDown, Download, Loader2, Package, Check, CheckCircle2, Printer, PackageCheck, Compass } from "lucide-react";
 import { trackCustomerOrder } from "../../actions/pathao";
 import { formatBDT } from "@/utils/formatPrice";
+import { formatVariant } from "@/utils/formatVariant";
 import { AdminPagination } from "@/components/AdminPagination";
 
 interface OrderItem {
   id: string;
   size: string | null;
+  color?: string | null;
   quantity: number;
   price: number;
   requiresPrint: boolean;
@@ -266,9 +268,9 @@ export default function OrdersTab({ orders }: OrdersTabProps) {
                                 {item.product.name}
                               </h4>
                               <div className="flex items-center gap-3 mt-1.5 text-[10px] text-slate-400 font-normal">
-                                {item.size && (
+                                {formatVariant(item) && (
                                   <span className="bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded-sm">
-                                    Size: {item.size}
+                                    {formatVariant(item)}
                                   </span>
                                 )}
                                 <span>Qty: {item.quantity}</span>

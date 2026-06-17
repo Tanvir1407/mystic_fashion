@@ -88,7 +88,7 @@ export async function trackCustomerOrder(query: string) {
                                 }
                             },
                             variant: {
-                                select: { size: true }
+                                select: { size: true, color: true }
                             }
                         }
                     }
@@ -104,6 +104,7 @@ export async function trackCustomerOrder(query: string) {
                 items: orderData.items.map(item => ({
                     ...item,
                     size: item.variant?.size || 'M',
+                    color: item.variant?.color || 'Default',
                     product: {
                         name: item.product.name,
                         slug: item.product.slug,
@@ -174,7 +175,7 @@ export async function trackCustomerOrder(query: string) {
                                 }
                             },
                             variant: {
-                                select: { size: true }
+                                select: { size: true, color: true }
                             }
                         }
                     }
@@ -190,6 +191,7 @@ export async function trackCustomerOrder(query: string) {
                 items: order.items.map(item => ({
                     ...item,
                     size: item.variant?.size || 'M',
+                    color: item.variant?.color || 'Default',
                     product: {
                         name: item.product.name,
                         slug: item.product.slug,

@@ -162,7 +162,12 @@ export default async function ProductsPage({
 
     const mappedVariants = product.variants?.map((v: any) => ({
       ...v,
-      stock: v.stocks?.[0]?.availableQuantity ?? v.stock ?? 0
+      stock: v.stocks?.[0]?.availableQuantity ?? v.stock ?? 0,
+      pricingMatrix: v.pricingMatrix ? {
+        ...v.pricingMatrix,
+        basePrice: v.pricingMatrix.basePrice ? Number(v.pricingMatrix.basePrice) : 0,
+        costPrice: v.pricingMatrix.costPrice ? Number(v.pricingMatrix.costPrice) : null,
+      } : null
     })) || [];
 
     // Sort variants by order field in-place

@@ -60,6 +60,7 @@ const NAV_LINKS = [
       { href: "/admin/inventory/brands", label: "Brands", action: "VIEW", subject: "PRODUCTS" },
       { href: "/admin/inventory/categories", label: "Categories", action: "VIEW", subject: "PRODUCTS" },
       { href: "/admin/inventory/subcategories", label: "Subcategories", action: "VIEW", subject: "PRODUCTS" },
+      { href: "/admin/inventory/attributes", label: "Attributes", action: "VIEW", subject: "PRODUCTS" },
       { href: "/admin/inventory/adjustments", label: "Stock Adjustments", action: "VIEW", subject: "STOCK_ADJUSTMENTS" },
       { href: "/admin/inventory/low-stock", label: "Low Stock Alerts", action: "VIEW", subject: "LOW_STOCK_ALERTS" },
     ]

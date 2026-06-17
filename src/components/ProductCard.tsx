@@ -22,32 +22,53 @@ interface ProductCardProps {
 }
 
 export default function ProductCard({ product }: ProductCardProps) {
-  let finalPrice = product.price;
+  // Helper to parse decimal objects/strings to numbers safely
+  const parsePrice = (val: any): number => {
+    if (val === null || val === undefined) return 0;
+    if (typeof val === "number") return val;
+    if (typeof val === "string") return parseFloat(val) || 0;
+    if (typeof val === "object") {
+      if (typeof val.toNumber === "function") {
+        return val.toNumber();
+      }
+      if (val.d && Array.isArray(val.d)) {
+        const sign = val.s === -1 ? "-" : "";
+        const base = val.d.join("");
+        const exponent = typeof val.e === "number" ? val.e : 0;
+        const parsed = parseFloat(sign + base) * Math.pow(10, exponent - (base.length - 1));
+        return isNaN(parsed) ? 0 : parsed;
+      }
+    }
+    return Number(val) || 0;
+  };
+
+  const productPrice = parsePrice(product.price);
+  let finalPrice = productPrice;
   let isDiscounted = false;
   const productImages = product.images || [];
 
   if (product.discount && product.discount.active) {
     isDiscounted = true;
     if (product.discount.discountType === "PERCENTAGE") {
-      finalPrice = roundPrice(product.price - (product.price * (product.discount.value / 100)));
+      finalPrice = roundPrice(productPrice - (productPrice * (product.discount.value / 100)));
     } else {
-      finalPrice = roundPrice(Math.max(0, product.price - product.discount.value));
+      finalPrice = roundPrice(Math.max(0, productPrice - product.discount.value));
     }
   }
 
   let hasMultiplePrices = false;
   let minPrice = finalPrice;
   let maxPrice = finalPrice;
-  let originalMinPrice = product.price;
-  let originalMaxPrice = product.price;
+  let originalMinPrice = productPrice;
+  let originalMaxPrice = productPrice;
 
   if (product.variants && product.variants.length > 0) {
     const variantPrices = product.variants.map((v: any) => {
-      let vPrice = product.price;
+      let vPrice = productPrice;
       if (v.price !== undefined) {
-         vPrice = Number(v.price);
+         vPrice = parsePrice(v.price);
       } else if (v.pricingMatrix?.basePrice !== undefined) {
-         vPrice = Number(v.pricingMatrix.basePrice);
+         vPrice = parsePrice(v.pricingMatrix.basePrice);
       }
       return vPrice;
     });

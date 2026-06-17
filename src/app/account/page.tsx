@@ -34,7 +34,8 @@ export default async function AccountPage() {
               },
               variant: {
                 select: {
-                  size: true
+                  size: true,
+                  color: true
                 }
               }
             }
@@ -93,6 +94,7 @@ export default async function AccountPage() {
     items: order.items.map((item) => ({
       id: item.id,
       size: item.variant?.size || "M",
+      color: item.variant?.color || "Default",
       quantity: item.quantity,
       price: item.price,
       requiresPrint: item.requiresPrint,

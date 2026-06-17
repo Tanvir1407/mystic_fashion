@@ -37,7 +37,14 @@ export default async function Home() {
           },
           take: 4,
           orderBy: { createdAt: "desc" },
-          include: { discount: true, variants: true }
+          include: {
+            discount: true,
+            variants: {
+              include: {
+                pricingMatrix: true
+              }
+            }
+          }
         }).catch(e => { console.error(e); return []; })
       )
     ),
@@ -54,7 +61,14 @@ export default async function Home() {
             },
             orderBy: { featuredOrder: "asc" },
             take: 4,
-            include: { discount: true, variants: true }
+            include: {
+              discount: true,
+              variants: {
+                include: {
+                  pricingMatrix: true
+                }
+              }
+            }
           });
 
           let finalProducts = [...featured];
@@ -74,7 +88,14 @@ export default async function Home() {
                 }
               },
               take: remainingCount,
-              include: { discount: true, variants: true }
+              include: {
+              discount: true,
+              variants: {
+                include: {
+                  pricingMatrix: true
+                }
+              }
+            }
             });
             finalProducts = [...finalProducts, ...topSold];
           }
@@ -93,8 +114,43 @@ export default async function Home() {
     getFooterData()
   ]);
 
-  const newArrivalsProducts = categoryRecentRes.flat();
-  const showroomProducts = categoryShowroomRes.flat();
+  // Helper to map and convert pricingMatrix decimal values to standard numbers
+  const mapProductPrices = (product: any) => {
+    if (!product) return product;
+    const toNumber = (val: any) => {
+      if (val === null || val === undefined) return null;
+      if (typeof val === "number") return val;
+      if (typeof val.toNumber === "function") return val.toNumber();
+      if (typeof val === "object" && Array.isArray(val.d)) {
+        return parseFloat(val.toString()) || 0;
+      }
+      return Number(val) || 0;
+    };
+    const variants = product.variants?.map((v: any) => {
+      if (v.pricingMatrix) {
+        return {
+          ...v,
+          pricingMatrix: {
+            ...v.pricingMatrix,
+            basePrice: toNumber(v.pricingMatrix.basePrice) ?? 0,
+            costPrice: toNumber(v.pricingMatrix.costPrice),
+            msrp: toNumber(v.pricingMatrix.msrp),
+            b2bPrice: toNumber(v.pricingMatrix.b2bPrice)
+          }
+        };
+      }
+      return v;
+    }) || [];
+    const basePrice = variants[0]?.pricingMatrix?.basePrice ?? 0;
+    return {
+      ...product,
+      price: basePrice,
+      variants
+    };
+  };
+
+  const newArrivalsProducts = categoryRecentRes.flat().map(mapProductPrices);
+  const showroomProducts = categoryShowroomRes.flat().map(mapProductPrices);
   const heroSlides = heroSlidesRes;
 
   // Sort variants by order in place

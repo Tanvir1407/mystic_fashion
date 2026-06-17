@@ -6,12 +6,14 @@ import { formatBDT } from "@/utils/formatPrice";
 import { Printer, ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
+import { formatVariant } from "@/utils/formatVariant";
 
 interface OrderItem {
   id: string;
   quantity: number;
   price: number;
   size: string;
+  color?: string | null;
   product: {
     name: string;
   };
@@ -227,7 +229,7 @@ export default function InvoiceClient({
                         </div>
                       )}
                     </td>
-                    <td className="py-4 text-center font-light uppercase text-slate-600">{item.size || "N/A"}</td>
+                    <td className="py-4 text-center font-light uppercase text-slate-600">{formatVariant(item) || "N/A"}</td>
                     <td className="py-4 text-center font-light text-slate-600">{item.quantity}</td>
                     <td className="py-4 text-right font-light text-slate-600">{formatBDT(item.price)}</td>
                     <td className="py-4 text-right font-semibold text-slate-900 print:text-black">
