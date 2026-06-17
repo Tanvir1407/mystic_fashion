@@ -22,7 +22,8 @@ interface Product {
 interface OrderItem {
   productId: string;
   productName: string;
-  size: string;
+  size: string;           // internal DB key for variant lookup (ProductVariant.size)
+  displayVariant?: string; // human-readable label for UI (e.g. "1KG / KING SIZE")
   quantity: number;
   price: number;
   stock: number;
@@ -119,6 +120,8 @@ export default function CreateOrderClient({
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedProductId, setSelectedProductId] = useState("");
   const [selectedSize, setSelectedSize] = useState("");
+  // Dynamic PIM attribute selections: { [attrKey]: selectedValue }
+  const [selectedAttrValues, setSelectedAttrValues] = useState<Record<string, string>>({});
   const [quantity, setQuantity] = useState(1);
   const [focusedIndex, setFocusedIndex] = useState(-1);
 
@@ -140,7 +143,7 @@ export default function CreateOrderClient({
       const res = await getPathaoCities();
       if (res.success && res.data) {
         const cityOptions = res.data.map((c: any) => ({ value: c.city_id.toString(), label: c.city_name }));
-        setCities([{ value: "self-pickup", label: "Self Pickup" }, ...cityOptions]);
+        setCities(cityOptions);
       }
       setLoadingCities(false);
     }
@@ -211,7 +214,13 @@ export default function CreateOrderClient({
     if (filteredProducts.length === 0) {
       if (e.key === "Enter" && selectedProductId) {
         e.preventDefault();
-        qtyInputRef.current?.focus();
+        // Focus the first variant/size button, not qty — user still needs to pick a variant
+        const firstVariantBtn = sizeContainerRef.current?.querySelector<HTMLButtonElement>("button");
+        if (firstVariantBtn) {
+          firstVariantBtn.focus();
+        } else {
+          qtyInputRef.current?.focus();
+        }
       }
       return;
     }
@@ -228,6 +237,8 @@ export default function CreateOrderClient({
         const p = filteredProducts[focusedIndex];
         setSelectedProductId(p.id);
         setSearchQuery(p.name);
+        setSelectedSize("");
+        setSelectedAttrValues({});
         setFocusedIndex(-1);
         // Instant target switch down to variant sizes element block
         setTimeout(() => {
@@ -240,6 +251,69 @@ export default function CreateOrderClient({
 
   const selectedProduct = useMemo(() => products.find(p => p.id === selectedProductId), [products, selectedProductId]);
   const availableSizes = useMemo(() => selectedProduct?.variants || [], [selectedProduct]);
+
+  // ─── Dynamic Attribute Cascade Logic ───────────────────────────────────────
+  // Determine if this product uses PIM attributes (has non-empty attributes JSON)
+  const attrKeys = useMemo(() => {
+    if (!selectedProduct) return [];
+    const keySets = new Set<string>();
+    for (const v of selectedProduct.variants) {
+      const attrs = (v.attributes && typeof v.attributes === 'object' && !Array.isArray(v.attributes))
+        ? v.attributes as Record<string, string>
+        : {};
+      Object.keys(attrs).forEach(k => keySets.add(k));
+    }
+    return Array.from(keySets);
+  }, [selectedProduct]);
+
+  const isAttrMode = attrKeys.length > 0;
+
+  // For each attr key, get unique values from variants (filtered by prior selections)
+  const attrOptions = useMemo(() => {
+    if (!isAttrMode || !selectedProduct) return {};
+    const result: Record<string, { value: string; totalStock: number }[]> = {};
+    for (let i = 0; i < attrKeys.length; i++) {
+      const key = attrKeys[i];
+      // Filter variants matching all previous attribute selections
+      const filtered = selectedProduct.variants.filter((v: any) => {
+        const attrs = (v.attributes && typeof v.attributes === 'object') ? v.attributes as Record<string, string> : {};
+        for (let j = 0; j < i; j++) {
+          const prevKey = attrKeys[j];
+          if (selectedAttrValues[prevKey] && attrs[prevKey] !== selectedAttrValues[prevKey]) return false;
+        }
+        return true;
+      });
+      // Aggregate unique values + total stock for this key
+      const seen = new Map<string, number>();
+      for (const v of filtered) {
+        const attrs = (v.attributes && typeof v.attributes === 'object') ? v.attributes as Record<string, string> : {};
+        const val = attrs[key];
+        if (val) {
+          seen.set(val, (seen.get(val) || 0) + (v.stock ?? 0));
+        }
+      }
+      result[key] = Array.from(seen.entries()).map(([value, totalStock]) => ({ value, totalStock }));
+    }
+    return result;
+  }, [isAttrMode, selectedProduct, attrKeys, selectedAttrValues]);
+
+  // Resolve the matched variant when all attribute values are selected
+  const resolvedVariant = useMemo(() => {
+    if (!isAttrMode || !selectedProduct || attrKeys.length === 0) return null;
+    const allSelected = attrKeys.every(k => !!selectedAttrValues[k]);
+    if (!allSelected) return null;
+    return selectedProduct.variants.find((v: any) => {
+      const attrs = (v.attributes && typeof v.attributes === 'object') ? v.attributes as Record<string, string> : {};
+      return attrKeys.every(k => attrs[k] === selectedAttrValues[k]);
+    }) || null;
+  }, [isAttrMode, selectedProduct, attrKeys, selectedAttrValues]);
+
+  // Keep selectedSize in sync with the resolved variant (for backward compat with addToOrder)
+  useEffect(() => {
+    if (isAttrMode) {
+      setSelectedSize(resolvedVariant ? resolvedVariant.size : "");
+    }
+  }, [isAttrMode, resolvedVariant]);
 
   const getDiscountedPrice = (product: Product) => {
     if (!product.discount) return product.price;
@@ -265,10 +339,16 @@ export default function CreateOrderClient({
       updatedItems[existingIndex].quantity += quantity;
       setOrderItems(updatedItems);
     } else {
+      // Build human-readable display label for attr mode (e.g. "1KG / KING SIZE")
+      const displayVariant = isAttrMode && attrKeys.length > 0
+        ? attrKeys.map(k => selectedAttrValues[k]).filter(Boolean).join(" / ")
+        : undefined;
+
       setOrderItems([...orderItems, {
         productId: selectedProduct.id,
         productName: selectedProduct.name,
         size: selectedSize,
+        displayVariant,
         quantity: quantity,
         price: unitPrice,
         stock: variant.stock,
@@ -282,6 +362,7 @@ export default function CreateOrderClient({
     setSearchQuery("");
     setSelectedProductId("");
     setSelectedSize("");
+    setSelectedAttrValues({});
     setQuantity(1);
     setRequiresPrint(false);
     setPendingPrintDetails([]);
@@ -513,6 +594,8 @@ export default function CreateOrderClient({
                         onClick={() => {
                           setSelectedProductId(p.id);
                           setSearchQuery(p.name);
+                          setSelectedSize("");
+                          setSelectedAttrValues({});
                           setFocusedIndex(-1);
                           setTimeout(() => {
                             const firstBtn = sizeContainerRef.current?.querySelector("button");
@@ -535,54 +618,183 @@ export default function CreateOrderClient({
 
             {/* Stacked parameters row below */}
             <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
-              {/* Matrix Variant Size Chips Wrapper Section */}
+              {/* Matrix Variant Size Chips Wrapper Section — Dynamic PIM or Legacy */}
               <div className="md:col-span-8">
-                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1.5">SIZE SELECTION (STOCK)</label>
-                <div ref={sizeContainerRef} className="flex flex-wrap gap-1.5 min-h-[28px] items-center">
-                  {selectedProductId ? (
-                    availableSizes.map((v, idx) => {
-                      const isOutOfStock = v.stock <= 0;
+                {!selectedProductId ? (
+                  <>
+                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1.5">VARIANT SELECTION (STOCK)</label>
+                    <div className="text-slate-400 italic text-xs leading-6 min-h-[28px] flex items-center">Select a product first to view available attributes</div>
+                  </>
+                ) : isAttrMode ? (
+                  /* ── PIM Cascaded Attribute Mode ── */
+                  <div ref={sizeContainerRef} className="space-y-3">
+                    {attrKeys.map((attrKey, attrIdx) => {
+                      const options = attrOptions[attrKey] || [];
+                      const isLocked = attrIdx > 0 && !selectedAttrValues[attrKeys[attrIdx - 1]];
                       return (
-                        <button
-                          key={v.id}
-                          type="button"
-                          onClick={() => {
-                            setSelectedSize(v.size);
-                            setTimeout(() => qtyInputRef.current?.focus(), 50);
-                          }}
-                          onKeyDown={(e) => {
-                            if (e.key === "ArrowRight") {
-                              e.preventDefault();
-                              const nextBtn = sizeContainerRef.current?.querySelectorAll("button")[idx + 1];
-                              (nextBtn as HTMLButtonElement)?.focus();
-                            } else if (e.key === "ArrowLeft") {
-                              e.preventDefault();
-                              const prevBtn = sizeContainerRef.current?.querySelectorAll("button")[idx - 1];
-                              (prevBtn as HTMLButtonElement)?.focus();
-                            } else if (e.key === "ArrowUp") {
-                              e.preventDefault();
-                              productSearchRef.current?.focus();
-                            } else if (e.key === "Enter") {
-                              e.preventDefault();
-                              setSelectedSize(v.size);
-                              qtyInputRef.current?.focus();
-                            }
-                          }}
-                          className={`px-2.5 py-1 text-xs font-black rounded border tracking-tight transition-all uppercase ${selectedSize === v.size
-                            ? "bg-slate-900 border-slate-900 text-white shadow-sm"
-                            : isOutOfStock
-                              ? "bg-orange-50 border-orange-200 text-orange-700 hover:bg-orange-100"
-                              : "bg-slate-50 border-slate-200 text-slate-700 hover:border-slate-400 hover:bg-slate-100"
-                            }`}
-                        >
-                          {v.size} <span className="font-normal text-[10px]">({v.stock})</span>
-                        </button>
+                        <div key={attrKey}>
+                          <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1.5">
+                            {attrKey.toUpperCase()}
+                            {isLocked && <span className="ml-1.5 text-slate-300 font-normal normal-case">— select {attrKeys[attrIdx - 1]} first</span>}
+                          </label>
+                          <div className="flex flex-wrap gap-1.5 min-h-[28px] items-center">
+                            {isLocked ? (
+                              <span className="text-slate-300 text-xs italic">—</span>
+                            ) : (
+                              options.map((opt) => {
+                                const isSelected = selectedAttrValues[attrKey] === opt.value;
+                                const isOOS = opt.totalStock <= 0;
+                                return (
+                                  <button
+                                    key={opt.value}
+                                    type="button"
+                                    data-attr-row={attrKey}
+                                    onClick={() => {
+                                      // Selecting at level i clears all downstream selections
+                                      const updated: Record<string, string> = {};
+                                      for (let j = 0; j < attrIdx; j++) updated[attrKeys[j]] = selectedAttrValues[attrKeys[j]];
+                                      updated[attrKey] = opt.value;
+                                      setSelectedAttrValues(updated);
+                                      if (attrIdx === attrKeys.length - 1) {
+                                        setTimeout(() => qtyInputRef.current?.focus(), 50);
+                                      }
+                                    }}
+                                    onKeyDown={(e) => {
+                                      // ─── Row-Scoped Keyboard Navigation ───────────────
+                                      // Query ONLY buttons belonging to THIS attribute row
+                                      const rowBtns = Array.from(
+                                        sizeContainerRef.current?.querySelectorAll<HTMLButtonElement>(`[data-attr-row="${attrKey}"]`) ?? []
+                                      );
+                                      const rowIdx = rowBtns.indexOf(e.currentTarget as HTMLButtonElement);
+
+                                      if (e.key === "ArrowRight") {
+                                        e.preventDefault();
+                                        // Move to next chip in same row only
+                                        rowBtns[rowIdx + 1]?.focus();
+
+                                      } else if (e.key === "ArrowLeft") {
+                                        e.preventDefault();
+                                        // Move to prev chip in same row only
+                                        rowBtns[rowIdx - 1]?.focus();
+
+                                      } else if (e.key === "ArrowUp") {
+                                        e.preventDefault();
+                                        if (attrIdx === 0) {
+                                          productSearchRef.current?.focus();
+                                        } else {
+                                          // Jump to first button of the previous attribute row
+                                          const prevKey = attrKeys[attrIdx - 1];
+                                          const prevBtns = Array.from(
+                                            sizeContainerRef.current?.querySelectorAll<HTMLButtonElement>(`[data-attr-row="${prevKey}"]`) ?? []
+                                          );
+                                          prevBtns[0]?.focus();
+                                        }
+
+                                      } else if (e.key === "ArrowDown") {
+                                        e.preventDefault();
+                                        if (attrIdx < attrKeys.length - 1) {
+                                          // Jump to first button of the next attribute row (if unlocked)
+                                          const nextKey = attrKeys[attrIdx + 1];
+                                          const nextBtns = Array.from(
+                                            sizeContainerRef.current?.querySelectorAll<HTMLButtonElement>(`[data-attr-row="${nextKey}"]`) ?? []
+                                          );
+                                          nextBtns[0]?.focus();
+                                        } else {
+                                          // Last row → advance to quantity input
+                                          qtyInputRef.current?.focus();
+                                        }
+
+                                      } else if (e.key === "Enter") {
+                                        e.preventDefault();
+                                        // Select this value and clear all downstream
+                                        const updated: Record<string, string> = {};
+                                        for (let j = 0; j < attrIdx; j++) updated[attrKeys[j]] = selectedAttrValues[attrKeys[j]];
+                                        updated[attrKey] = opt.value;
+                                        setSelectedAttrValues(updated);
+
+                                        if (attrIdx === attrKeys.length - 1) {
+                                          // All attributes selected → focus qty
+                                          setTimeout(() => qtyInputRef.current?.focus(), 50);
+                                        } else {
+                                          // More rows remain → wait for re-render then focus first button of next row
+                                          setTimeout(() => {
+                                            const nextKey = attrKeys[attrIdx + 1];
+                                            const nextBtns = Array.from(
+                                              sizeContainerRef.current?.querySelectorAll<HTMLButtonElement>(`[data-attr-row="${nextKey}"]`) ?? []
+                                            );
+                                            nextBtns[0]?.focus();
+                                          }, 60);
+                                        }
+                                      }
+                                    }}
+                                    className={`px-2.5 py-1 text-xs font-black rounded border tracking-tight transition-all uppercase ${isSelected
+                                        ? "bg-slate-900 border-slate-900 text-white shadow-sm"
+                                        : isOOS
+                                          ? "bg-orange-50 border-orange-200 text-orange-700 hover:bg-orange-100"
+                                          : "bg-slate-50 border-slate-200 text-slate-700 hover:border-slate-400 hover:bg-slate-100"
+                                      }`}
+                                  >
+                                    {opt.value}
+                                    {attrIdx === attrKeys.length - 1 && (
+                                      <span className="font-normal text-[10px]"> ({resolvedVariant && selectedAttrValues[attrKey] === opt.value ? resolvedVariant.stock : opt.totalStock})</span>
+                                    )}
+                                  </button>
+                                );
+                              })
+                            )}
+                          </div>
+                        </div>
                       );
-                    })
-                  ) : (
-                    <div className="text-slate-400 italic text-xs leading-6">Select a product first to view available attributes</div>
-                  )}
-                </div>
+                    })}
+
+                  </div>
+                ) : (
+                  /* ── Legacy Flat Size Mode ── */
+                  <>
+                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1.5">SIZE SELECTION (STOCK)</label>
+                    <div ref={sizeContainerRef} className="flex flex-wrap gap-1.5 min-h-[28px] items-center">
+                      {availableSizes.map((v: any, idx: number) => {
+                        const isOutOfStock = v.stock <= 0;
+                        return (
+                          <button
+                            key={v.id}
+                            type="button"
+                            onClick={() => {
+                              setSelectedSize(v.size);
+                              setTimeout(() => qtyInputRef.current?.focus(), 50);
+                            }}
+                            onKeyDown={(e) => {
+                              if (e.key === "ArrowRight") {
+                                e.preventDefault();
+                                const nextBtn = sizeContainerRef.current?.querySelectorAll("button")[idx + 1];
+                                (nextBtn as HTMLButtonElement)?.focus();
+                              } else if (e.key === "ArrowLeft") {
+                                e.preventDefault();
+                                const prevBtn = sizeContainerRef.current?.querySelectorAll("button")[idx - 1];
+                                (prevBtn as HTMLButtonElement)?.focus();
+                              } else if (e.key === "ArrowUp") {
+                                e.preventDefault();
+                                productSearchRef.current?.focus();
+                              } else if (e.key === "Enter") {
+                                e.preventDefault();
+                                setSelectedSize(v.size);
+                                qtyInputRef.current?.focus();
+                              }
+                            }}
+                            className={`px-2.5 py-1 text-xs font-black rounded border tracking-tight transition-all uppercase ${selectedSize === v.size
+                              ? "bg-slate-900 border-slate-900 text-white shadow-sm"
+                              : isOutOfStock
+                                ? "bg-orange-50 border-orange-200 text-orange-700 hover:bg-orange-100"
+                                : "bg-slate-50 border-slate-200 text-slate-700 hover:border-slate-400 hover:bg-slate-100"
+                              }`}
+                          >
+                            {v.size} <span className="font-normal text-[10px]">({v.stock})</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </>
+                )}
               </div>
 
               {/* Quantity Counter Input field */}
@@ -594,7 +806,30 @@ export default function CreateOrderClient({
                   min="1"
                   value={quantity}
                   onChange={e => setQuantity(parseInt(e.target.value) || 1)}
-                  onKeyDown={(e) => { if (e.key === "Enter") addToOrder(); }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      addToOrder();
+                    } else if (e.key === "ArrowLeft") {
+                      e.preventDefault();
+                      if (isAttrMode) {
+                        // Focus the selected (or first) button of the LAST attribute row
+                        const lastKey = attrKeys[attrKeys.length - 1];
+                        const lastRowBtns = Array.from(
+                          sizeContainerRef.current?.querySelectorAll<HTMLButtonElement>(`[data-attr-row="${lastKey}"]`) ?? []
+                        );
+                        // Prefer the currently-selected button, fall back to last button
+                        const selectedBtn = lastRowBtns.find(b => b.textContent?.trim().startsWith(selectedAttrValues[lastKey] ?? ""));
+                        (selectedBtn ?? lastRowBtns[lastRowBtns.length - 1])?.focus();
+                      } else {
+                        // Legacy mode: focus the selected size button (or last button)
+                        const allBtns = Array.from(
+                          sizeContainerRef.current?.querySelectorAll<HTMLButtonElement>("button") ?? []
+                        );
+                        const selectedBtn = allBtns.find(b => b.classList.contains("bg-slate-900"));
+                        (selectedBtn ?? allBtns[allBtns.length - 1])?.focus();
+                      }
+                    }
+                  }}
                   className="w-full px-2 py-1 bg-slate-50 border border-slate-200 rounded font-bold text-center outline-none focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
                 />
               </div>
@@ -616,11 +851,15 @@ export default function CreateOrderClient({
           </div>
 
           {/* Out of Stock Override Notice area integration */}
-          {selectedSize && availableSizes.find(v => v.size === selectedSize)?.stock <= 0 && (
-            <div className="text-[10px] font-bold text-orange-600 bg-orange-50 border border-orange-100 p-2 rounded">
-              ⚠ Backorder: Item is out of stock.
-            </div>
-          )}
+          {selectedSize && (
+            isAttrMode
+              ? resolvedVariant && resolvedVariant.stock <= 0
+              : (availableSizes as any[]).find((v: any) => v.size === selectedSize)?.stock <= 0
+          ) && (
+              <div className="text-[10px] font-bold text-orange-600 bg-orange-50 border border-orange-100 p-2 rounded">
+                ⚠ Backorder: Item is out of stock.
+              </div>
+            )}
 
           {/* Jersey Customization (DTF) Panel Area */}
           {selectedProductId && selectedSize && (
@@ -1215,7 +1454,7 @@ export default function CreateOrderClient({
                 <thead>
                   <tr className="border-b border-slate-200 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
                     <th className="py-2 px-1">Item Details</th>
-                    <th className="py-2 px-1 text-center w-12">Size</th>
+                    <th className="py-2 px-1 text-center w-12">Variant</th>
                     <th className="py-2 px-1 text-center w-12">Qty</th>
                     <th className="py-2 px-1 text-right w-20">Price</th>
                     <th className="py-2 px-1 text-right w-8"></th>
@@ -1247,7 +1486,7 @@ export default function CreateOrderClient({
                           )}
                         </td>
                         <td className="py-2 px-1 text-center">
-                          <span className="px-1.5 py-0.5 bg-slate-50 rounded font-black text-[10px] border border-slate-200">{item.size}</span>
+                          <span className="px-1.5 py-0.5 bg-slate-50 rounded font-black text-[10px] border border-slate-200">{item.displayVariant ?? item.size}</span>
                         </td>
                         <td className="py-2 px-1 text-center font-bold text-xs text-slate-700">{item.quantity}</td>
                         <td className="py-2 px-1 text-right font-mono font-bold text-slate-700">{formatBDT(item.price)}</td>
@@ -1403,7 +1642,7 @@ export default function CreateOrderClient({
                     <thead>
                       <tr className="bg-slate-50 text-[10px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-200">
                         <th className="py-2 px-3">Product Name</th>
-                        <th className="py-2 px-3 text-center w-16">Size</th>
+                        <th className="py-2 px-3 text-center w-16">Variant</th>
                         <th className="py-2 px-3 text-center w-16">Qty</th>
                         <th className="py-2 px-3 text-right w-24">Price</th>
                       </tr>
@@ -1424,7 +1663,7 @@ export default function CreateOrderClient({
                             )}
                           </td>
                           <td className="py-2.5 px-3 text-center">
-                            <span className="px-1.5 py-0.5 bg-slate-50 rounded font-black text-[10px] border border-slate-200">{item.size}</span>
+                            <span className="px-1.5 py-0.5 bg-slate-50 rounded font-black text-[10px] border border-slate-200">{item.displayVariant ?? item.size}</span>
                           </td>
                           <td className="py-2.5 px-3 text-center text-slate-700">{item.quantity}</td>
                           <td className="py-2.5 px-3 text-right font-mono font-bold text-slate-700">{formatBDT(item.price)}</td>
