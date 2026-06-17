@@ -156,17 +156,17 @@ export default function ProductFormClient({
     if (!files || files.length === 0) return;
 
     const currentCount = images.length;
-    if (currentCount >= 6) {
-      alert("You can only upload a maximum of 6 images.");
+    if (currentCount >= 20) {
+      alert("You can only upload a maximum of 20 images.");
       e.target.value = "";
       return;
     }
 
-    const availableSlots = 6 - currentCount;
+    const availableSlots = 20 - currentCount;
     let filesToUpload = Array.from(files);
 
     if (filesToUpload.length > availableSlots) {
-      alert(`You can only upload up to 6 images. Only the first ${availableSlots} image(s) will be uploaded.`);
+      alert(`You can only upload up to 20 images. Only the first ${availableSlots} image(s) will be uploaded.`);
       filesToUpload = filesToUpload.slice(0, availableSlots);
     }
 
@@ -418,13 +418,13 @@ export default function ProductFormClient({
                 </div>
               )}
 
-              <div className={`relative border-2 border-dashed ${images.length >= 6 ? 'border-slate-200 bg-slate-100 cursor-not-allowed' : 'border-slate-300 hover:border-indigo-500 bg-slate-50'} rounded-none p-8 transition-colors text-center flex flex-col items-center justify-center`}>
+              <div className={`relative border-2 border-dashed ${images.length >= 20 ? 'border-slate-200 bg-slate-100 cursor-not-allowed' : 'border-slate-300 hover:border-indigo-500 bg-slate-50'} rounded-none p-8 transition-colors text-center flex flex-col items-center justify-center`}>
                 <input
                   type="file"
                   accept="image/*"
                   multiple
                   onChange={handleImageUpload}
-                  disabled={isUploading || images.length >= 6}
+                  disabled={isUploading || images.length >= 20}
                   className="absolute inset-0 w-full h-full opacity-0 cursor-pointer disabled:cursor-not-allowed"
                 />
                 {isUploading ? (
@@ -432,16 +432,16 @@ export default function ProductFormClient({
                     <div className="w-6 h-6 border-2 border-indigo-500/50 border-t-indigo-600 rounded-full animate-spin" />
                     <span className="text-xs text-slate-500 font-medium">Uploading images...</span>
                   </div>
-                ) : images.length >= 6 ? (
+                ) : images.length >= 20 ? (
                   <>
-                    <span className="text-sm font-semibold text-slate-500">Maximum of 6 images uploaded</span>
-                    <span className="text-xs text-slate-400 mt-1">Remove some images to upload new ones (Highest 6 images)</span>
+                    <span className="text-sm font-semibold text-slate-500">Maximum of 20 images uploaded</span>
+                    <span className="text-xs text-slate-400 mt-1">Remove some images to upload new ones (Highest 20 images)</span>
                   </>
                 ) : (
                   <>
                     <Plus className="w-8 h-8 text-slate-400 mb-2" />
                     <span className="text-sm font-semibold text-slate-600">Click or drag images to upload</span>
-                    <span className="text-xs text-slate-400 mt-1">PNG, JPG up to 5MB • Max 6 images</span>
+                    <span className="text-xs text-slate-400 mt-1">PNG, JPG up to 5MB • Max 20 images</span>
                   </>
                 )}
               </div>

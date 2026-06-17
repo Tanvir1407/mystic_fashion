@@ -30,8 +30,8 @@ async function _createProduct(data: {
   variants: { size: string; color: string; colorCode?: string; sku?: string; stock: number }[];
 }) {
   try {
-    if (data.images.length > 6) {
-      return { success: false, error: "A product can have a maximum of 6 images." };
+    if (data.images.length > 20) {
+      return { success: false, error: "A product can have a maximum of 20 images." };
     }
 
     const rawSlug = data.slug ? data.slug.trim() : slugify(data.name);
@@ -133,8 +133,8 @@ async function _updateProduct(
   }
 ) {
   try {
-    if (data.images.length > 6) {
-      return { success: false, error: "A product can have a maximum of 6 images." };
+    if (data.images.length > 20) {
+      return { success: false, error: "A product can have a maximum of 20 images." };
     }
 
     const rawSlug = data.slug ? data.slug.trim() : slugify(data.name);
