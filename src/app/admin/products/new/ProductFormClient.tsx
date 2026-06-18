@@ -2,9 +2,30 @@
 
 import { useState, useRef, useEffect } from "react";
 import { createProduct, updateProduct, uploadImage } from "../actions";
-import { createBrand, createSubcategory, createCategory } from "../../inventory/catalog-actions";
+import {
+  createBrand,
+  createSubcategory,
+  createCategory,
+} from "../../inventory/catalog-actions";
 import { slugify } from "@/utils/slugify";
-import { Plus, Trash2, Save, ArrowLeft, GripVertical, Bold, Italic, Underline, List, ListOrdered, Undo, Redo, Eraser, X, Loader2, ChevronDown } from "lucide-react";
+import {
+  Plus,
+  Trash2,
+  Save,
+  ArrowLeft,
+  GripVertical,
+  Bold,
+  Italic,
+  Underline,
+  List,
+  ListOrdered,
+  Undo,
+  Redo,
+  Eraser,
+  X,
+  Loader2,
+  ChevronDown,
+} from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
@@ -13,28 +34,48 @@ export default function ProductFormClient({
   sizeCharts,
   discounts,
   brands = [],
-  categories = []
+  categories = [],
 }: {
-  initialData?: any,
-  sizeCharts: any[],
-  discounts: any[],
-  brands?: any[],
-  categories?: any[]
+  initialData?: any;
+  sizeCharts: any[];
+  discounts: any[];
+  brands?: any[];
+  categories?: any[];
 }) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [name, setName] = useState(initialData?.name || "");
-  const [description, setDescription] = useState(initialData?.description || "");
-  const [price, setPrice] = useState(initialData?.price || "");
+  const [description, setDescription] = useState(
+    initialData?.description || "",
+  );
+  //
+  const initialPrice =
+    initialData?.price ||
+    initialData?.variants?.[0]?.pricingMatrix?.basePrice ||
+    "";
+  const [price, setPrice] = useState(initialPrice);
+  //
   const [images, setImages] = useState<string[]>(initialData?.images || []);
   const [isUploading, setIsUploading] = useState(false);
-  const [isFeatured, setIsFeatured] = useState(initialData?.isFeatured || false);
-  const [featuredOrder, setFeaturedOrder] = useState<number>(initialData?.featuredOrder || 0);
-  const [isPublished, setIsPublished] = useState(initialData?.isPublished ?? true);
-  const [isCustomize, setIsCustomize] = useState(initialData?.isCustomize || false);
-  const [trackStock, setTrackStock] = useState(initialData?.trackStock || false);
+  const [isFeatured, setIsFeatured] = useState(
+    initialData?.isFeatured || false,
+  );
+  const [featuredOrder, setFeaturedOrder] = useState<number>(
+    initialData?.featuredOrder || 0,
+  );
+  const [isPublished, setIsPublished] = useState(
+    initialData?.isPublished ?? true,
+  );
+  const [isCustomize, setIsCustomize] = useState(
+    initialData?.isCustomize || false,
+  );
+  const [trackStock, setTrackStock] = useState(
+    initialData?.trackStock || false,
+  );
   const [slug, setSlug] = useState(initialData?.slug || "");
   const [isSlugEdited, setIsSlugEdited] = useState(!!initialData?.slug);
+  ////
+  const [perVariantPricing, setPerVariantPricing] = useState(false);
 
   const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value;
@@ -135,7 +176,7 @@ export default function ProductFormClient({
               };
             }
             return c;
-          })
+          }),
         );
         setSubcategoryId(res.subcategory.id);
         setNewSubcategoryName("");
@@ -166,7 +207,9 @@ export default function ProductFormClient({
     let filesToUpload = Array.from(files);
 
     if (filesToUpload.length > availableSlots) {
-      alert(`You can only upload up to 6 images. Only the first ${availableSlots} image(s) will be uploaded.`);
+      alert(
+        `You can only upload up to 6 images. Only the first ${availableSlots} image(s) will be uploaded.`,
+      );
       filesToUpload = filesToUpload.slice(0, availableSlots);
     }
 
@@ -180,7 +223,7 @@ export default function ProductFormClient({
         const url = await uploadImage(formData);
 
         // ✅ FIX 1: Shudhu valid url ashlei push korbe, undefined ashle korbe na
-        if (url && typeof url === 'string') {
+        if (url && typeof url === "string") {
           newImages.push(url);
         } else {
           console.warn("Upload response did not return a valid URL:", url);
@@ -201,12 +244,35 @@ export default function ProductFormClient({
   };
   const [brandId, setBrandId] = useState(initialData?.brandId || "");
   const [categoryId, setCategoryId] = useState(initialData?.categoryId || "");
-  const [subcategoryId, setSubcategoryId] = useState(initialData?.subcategoryId || "");
-  const [sizeChartId, setSizeChartId] = useState(initialData?.sizeChartId || "");
+  const [subcategoryId, setSubcategoryId] = useState(
+    initialData?.subcategoryId || "",
+  );
+  const [sizeChartId, setSizeChartId] = useState(
+    initialData?.sizeChartId || "",
+  );
   const [discountId, setDiscountId] = useState(initialData?.discountId || "");
-
-  const [variants, setVariants] = useState<{ id: string, size: string, color: string, colorCode: string, sku: string, stock: number }[]>(
-    initialData?.variants?.map((v: any, idx: number) => ({ id: String(idx), size: v.size, color: v.color || "Default", colorCode: v.colorCode || "", sku: v.sku || "", stock: v.stock })) || []
+  //variant
+  const [variants, setVariants] = useState<
+    {
+      id: string;
+      size: string;
+      color: string;
+      colorCode: string;
+      sku: string;
+      stock: number;
+      price: number; // new field
+    }[]
+  >(
+    initialData?.variants?.map((v: any, idx: number) => ({
+      id: String(idx),
+      size: v.size,
+      color: v.color || "Default",
+      colorCode: v.colorCode || "",
+      sku: v.sku || "",
+      stock: v.stock,
+      price:
+        Number(v?.pricingMatrix?.basePrice) || Number(initialData?.price) || 0,
+    })) || [],
   );
 
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
@@ -232,43 +298,69 @@ export default function ProductFormClient({
   };
 
   const addVariant = () => {
-    setVariants([...variants, { id: Date.now().toString(), size: "", color: "Default", colorCode: "", sku: "", stock: 0 }]);
+    setVariants([
+      ...variants,
+      {
+        id: Date.now().toString(),
+        size: "",
+        color: "Default",
+        colorCode: "",
+        sku: "",
+        stock: 0,
+        price: parseFloat(price) || 0, // current price theke default
+      },
+    ]);
   };
 
   const removeVariant = (id: string) => {
-    setVariants(variants.filter(v => v.id !== id));
+    setVariants(variants.filter((v) => v.id !== id));
   };
 
-  const updateVariant = (id: string, field: "size" | "stock" | "sku" | "color" | "colorCode", value: any) => {
-    setVariants(variants.map(v => v.id === id ? { ...v, [field]: value } : v));
+  const updateVariant = (
+    id: string,
+    field: "size" | "stock" | "sku" | "color" | "colorCode" | "price",
+    value: any,
+  ) => {
+    setVariants(
+      variants.map((v) => (v.id === id ? { ...v, [field]: value } : v)),
+    );
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) return alert("Name is required.");
     if (!price || isNaN(Number(price))) return alert("Price must be a number.");
-    if (variants.length === 0) return alert("You must add at least one Variant.");
+    if (variants.length === 0)
+      return alert("You must add at least one Variant.");
 
     setLoading(true);
 
     // Check duplicate sizes in UI
-    const combinationsSet = new Set(variants.map(v => v.size.trim().toLowerCase()));
+    const combinationsSet = new Set(
+      variants.map((v) => v.size.trim().toLowerCase()),
+    );
     if (combinationsSet.size !== variants.length) {
       setLoading(false);
       return alert("Duplicate Size found. Each variant size must be unique.");
     }
 
     // ✅ FIX 2: Filter out any undefined, null, or empty strings from images array
-    const validImages = images.filter((img) => typeof img === 'string' && img.trim() !== "");
+    const validImages = images.filter(
+      (img) => typeof img === "string" && img.trim() !== "",
+    );
 
-    const selectedCategoryObj = localCategories?.find(c => c.id === categoryId);
-    const categoryName = selectedCategoryObj ? selectedCategoryObj.name : "Uncategorized";
+    const selectedCategoryObj = localCategories?.find(
+      (c) => c.id === categoryId,
+    );
+    const categoryName = selectedCategoryObj
+      ? selectedCategoryObj.name
+      : "Uncategorized";
 
     const productPayload = {
       name: name.trim(),
       slug: slug.trim(),
       description: description.trim(),
-      price: parseFloat(price),
+      price: parseFloat(price), //main product table price
       images: validImages, // Send the cleaned array
       category: categoryName,
       brandId: brandId || null,
@@ -281,13 +373,15 @@ export default function ProductFormClient({
       isPublished,
       isCustomize,
       trackStock,
-      variants: variants.map(({ size, sku, stock }) => ({
-        size: size.trim(),
-        color: "Default",
-        colorCode: undefined,
-        sku: sku.trim() || undefined,
-        stock
-      }))
+      //
+      variants: variants.map((v) => ({
+        size: v.size.trim(),
+        color: v.color || "Default",
+        colorCode: v.colorCode || "",
+        sku: v.sku.trim() || undefined,
+        stock: Number(v.stock),
+        basePrice: v.price,
+      })),
     };
 
     try {
@@ -318,18 +412,26 @@ export default function ProductFormClient({
   };
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-6 w-full pb-12 px-4 max-w-[1600px] mx-auto">
+    <form
+      onSubmit={handleSubmit}
+      className="flex flex-col gap-6 w-full pb-12 px-4 max-w-[1600px] mx-auto"
+    >
       {/* Header Section */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-slate-200 pb-5">
         <div className="flex items-center gap-4">
-          <Link href="/admin/products" className="p-2 bg-slate-100 hover:bg-slate-200 rounded-none transition-colors text-slate-500 font-bold flex items-center justify-center">
+          <Link
+            href="/admin/products"
+            className="p-2 bg-slate-100 hover:bg-slate-200 rounded-none transition-colors text-slate-500 font-bold flex items-center justify-center"
+          >
             <ArrowLeft className="w-5 h-5" />
           </Link>
           <div>
             <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900">
-              {initialData ? 'Edit Product' : 'Add New Product'}
+              {initialData ? "Edit Product" : "Add New Product"}
             </h1>
-            <p className="text-xs sm:text-sm text-slate-500 mt-1">Configure product details, variants, and stock dependencies.</p>
+            <p className="text-xs sm:text-sm text-slate-500 mt-1">
+              Configure product details, variants, and stock dependencies.
+            </p>
           </div>
         </div>
 
@@ -359,7 +461,9 @@ export default function ProductFormClient({
 
             <div className="space-y-6">
               <div>
-                <label className="block text-sm font-semibold text-slate-900 mb-2">Product Name *</label>
+                <label className="block text-sm font-semibold text-slate-900 mb-2">
+                  Product Name *
+                </label>
                 <input
                   type="text"
                   value={name}
@@ -371,7 +475,9 @@ export default function ProductFormClient({
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-slate-900 mb-2">Product Slug *</label>
+                <label className="block text-sm font-semibold text-slate-900 mb-2">
+                  Product Slug *
+                </label>
                 <input
                   type="text"
                   value={slug}
@@ -383,12 +489,19 @@ export default function ProductFormClient({
                   className="w-full px-4 py-2.5 border border-slate-300 rounded-none focus:outline-none focus:border-slate-900 focus:ring-0 focus:border-slate-900 text-sm"
                   required
                 />
-                <p className="text-[11px] text-slate-500 mt-1">Used in URL: /product/{slug || 'slug'}</p>
+                <p className="text-[11px] text-slate-500 mt-1">
+                  Used in URL: /product/{slug || "slug"}
+                </p>
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-slate-900 mb-2">Description</label>
-                <SimpleRichTextEditor value={description} onChange={setDescription} />
+                <label className="block text-sm font-semibold text-slate-900 mb-2">
+                  Description
+                </label>
+                <SimpleRichTextEditor
+                  value={description}
+                  onChange={setDescription}
+                />
               </div>
             </div>
           </div>
@@ -403,8 +516,15 @@ export default function ProductFormClient({
               {images.length > 0 && (
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6">
                   {images.map((img, idx) => (
-                    <div key={idx} className="relative group aspect-square border border-slate-200 rounded-none overflow-hidden bg-slate-50 shadow-none">
-                      <img src={img} alt={`Uploaded ${idx}`} className="w-full h-full object-cover" />
+                    <div
+                      key={idx}
+                      className="relative group aspect-square border border-slate-200 rounded-none overflow-hidden bg-slate-50 shadow-none"
+                    >
+                      <img
+                        src={img}
+                        alt={`Uploaded ${idx}`}
+                        className="w-full h-full object-cover"
+                      />
                       <button
                         type="button"
                         onClick={() => removeImage(idx)}
@@ -418,7 +538,9 @@ export default function ProductFormClient({
                 </div>
               )}
 
-              <div className={`relative border-2 border-dashed ${images.length >= 6 ? 'border-slate-200 bg-slate-100 cursor-not-allowed' : 'border-slate-300 hover:border-indigo-500 bg-slate-50'} rounded-none p-8 transition-colors text-center flex flex-col items-center justify-center`}>
+              <div
+                className={`relative border-2 border-dashed ${images.length >= 6 ? "border-slate-200 bg-slate-100 cursor-not-allowed" : "border-slate-300 hover:border-indigo-500 bg-slate-50"} rounded-none p-8 transition-colors text-center flex flex-col items-center justify-center`}
+              >
                 <input
                   type="file"
                   accept="image/*"
@@ -430,18 +552,28 @@ export default function ProductFormClient({
                 {isUploading ? (
                   <div className="flex flex-col items-center gap-2">
                     <div className="w-6 h-6 border-2 border-indigo-500/50 border-t-indigo-600 rounded-full animate-spin" />
-                    <span className="text-xs text-slate-500 font-medium">Uploading images...</span>
+                    <span className="text-xs text-slate-500 font-medium">
+                      Uploading images...
+                    </span>
                   </div>
                 ) : images.length >= 6 ? (
                   <>
-                    <span className="text-sm font-semibold text-slate-500">Maximum of 6 images uploaded</span>
-                    <span className="text-xs text-slate-400 mt-1">Remove some images to upload new ones (Highest 6 images)</span>
+                    <span className="text-sm font-semibold text-slate-500">
+                      Maximum of 6 images uploaded
+                    </span>
+                    <span className="text-xs text-slate-400 mt-1">
+                      Remove some images to upload new ones (Highest 6 images)
+                    </span>
                   </>
                 ) : (
                   <>
                     <Plus className="w-8 h-8 text-slate-400 mb-2" />
-                    <span className="text-sm font-semibold text-slate-600">Click or drag images to upload</span>
-                    <span className="text-xs text-slate-400 mt-1">PNG, JPG up to 5MB • Max 6 images</span>
+                    <span className="text-sm font-semibold text-slate-600">
+                      Click or drag images to upload
+                    </span>
+                    <span className="text-xs text-slate-400 mt-1">
+                      PNG, JPG up to 5MB • Max 6 images
+                    </span>
                   </>
                 )}
               </div>
@@ -466,9 +598,16 @@ export default function ProductFormClient({
                   onChange={(e) => setIsPublished(e.target.checked)}
                   className="w-5 h-5 text-emerald-600 border-emerald-300 rounded focus:ring-emerald-500 cursor-pointer shrink-0"
                 />
-                <label htmlFor="isPublished" className="flex flex-col cursor-pointer select-none">
-                  <span className="text-sm font-bold text-emerald-900">Publish to Storefront</span>
-                  <span className="text-[10px] text-emerald-700 font-medium">Make visible to customers on the storefront</span>
+                <label
+                  htmlFor="isPublished"
+                  className="flex flex-col cursor-pointer select-none"
+                >
+                  <span className="text-sm font-bold text-emerald-900">
+                    Publish to Storefront
+                  </span>
+                  <span className="text-[10px] text-emerald-700 font-medium">
+                    Make visible to customers on the storefront
+                  </span>
                 </label>
               </div>
 
@@ -480,9 +619,16 @@ export default function ProductFormClient({
                   onChange={(e) => setIsFeatured(e.target.checked)}
                   className="w-5 h-5 text-amber-600 border-amber-300 rounded focus:ring-amber-500 cursor-pointer shrink-0"
                 />
-                <label htmlFor="isFeatured" className="flex flex-col cursor-pointer select-none">
-                  <span className="text-sm font-bold text-amber-900">Featured Product</span>
-                  <span className="text-[10px] text-amber-700 font-medium">Pin this product to the top of homepage</span>
+                <label
+                  htmlFor="isFeatured"
+                  className="flex flex-col cursor-pointer select-none"
+                >
+                  <span className="text-sm font-bold text-amber-900">
+                    Featured Product
+                  </span>
+                  <span className="text-[10px] text-amber-700 font-medium">
+                    Pin this product to the top of homepage
+                  </span>
                 </label>
               </div>
 
@@ -494,7 +640,9 @@ export default function ProductFormClient({
                   <input
                     type="number"
                     value={featuredOrder}
-                    onChange={(e) => setFeaturedOrder(parseInt(e.target.value) || 0)}
+                    onChange={(e) =>
+                      setFeaturedOrder(parseInt(e.target.value) || 0)
+                    }
                     placeholder="e.g. 1"
                     className="w-full max-w-[150px] px-3 py-1.5 border border-slate-300 rounded-none focus:outline-none focus:border-slate-900 text-xs font-mono"
                   />
@@ -509,9 +657,16 @@ export default function ProductFormClient({
                   onChange={(e) => setIsCustomize(e.target.checked)}
                   className="w-5 h-5 text-[#800020] border-[#800020]/30 rounded focus:ring-[#800020] cursor-pointer shrink-0"
                 />
-                <label htmlFor="isCustomize" className="flex flex-col cursor-pointer select-none">
-                  <span className="text-sm font-bold text-[#800020]">Offer Customization (DTF Print)</span>
-                  <span className="text-[10px] text-zinc-500 font-medium">Allow customers to add their custom Info on product.</span>
+                <label
+                  htmlFor="isCustomize"
+                  className="flex flex-col cursor-pointer select-none"
+                >
+                  <span className="text-sm font-bold text-[#800020]">
+                    Offer Customization (DTF Print)
+                  </span>
+                  <span className="text-[10px] text-zinc-500 font-medium">
+                    Allow customers to add their custom Info on product.
+                  </span>
                 </label>
               </div>
 
@@ -523,9 +678,17 @@ export default function ProductFormClient({
                   onChange={(e) => setTrackStock(e.target.checked)}
                   className="w-5 h-5 text-indigo-600 border-indigo-300 rounded focus:ring-indigo-500 cursor-pointer shrink-0"
                 />
-                <label htmlFor="trackStock" className="flex flex-col cursor-pointer select-none">
-                  <span className="text-sm font-bold text-indigo-900">Track Stock</span>
-                  <span className="text-[10px] text-zinc-500 font-medium">Validate stock availability on storefront and during checkout.</span>
+                <label
+                  htmlFor="trackStock"
+                  className="flex flex-col cursor-pointer select-none"
+                >
+                  <span className="text-sm font-bold text-indigo-900">
+                    Track Stock
+                  </span>
+                  <span className="text-[10px] text-zinc-500 font-medium">
+                    Validate stock availability on storefront and during
+                    checkout.
+                  </span>
                 </label>
               </div>
             </div>
@@ -539,12 +702,24 @@ export default function ProductFormClient({
 
             <div className="space-y-5">
               <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Selling Price (৳) *</label>
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
+                  Selling Price (৳) *
+                </label>
                 <input
                   type="number"
-                  step="0.001"
+                  step="1"
                   value={price}
-                  onChange={(e) => setPrice(e.target.value)}
+                  onChange={(e) => {
+                    const newPrice = parseFloat(e.target.value) || 0;
+                    setPrice(e.target.value);
+                    // sob variant er price update kore dewa (override)
+                    setVariants((prev) =>
+                      prev.map((v) => ({
+                        ...v,
+                        price: newPrice,
+                      })),
+                    );
+                  }}
                   placeholder="5000"
                   className="w-full px-4 py-2 border border-slate-300 rounded-none focus:outline-none focus:border-slate-900 text-sm font-mono"
                   required
@@ -553,7 +728,9 @@ export default function ProductFormClient({
 
               <div>
                 <div className="flex items-center justify-between mb-2">
-                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">Brand</label>
+                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
+                    Brand
+                  </label>
                   {!isAddingBrand && (
                     <button
                       type="button"
@@ -581,7 +758,11 @@ export default function ProductFormClient({
                       disabled={brandSubmitting || !newBrandName.trim()}
                       className="px-3 py-1.5 bg-[#800020] text-white text-xs font-bold rounded-none hover:bg-opacity-95 transition-all disabled:opacity-50"
                     >
-                      {brandSubmitting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : "Save"}
+                      {brandSubmitting ? (
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      ) : (
+                        "Save"
+                      )}
                     </button>
                     <button
                       type="button"
@@ -599,7 +780,10 @@ export default function ProductFormClient({
                   <CustomFormSelect
                     options={[
                       { value: "", label: "No Brand" },
-                      ...localBrands.map((b) => ({ value: b.id, label: b.name })),
+                      ...localBrands.map((b) => ({
+                        value: b.id,
+                        label: b.name,
+                      })),
                     ]}
                     value={brandId}
                     onChange={(val) => setBrandId(val)}
@@ -611,7 +795,9 @@ export default function ProductFormClient({
 
               <div>
                 <div className="flex items-center justify-between mb-2">
-                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">Category *</label>
+                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
+                    Category *
+                  </label>
                   {!isAddingCategory && (
                     <button
                       type="button"
@@ -639,7 +825,11 @@ export default function ProductFormClient({
                       disabled={categorySubmitting || !newCategoryName.trim()}
                       className="px-3 py-1.5 bg-[#800020] text-white text-xs font-bold rounded-none hover:bg-opacity-95 transition-all disabled:opacity-50"
                     >
-                      {categorySubmitting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : "Save"}
+                      {categorySubmitting ? (
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      ) : (
+                        "Save"
+                      )}
                     </button>
                     <button
                       type="button"
@@ -657,7 +847,10 @@ export default function ProductFormClient({
                   <CustomFormSelect
                     options={[
                       { value: "", label: "Select Category" },
-                      ...localCategories.map((c) => ({ value: c.id, label: c.name })),
+                      ...localCategories.map((c) => ({
+                        value: c.id,
+                        label: c.name,
+                      })),
                     ]}
                     value={categoryId}
                     onChange={(val) => {
@@ -673,7 +866,9 @@ export default function ProductFormClient({
               {categoryId && (
                 <div>
                   <div className="flex items-center justify-between mb-2">
-                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">Subcategory</label>
+                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
+                      Subcategory
+                    </label>
                     {!isAddingSubcategory && (
                       <button
                         type="button"
@@ -698,10 +893,16 @@ export default function ProductFormClient({
                       <button
                         type="button"
                         onClick={handleAddSubcategoryInline}
-                        disabled={subcategorySubmitting || !newSubcategoryName.trim()}
+                        disabled={
+                          subcategorySubmitting || !newSubcategoryName.trim()
+                        }
                         className="px-3 py-1.5 bg-[#800020] text-white text-xs font-bold rounded-none hover:bg-opacity-95 transition-all disabled:opacity-50"
                       >
-                        {subcategorySubmitting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : "Save"}
+                        {subcategorySubmitting ? (
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        ) : (
+                          "Save"
+                        )}
                       </button>
                       <button
                         type="button"
@@ -719,7 +920,10 @@ export default function ProductFormClient({
                     <CustomFormSelect
                       options={[
                         { value: "", label: "None" },
-                        ...(localCategories.find((c: any) => c.id === categoryId)?.subcategories || []).map((sc: any) => ({ value: sc.id, label: sc.name })),
+                        ...(
+                          localCategories.find((c: any) => c.id === categoryId)
+                            ?.subcategories || []
+                        ).map((sc: any) => ({ value: sc.id, label: sc.name })),
                       ]}
                       value={subcategoryId}
                       onChange={(val) => setSubcategoryId(val)}
@@ -731,11 +935,16 @@ export default function ProductFormClient({
               )}
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Size Chart Reference</label>
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
+                  Size Chart Reference
+                </label>
                 <CustomFormSelect
                   options={[
                     { value: "", label: "None Assigned (Ad-hoc sizing)" },
-                    ...sizeCharts.map(chart => ({ value: chart.id, label: chart.category })),
+                    ...sizeCharts.map((chart) => ({
+                      value: chart.id,
+                      label: chart.category,
+                    })),
                   ]}
                   value={sizeChartId}
                   onChange={(val) => setSizeChartId(val)}
@@ -745,13 +954,15 @@ export default function ProductFormClient({
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Discount</label>
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
+                  Discount
+                </label>
                 <CustomFormSelect
                   options={[
                     { value: "", label: "No Active Promotion" },
-                    ...discounts.map(disc => ({
+                    ...discounts.map((disc) => ({
                       value: disc.id,
-                      label: `${disc.name} (${disc.discountType === "PERCENTAGE" ? `${disc.value}% OFF` : `৳${disc.value} OFF`})`
+                      label: `${disc.name} (${disc.discountType === "PERCENTAGE" ? `${disc.value}% OFF` : `৳${disc.value} OFF`})`,
                     })),
                   ]}
                   value={discountId}
@@ -762,8 +973,6 @@ export default function ProductFormClient({
               </div>
             </div>
           </div>
-
-
         </div>
       </div>
       {/* Card 5: Size Variants & Stock */}
@@ -777,8 +986,32 @@ export default function ProductFormClient({
               🔒 Stock managed by Purchases & Orders
             </span>
           ) : (
-            <span className="text-[10px] text-slate-500 font-medium">Set initial stock for new product</span>
+            <span className="text-[10px] text-slate-500 font-medium">
+              Set initial stock for new product
+            </span>
           )}
+        </div>
+
+        {/* Per-variant pricing toggle */}
+        <div className="flex items-center justify-end gap-3 p-2 mb-3 bg-slate-50 border border-slate-200 rounded-none">
+          <input
+            type="checkbox"
+            id="perVariantPricing"
+            checked={perVariantPricing}
+            onChange={(e) => setPerVariantPricing(e.target.checked)}
+            className="w-5 h-5 text-slate-900 border-slate-400 rounded focus:ring-slate-500 cursor-pointer shrink-0"
+          />
+          <label
+            htmlFor="perVariantPricing"
+            className="flex flex-col cursor-pointer select-none"
+          >
+            <span className="text-sm font-bold text-slate-900">
+              Enable per-variant pricing
+            </span>
+            <span className="text-[10px] text-zinc-500 font-medium">
+              Set different prices for each size variant individually
+            </span>
+          </label>
         </div>
 
         <div className="overflow-hidden border border-slate-200 rounded-none">
@@ -786,9 +1019,18 @@ export default function ProductFormClient({
             <thead>
               <tr className="bg-slate-50 border-b border-slate-200">
                 <th className="w-8 py-2 text-center"></th>
-                <th className="px-3 py-2 text-xs font-semibold text-slate-500 uppercase tracking-wider w-1/3">Size</th>
-                <th className="px-3 py-2 text-xs font-semibold text-slate-500 uppercase tracking-wider w-1/3">SKU</th>
-                <th className="px-3 py-2 text-xs font-semibold text-slate-500 uppercase tracking-wider w-1/3">Stock</th>
+                <th className="px-3 py-2 text-xs font-semibold text-slate-500 uppercase tracking-wider w-1/4">
+                  Size
+                </th>
+                <th className="px-3 py-2 text-xs font-semibold text-slate-500 uppercase tracking-wider w-1/4">
+                  SKU
+                </th>
+                <th className="px-3 py-2 text-xs font-semibold text-slate-500 uppercase tracking-wider w-1/4">
+                  Stock
+                </th>
+                <th className="px-3 py-2 text-xs font-semibold text-slate-500 uppercase tracking-wider w-1/4">
+                  Price (৳)
+                </th>
                 <th className="w-8 py-2 text-center"></th>
               </tr>
             </thead>
@@ -809,7 +1051,13 @@ export default function ProductFormClient({
                     <input
                       type="text"
                       value={v.size}
-                      onChange={(e) => updateVariant(v.id, "size", e.target.value.toUpperCase())}
+                      onChange={(e) =>
+                        updateVariant(
+                          v.id,
+                          "size",
+                          e.target.value.toUpperCase(),
+                        )
+                      }
                       placeholder="XL"
                       className="w-full px-2 py-1.5 border border-slate-200 rounded-none text-xs focus:outline-none focus:border-slate-900 uppercase font-semibold"
                       required
@@ -819,7 +1067,9 @@ export default function ProductFormClient({
                     <input
                       type="text"
                       value={v.sku}
-                      onChange={(e) => updateVariant(v.id, "sku", e.target.value)}
+                      onChange={(e) =>
+                        updateVariant(v.id, "sku", e.target.value)
+                      }
                       placeholder="SKU-..."
                       className="w-full px-2 py-1.5 border border-slate-200 rounded-none text-xs focus:outline-none focus:border-slate-900 uppercase font-mono"
                     />
@@ -837,11 +1087,38 @@ export default function ProductFormClient({
                         type="number"
                         min="0"
                         value={v.stock}
-                        onChange={(e) => updateVariant(v.id, "stock", parseInt(e.target.value) || 0)}
+                        onChange={(e) =>
+                          updateVariant(
+                            v.id,
+                            "stock",
+                            parseInt(e.target.value) || 0,
+                          )
+                        }
                         className="w-full px-2 py-1.5 border border-slate-200 bg-white rounded-none text-xs focus:outline-none focus:border-slate-900 font-mono"
                       />
                     )}
                   </td>
+                  {/* new price colomn */}
+                  <td className="px-3 py-2">
+                    <input
+                      type="number"
+                      step="1"
+                      value={v.price}
+                      onChange={(e) => {
+                        if (!perVariantPricing) return;
+                        const newPrice = parseFloat(e.target.value) || 0;
+                        updateVariant(v.id, "price", newPrice);
+                      }}
+                      readOnly={!perVariantPricing}
+                      className={`w-full px-2 py-1.5 border rounded-none text-xs focus:outline-none font-mono text-center ${
+                        perVariantPricing
+                          ? "border-slate-200 bg-white focus:border-slate-900"
+                          : "border-slate-100 bg-slate-50 text-slate-500 cursor-not-allowed"
+                      }`}
+                      placeholder="Price"
+                    />
+                  </td>
+                  {/* end new prce colomn */}
                   <td className="py-2 text-center">
                     <button
                       type="button"
@@ -996,7 +1273,7 @@ function CustomFormSelect({
   value,
   onChange,
   placeholder = "Select Option",
-  searchable = false
+  searchable = false,
 }: CustomFormSelectProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [search, setSearch] = useState("");
@@ -1005,12 +1282,15 @@ function CustomFormSelect({
   const selectedOption = options.find((opt) => opt.value === value);
 
   const filteredOptions = options.filter((opt) =>
-    opt.label.toLowerCase().includes(search.toLowerCase())
+    opt.label.toLowerCase().includes(search.toLowerCase()),
   );
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+      if (
+        containerRef.current &&
+        !containerRef.current.contains(event.target as Node)
+      ) {
         setIsOpen(false);
       }
     };
@@ -1025,8 +1305,12 @@ function CustomFormSelect({
         onClick={() => setIsOpen(!isOpen)}
         className="w-full h-[38px] flex items-center justify-between px-4 py-2 border border-slate-300 rounded-none bg-white text-sm focus:outline-none focus:border-slate-900 text-slate-800"
       >
-        <span className="truncate">{selectedOption ? selectedOption.label : placeholder}</span>
-        <ChevronDown className={`w-4 h-4 text-slate-500 transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`} />
+        <span className="truncate">
+          {selectedOption ? selectedOption.label : placeholder}
+        </span>
+        <ChevronDown
+          className={`w-4 h-4 text-slate-500 transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`}
+        />
       </button>
 
       {isOpen && (
@@ -1054,10 +1338,11 @@ function CustomFormSelect({
                     setIsOpen(false);
                     setSearch("");
                   }}
-                  className={`w-full text-left px-4 py-2 text-xs transition-colors flex items-center justify-between ${value === opt.value
+                  className={`w-full text-left px-4 py-2 text-xs transition-colors flex items-center justify-between ${
+                    value === opt.value
                       ? "bg-[#800020] text-white font-bold"
                       : "hover:bg-slate-100 text-slate-700"
-                    }`}
+                  }`}
                 >
                   <span>{opt.label}</span>
                 </button>

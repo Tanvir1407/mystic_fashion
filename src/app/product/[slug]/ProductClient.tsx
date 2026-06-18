@@ -21,7 +21,7 @@ interface Product {
   category: string;
   isCustomize?: boolean | null;
   trackStock?: boolean;
-  variants: { size: string, stock: number }[];
+  variants: { size: string, stock: number, pricingMatrix?: { basePrice?: number | string } | null }[];
   discount?: {
     active: boolean;
     discountType: "PERCENTAGE" | "FLAT";
@@ -56,15 +56,23 @@ export default function ProductClient({ product, sizeChartData, deliveryData, re
     ? product.variants.find(v => v.size === selectedSize)?.stock || 0
     : 0;
 
-  let finalPrice = product.price;
+  let basePrice = product.price;
+  if (selectedSize) {
+    const selectedVariant = product.variants.find(v => v.size === selectedSize);
+    if (selectedVariant?.pricingMatrix?.basePrice) {
+      basePrice = Number(selectedVariant.pricingMatrix.basePrice);
+    }
+  }
+
+  let finalPrice = basePrice;
   let isDiscounted = false;
 
   if (product.discount && product.discount.active) {
     isDiscounted = true;
     if (product.discount.discountType === "PERCENTAGE") {
-      finalPrice = roundPrice(product.price - (product.price * (product.discount.value / 100)));
+      finalPrice = roundPrice(basePrice - (basePrice * (product.discount.value / 100)));
     } else {
-      finalPrice = roundPrice(Math.max(0, product.price - product.discount.value));
+      finalPrice = roundPrice(Math.max(0, basePrice - product.discount.value));
     }
   }
 
@@ -75,7 +83,7 @@ export default function ProductClient({ product, sizeChartData, deliveryData, re
       id: product.id,
       name: product.name,
       price: finalPrice,
-      originalPrice: isDiscounted ? product.price : undefined,
+      originalPrice: isDiscounted ? basePrice : undefined,
       image: product.images[0] || "",
       category: product.team,
       isCustomize: product.isCustomize ?? false,
@@ -187,7 +195,7 @@ export default function ProductClient({ product, sizeChartData, deliveryData, re
             <div className="flex items-end gap-4 mb-8">
               <p className="text-3xl md:text-4xl font-black text-[#800020]">{formatBDT(finalPrice)}</p>
               {isDiscounted ? (
-                <p className="text-lg font-bold text-zinc-400 line-through mb-1.5">{formatBDT(product.price)}</p>
+                <p className="text-lg font-bold text-zinc-400 line-through mb-1.5">{formatBDT(basePrice)}</p>
               ) : null}
             </div>
 

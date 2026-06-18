@@ -4,10 +4,20 @@ import { notFound } from "next/navigation";
 
 export const dynamic = "force-dynamic";
 
-export default async function EditProductPage({ params }: { params: { id: string } }) {
+export default async function EditProductPage({
+  params,
+}: {
+  params: { id: string };
+}) {
   const product = await prisma.product.findUnique({
     where: { id: params.id },
-    include: { variants: true }
+    include: {
+      variants: {
+        include: {
+          pricingMatrix: true,
+        },
+      },
+    },
   });
 
   if (!product) notFound();
@@ -17,11 +27,19 @@ export default async function EditProductPage({ params }: { params: { id: string
 
   const sizeCharts = await prisma.sizeChart.findMany();
   const discounts = await prisma.discount.findMany({ where: { active: true } });
-  const brands = await prisma.brand.findMany({ orderBy: { name: 'asc' } });
+  const brands = await prisma.brand.findMany({ orderBy: { name: "asc" } });
   const categories = await prisma.category.findMany({
-    orderBy: { name: 'asc' },
-    include: { subcategories: { orderBy: { name: 'asc' } } }
+    orderBy: { name: "asc" },
+    include: { subcategories: { orderBy: { name: "asc" } } },
   });
 
-  return <ProductFormClient initialData={product} sizeCharts={sizeCharts} discounts={discounts} brands={brands} categories={categories} />;
+  return (
+    <ProductFormClient
+      initialData={product}
+      sizeCharts={sizeCharts}
+      discounts={discounts}
+      brands={brands}
+      categories={categories}
+    />
+  );
 }

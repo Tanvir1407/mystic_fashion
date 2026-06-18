@@ -1,21 +1,28 @@
-import { notFound, redirect } from 'next/navigation';
-import ProductClient from './ProductClient';
+import { notFound, redirect } from "next/navigation";
+import ProductClient from "./ProductClient";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import SidebarCart from "@/components/SidebarCart";
 import prisma from "@/lib/prisma";
 import { getFooterData } from "@/lib/footer";
-import { cookies } from 'next/headers';
+import { cookies } from "next/headers";
 
 export const dynamic = "force-dynamic";
 
-export default async function ProductPage({ params }: { params: { slug: string } }) {
+export default async function ProductPage({
+  params,
+}: {
+  params: { slug: string };
+}) {
   const cookieStore = cookies();
   const isAdmin = cookieStore.get("admin-auth")?.value === "true";
 
   const identifier = params.slug;
   // Match UUID pattern (standard Prisma UUID format)
-  const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(identifier);
+  const isUuid =
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+      identifier,
+    );
 
   let product = null;
 
@@ -23,10 +30,12 @@ export default async function ProductPage({ params }: { params: { slug: string }
     product = await prisma.product.findUnique({
       where: { id: identifier },
       include: {
-        variants: true,
+        variants: {
+          include: { pricingMatrix: true },
+        },
         sizeChart: true,
         discount: true,
-      }
+      },
     });
 
     // If found by ID and has a slug, do a 301 redirect to the slug-based URL!
@@ -37,10 +46,12 @@ export default async function ProductPage({ params }: { params: { slug: string }
     product = await prisma.product.findUnique({
       where: { slug: identifier },
       include: {
-        variants: true,
+        variants: {
+          include: { pricingMatrix: true },
+        },
         sizeChart: true,
         discount: true,
-      }
+      },
     });
   }
 
@@ -49,10 +60,12 @@ export default async function ProductPage({ params }: { params: { slug: string }
     product = await prisma.product.findUnique({
       where: { id: identifier },
       include: {
-        variants: true,
+        variants: {
+          include: { pricingMatrix: true },
+        },
         sizeChart: true,
         discount: true,
-      }
+      },
     });
     if (product && product.slug) {
       redirect(`/product/${product.slug}`);
@@ -68,7 +81,7 @@ export default async function ProductPage({ params }: { params: { slug: string }
 
   const [delivery, footerData, relatedProducts] = await Promise.all([
     prisma.deliverySetting.findUnique({
-      where: { id: "default" }
+      where: { id: "default" },
     }),
     getFooterData(),
     (async () => {
@@ -79,7 +92,9 @@ export default async function ProductPage({ params }: { params: { slug: string }
           deletedAt: null,
           id: { not: product.id },
           OR: [
-            product.subcategoryId ? { subcategoryId: product.subcategoryId } : undefined,
+            product.subcategoryId
+              ? { subcategoryId: product.subcategoryId }
+              : undefined,
             product.categoryId ? { categoryId: product.categoryId } : undefined,
             product.brandId ? { brandId: product.brandId } : undefined,
             { category: { equals: product.category, mode: "insensitive" } },
@@ -96,10 +111,17 @@ export default async function ProductPage({ params }: { params: { slug: string }
       // Score candidates based on matching attributes
       const scoredProducts = relatedCandidates.map((p) => {
         let score = 0;
-        if (product.subcategoryId && p.subcategoryId === product.subcategoryId) score += 4;
-        if (product.categoryId && p.categoryId === product.categoryId) score += 3;
+        if (product.subcategoryId && p.subcategoryId === product.subcategoryId)
+          score += 4;
+        if (product.categoryId && p.categoryId === product.categoryId)
+          score += 3;
         if (product.brandId && p.brandId === product.brandId) score += 1;
-        if (product.category && p.category && p.category.toLowerCase() === product.category.toLowerCase()) score += 2;
+        if (
+          product.category &&
+          p.category &&
+          p.category.toLowerCase() === product.category.toLowerCase()
+        )
+          score += 2;
 
         return { product: p, score };
       });
@@ -109,7 +131,10 @@ export default async function ProductPage({ params }: { params: { slug: string }
         if (b.score !== a.score) {
           return b.score - a.score;
         }
-        return new Date(b.product.createdAt).getTime() - new Date(a.product.createdAt).getTime();
+        return (
+          new Date(b.product.createdAt).getTime() -
+          new Date(a.product.createdAt).getTime()
+        );
       });
 
       let selected = scoredProducts.map((sp) => sp.product).slice(0, 4);
@@ -141,7 +166,7 @@ export default async function ProductPage({ params }: { params: { slug: string }
       });
 
       return selected;
-    })()
+    })(),
   ]);
 
   const deliveryData = delivery || { insideDhaka: 80, outsideDhaka: 150 };
@@ -150,10 +175,10 @@ export default async function ProductPage({ params }: { params: { slug: string }
     <div className="min-h-screen bg-white">
       <Header />
       <main className="w-full">
-        <ProductClient 
-          product={product} 
-          sizeChartData={product.sizeChart || null} 
-          deliveryData={deliveryData} 
+        <ProductClient
+          product={product}
+          sizeChartData={product.sizeChart || null}
+          deliveryData={deliveryData}
           relatedProducts={relatedProducts}
         />
       </main>
