@@ -48,6 +48,16 @@ export default function ProductClient({ product, sizeChartData, deliveryData, re
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const selectedImage = product.images[selectedImageIndex] || "";
 
+  const [isZoomed, setIsZoomed] = useState(false);
+  const [zoomOrigin, setZoomOrigin] = useState({ x: 50, y: 50 });
+
+  const handleImageMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = ((e.clientX - rect.left) / rect.width) * 100;
+    const y = ((e.clientY - rect.top) / rect.height) * 100;
+    setZoomOrigin({ x, y });
+  };
+
   const [selectedSize, setSelectedSize] = useState<string | null>(null);
   const [selectedColor, setSelectedColor] = useState<string | null>(null);
   const [quantity, setQuantity] = useState(1);
@@ -293,20 +303,31 @@ export default function ProductClient({ product, sizeChartData, deliveryData, re
             </div>
 
             {/* Main Image */}
-            <div className="relative flex-1 aspect-[4/5] bg-[#F9F9F9] flex items-center justify-center group overflow-hidden shadow-sm border border-slate-100 order-1 lg:order-2">
+            <div
+              className="relative flex-1 aspect-[4/5] bg-[#F9F9F9] flex items-center justify-center group overflow-hidden shadow-sm border border-slate-100 order-1 lg:order-2 select-none"
+              onMouseEnter={() => setIsZoomed(true)}
+              onMouseLeave={() => setIsZoomed(false)}
+              onMouseMove={handleImageMouseMove}
+            >
               {selectedImage ? (
                 <UploadedImage
                   src={selectedImage}
                   alt={product.name}
                   fill
-                  className="object-cover transition-transform duration-700"
+                  className="object-cover"
+                  style={{
+                    transition: isZoomed ? "transform 0.1s ease-out" : "transform 0.3s ease-out",
+                    transform: isZoomed ? "scale(2.2)" : "scale(1)",
+                    transformOrigin: `${zoomOrigin.x}% ${zoomOrigin.y}%`,
+                    cursor: isZoomed ? "crosshair" : "zoom-in",
+                  }}
                   priority
                 />
               ) : (
                 <span className="text-slate-400 font-medium">No Image</span>
               )}
               {/* Navigation Arrows */}
-              {product.images.length > 1 && (
+              {product.images.length > 1 && !isZoomed && (
                 <>
                   <button
                     onClick={handlePrevImage}
