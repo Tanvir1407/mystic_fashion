@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import UploadedImage from "@/components/UploadedImage";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useCartStore } from "@/store/cartStore";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -50,6 +50,16 @@ export default function ProductClient({ product, sizeChartData, deliveryData, re
 
   const [isZoomed, setIsZoomed] = useState(false);
   const [zoomOrigin, setZoomOrigin] = useState({ x: 50, y: 50 });
+
+  const thumbnailScrollRef = useRef<HTMLDivElement>(null);
+  const thumbnailRefs = useRef<(HTMLButtonElement | null)[]>([]);
+
+  useEffect(() => {
+    const activeThumb = thumbnailRefs.current[selectedImageIndex];
+    if (activeThumb && thumbnailScrollRef.current) {
+      activeThumb.scrollIntoView({ block: "nearest", behavior: "smooth" });
+    }
+  }, [selectedImageIndex]);
 
   const handleImageMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
     const rect = e.currentTarget.getBoundingClientRect();
@@ -286,11 +296,15 @@ export default function ProductClient({ product, sizeChartData, deliveryData, re
 
           {/* Left: Product Images */}
           <div className="w-full lg:w-1/2 flex flex-col lg:flex-row gap-4">
-            {/* Thumbnails Row/Column */}
-            <div className="flex flex-row lg:flex-col gap-3 overflow-auto scrollbar-hide w-full lg:w-24 flex-shrink-0 order-2 lg:order-1">
+            {/* Thumbnails Row/Column — mobile: horizontal scroll, desktop: 5 visible + vertical scroll */}
+            <div
+              ref={thumbnailScrollRef}
+              className="flex flex-row lg:flex-col gap-3 overflow-x-auto lg:overflow-x-hidden lg:overflow-y-auto scrollbar-hide w-full lg:w-24 flex-shrink-0 order-2 lg:order-1 lg:max-h-[688px]"
+            >
               {product.images.map((img, idx) => (
                 <button
                   key={idx}
+                  ref={(el) => { thumbnailRefs.current[idx] = el; }}
                   onClick={() => handleThumbnailClick(idx)}
                   className={`relative w-20 h-24 lg:w-full lg:h-32 flex-shrink-0 bg-[#F9F9F9] overflow-hidden transition-all box-border ${selectedImageIndex === idx
                     ? 'opacity-100 border-[2px] border-[#800020] shadow-sm'
