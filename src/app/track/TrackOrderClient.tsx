@@ -147,14 +147,27 @@ function OrderDetailCard({ order, pathaoInfo }: { order: any; pathaoInfo?: any }
       {/* Items + Financial */}
       <div className="p-5 sm:p-6 grid grid-cols-1 sm:grid-cols-2 gap-6 text-xs">
         <div className="space-y-3">
-          <h4 className="text-[10px] uppercase font-medium tracking-widest text-slate-400">Order Items</h4>
-          <div className="space-y-2">
-            {order.items?.map((item: any, idx: number) => (
-              <div key={idx} className="flex justify-between items-center">
-                <span className="font-medium text-zinc-700 truncate max-w-[180px]">{item.product?.name}</span>
-                <span className="font-mono text-zinc-500 bg-zinc-100 px-2 py-0.5 rounded text-[10px]">×{item.quantity}</span>
-              </div>
-            ))}
+          <h4 className="text-[10px] uppercase font-medium tracking-widest text-slate-400 mb-3">Order Items</h4>
+          <div className="space-y-3">
+            {order.items?.map((item: any, idx: number) => {
+              const parts: string[] = [];
+              const size = item.size && item.size !== "Default" && item.size !== "none" ? item.size : null;
+              const color = item.color && item.color !== "Default" && item.color !== "none" ? item.color : null;
+              if (color) parts.push(color);
+              if (size) parts.push(size);
+              const variantLabel = parts.join(" / ");
+              return (
+                <div key={idx} className="flex justify-between items-start gap-2">
+                  <div className="min-w-0 flex-1">
+                    <p className="font-medium text-zinc-700 text-xs leading-snug">{item.product?.name}</p>
+                    {variantLabel && (
+                      <p className="text-[11px] text-slate-400 mt-0.5">{variantLabel}</p>
+                    )}
+                  </div>
+                  <span className="font-mono text-zinc-500 bg-slate-100 px-2 py-0.5 rounded text-[10px] shrink-0 mt-0.5">×{item.quantity}</span>
+                </div>
+              );
+            })}
           </div>
         </div>
         <div className="space-y-2.5 border-t sm:border-t-0 sm:border-l border-zinc-100 pt-4 sm:pt-0 sm:pl-6">
@@ -203,10 +216,21 @@ function PhoneOrdersList({ orders, onSelectOrder }: { orders: any[]; onSelectOrd
                 </span>
               </div>
               <p className="text-[11px] text-zinc-500 font-medium">{formatDate(order.createdAt)}</p>
-              <p className="text-[11px] text-zinc-600 font-semibold mt-1 truncate">
-                {order.items?.slice(0, 2).map((i: any) => i.product?.name).join(", ")}
-                {order.items?.length > 2 && ` +${order.items.length - 2} more`}
-              </p>
+              <div className="mt-1 space-y-0.5">
+                {order.items?.slice(0, 2).map((i: any, idx: number) => {
+                  const parts: string[] = [];
+                  const s = i.size && i.size !== "Default" && i.size !== "none" ? i.size : null;
+                  const c = i.color && i.color !== "Default" && i.color !== "none" ? i.color : null;
+                  if (c) parts.push(c);
+                  if (s) parts.push(s);
+                  return (
+                    <p key={idx} className="text-[11px] text-zinc-600 truncate">
+                      {i.product?.name}{parts.length > 0 && <span className="text-slate-400"> · {parts.join(" / ")}</span>}
+                    </p>
+                  );
+                })}
+                {order.items?.length > 2 && <p className="text-[11px] text-slate-400">+{order.items.length - 2} more</p>}
+              </div>
             </div>
             <div className="text-right shrink-0">
               <p className="text-sm font-semibold text-primary font-mono">{formatBDT(order.totalAmount)}</p>

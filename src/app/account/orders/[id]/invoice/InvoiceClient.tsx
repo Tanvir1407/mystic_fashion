@@ -207,7 +207,7 @@ export default function InvoiceClient({
                 <tr className="border-b border-slate-300 text-[10px] font-semibold tracking-widest text-slate-400 uppercase text-left">
                   <th className="py-2.5 w-[8%] text-center">SL</th>
                   <th className="py-2.5 w-[47%]">Description</th>
-                  <th className="py-2.5 w-[12%] text-center">Size</th>
+                  <th className="py-2.5 w-[12%] text-center">Variant</th>
                   <th className="py-2.5 w-[10%] text-center">Qty</th>
                   <th className="py-2.5 w-[11%] text-right">Unit Price</th>
                   <th className="py-2.5 w-[12%] text-right">Total</th>

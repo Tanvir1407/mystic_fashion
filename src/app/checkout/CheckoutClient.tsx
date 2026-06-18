@@ -356,26 +356,28 @@ export default function CheckoutClient({
         <Header />
 
         <div className="flex-1 flex flex-col items-center justify-center p-6 text-center animate-in fade-in duration-700">
-          <div className="mb-10">
-            <CheckCircle2 className="w-16 h-16 text-emerald-500 mx-auto" strokeWidth={1.5} />
+          <div className="mb-8">
+            <CheckCircle2 className="w-12 h-12 text-emerald-500 mx-auto" strokeWidth={1.5} />
           </div>
 
-          <h1 className="text-3xl font-black text-slate-900 mb-6 tracking-tight ">Order Confirmed!</h1>
+          <h1 className="text-2xl font-semibold text-slate-800 mb-4">Order Confirmed</h1>
 
-          <div className="max-w-md mx-auto space-y-4">
-            <p className="text-slate-600 leading-relaxed font-medium">
-              Thank you for shopping with <span className="text-slate-900 font-bold">Mystic Fashion</span>.
-              Your order (<span className="text-primary font-black tracking-tight underline decoration-slate-200 underline-offset-4">{confirmedOrderId}</span>) has been placed successfully and will be delivered soon.
+          <div className="max-w-md mx-auto space-y-3">
+            <p className="text-slate-500 leading-relaxed text-sm">
+              Thank you for shopping with <span className="text-slate-700 font-medium">Mystic Fashion</span>.
+              Your order{" "}
+              <span className="text-primary font-medium">({confirmedOrderId})</span>
+              {" "}has been placed successfully and will be delivered soon.
             </p>
 
-            <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest italic">
-              take this id for any future query about order
+            <p className="text-[11px] text-slate-400 uppercase tracking-widest">
+              Save this ID for future order queries
             </p>
           </div>
 
           <Link
             href="/"
-            className="mt-12 bg-primary text-white px-12 py-4 rounded-full font-black uppercase tracking-[0.2em] text-[10px] transition-all shadow-xl shadow-slate-200 active:scale-[0.98]"
+            className="mt-10 bg-primary text-white px-10 py-3 font-medium text-xs uppercase tracking-widest hover:bg-[#600018] transition-all"
           >
             Continue Shopping
           </Link>
