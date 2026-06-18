@@ -106,76 +106,68 @@ export default function SidebarCart() {
                 </div>
               ) : (
                 items.map((item) => (
-                  <div key={`${item.id}-${item.size}-${item.color || "Default"}`} className="flex gap-4 group ">
-                    <div className="relative w-24 h-28 bg-slate-100 dark:bg-zinc-900 rounded-lg overflow-hidden flex-shrink-0">
+                  <div key={`${item.id}-${item.size}-${item.color || "Default"}`} className="flex gap-3 group pb-5 border-b border-slate-100 dark:border-zinc-900 last:border-0 last:pb-0">
+                    {/* Image */}
+                    <div className="relative w-20 h-24 bg-slate-100 dark:bg-zinc-900 overflow-hidden flex-shrink-0">
                       {item.image ? (
-                        <Image
-                          src={item.image}
-                          alt={item.name}
-                          fill
-                          className="object-cover"
-                        />
+                        <Image src={item.image} alt={item.name} fill className="object-cover" />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center">
-                          <ShoppingBag className="w-8 h-8 text-slate-300" />
+                          <ShoppingBag className="w-7 h-7 text-slate-300" />
                         </div>
                       )}
                     </div>
-                    <div className="flex-1 flex flex-col justify-between py-1">
-                      <div>
-                        <div className="flex justify-between items-start">
-                          <h3 className="font-medium text-sm leading-tight group-hover:text-primary transition-colors line-clamp-2">
-                            {item.name}
-                          </h3>
-                          <button
-                            onClick={() => removeItem(item.id, item.size, item.color)}
-                            className="p-1 text-slate-400 hover:text-red-500 transition-colors"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
 
-
+                    {/* Content */}
+                    <div className="flex-1 flex flex-col gap-2 min-w-0">
+                      {/* Name + Delete */}
+                      <div className="flex justify-between items-start gap-2">
+                        <h3 className="font-semibold text-sm leading-snug text-zinc-800 dark:text-zinc-100 group-hover:text-primary transition-colors line-clamp-2">
+                          {item.name}
+                        </h3>
+                        <button
+                          onClick={() => removeItem(item.id, item.size, item.color)}
+                          className="flex-shrink-0 p-1 text-slate-300 hover:text-red-500 transition-colors"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
                       </div>
-                      <div>
+
+                      {/* Variant badges */}
+                      <div className="flex flex-wrap gap-1.5">
                         {item.size && item.size !== "Default" && (
-                          <span className="text-[14px] font-semibold bg-slate-100 dark:bg-zinc-900 px-2 py-1 text-slate-600 dark:text-slate-400">
+                          <span className="text-[10px] font-bold uppercase tracking-wide bg-slate-100 dark:bg-zinc-800 text-slate-500 dark:text-slate-400 px-2 py-0.5">
                             {item.sizeAttributeName || "Size"}: {item.size}
                           </span>
                         )}
                         {item.color && item.color !== "Default" && (
-                          <span className="text-[14px] font-semibold bg-slate-100 dark:bg-zinc-900 px-2 py-1 text-slate-600 dark:text-slate-400 ml-2">
+                          <span className="text-[10px] font-bold uppercase tracking-wide bg-slate-100 dark:bg-zinc-800 text-slate-500 dark:text-slate-400 px-2 py-0.5">
                             {item.colorAttributeName || "Color"}: {item.color}
                           </span>
                         )}
                       </div>
-                      <div>
 
-
-                        <div className="flex items-center justify-between gap-3">
-                          <div>
-                            <p className="text-xl text-primary font-semibold mt-1">
-                              {formatBDT(item.price)}
-                            </p>
-                          </div>
-                          <div className="flex items-center border border-slate-200 dark:border-zinc-800 ">
-                            <button
-                              onClick={() => updateQuantity(item.id, item.quantity - 1, item.size, item.color)}
-                              className="p-2 px-3 hover:bg-slate-50 border-r dark:hover:bg-zinc-900 transition-colors"
-                            >
-                              <Minus className="w-4 h-4" />
-                            </button>
-                            <span className="w-10 text-center text-xs font-bold">{item.quantity}</span>
-                            <button
-                              onClick={() => updateQuantity(item.id, item.quantity + 1, item.size, item.color)}
-                              className="p-2 px-3 border-l hover:bg-slate-50 dark:hover:bg-zinc-900 transition-colors"
-                            >
-                              <Plus className="w-4 h-4" />
-                            </button>
-                          </div>
+                      {/* Price + Quantity */}
+                      <div className="flex items-center justify-between mt-auto">
+                        <p className="text-base font-bold text-primary">
+                          {formatBDT(item.price)}
+                        </p>
+                        <div className="flex items-center border border-slate-200 dark:border-zinc-700">
+                          <button
+                            onClick={() => updateQuantity(item.id, item.quantity - 1, item.size, item.color)}
+                            className="p-1.5 px-2.5 hover:bg-slate-50 dark:hover:bg-zinc-900 border-r border-slate-200 dark:border-zinc-700 transition-colors"
+                          >
+                            <Minus className="w-3 h-3" />
+                          </button>
+                          <span className="w-8 text-center text-xs font-bold">{item.quantity}</span>
+                          <button
+                            onClick={() => updateQuantity(item.id, item.quantity + 1, item.size, item.color)}
+                            className="p-1.5 px-2.5 hover:bg-slate-50 dark:hover:bg-zinc-900 border-l border-slate-200 dark:border-zinc-700 transition-colors"
+                          >
+                            <Plus className="w-3 h-3" />
+                          </button>
                         </div>
                       </div>
-
                     </div>
                   </div>
                 ))
