@@ -22,11 +22,11 @@ export default function SidebarCart() {
 
   useEffect(() => {
     if (isOpen && items.length > 0) {
-      const productIds = items.map((i: any) => i.id);
-      syncCartPrices(productIds).then((updatedPrices) => {
+      const syncItems = items.map((i: any) => ({ id: i.id, size: i.size }));
+      syncCartPrices(syncItems).then((updatedPrices) => {
         updatedPrices.forEach((updated: any) => {
           items.forEach((item: any) => {
-            if (item.id === updated.id && item.price !== updated.price) {
+            if (item.id === updated.id && item.size === updated.size && item.price !== updated.price) {
               updateItem(item.id, item.size, { price: updated.price });
             }
           });

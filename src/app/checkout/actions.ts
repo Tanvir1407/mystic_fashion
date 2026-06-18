@@ -36,7 +36,7 @@ export async function placeOrderAction(payload: {
 
       if (sessionCustomerId) {
         const existingCustomer = await tx.customer.findUnique({
-          where: { id: sessionCustomerId }
+          where: { id: sessionCustomerId },
         });
 
         if (existingCustomer) {
@@ -49,7 +49,7 @@ export async function placeOrderAction(payload: {
             data: {
               name: nameToUse || undefined,
               address: addressToUse || undefined,
-            }
+            },
           });
         }
       }
@@ -71,7 +71,10 @@ export async function placeOrderAction(payload: {
           } else {
             const nameToUse = payload.fullName?.trim();
             const addressToUse = payload.address?.trim();
-            if ((nameToUse && nameToUse !== customer.name) || (addressToUse && addressToUse !== customer.address)) {
+            if (
+              (nameToUse && nameToUse !== customer.name) ||
+              (addressToUse && addressToUse !== customer.address)
+            ) {
               customer = await tx.customer.update({
                 where: { phone },
                 data: {
@@ -86,23 +89,37 @@ export async function placeOrderAction(payload: {
       }
 
       // Recalculate subtotal securely from DB
-      const productIds = payload.items.map(item => item.id);
+      const productIds = payload.items.map((item) => item.id);
       const dbProducts = await tx.product.findMany({
         where: { id: { in: productIds } },
-        include: { discount: true }
+        include: {
+          discount: true,
+          variants: {
+            include: { pricingMatrix: true },
+          },
+        },
       });
-      const dbProductMap = new Map(dbProducts.map(p => [p.id, p]));
+      const dbProductMap = new Map(dbProducts.map((p) => [p.id, p]));
 
       let calculatedSubtotal = 0;
       for (const item of payload.items) {
-        const dbProd = dbProductMap.get(item.id);
+        const dbProd = dbProductMap.get(item.id) as any;
         if (!dbProd) throw new Error(`Product not found: ${item.name}`);
-        let finalPrice = dbProd.price;
+
+        let basePrice = dbProd.price;
+        if (item.size) {
+          const variant = dbProd.variants.find((v) => v.size === item.size);
+          if (variant?.pricingMatrix?.basePrice) {
+            basePrice = Number(variant.pricingMatrix.basePrice);
+          }
+        }
+
+        let finalPrice = basePrice;
         if (dbProd.discount && dbProd.discount.active) {
           if (dbProd.discount.discountType === "PERCENTAGE") {
-            finalPrice = finalPrice - (finalPrice * (dbProd.discount.value / 100));
+            finalPrice = basePrice - basePrice * (dbProd.discount.value / 100);
           } else {
-            finalPrice = finalPrice - dbProd.discount.value;
+            finalPrice = basePrice - dbProd.discount.value;
           }
         }
         calculatedSubtotal += roundPrice(finalPrice) * item.quantity;
@@ -110,14 +127,17 @@ export async function placeOrderAction(payload: {
 
       // Calculate DTF Cost
       const calculatedAdvance = payload.items.reduce((sum, item) => {
-        const printCount = item.printDetails?.length || (item.requiresPrint ? 1 : 0);
-        return sum + (printCount * (item.printCost || 0));
+        const printCount =
+          item.printDetails?.length || (item.requiresPrint ? 1 : 0);
+        return sum + printCount * (item.printCost || 0);
       }, 0);
 
       // Delivery Setting & Charge
       let insideCharge = 80;
       let outsideCharge = 150;
-      const delSetting = await tx.deliverySetting.findUnique({ where: { id: "default" } });
+      const delSetting = await tx.deliverySetting.findUnique({
+        where: { id: "default" },
+      });
       if (delSetting) {
         insideCharge = delSetting.insideDhaka;
         outsideCharge = delSetting.outsideDhaka;
@@ -138,18 +158,20 @@ export async function placeOrderAction(payload: {
           deliveryCharge,
           payload.phone,
           payload.couponSessionId,
-          tx
+          tx,
         );
 
         if (!validationResult.isValid) {
-          throw new Error(validationResult.error || "Coupon validation failed.");
+          throw new Error(
+            validationResult.error || "Coupon validation failed.",
+          );
         }
 
         validatedDiscountAmount = validationResult.discountAmount;
 
         const dbCoupon = await tx.coupon.findUnique({
           where: { code: sanitizedCoupon },
-          select: { id: true, type: true }
+          select: { id: true, type: true },
         });
         if (dbCoupon) {
           couponIdToLog = dbCoupon.id;
@@ -161,10 +183,11 @@ export async function placeOrderAction(payload: {
 
       // Calculate Secure Grand Total
       const secureTotalAmount = roundPrice(
-        calculatedSubtotal - validatedDiscountAmount + calculatedAdvance + finalDeliveryCharge
+        calculatedSubtotal -
+          validatedDiscountAmount +
+          calculatedAdvance +
+          finalDeliveryCharge,
       );
-
-
 
       // 1. Create the order & items
       const tags = [];
@@ -182,7 +205,9 @@ export async function placeOrderAction(payload: {
           district: payload.district,
           address: payload.address,
           totalAmount: secureTotalAmount,
-          advancePaid: payload.isFullPayment ? secureTotalAmount : calculatedAdvance,
+          advancePaid: payload.isFullPayment
+            ? secureTotalAmount
+            : calculatedAdvance,
           bkashNumber: payload.bkashNumber,
           bkashTrxId: payload.bkashTrxId,
           remarks: payload.remarks,
@@ -197,7 +222,11 @@ export async function placeOrderAction(payload: {
           tags: tags,
           items: {
             create: payload.items.flatMap((item) => {
-              if (item.requiresPrint && item.printDetails && item.printDetails.length > 0) {
+              if (
+                item.requiresPrint &&
+                item.printDetails &&
+                item.printDetails.length > 0
+              ) {
                 const printedItems = item.printDetails.map((pd: any) => ({
                   productId: item.id,
                   size: item.size || "M",
@@ -223,16 +252,18 @@ export async function placeOrderAction(payload: {
                 }
                 return printedItems;
               } else {
-                return [{
-                  productId: item.id,
-                  size: item.size || "M",
-                  quantity: item.quantity,
-                  price: item.price,
-                  requiresPrint: item.requiresPrint || false,
-                  printName: item.printName || null,
-                  printNumber: item.printNumber || null,
-                  printCost: item.printCost || 0,
-                }];
+                return [
+                  {
+                    productId: item.id,
+                    size: item.size || "M",
+                    quantity: item.quantity,
+                    price: item.price,
+                    requiresPrint: item.requiresPrint || false,
+                    printName: item.printName || null,
+                    printNumber: item.printNumber || null,
+                    printCost: item.printCost || 0,
+                  },
+                ];
               }
             }),
           },
@@ -247,8 +278,8 @@ export async function placeOrderAction(payload: {
             customerId: customerId,
             phone: phone || normalizePhone(payload.phone),
             orderId: order.id,
-            discountAmount: validatedDiscountAmount
-          }
+            discountAmount: validatedDiscountAmount,
+          },
         });
 
         // Cleanup lock for this user
@@ -258,9 +289,11 @@ export async function placeOrderAction(payload: {
             couponId: couponIdToLog,
             OR: [
               { phone: phoneMatch },
-              payload.couponSessionId ? { sessionId: payload.couponSessionId } : {}
-            ]
-          }
+              payload.couponSessionId
+                ? { sessionId: payload.couponSessionId }
+                : {},
+            ],
+          },
         });
       }
 
@@ -275,16 +308,16 @@ export async function placeOrderAction(payload: {
             productId_size_color: {
               productId: item.id,
               size: item.size,
-              color: item.color || "Default"
-            }
+              color: item.color || "Default",
+            },
           },
           include: {
             product: {
               select: {
-                trackStock: true
-              }
-            }
-          }
+                trackStock: true,
+              },
+            },
+          },
         });
 
         if (!variant) {
@@ -292,7 +325,9 @@ export async function placeOrderAction(payload: {
         }
 
         if (variant.product.trackStock && variant.stock < item.quantity) {
-          throw new Error(`Variant "${item.name} (${item.size})" does not have enough stock (Available: ${variant.stock}).`);
+          throw new Error(
+            `Variant "${item.name} (${item.size})" does not have enough stock (Available: ${variant.stock}).`,
+          );
         }
       }
 
@@ -312,20 +347,26 @@ export async function validateCoupon(
   items: any[],
   deliveryCharge: number,
   phone?: string,
-  sessionId?: string
+  sessionId?: string,
 ) {
   try {
-    const res = await validateCouponRules(code, items, deliveryCharge, phone, sessionId);
+    const res = await validateCouponRules(
+      code,
+      items,
+      deliveryCharge,
+      phone,
+      sessionId,
+    );
 
     if (res.isValid && sessionId) {
       const coupon = await prisma.coupon.findUnique({
-        where: { code: code.toUpperCase() }
+        where: { code: code.toUpperCase() },
       });
       if (coupon) {
         const phoneMatch = phone ? normalizePhone(phone) : null;
         // Clean existing lock for this session
         await prisma.couponLock.deleteMany({
-          where: { sessionId, couponId: coupon.id }
+          where: { sessionId, couponId: coupon.id },
         });
         // Create new lock
         await prisma.couponLock.create({
@@ -333,17 +374,17 @@ export async function validateCoupon(
             couponId: coupon.id,
             sessionId,
             phone: phoneMatch,
-            expiresAt: new Date(Date.now() + 15 * 60 * 1000)
-          }
+            expiresAt: new Date(Date.now() + 15 * 60 * 1000),
+          },
         });
       }
     } else if (!res.isValid && sessionId && code) {
       const coupon = await prisma.coupon.findUnique({
-        where: { code: code.toUpperCase() }
+        where: { code: code.toUpperCase() },
       });
       if (coupon) {
         await prisma.couponLock.deleteMany({
-          where: { sessionId, couponId: coupon.id }
+          where: { sessionId, couponId: coupon.id },
         });
       }
     }
@@ -352,33 +393,55 @@ export async function validateCoupon(
       success: res.isValid,
       discountAmount: res.discountAmount,
       couponCode: code.toUpperCase(),
-      error: res.error
+      error: res.error,
     };
   } catch (error: any) {
     return { success: false, error: "Failed to validate coupon." };
   }
 }
 
-export async function syncCartPrices(productIds: string[]) {
+export async function syncCartPrices(
+  items: { id: string; size?: string | null }[],
+) {
   try {
+    const productIds = Array.from(new Set(items.map((i) => i.id)));
     const products = await prisma.product.findMany({
       where: {
         id: { in: productIds },
-        isPublished: true
+        isPublished: true,
       },
-      include: { discount: true }
+      include: {
+        discount: true,
+        variants: {
+          include: { pricingMatrix: true },
+        },
+      },
     });
 
-    return products.map(product => {
-      let finalPrice = product.price;
-      if (product.discount && product.discount.active) {
-        if (product.discount.discountType === "PERCENTAGE") {
-          finalPrice = finalPrice - (finalPrice * (product.discount.value / 100));
-        } else {
-          finalPrice = finalPrice - product.discount.value;
+    const productMap = new Map(products.map((p) => [p.id, p]));
+
+    return items.map((item) => {
+      const product = productMap.get(item.id);
+      if (!product) return { id: item.id, size: item.size, price: 0 };
+
+      let basePrice = product.price;
+      if (item.size) {
+        const variant = product.variants.find((v) => v.size === item.size);
+        if (variant?.pricingMatrix?.basePrice) {
+          basePrice = Number(variant.pricingMatrix.basePrice);
         }
       }
-      return { id: product.id, price: roundPrice(finalPrice) };
+
+      let finalPrice = basePrice;
+      if (product.discount && product.discount.active) {
+        if (product.discount.discountType === "PERCENTAGE") {
+          finalPrice = basePrice - basePrice * (product.discount.value / 100);
+        } else {
+          finalPrice = basePrice - product.discount.value;
+        }
+      }
+
+      return { id: product.id, size: item.size, price: roundPrice(finalPrice) };
     });
   } catch (error) {
     console.error("Failed to sync cart prices:", error);
