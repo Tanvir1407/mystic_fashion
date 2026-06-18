@@ -242,7 +242,6 @@ export async function placeOrderAction(payload: {
               if (item.requiresPrint && item.printDetails && item.printDetails.length > 0) {
                 const printedItems = item.printDetails.map((pd: any) => ({
                   productId: item.id,
-                  size: item.size || "M",
                   variantId,
                   quantity: 1,
                   price: item.price,
@@ -255,7 +254,6 @@ export async function placeOrderAction(payload: {
                 if (remainingQty > 0) {
                   printedItems.push({
                     productId: item.id,
-                    size: item.size || "M",
                     variantId,
                     quantity: remainingQty,
                     price: item.price,
@@ -269,7 +267,6 @@ export async function placeOrderAction(payload: {
               } else {
                 return [{
                   productId: item.id,
-                  size: item.size || "M",
                   variantId,
                   quantity: item.quantity,
                   price: item.price,
