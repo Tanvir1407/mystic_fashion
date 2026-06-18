@@ -1,4 +1,5 @@
 import { notFound, redirect } from 'next/navigation';
+import type { Metadata } from 'next';
 import ProductClient from './ProductClient';
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
@@ -8,6 +9,69 @@ import { getFooterData } from "@/lib/footer";
 import { cookies } from 'next/headers';
 
 export const dynamic = "force-dynamic";
+
+// ─── generateMetadata: rich title + OG + meta description ───────────────────
+export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://mysticfashion.co";
+  const identifier = params.slug;
+
+  const product = await prisma.product.findUnique({
+    where: identifier.includes('-') && identifier.length > 30 ? { id: identifier } : { slug: identifier },
+    select: {
+      name: true,
+      description: true,
+      slug: true,
+      team: true,
+      categoryRel: { select: { name: true } },
+      mediaAssets: { take: 1, orderBy: { sortOrder: "asc" }, select: { url: true } },
+      variants: {
+        take: 1,
+        select: { pricingMatrix: { select: { basePrice: true } } }
+      }
+    }
+  }).catch(() => null);
+
+  if (!product) {
+    return { title: "Product Not Found | Mystic Fashion" };
+  }
+
+  const plainDesc = product.description
+    ? product.description.replace(/<[^>]*>/g, "").replace(/\s+/g, " ").trim().substring(0, 160)
+    : `Shop ${product.name} at Mystic Fashion. Premium authentic jerseys and apparel in Bangladesh.`;
+
+  const basePrice = product.variants?.[0]?.pricingMatrix?.basePrice
+    ? Number(product.variants[0].pricingMatrix.basePrice)
+    : null;
+
+  const priceText = basePrice ? ` — ৳${basePrice}` : "";
+  const categoryText = product.categoryRel?.name ? ` | ${product.categoryRel.name}` : "";
+  const imageUrl = product.mediaAssets?.[0]?.url || `${baseUrl}/og-image.jpg`;
+
+  return {
+    title: `${product.name}${priceText}${categoryText} | Mystic Fashion`,
+    description: plainDesc,
+    openGraph: {
+      title: `${product.name} | Mystic Fashion`,
+      description: plainDesc,
+      url: `${baseUrl}/product/${product.slug}`,
+      siteName: "Mystic Fashion",
+      images: [{ url: imageUrl, width: 800, height: 1067, alt: product.name }],
+      type: "website",
+      locale: "en_US",
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: `${product.name} | Mystic Fashion`,
+      description: plainDesc,
+      images: [imageUrl],
+    },
+    alternates: {
+      canonical: `${baseUrl}/product/${product.slug}`,
+    },
+  };
+}
+
+
 
 export default async function ProductPage({ params }: { params: { slug: string } }) {
   const cookieStore = cookies();
@@ -198,6 +262,7 @@ export default async function ProductPage({ params }: { params: { slug: string }
     };
   });
 
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://mysticfashion.co";
   const [delivery, footerData] = await Promise.all([
     prisma.deliverySetting.findUnique({
       where: { id: "default" }
@@ -207,8 +272,71 @@ export default async function ProductPage({ params }: { params: { slug: string }
 
   const deliveryData = delivery || { insideDhaka: 80, outsideDhaka: 150 };
 
+  // ─── JSON-LD: schema.org Product for AI & rich search results ────────────
+  const prices = product.variants
+    .map((v: any) => v.price)
+    .filter((p: any) => p > 0);
+  const minPrice = prices.length > 0 ? Math.min(...prices) : product.price;
+  const maxPrice = prices.length > 0 ? Math.max(...prices) : product.price;
+  const totalStock = product.variants.reduce((s: number, v: any) => s + (v.stock || 0), 0);
+
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Product",
+    name: product.name,
+    description: product.description
+      ? product.description.replace(/<[^>]*>/g, "").replace(/\s+/g, " ").trim().substring(0, 500)
+      : `Premium ${product.name} available at Mystic Fashion.`,
+    url: `${baseUrl}/product/${product.slug}`,
+    image: product.images?.length > 0 ? product.images : undefined,
+    brand: {
+      "@type": "Brand",
+      name: "Mystic Fashion",
+    },
+    offers: prices.length > 1 ? {
+      "@type": "AggregateOffer",
+      priceCurrency: "BDT",
+      lowPrice: minPrice,
+      highPrice: maxPrice,
+      offerCount: product.variants.length,
+      availability: totalStock > 0
+        ? "https://schema.org/InStock"
+        : "https://schema.org/OutOfStock",
+      seller: { "@type": "Organization", name: "Mystic Fashion" },
+    } : {
+      "@type": "Offer",
+      priceCurrency: "BDT",
+      price: minPrice,
+      availability: totalStock > 0
+        ? "https://schema.org/InStock"
+        : "https://schema.org/OutOfStock",
+      seller: { "@type": "Organization", name: "Mystic Fashion" },
+      shippingDetails: {
+        "@type": "OfferShippingDetails",
+        shippingRate: {
+          "@type": "MonetaryAmount",
+          value: deliveryData.outsideDhaka,
+          currency: "BDT",
+        },
+        deliveryTime: {
+          "@type": "ShippingDeliveryTime",
+          businessDays: { "@type": "QuantitativeValue", minValue: 1, maxValue: 3 },
+        },
+        shippingDestination: {
+          "@type": "DefinedRegion",
+          addressCountry: "BD",
+        },
+      },
+    },
+  };
+
   return (
     <div className="min-h-screen bg-white">
+      {/* JSON-LD Structured Data for AI crawlers & Google rich snippets */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       <Header />
       <main className="w-full">
         <ProductClient product={product as any} sizeChartData={product.sizeChart || null} deliveryData={deliveryData} relatedProducts={relatedProducts} />
