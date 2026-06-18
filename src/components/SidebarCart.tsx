@@ -138,14 +138,14 @@ export default function SidebarCart() {
 
                       </div>
                       <div>
-                        {item.size && (
+                        {item.size && item.size !== "Default" && (
                           <span className="text-[14px] font-semibold bg-slate-100 dark:bg-zinc-900 px-2 py-1 text-slate-600 dark:text-slate-400">
-                            Size: {item.size}
+                            {item.sizeAttributeName || "Size"}: {item.size}
                           </span>
                         )}
                         {item.color && item.color !== "Default" && (
                           <span className="text-[14px] font-semibold bg-slate-100 dark:bg-zinc-900 px-2 py-1 text-slate-600 dark:text-slate-400 ml-2">
-                            Color: {item.color}
+                            {item.colorAttributeName || "Color"}: {item.color}
                           </span>
                         )}
                       </div>
