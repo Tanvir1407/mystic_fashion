@@ -87,7 +87,7 @@ export default function InvoiceClient({
   };
 
   return (
-    <div className="min-h-screen bg-[#fafafa] py-12 print:py-0 text-[#1e293b] flex flex-col items-center font-sans antialiased">
+    <div className="min-h-screen print:min-h-0 bg-[#fafafa] py-12 print:py-0 text-[#1e293b] flex flex-col items-center font-sans antialiased">
       {/* Control Bar (Hidden on print) */}
       <div className="w-full max-w-[210mm] bg-white border border-slate-100 rounded-lg px-6 py-4 flex items-center justify-between shadow-xs mb-8 print:hidden">
         <Breadcrumb items={[
@@ -121,7 +121,9 @@ export default function InvoiceClient({
               box-shadow: none !important;
               border: none !important;
               padding: 0 !important;
-              min-height: auto !important;
+              min-height: 0 !important;
+              height: auto !important;
+              display: block !important;
             }
           }
           @page {
