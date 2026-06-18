@@ -72,37 +72,18 @@ export async function getFilteredProductsList(params: {
 
   const productsRes = await prisma.product.findMany({
     where: whereClause,
-    select: {
-      id: true,
-      slug: true,
-      name: true,
-      description: true,
-      price: true,
-      purchasePrice: true,
-      images: true,
-      team: true,
-      category: true,
-      brandId: true,
-      categoryId: true,
-      subcategoryId: true,
-      createdAt: true,
-      isFeatured: true,
-      featuredOrder: true,
-      isPublished: true,
-      trackStock: true,
+    include: {
       brand: true,
       categoryRel: true,
       subcategory: true,
       discount: true,
+      mediaAssets: { orderBy: { sortOrder: "asc" } },
       variants: {
-        select: {
-          id: true,
-          size: true,
-          color: true,
-          colorCode: true,
-          sku: true,
-          stock: true,
-          order: true,
+        include: {
+          pricingMatrix: true,
+          stocks: {
+            where: { warehouse: { code: "WH-MAIN" } }
+          }
         }
       }
     },
@@ -112,12 +93,58 @@ export async function getFilteredProductsList(params: {
     return [];
   });
 
-  // Sort product variants
-  const rawProducts = productsRes || [];
-  rawProducts.forEach((product) => {
-    if (product.variants) {
-      product.variants.sort((a, b) => (a.order || 0) - (b.order || 0));
-    }
+  const rawProducts = (productsRes || []).map((p) => {
+    const basePrice = p.variants?.[0]?.pricingMatrix?.basePrice
+      ? Number(p.variants[0].pricingMatrix.basePrice)
+      : 0;
+
+    const displayImages = (p.mediaAssets && p.mediaAssets.length > 0)
+      ? p.mediaAssets.map((asset: any) => asset.url)
+      : [];
+
+    const mappedVariants = p.variants.map((v) => {
+      const vPrice = v.pricingMatrix?.basePrice ? Number(v.pricingMatrix.basePrice) : basePrice;
+      const vStock = v.stocks?.[0]?.availableQuantity ?? 0;
+      return {
+        id: v.id,
+        size: v.size,
+        color: v.color,
+        colorCode: v.colorCode,
+        sku: v.sku,
+        stock: vStock,
+        price: vPrice,
+        order: v.order
+      };
+    });
+
+    mappedVariants.sort((a, b) => (a.order || 0) - (b.order || 0));
+
+    return {
+      id: p.id,
+      slug: p.slug,
+      name: p.name,
+      description: p.description,
+      price: basePrice,
+      purchasePrice: p.variants?.[0]?.pricingMatrix?.costPrice
+        ? Number(p.variants[0].pricingMatrix.costPrice)
+        : 0,
+      images: displayImages,
+      team: p.team,
+      category: p.category,
+      brandId: p.brandId,
+      categoryId: p.categoryId,
+      subcategoryId: p.subcategoryId,
+      createdAt: p.createdAt,
+      isFeatured: p.isFeatured,
+      featuredOrder: p.featuredOrder,
+      isPublished: p.isPublished,
+      trackStock: p.trackStock,
+      brand: p.brand,
+      categoryRel: p.categoryRel,
+      subcategory: p.subcategory,
+      discount: p.discount,
+      variants: mappedVariants
+    };
   });
 
   // In-memory price range filtering

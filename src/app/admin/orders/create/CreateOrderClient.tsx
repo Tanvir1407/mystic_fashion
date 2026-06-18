@@ -21,8 +21,10 @@ interface Product {
 
 interface OrderItem {
   productId: string;
+  variantId: string;
   productName: string;
-  size: string;
+  size: string;           // internal DB key for variant lookup (ProductVariant.size)
+  displayVariant?: string; // human-readable label for UI (e.g. "1KG / KING SIZE")
   quantity: number;
   price: number;
   stock: number;
@@ -119,6 +121,8 @@ export default function CreateOrderClient({
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedProductId, setSelectedProductId] = useState("");
   const [selectedSize, setSelectedSize] = useState("");
+  // Dynamic PIM attribute selections: { [attrKey]: selectedValue }
+  const [selectedAttrValues, setSelectedAttrValues] = useState<Record<string, string>>({});
   const [quantity, setQuantity] = useState(1);
   const [focusedIndex, setFocusedIndex] = useState(-1);
 
@@ -140,7 +144,7 @@ export default function CreateOrderClient({
       const res = await getPathaoCities();
       if (res.success && res.data) {
         const cityOptions = res.data.map((c: any) => ({ value: c.city_id.toString(), label: c.city_name }));
-        setCities([{ value: "self-pickup", label: "Self Pickup" }, ...cityOptions]);
+        setCities(cityOptions);
       }
       setLoadingCities(false);
     }
@@ -211,7 +215,13 @@ export default function CreateOrderClient({
     if (filteredProducts.length === 0) {
       if (e.key === "Enter" && selectedProductId) {
         e.preventDefault();
-        qtyInputRef.current?.focus();
+        // Focus the first variant/size button, not qty — user still needs to pick a variant
+        const firstVariantBtn = sizeContainerRef.current?.querySelector<HTMLButtonElement>("button");
+        if (firstVariantBtn) {
+          firstVariantBtn.focus();
+        } else {
+          qtyInputRef.current?.focus();
+        }
       }
       return;
     }
@@ -228,6 +238,8 @@ export default function CreateOrderClient({
         const p = filteredProducts[focusedIndex];
         setSelectedProductId(p.id);
         setSearchQuery(p.name);
+        setSelectedSize("");
+        setSelectedAttrValues({});
         setFocusedIndex(-1);
         // Instant target switch down to variant sizes element block
         setTimeout(() => {
@@ -240,6 +252,69 @@ export default function CreateOrderClient({
 
   const selectedProduct = useMemo(() => products.find(p => p.id === selectedProductId), [products, selectedProductId]);
   const availableSizes = useMemo(() => selectedProduct?.variants || [], [selectedProduct]);
+
+  // ─── Dynamic Attribute Cascade Logic ───────────────────────────────────────
+  // Determine if this product uses PIM attributes (has non-empty attributes JSON)
+  const attrKeys = useMemo(() => {
+    if (!selectedProduct) return [];
+    const keySets = new Set<string>();
+    for (const v of selectedProduct.variants) {
+      const attrs = (v.attributes && typeof v.attributes === 'object' && !Array.isArray(v.attributes))
+        ? v.attributes as Record<string, string>
+        : {};
+      Object.keys(attrs).forEach(k => keySets.add(k));
+    }
+    return Array.from(keySets);
+  }, [selectedProduct]);
+
+  const isAttrMode = attrKeys.length > 0;
+
+  // For each attr key, get unique values from variants (filtered by prior selections)
+  const attrOptions = useMemo(() => {
+    if (!isAttrMode || !selectedProduct) return {};
+    const result: Record<string, { value: string; totalStock: number }[]> = {};
+    for (let i = 0; i < attrKeys.length; i++) {
+      const key = attrKeys[i];
+      // Filter variants matching all previous attribute selections
+      const filtered = selectedProduct.variants.filter((v: any) => {
+        const attrs = (v.attributes && typeof v.attributes === 'object') ? v.attributes as Record<string, string> : {};
+        for (let j = 0; j < i; j++) {
+          const prevKey = attrKeys[j];
+          if (selectedAttrValues[prevKey] && attrs[prevKey] !== selectedAttrValues[prevKey]) return false;
+        }
+        return true;
+      });
+      // Aggregate unique values + total stock for this key
+      const seen = new Map<string, number>();
+      for (const v of filtered) {
+        const attrs = (v.attributes && typeof v.attributes === 'object') ? v.attributes as Record<string, string> : {};
+        const val = attrs[key];
+        if (val) {
+          seen.set(val, (seen.get(val) || 0) + (v.stock ?? 0));
+        }
+      }
+      result[key] = Array.from(seen.entries()).map(([value, totalStock]) => ({ value, totalStock }));
+    }
+    return result;
+  }, [isAttrMode, selectedProduct, attrKeys, selectedAttrValues]);
+
+  // Resolve the matched variant when all attribute values are selected
+  const resolvedVariant = useMemo(() => {
+    if (!isAttrMode || !selectedProduct || attrKeys.length === 0) return null;
+    const allSelected = attrKeys.every(k => !!selectedAttrValues[k]);
+    if (!allSelected) return null;
+    return selectedProduct.variants.find((v: any) => {
+      const attrs = (v.attributes && typeof v.attributes === 'object') ? v.attributes as Record<string, string> : {};
+      return attrKeys.every(k => attrs[k] === selectedAttrValues[k]);
+    }) || null;
+  }, [isAttrMode, selectedProduct, attrKeys, selectedAttrValues]);
+
+  // Keep selectedSize in sync with the resolved variant (for backward compat with addToOrder)
+  useEffect(() => {
+    if (isAttrMode) {
+      setSelectedSize(resolvedVariant ? resolvedVariant.size : "");
+    }
+  }, [isAttrMode, resolvedVariant]);
 
   const getDiscountedPrice = (product: Product) => {
     if (!product.discount) return product.price;
@@ -265,10 +340,17 @@ export default function CreateOrderClient({
       updatedItems[existingIndex].quantity += quantity;
       setOrderItems(updatedItems);
     } else {
+      // Build human-readable display label for attr mode (e.g. "1KG / KING SIZE")
+      const displayVariant = isAttrMode && attrKeys.length > 0
+        ? attrKeys.map(k => selectedAttrValues[k]).filter(Boolean).join(" / ")
+        : undefined;
+
       setOrderItems([...orderItems, {
         productId: selectedProduct.id,
+        variantId: variant.id,
         productName: selectedProduct.name,
         size: selectedSize,
+        displayVariant,
         quantity: quantity,
         price: unitPrice,
         stock: variant.stock,
@@ -282,6 +364,7 @@ export default function CreateOrderClient({
     setSearchQuery("");
     setSelectedProductId("");
     setSelectedSize("");
+    setSelectedAttrValues({});
     setQuantity(1);
     setRequiresPrint(false);
     setPendingPrintDetails([]);
@@ -361,7 +444,7 @@ export default function CreateOrderClient({
             pathaoZoneId: selectedZoneId || undefined, pathaoAreaId: selectedAreaId || undefined,
             isStorePickup, deliveryCharge: isStorePickup ? deliveryCharge : finalDeliveryCharge,
             items: orderItems.map(item => ({
-              productId: item.productId, size: item.size, quantity: item.quantity, price: item.price,
+              productId: item.productId, variantId: item.variantId, size: item.size, quantity: item.quantity, price: item.price,
               requiresPrint: item.requiresPrint, printCost: item.printCost, printDetails: item.printDetails
             })),
             exchangeRefOrderId: exchangeRefOrderId.trim(), exchangeItemNote: exchangeItemNote.trim(),
@@ -373,7 +456,7 @@ export default function CreateOrderClient({
             pathaoZoneId: selectedZoneId || undefined, pathaoAreaId: selectedAreaId || undefined,
             isStorePickup, deliveryCharge: isStorePickup ? deliveryCharge : finalDeliveryCharge,
             items: orderItems.map(item => ({
-              productId: item.productId, size: item.size, quantity: item.quantity, price: item.price,
+              productId: item.productId, variantId: item.variantId, size: item.size, quantity: item.quantity, price: item.price,
               requiresPrint: item.requiresPrint, printCost: item.printCost, printDetails: item.printDetails
             })),
             hasBackorderItems, tags, createdById: createdById || undefined,
@@ -481,13 +564,13 @@ export default function CreateOrderClient({
         {/* Product Engine Block */}
         <div className="bg-white p-6 border border-slate-200 shadow-sm rounded-lg space-y-4">
           <div className="flex justify-between items-center border-b border-slate-100 pb-2.5 mb-4">
-            <h2 className="font-bold text-sm uppercase tracking-wider text-slate-800 flex items-center gap-1.5">PRODUCT SELECTION</h2>
+            <h2 className="font-semibold text-xs uppercase tracking-wider text-slate-600 flex items-center gap-1.5">Product Selection</h2>
           </div>
 
           <div className="space-y-4">
             {/* Search Box Component - Full Width */}
             <div className="relative">
-              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1.5">SEARCH DATABASE</label>
+              <label className="text-[10px] font-medium text-slate-500 uppercase tracking-wider block mb-1.5">SEARCH DATABASE</label>
               <div className="relative">
                 <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 font-bold" />
                 <input
@@ -513,6 +596,8 @@ export default function CreateOrderClient({
                         onClick={() => {
                           setSelectedProductId(p.id);
                           setSearchQuery(p.name);
+                          setSelectedSize("");
+                          setSelectedAttrValues({});
                           setFocusedIndex(-1);
                           setTimeout(() => {
                             const firstBtn = sizeContainerRef.current?.querySelector("button");
@@ -522,8 +607,8 @@ export default function CreateOrderClient({
                         className={`w-full text-left px-3 py-2 flex items-center justify-between transition-colors border-b last:border-0 border-slate-50 ${focusedIndex === idx ? "bg-primary text-white" : "hover:bg-slate-50 text-slate-800"
                           }`}
                       >
-                        <div className="truncate font-bold text-xs pr-2">{p.name}</div>
-                        <div className={`font-mono font-black text-xs shrink-0 ${focusedIndex === idx ? "text-white" : "text-primary"}`}>
+                        <div className="truncate font-medium text-xs pr-2">{p.name}</div>
+                        <div className={`font-mono font-medium text-xs shrink-0 ${focusedIndex === idx ? "text-white" : "text-primary"}`}>
                           {formatBDT(p.price)}
                         </div>
                       </button>
@@ -535,66 +620,218 @@ export default function CreateOrderClient({
 
             {/* Stacked parameters row below */}
             <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
-              {/* Matrix Variant Size Chips Wrapper Section */}
+              {/* Matrix Variant Size Chips Wrapper Section — Dynamic PIM or Legacy */}
               <div className="md:col-span-8">
-                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1.5">SIZE SELECTION (STOCK)</label>
-                <div ref={sizeContainerRef} className="flex flex-wrap gap-1.5 min-h-[28px] items-center">
-                  {selectedProductId ? (
-                    availableSizes.map((v, idx) => {
-                      const isOutOfStock = v.stock <= 0;
+                {!selectedProductId ? (
+                  <>
+                    <label className="text-[10px] font-medium text-slate-500 uppercase tracking-wider block mb-1.5">VARIANT SELECTION (STOCK)</label>
+                    <div className="text-slate-400 italic text-xs leading-6 min-h-[28px] flex items-center">Select a product first to view available attributes</div>
+                  </>
+                ) : isAttrMode ? (
+                  /* ── PIM Cascaded Attribute Mode ── */
+                  <div ref={sizeContainerRef} className="space-y-3">
+                    {attrKeys.map((attrKey, attrIdx) => {
+                      const options = attrOptions[attrKey] || [];
+                      const isLocked = attrIdx > 0 && !selectedAttrValues[attrKeys[attrIdx - 1]];
                       return (
-                        <button
-                          key={v.id}
-                          type="button"
-                          onClick={() => {
-                            setSelectedSize(v.size);
-                            setTimeout(() => qtyInputRef.current?.focus(), 50);
-                          }}
-                          onKeyDown={(e) => {
-                            if (e.key === "ArrowRight") {
-                              e.preventDefault();
-                              const nextBtn = sizeContainerRef.current?.querySelectorAll("button")[idx + 1];
-                              (nextBtn as HTMLButtonElement)?.focus();
-                            } else if (e.key === "ArrowLeft") {
-                              e.preventDefault();
-                              const prevBtn = sizeContainerRef.current?.querySelectorAll("button")[idx - 1];
-                              (prevBtn as HTMLButtonElement)?.focus();
-                            } else if (e.key === "ArrowUp") {
-                              e.preventDefault();
-                              productSearchRef.current?.focus();
-                            } else if (e.key === "Enter") {
-                              e.preventDefault();
-                              setSelectedSize(v.size);
-                              qtyInputRef.current?.focus();
-                            }
-                          }}
-                          className={`px-2.5 py-1 text-xs font-black rounded border tracking-tight transition-all uppercase ${selectedSize === v.size
-                            ? "bg-slate-900 border-slate-900 text-white shadow-sm"
-                            : isOutOfStock
-                              ? "bg-orange-50 border-orange-200 text-orange-700 hover:bg-orange-100"
-                              : "bg-slate-50 border-slate-200 text-slate-700 hover:border-slate-400 hover:bg-slate-100"
-                            }`}
-                        >
-                          {v.size} <span className="font-normal text-[10px]">({v.stock})</span>
-                        </button>
+                        <div key={attrKey}>
+                          <label className="text-[10px] font-medium text-slate-500 uppercase tracking-wider block mb-1.5">
+                            {attrKey.toUpperCase()}
+                            {isLocked && <span className="ml-1.5 text-slate-300 font-normal normal-case">— select {attrKeys[attrIdx - 1]} first</span>}
+                          </label>
+                          <div className="flex flex-wrap gap-1.5 min-h-[28px] items-center">
+                            {isLocked ? (
+                              <span className="text-slate-300 text-xs italic">—</span>
+                            ) : (
+                              options.map((opt) => {
+                                const isSelected = selectedAttrValues[attrKey] === opt.value;
+                                const isOOS = opt.totalStock <= 0;
+                                return (
+                                  <button
+                                    key={opt.value}
+                                    type="button"
+                                    data-attr-row={attrKey}
+                                    onClick={() => {
+                                      // Selecting at level i clears all downstream selections
+                                      const updated: Record<string, string> = {};
+                                      for (let j = 0; j < attrIdx; j++) updated[attrKeys[j]] = selectedAttrValues[attrKeys[j]];
+                                      updated[attrKey] = opt.value;
+                                      setSelectedAttrValues(updated);
+                                      if (attrIdx === attrKeys.length - 1) {
+                                        setTimeout(() => qtyInputRef.current?.focus(), 50);
+                                      }
+                                    }}
+                                    onKeyDown={(e) => {
+                                      // ─── Row-Scoped Keyboard Navigation ───────────────
+                                      // Query ONLY buttons belonging to THIS attribute row
+                                      const rowBtns = Array.from(
+                                        sizeContainerRef.current?.querySelectorAll<HTMLButtonElement>(`[data-attr-row="${attrKey}"]`) ?? []
+                                      );
+                                      const rowIdx = rowBtns.indexOf(e.currentTarget as HTMLButtonElement);
+
+                                      if (e.key === "ArrowRight") {
+                                        e.preventDefault();
+                                        // Move to next chip in same row only
+                                        rowBtns[rowIdx + 1]?.focus();
+
+                                      } else if (e.key === "ArrowLeft") {
+                                        e.preventDefault();
+                                        // Move to prev chip in same row only
+                                        rowBtns[rowIdx - 1]?.focus();
+
+                                      } else if (e.key === "ArrowUp") {
+                                        e.preventDefault();
+                                        if (attrIdx === 0) {
+                                          productSearchRef.current?.focus();
+                                        } else {
+                                          // Jump to first button of the previous attribute row
+                                          const prevKey = attrKeys[attrIdx - 1];
+                                          const prevBtns = Array.from(
+                                            sizeContainerRef.current?.querySelectorAll<HTMLButtonElement>(`[data-attr-row="${prevKey}"]`) ?? []
+                                          );
+                                          prevBtns[0]?.focus();
+                                        }
+
+                                      } else if (e.key === "ArrowDown") {
+                                        e.preventDefault();
+                                        if (attrIdx < attrKeys.length - 1) {
+                                          // Jump to first button of the next attribute row (if unlocked)
+                                          const nextKey = attrKeys[attrIdx + 1];
+                                          const nextBtns = Array.from(
+                                            sizeContainerRef.current?.querySelectorAll<HTMLButtonElement>(`[data-attr-row="${nextKey}"]`) ?? []
+                                          );
+                                          nextBtns[0]?.focus();
+                                        } else {
+                                          // Last row → advance to quantity input
+                                          qtyInputRef.current?.focus();
+                                        }
+
+                                      } else if (e.key === "Enter") {
+                                        e.preventDefault();
+                                        // Select this value and clear all downstream
+                                        const updated: Record<string, string> = {};
+                                        for (let j = 0; j < attrIdx; j++) updated[attrKeys[j]] = selectedAttrValues[attrKeys[j]];
+                                        updated[attrKey] = opt.value;
+                                        setSelectedAttrValues(updated);
+
+                                        if (attrIdx === attrKeys.length - 1) {
+                                          // All attributes selected → focus qty
+                                          setTimeout(() => qtyInputRef.current?.focus(), 50);
+                                        } else {
+                                          // More rows remain → wait for re-render then focus first button of next row
+                                          setTimeout(() => {
+                                            const nextKey = attrKeys[attrIdx + 1];
+                                            const nextBtns = Array.from(
+                                              sizeContainerRef.current?.querySelectorAll<HTMLButtonElement>(`[data-attr-row="${nextKey}"]`) ?? []
+                                            );
+                                            nextBtns[0]?.focus();
+                                          }, 60);
+                                        }
+                                      }
+                                    }}
+                                    className={`px-2.5 py-1 text-xs font-semibold rounded border tracking-tight transition-all uppercase ${isSelected
+                                        ? "bg-slate-900 border-slate-900 text-white shadow-sm"
+                                        : isOOS
+                                          ? "bg-orange-50 border-orange-200 text-orange-700 hover:bg-orange-100"
+                                          : "bg-slate-50 border-slate-200 text-slate-700 hover:border-slate-400 hover:bg-slate-100"
+                                      }`}
+                                  >
+                                    {opt.value}
+                                    {attrIdx === attrKeys.length - 1 && (
+                                      <span className="font-normal text-[10px]"> ({resolvedVariant && selectedAttrValues[attrKey] === opt.value ? resolvedVariant.stock : opt.totalStock})</span>
+                                    )}
+                                  </button>
+                                );
+                              })
+                            )}
+                          </div>
+                        </div>
                       );
-                    })
-                  ) : (
-                    <div className="text-slate-400 italic text-xs leading-6">Select a product first to view available attributes</div>
-                  )}
-                </div>
+                    })}
+
+                  </div>
+                ) : (
+                  /* ── Legacy Flat Size Mode ── */
+                  <>
+                    <label className="text-[10px] font-medium text-slate-500 uppercase tracking-wider block mb-1.5">SIZE SELECTION (STOCK)</label>
+                    <div ref={sizeContainerRef} className="flex flex-wrap gap-1.5 min-h-[28px] items-center">
+                      {availableSizes.map((v: any, idx: number) => {
+                        const isOutOfStock = v.stock <= 0;
+                        return (
+                          <button
+                            key={v.id}
+                            type="button"
+                            onClick={() => {
+                              setSelectedSize(v.size);
+                              setTimeout(() => qtyInputRef.current?.focus(), 50);
+                            }}
+                            onKeyDown={(e) => {
+                              if (e.key === "ArrowRight") {
+                                e.preventDefault();
+                                const nextBtn = sizeContainerRef.current?.querySelectorAll("button")[idx + 1];
+                                (nextBtn as HTMLButtonElement)?.focus();
+                              } else if (e.key === "ArrowLeft") {
+                                e.preventDefault();
+                                const prevBtn = sizeContainerRef.current?.querySelectorAll("button")[idx - 1];
+                                (prevBtn as HTMLButtonElement)?.focus();
+                              } else if (e.key === "ArrowUp") {
+                                e.preventDefault();
+                                productSearchRef.current?.focus();
+                              } else if (e.key === "Enter") {
+                                e.preventDefault();
+                                setSelectedSize(v.size);
+                                qtyInputRef.current?.focus();
+                              }
+                            }}
+                            className={`px-2.5 py-1 text-xs font-semibold rounded border tracking-tight transition-all uppercase ${selectedSize === v.size
+                              ? "bg-slate-900 border-slate-900 text-white shadow-sm"
+                              : isOutOfStock
+                                ? "bg-orange-50 border-orange-200 text-orange-700 hover:bg-orange-100"
+                                : "bg-slate-50 border-slate-200 text-slate-700 hover:border-slate-400 hover:bg-slate-100"
+                              }`}
+                          >
+                            {v.size} <span className="font-normal text-[10px]">({v.stock})</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </>
+                )}
               </div>
 
               {/* Quantity Counter Input field */}
               <div className="md:col-span-2">
-                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1.5">QTY</label>
+                <label className="text-[10px] font-medium text-slate-500 uppercase tracking-wider block mb-1.5">QTY</label>
                 <input
                   ref={qtyInputRef}
                   type="number"
                   min="1"
                   value={quantity}
                   onChange={e => setQuantity(parseInt(e.target.value) || 1)}
-                  onKeyDown={(e) => { if (e.key === "Enter") addToOrder(); }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      addToOrder();
+                    } else if (e.key === "ArrowLeft") {
+                      e.preventDefault();
+                      if (isAttrMode) {
+                        // Focus the selected (or first) button of the LAST attribute row
+                        const lastKey = attrKeys[attrKeys.length - 1];
+                        const lastRowBtns = Array.from(
+                          sizeContainerRef.current?.querySelectorAll<HTMLButtonElement>(`[data-attr-row="${lastKey}"]`) ?? []
+                        );
+                        // Prefer the currently-selected button, fall back to last button
+                        const selectedBtn = lastRowBtns.find(b => b.textContent?.trim().startsWith(selectedAttrValues[lastKey] ?? ""));
+                        (selectedBtn ?? lastRowBtns[lastRowBtns.length - 1])?.focus();
+                      } else {
+                        // Legacy mode: focus the selected size button (or last button)
+                        const allBtns = Array.from(
+                          sizeContainerRef.current?.querySelectorAll<HTMLButtonElement>("button") ?? []
+                        );
+                        const selectedBtn = allBtns.find(b => b.classList.contains("bg-slate-900"));
+                        (selectedBtn ?? allBtns[allBtns.length - 1])?.focus();
+                      }
+                    }
+                  }}
                   className="w-full px-2 py-1 bg-slate-50 border border-slate-200 rounded font-bold text-center outline-none focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
                 />
               </div>
@@ -606,7 +843,7 @@ export default function CreateOrderClient({
                   type="button"
                   onClick={addToOrder}
                   disabled={!selectedProductId || !selectedSize}
-                  className="w-full h-[28px] bg-slate-900 text-white font-bold rounded flex items-center justify-center hover:bg-slate-800 disabled:bg-slate-100 disabled:text-slate-300 transition-all text-xs uppercase tracking-wider gap-1.5"
+                  className="w-full h-[28px] bg-slate-700 text-white font-medium rounded flex items-center justify-center hover:bg-slate-800 disabled:bg-slate-100 disabled:text-slate-300 transition-all text-xs gap-1.5"
                 >
                   <Plus className="w-3.5 h-3.5" />
                   <span>ADD</span>
@@ -616,16 +853,20 @@ export default function CreateOrderClient({
           </div>
 
           {/* Out of Stock Override Notice area integration */}
-          {selectedSize && availableSizes.find(v => v.size === selectedSize)?.stock <= 0 && (
-            <div className="text-[10px] font-bold text-orange-600 bg-orange-50 border border-orange-100 p-2 rounded">
-              ⚠ Backorder: Item is out of stock.
-            </div>
-          )}
+          {selectedSize && (
+            isAttrMode
+              ? resolvedVariant && resolvedVariant.stock <= 0
+              : (availableSizes as any[]).find((v: any) => v.size === selectedSize)?.stock <= 0
+          ) && (
+              <div className="text-[10px] font-medium text-orange-600 bg-orange-50 border border-orange-100 p-2 rounded">
+                ⚠ Backorder: Item is out of stock.
+              </div>
+            )}
 
           {/* Jersey Customization (DTF) Panel Area */}
           {selectedProductId && selectedSize && (
             <div className="pt-2 border-t border-dashed border-slate-200">
-              <label className="inline-flex items-center gap-1.5 font-bold text-slate-700 hover:text-primary cursor-pointer uppercase tracking-wide text-[10px]">
+              <label className="inline-flex items-center gap-1.5 font-medium text-slate-500 hover:text-primary cursor-pointer text-[10px]">
                 <input
                   type="checkbox"
                   checked={requiresPrint}
@@ -642,13 +883,13 @@ export default function CreateOrderClient({
 
               {requiresPrint && (
                 <div className="mt-2 bg-slate-50 p-2 rounded border border-slate-200 space-y-1.5">
-                  <div className="flex justify-between items-center border-b pb-1 mb-1 text-[9px] uppercase font-black text-slate-400 tracking-wider">
+                  <div className="flex justify-between items-center border-b pb-1 mb-1 text-[9px] uppercase font-medium text-slate-400 tracking-wider">
                     <span>PRINT DETAILS</span>
                   </div>
                   <div className="space-y-1.5">
                     {pendingPrintDetails.map((detail, idx) => (
                       <div key={idx} className="flex gap-2 items-center bg-white p-1 rounded border shadow-sm">
-                        <span className="font-mono font-black text-slate-400 text-[10px] px-1.5">{idx + 1}</span>
+                        <span className="font-mono text-slate-400 text-[10px] px-1.5">{idx + 1}</span>
                         <input
                           type="text"
                           placeholder="NAME ON JERSEY"
@@ -685,7 +926,7 @@ export default function CreateOrderClient({
                     <button
                       type="button"
                       onClick={() => setPendingPrintDetails([...pendingPrintDetails, { name: "", number: "" }])}
-                      className="text-[9px] font-black uppercase text-primary bg-primary/5 hover:bg-primary/10 px-2 py-1 border border-primary/20 rounded flex items-center gap-1 mt-1"
+                      className="text-[9px] font-medium text-primary bg-primary/5 hover:bg-primary/10 px-2 py-1 border border-primary/20 rounded flex items-center gap-1 mt-1"
                     >
                       <Plus className="w-3 h-3" /> ADD SLOT
                     </button>
@@ -699,10 +940,10 @@ export default function CreateOrderClient({
         {/* Core Administrative Parameters Form */}
         <div className="bg-white p-6 border border-slate-200 shadow-sm rounded-lg space-y-4">
           <div className="flex justify-between items-center border-b border-slate-100 pb-2.5 mb-4">
-            <h2 className="font-bold text-sm uppercase tracking-wider text-slate-800 flex items-center gap-1.5">CUSTOMER INFORMATION</h2>
+            <h2 className="font-semibold text-xs uppercase tracking-wider text-slate-600 flex items-center gap-1.5">Customer Information</h2>
 
             {/* Header Level Interactive Flags */}
-            <div className="flex gap-3 text-[10px] font-bold">
+            <div className="flex gap-3 text-[10px] font-medium text-slate-500">
               <label className="flex items-center gap-1 cursor-pointer">
                 <input
                   type="checkbox"
@@ -730,7 +971,7 @@ export default function CreateOrderClient({
           {/* Metadata Block inputs array */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-1">
-              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">CUSTOMER NAME</label>
+              <label className="text-[10px] font-medium text-slate-500 uppercase tracking-wider block mb-1">CUSTOMER NAME</label>
               <input
                 ref={customerNameRef}
                 type="text"
@@ -749,7 +990,7 @@ export default function CreateOrderClient({
               />
             </div>
             <div className="space-y-1">
-              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">PHONE NUMBER</label>
+              <label className="text-[10px] font-medium text-slate-500 uppercase tracking-wider block mb-1">PHONE NUMBER</label>
               <input
                 ref={phoneRef}
                 type="text"
@@ -781,7 +1022,7 @@ export default function CreateOrderClient({
 
           <div className="space-y-3">
             <div className="space-y-1">
-              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">SALESMAN (INCENTIVE OWNER)</label>
+              <label className="text-[10px] font-medium text-slate-500 uppercase tracking-wider block mb-1">SALESMAN (INCENTIVE OWNER)</label>
               <CustomSelect
                 options={[
                   { value: "", label: "Current Logged-in User (Default)" },
@@ -797,7 +1038,7 @@ export default function CreateOrderClient({
 
             {isStorePickup && (
               <div className="space-y-1 animate-in fade-in duration-150">
-                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">STORE PICKUP DELIVERY FEE</label>
+                <label className="text-[10px] font-medium text-slate-500 uppercase tracking-wider block mb-1">STORE PICKUP DELIVERY FEE</label>
                 <input
                   type="number"
                   value={deliveryCharge || ""}
@@ -813,7 +1054,7 @@ export default function CreateOrderClient({
           {isExchange && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-3 border border-orange-200 bg-orange-50/40 rounded animate-in fade-in duration-150">
               <div className="space-y-1">
-                <label className="text-[10px] font-bold text-orange-800 uppercase tracking-wider block mb-1">ORIGINAL ORDER ID *</label>
+                <label className="text-[10px] font-medium text-orange-700 uppercase tracking-wider block mb-1">ORIGINAL ORDER ID *</label>
                 <input
                   type="text"
                   value={exchangeRefOrderId}
@@ -823,7 +1064,7 @@ export default function CreateOrderClient({
                 />
               </div>
               <div className="space-y-1">
-                <label className="text-[10px] font-bold text-orange-800 uppercase tracking-wider block mb-1">EXCHANGE NOTE *</label>
+                <label className="text-[10px] font-medium text-orange-700 uppercase tracking-wider block mb-1">EXCHANGE NOTE *</label>
                 <input
                   type="text"
                   value={exchangeItemNote}
@@ -980,7 +1221,7 @@ export default function CreateOrderClient({
 
           {/* Full Street Address Line Field */}
           <div className="space-y-1">
-            <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">FULL ADDRESS *</label>
+            <label className="text-[10px] font-medium text-slate-500 uppercase tracking-wider block mb-1">FULL ADDRESS *</label>
             <input
               ref={addressRef}
               type="text"
@@ -1024,9 +1265,9 @@ export default function CreateOrderClient({
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border-t border-slate-200 pt-3">
             {/* Advance Paid input structure */}
             <div className="space-y-1">
-              <label className="text-[10px] font-bold text-red-600 uppercase tracking-wider block mb-1">ADVANCE PAID (BDT)</label>
+              <label className="text-[10px] font-medium text-red-500 uppercase tracking-wider block mb-1">Advance Paid (BDT)</label>
               <div className="relative">
-                <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs font-black text-slate-400">৳</span>
+                <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs font-medium text-slate-400">৳</span>
                 <input
                   ref={advancePaidRef}
                   type="number"
@@ -1046,7 +1287,7 @@ export default function CreateOrderClient({
                       }
                     }
                   }}
-                  className="w-full pl-6 pr-3 py-1 bg-red-50/40 border border-red-200 rounded font-mono text-xs font-bold text-red-600 outline-none focus:bg-white focus:ring-2 focus:ring-red-500/20 focus:border-red-500 transition-all"
+                  className="w-full pl-6 pr-3 py-1 bg-red-50/40 border border-red-200 rounded font-mono text-xs font-medium text-red-600 outline-none focus:bg-white focus:ring-2 focus:ring-red-500/20 focus:border-red-500 transition-all"
                   placeholder="0"
                 />
               </div>
@@ -1054,10 +1295,10 @@ export default function CreateOrderClient({
 
             {/* Discount Section Component */}
             <div className="space-y-1">
-              <label className="text-[10px] font-bold text-primary uppercase tracking-wider block mb-1">MANUAL DISCOUNT</label>
+              <label className="text-[10px] font-medium text-primary/80 uppercase tracking-wider block mb-1">Manual Discount</label>
               <div className="flex gap-1">
                 <div className="relative flex-1">
-                  <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs font-black text-primary/70">
+                  <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs font-medium text-primary/70">
                     {manualDiscountType === "FLAT" ? "৳" : "%"}
                   </span>
                   <input
@@ -1080,7 +1321,7 @@ export default function CreateOrderClient({
                         }
                       }
                     }}
-                    className="w-full pl-5 pr-2 py-1 bg-primary/5 border border-primary/20 rounded font-mono text-xs font-bold text-primary outline-none focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+                    className="w-full pl-5 pr-2 py-1 bg-primary/5 border border-primary/20 rounded font-mono text-xs font-medium text-primary outline-none focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
                     placeholder="0"
                   />
                 </div>
@@ -1097,7 +1338,7 @@ export default function CreateOrderClient({
                       discountRef.current?.focus();
                     }
                   }}
-                  className="px-1 py-1 bg-primary/5 border border-primary/20 rounded text-[9px] font-black uppercase outline-none focus:bg-white focus:border-primary cursor-pointer"
+                  className="px-1 py-1 bg-primary/5 border border-primary/20 rounded text-[9px] font-medium uppercase outline-none focus:bg-white focus:border-primary cursor-pointer"
                 >
                   <option value="FLAT">FLAT</option>
                   <option value="PERCENTAGE">%</option>
@@ -1108,7 +1349,7 @@ export default function CreateOrderClient({
 
           {/* Internal Remarks Textarea component */}
           <div className="space-y-1">
-            <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">NOTES</label>
+            <label className="text-[10px] font-medium text-slate-500 uppercase tracking-wider block mb-1">NOTES</label>
             <textarea
               ref={remarksRef}
               value={remarks}
@@ -1133,7 +1374,7 @@ export default function CreateOrderClient({
 
           {/* Pathao Special Instructions component */}
           <div className="space-y-1">
-            <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">PATHAO SPECIAL INSTRUCTIONS</label>
+            <label className="text-[10px] font-medium text-slate-500 uppercase tracking-wider block mb-1">PATHAO SPECIAL INSTRUCTIONS</label>
             <textarea
               ref={specialInstructionRef}
               value={specialInstruction}
@@ -1158,10 +1399,10 @@ export default function CreateOrderClient({
 
           {/* Admin Tag Engine Input field */}
           <div className="space-y-1">
-            <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1 mb-1"><Tags className="w-3 h-3" /> ORDER TAGS</label>
+            <label className="text-[10px] font-medium text-slate-400 uppercase tracking-wider flex items-center gap-1 mb-1"><Tags className="w-3 h-3" /> ORDER TAGS</label>
             <div className="flex flex-wrap items-center gap-1 p-1 bg-slate-50 border border-slate-200 rounded min-h-[32px] focus-within:ring-2 focus-within:ring-primary/20 focus-within:border-primary focus-within:bg-white transition-all">
               {tags.map((tag, idx) => (
-                <span key={tag} className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-black bg-slate-900 text-white uppercase tracking-wider">
+                <span key={tag} className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-medium bg-slate-700 text-white uppercase tracking-wider">
                   {tag}
                   <button type="button" onClick={() => removeTag(idx)} className="text-slate-400 hover:text-white"><X className="w-2.5 h-2.5" /></button>
                 </span>
@@ -1200,7 +1441,7 @@ export default function CreateOrderClient({
       <div className="xl:col-span-4 space-y-6">
         <div className="bg-white border border-slate-200 rounded-lg shadow-sm overflow-hidden flex flex-col">
           {/* Card Header */}
-          <div className="bg-slate-900 text-white font-bold text-xs uppercase px-4 py-3.5 flex items-center justify-between tracking-wider">
+          <div className="bg-slate-800 text-white font-semibold text-xs uppercase px-4 py-3 flex items-center justify-between tracking-wider">
             <span className="flex items-center gap-1.5">
               <ShoppingBag className="w-4 h-4 text-white" />
               ORDER SUMMARY
@@ -1213,9 +1454,9 @@ export default function CreateOrderClient({
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse">
                 <thead>
-                  <tr className="border-b border-slate-200 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                  <tr className="border-b border-slate-200 text-[10px] font-medium text-slate-500 uppercase tracking-wider">
                     <th className="py-2 px-1">Item Details</th>
-                    <th className="py-2 px-1 text-center w-12">Size</th>
+                    <th className="py-2 px-1 text-center w-12">Variant</th>
                     <th className="py-2 px-1 text-center w-12">Qty</th>
                     <th className="py-2 px-1 text-right w-20">Price</th>
                     <th className="py-2 px-1 text-right w-8"></th>
@@ -1232,14 +1473,14 @@ export default function CreateOrderClient({
                     orderItems.map((item, idx) => (
                       <tr key={`${item.productId}-${item.size}-${idx}`} className={`hover:bg-slate-50/80 transition-colors ${item.stock <= 0 ? "bg-orange-50/30" : ""}`}>
                         <td className="py-2 px-1">
-                          <div className="font-bold text-slate-800 text-xs">{item.productName}</div>
+                          <div className="font-medium text-slate-800 text-xs">{item.productName}</div>
                           {item.stock <= 0 && (
-                            <span className="mt-0.5 inline-block text-[8px] font-black text-orange-600 bg-orange-100 px-1 py-0 rounded">BACKORDER</span>
+                            <span className="mt-0.5 inline-block text-[8px] font-medium text-orange-600 bg-orange-50 px-1 py-0 rounded">BACKORDER</span>
                           )}
                           {item.requiresPrint && (
                             <div className="mt-1 flex flex-wrap gap-1">
                               {(item.printDetails || []).map((pd, pidx) => (
-                                <span key={pidx} className="text-[8px] font-black text-primary bg-primary/5 border border-primary/10 px-1.5 py-0 rounded">
+                                <span key={pidx} className="text-[8px] font-medium text-primary bg-primary/5 border border-primary/10 px-1.5 py-0 rounded">
                                   👕 {pd.name || "???"} #{pd.number || "00"}
                                 </span>
                               ))}
@@ -1247,10 +1488,10 @@ export default function CreateOrderClient({
                           )}
                         </td>
                         <td className="py-2 px-1 text-center">
-                          <span className="px-1.5 py-0.5 bg-slate-50 rounded font-black text-[10px] border border-slate-200">{item.size}</span>
+                          <span className="px-1.5 py-0.5 bg-slate-50 rounded font-medium text-[10px] border border-slate-200">{item.displayVariant ?? item.size}</span>
                         </td>
-                        <td className="py-2 px-1 text-center font-bold text-xs text-slate-700">{item.quantity}</td>
-                        <td className="py-2 px-1 text-right font-mono font-bold text-slate-700">{formatBDT(item.price)}</td>
+                        <td className="py-2 px-1 text-center font-medium text-xs text-slate-600">{item.quantity}</td>
+                        <td className="py-2 px-1 text-right font-mono font-medium text-slate-600">{formatBDT(item.price)}</td>
                         <td className="py-2 px-1 text-right">
                           <button onClick={() => removeItem(idx)} className="p-1 text-slate-300 hover:text-red-500 transition-colors">
                             <Trash2 className="w-3.5 h-3.5" />
@@ -1264,26 +1505,26 @@ export default function CreateOrderClient({
             </div>
 
             {/* Calculations Breakdown */}
-            <div className="border-t border-slate-200 pt-3 space-y-2 text-xs font-semibold">
+            <div className="border-t border-slate-200 pt-3 space-y-2 text-xs font-medium">
               <div className="flex justify-between text-slate-500">
                 <span>Subtotal ({orderItems.length} items)</span>
-                <span className="font-mono text-slate-800 font-bold">{formatBDT(subtotal)}</span>
+                <span className="font-mono text-slate-700 font-medium">{formatBDT(subtotal)}</span>
               </div>
 
               <div className="flex justify-between text-slate-500">
                 <span>Delivery Charge</span>
-                <span className="font-mono text-slate-800 font-bold">{formatBDT(finalDeliveryCharge)}</span>
+                <span className="font-mono text-slate-700 font-medium">{formatBDT(finalDeliveryCharge)}</span>
               </div>
 
               {totalDTFCost > 0 && (
-                <div className="flex justify-between text-primary font-bold">
+                <div className="flex justify-between text-primary font-medium">
                   <span>Customization Fee</span>
                   <span className="font-mono text-primary">{formatBDT(totalDTFCost)}</span>
                 </div>
               )}
 
               {calculatedDiscount > 0 && (
-                <div className="flex justify-between text-emerald-600 font-bold">
+                <div className="flex justify-between text-emerald-600 font-medium">
                   <span>Discount</span>
                   <span className="font-mono text-emerald-700">- {formatBDT(calculatedDiscount)}</span>
                 </div>
@@ -1291,19 +1532,19 @@ export default function CreateOrderClient({
 
               <div className="flex justify-between text-slate-500">
                 <span>Advance Paid</span>
-                <span className="font-mono text-slate-800 font-bold">- {formatBDT(advancePaid)}</span>
+                <span className="font-mono text-slate-700 font-medium">- {formatBDT(advancePaid)}</span>
               </div>
 
-              <div className="flex justify-between text-slate-800 border-t border-slate-200 pt-2.5 font-bold uppercase tracking-wider text-xs">
-                <span>GRAND TOTAL</span>
-                <span className="font-mono text-slate-900 text-sm font-black">{formatBDT(totalAmount)}</span>
+              <div className="flex justify-between text-slate-700 border-t border-slate-200 pt-2.5 font-semibold uppercase tracking-wider text-xs">
+                <span>Grand Total</span>
+                <span className="font-mono text-slate-800 text-sm font-semibold">{formatBDT(totalAmount)}</span>
               </div>
 
               {/* Net Due Focus Area */}
               <div className="border-t border-slate-100 pt-3 space-y-1">
                 <div className="flex justify-between items-baseline">
-                  <span className="text-xs font-black text-slate-800 uppercase tracking-wider">NET DUE</span>
-                  <span className="text-xl font-black font-mono text-primary tracking-tighter">
+                  <span className="text-xs font-bold text-slate-700 uppercase tracking-wider">Net Due</span>
+                  <span className="text-xl font-bold font-mono text-primary tracking-tighter">
                     {formatBDT(totalAmount - advancePaid)}
                   </span>
                 </div>
@@ -1314,7 +1555,7 @@ export default function CreateOrderClient({
 
               {/* Backorder warning injection panel */}
               {hasBackorderItems && (
-                <div className="border border-dashed border-orange-200 bg-orange-50 p-2 rounded text-[10px] font-bold text-center text-orange-700 tracking-wide uppercase">
+                <div className="border border-dashed border-orange-200 bg-orange-50 p-2 rounded text-[10px] font-medium text-center text-orange-700 tracking-wide uppercase">
                   ⚠ Invoice contains line items on Backorder status.
                 </div>
               )}
@@ -1325,7 +1566,7 @@ export default function CreateOrderClient({
                   ref={createOrderBtnRef}
                   onClick={handlePreSubmit}
                   disabled={isPending || orderItems.length === 0}
-                  className="w-full text-white font-black py-2.5 rounded text-xs uppercase tracking-wider bg-primary hover:bg-primary/90 disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed border border-transparent transition-all flex items-center justify-center gap-1.5 shadow-sm active:scale-[0.99]"
+                  className="w-full text-white font-semibold py-3 rounded text-xs uppercase tracking-wider bg-primary hover:bg-[#600018] disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-1.5 active:scale-[0.99] shadow-sm"
                 >
                   {isPending ? (
                     <>
@@ -1343,7 +1584,7 @@ export default function CreateOrderClient({
                 <div className="flex justify-center pt-1">
                   <Link
                     href={backUrl}
-                    className="inline-flex items-center gap-1 text-slate-400 hover:text-slate-600 text-[10px] font-bold transition-colors uppercase tracking-wider"
+                    className="inline-flex items-center gap-1 text-slate-400 hover:text-slate-600 text-[10px] font-medium transition-colors uppercase tracking-wider"
                   >
                     <ArrowLeft className="w-3 h-3" /> Discard & Back to List
                   </Link>
@@ -1360,8 +1601,8 @@ export default function CreateOrderClient({
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[999] flex items-center justify-center p-4 animate-in fade-in duration-200">
           <div className="bg-white w-full max-w-2xl border border-slate-200 rounded-lg shadow-2xl overflow-hidden flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-200 text-xs font-sans text-slate-900">
             {/* Modal Header */}
-            <div className="bg-slate-900 text-white font-bold text-xs uppercase px-6 py-4 flex items-center justify-between tracking-wider">
-              <span>CONFIRM ORDER DETAILS</span>
+            <div className="bg-slate-700 text-white font-medium text-xs uppercase px-5 py-3.5 flex items-center justify-between tracking-wider">
+              <span>Confirm Order Details</span>
               <button
                 onClick={() => setIsConfirmModalOpen(false)}
                 className="text-slate-400 hover:text-white transition-colors"
@@ -1374,36 +1615,36 @@ export default function CreateOrderClient({
             <div className="p-6 overflow-y-auto space-y-6">
               {/* Customer Details Block */}
               <div className="space-y-3">
-                <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-wider border-b border-slate-100 pb-1.5">
-                  CUSTOMER DETAILS
+                <h3 className="text-[10px] font-medium text-slate-400 uppercase tracking-wider border-b border-slate-100 pb-1.5">
+                  Customer Details
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-0.5">CUSTOMER NAME</span>
-                    <span className="font-bold text-slate-800 text-xs">{customerName}</span>
+                    <span className="text-[10px] font-medium text-slate-400 uppercase tracking-wider block mb-0.5">Customer Name</span>
+                    <span className="font-medium text-slate-700 text-xs">{customerName}</span>
                   </div>
                   <div>
-                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-0.5">PHONE NUMBER</span>
-                    <span className="font-mono font-bold text-slate-800 text-xs">{phone}</span>
+                    <span className="text-[10px] font-medium text-slate-400 uppercase tracking-wider block mb-0.5">Phone Number</span>
+                    <span className="font-mono font-medium text-slate-700 text-xs">{phone}</span>
                   </div>
                   <div className="md:col-span-2">
-                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-0.5">SHIPPING ADDRESS</span>
-                    <span className="font-bold text-slate-800 leading-relaxed block text-xs">{fullDeliveryAddress}</span>
+                    <span className="text-[10px] font-medium text-slate-400 uppercase tracking-wider block mb-0.5">Shipping Address</span>
+                    <span className="font-medium text-slate-700 leading-relaxed block text-xs">{fullDeliveryAddress}</span>
                   </div>
                 </div>
               </div>
 
               {/* Items Block */}
               <div className="space-y-3">
-                <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-wider border-b border-slate-100 pb-1.5">
-                  ORDERED PRODUCTS
+                <h3 className="text-[10px] font-medium text-slate-400 uppercase tracking-wider border-b border-slate-100 pb-1.5">
+                  Ordered Products
                 </h3>
                 <div className="border border-slate-200 rounded overflow-hidden">
                   <table className="w-full text-left border-collapse">
                     <thead>
-                      <tr className="bg-slate-50 text-[10px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-200">
+                      <tr className="bg-slate-50 text-[10px] font-medium text-slate-400 uppercase tracking-wider border-b border-slate-200">
                         <th className="py-2 px-3">Product Name</th>
-                        <th className="py-2 px-3 text-center w-16">Size</th>
+                        <th className="py-2 px-3 text-center w-16">Variant</th>
                         <th className="py-2 px-3 text-center w-16">Qty</th>
                         <th className="py-2 px-3 text-right w-24">Price</th>
                       </tr>
@@ -1412,11 +1653,11 @@ export default function CreateOrderClient({
                       {orderItems.map((item, idx) => (
                         <tr key={`${item.productId}-${item.size}-${idx}`} className="hover:bg-slate-50/50">
                           <td className="py-2.5 px-3">
-                            <div className="font-bold text-slate-800">{item.productName}</div>
+                            <div className="font-medium text-slate-700">{item.productName}</div>
                             {item.requiresPrint && (
                               <div className="mt-1 flex flex-wrap gap-1">
                                 {(item.printDetails || []).map((pd, pidx) => (
-                                  <span key={pidx} className="text-[8px] font-black text-primary bg-primary/5 border border-primary/10 px-1.5 py-0.5 rounded">
+                                  <span key={pidx} className="text-[8px] font-medium text-primary bg-primary/5 border border-primary/10 px-1.5 py-0.5 rounded">
                                     👕 {pd.name || "???"} #{pd.number || "00"}
                                   </span>
                                 ))}
@@ -1424,10 +1665,10 @@ export default function CreateOrderClient({
                             )}
                           </td>
                           <td className="py-2.5 px-3 text-center">
-                            <span className="px-1.5 py-0.5 bg-slate-50 rounded font-black text-[10px] border border-slate-200">{item.size}</span>
+                            <span className="px-1.5 py-0.5 bg-slate-50 rounded font-medium text-[10px] border border-slate-200">{item.displayVariant ?? item.size}</span>
                           </td>
                           <td className="py-2.5 px-3 text-center text-slate-700">{item.quantity}</td>
-                          <td className="py-2.5 px-3 text-right font-mono font-bold text-slate-700">{formatBDT(item.price)}</td>
+                          <td className="py-2.5 px-3 text-right font-mono font-medium text-slate-600">{formatBDT(item.price)}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -1436,38 +1677,38 @@ export default function CreateOrderClient({
               </div>
 
               {/* Financial Calculations Summary Block */}
-              <div className="bg-slate-50 p-4 rounded-lg border border-slate-200 space-y-2 text-xs font-semibold">
+              <div className="bg-slate-50 p-4 rounded-lg border border-slate-200 space-y-2 text-xs font-medium">
                 <div className="flex justify-between text-slate-500">
                   <span>Subtotal ({orderItems.length} items)</span>
-                  <span className="font-mono text-slate-800 font-bold">{formatBDT(subtotal)}</span>
+                  <span className="font-mono text-slate-700 font-medium">{formatBDT(subtotal)}</span>
                 </div>
                 <div className="flex justify-between text-slate-500">
                   <span>Delivery Charge</span>
-                  <span className="font-mono text-slate-800 font-bold">{formatBDT(isStorePickup ? deliveryCharge : finalDeliveryCharge)}</span>
+                  <span className="font-mono text-slate-700 font-medium">{formatBDT(isStorePickup ? deliveryCharge : finalDeliveryCharge)}</span>
                 </div>
                 {totalDTFCost > 0 && (
-                  <div className="flex justify-between text-primary font-bold">
+                  <div className="flex justify-between text-primary font-medium">
                     <span>Customization Fee</span>
                     <span className="font-mono text-primary">{formatBDT(totalDTFCost)}</span>
                   </div>
                 )}
                 {calculatedDiscount > 0 && (
-                  <div className="flex justify-between text-emerald-600 font-bold">
+                  <div className="flex justify-between text-emerald-600 font-medium">
                     <span>Discount</span>
                     <span className="font-mono text-emerald-700">- {formatBDT(calculatedDiscount)}</span>
                   </div>
                 )}
                 <div className="flex justify-between text-slate-500">
                   <span>Advance Paid</span>
-                  <span className="font-mono text-slate-800 font-bold">- {formatBDT(advancePaid)}</span>
+                  <span className="font-mono text-slate-700 font-medium">- {formatBDT(advancePaid)}</span>
                 </div>
-                <div className="flex justify-between border-t border-slate-200 pt-2.5 text-slate-800 font-bold uppercase tracking-wider text-xs">
+                <div className="flex justify-between border-t border-slate-200 pt-2.5 text-slate-700 font-medium uppercase tracking-wider text-xs">
                   <span>Grand Total</span>
-                  <span className="font-mono text-slate-900 font-black">{formatBDT(totalAmount)}</span>
+                  <span className="font-mono text-slate-800 font-semibold">{formatBDT(totalAmount)}</span>
                 </div>
-                <div className="flex justify-between border-t border-slate-200 pt-2 text-slate-800 font-bold uppercase tracking-wider text-xs">
-                  <span className="text-primary font-black">NET DUE</span>
-                  <span className="font-mono text-primary text-sm font-black">{formatBDT(totalAmount - advancePaid)}</span>
+                <div className="flex justify-between border-t border-slate-200 pt-2 text-slate-700 font-medium uppercase tracking-wider text-xs">
+                  <span className="text-primary font-semibold">Net Due</span>
+                  <span className="font-mono text-primary text-sm font-semibold">{formatBDT(totalAmount - advancePaid)}</span>
                 </div>
               </div>
             </div>
@@ -1477,7 +1718,7 @@ export default function CreateOrderClient({
               <button
                 type="button"
                 onClick={() => setIsConfirmModalOpen(false)}
-                className="px-4 py-2 border border-slate-200 hover:bg-slate-100 text-slate-700 text-xs font-bold transition-all rounded uppercase tracking-wider"
+                className="px-4 py-2 border border-slate-200 hover:bg-slate-100 text-slate-600 text-xs font-medium transition-all rounded uppercase tracking-wider"
               >
                 Cancel (Esc)
               </button>
@@ -1485,7 +1726,7 @@ export default function CreateOrderClient({
                 type="button"
                 onClick={handleSubmit}
                 disabled={isPending}
-                className="px-6 py-2 bg-primary hover:bg-primary/90 text-white text-xs font-black transition-all flex items-center gap-1.5 rounded uppercase tracking-wider shadow-sm"
+                className="px-6 py-2.5 bg-primary hover:bg-[#600018] text-white text-xs font-semibold transition-all flex items-center gap-1.5 rounded uppercase tracking-wider shadow-sm"
               >
                 {isPending ? (
                   <>

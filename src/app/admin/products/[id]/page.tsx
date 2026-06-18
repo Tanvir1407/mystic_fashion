@@ -22,14 +22,28 @@ import UploadedImage from '@/components/UploadedImage';
 import { formatBDT } from '@/utils/formatPrice';
 
 export default async function ProductDetailView({ params }: { params: { id: string } }) {
-  const product = await prisma.product.findUnique({
+  const productRes = await prisma.product.findUnique({
     where: { id: params.id },
     include: {
       brand: true,
-      categoryRel: true,
+      categoryRel: {
+        include: {
+          attributeMappings: {
+            include: {
+              attribute: true
+            },
+            orderBy: {
+              sortOrder: 'asc'
+            }
+          }
+        }
+      },
       subcategory: true,
+      mediaAssets: { orderBy: { sortOrder: 'asc' } },
       variants: {
         include: {
+          pricingMatrix: true,
+          stocks: { where: { warehouse: { code: 'WH-MAIN' } } },
           stockAdjustments: {
             orderBy: { createdAt: 'desc' },
             take: 10,
@@ -41,15 +55,47 @@ export default async function ProductDetailView({ params }: { params: { id: stri
         },
       },
       orderItems: {
-        include: { order: true },
+        include: { order: true, variant: true },
       },
       purchaseItems: true,
     },
   });
 
+  if (!productRes) {
+    notFound();
+  }
+
+  const basePrice = productRes.variants?.[0]?.pricingMatrix?.basePrice
+    ? Number(productRes.variants[0].pricingMatrix.basePrice)
+    : 0;
+
+  const displayImages = (productRes.mediaAssets && productRes.mediaAssets.length > 0)
+    ? productRes.mediaAssets.map((asset: any) => asset.url)
+    : ((productRes as any).images || []);
+
+  const costPrice = productRes.variants?.[0]?.pricingMatrix?.costPrice
+    ? Number(productRes.variants[0].pricingMatrix.costPrice)
+    : 0;
+
+  const product = {
+    ...productRes,
+    price: basePrice,
+    purchasePrice: costPrice,
+    images: displayImages,
+    variants: productRes.variants.map((v: any) => ({
+      ...v,
+      stock: v.stocks?.[0]?.availableQuantity ?? v.stock ?? 0
+    }))
+  };
+
   if (!product) {
     notFound();
   }
+
+  // Dynamic variant names based on PIM category attribute mapping
+  const sizeAttributeName = productRes.categoryRel?.attributeMappings?.[0]?.attribute?.name || "Size";
+  const colorAttributeName = productRes.categoryRel?.attributeMappings?.[1]?.attribute?.name || "Color";
+  const hasSecondAttribute = product.variants.some((v: any) => v.color && v.color !== 'Default' && v.color !== '');
 
   // Sort orderItems in-memory based on order.createdAt descending
   product.orderItems.sort((a, b) => new Date(b.order.createdAt).getTime() - new Date(a.order.createdAt).getTime());
@@ -72,7 +118,7 @@ export default async function ProductDetailView({ params }: { params: { id: stri
       id: oi.id,
       type: 'Order',
       date: oi.order.createdAt,
-      description: `Sold ${oi.quantity}x ${oi.size}`,
+      description: `Sold ${oi.quantity}x ${oi.variant?.size || "Default"}`,
       status: oi.order.status,
     })),
     ...product.variants.flatMap(v =>
@@ -368,42 +414,54 @@ export default async function ProductDetailView({ params }: { params: { id: stri
               </span>
             </div>
 
-            <div className="overflow-hidden border border-slate-200">
-              <table className="w-full text-sm text-left">
-                <thead className="text-xs text-slate-500 uppercase bg-slate-50 border-b border-slate-200">
-                  <tr>
-                    <th className="px-4 py-3 font-medium">Size</th>
-                    <th className="px-4 py-3 font-medium text-right">Stock</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {product.variants.sort((a, b) => a.order - b.order).map((variant) => {
-                    const isLowStock = variant.stock <= lowStockThreshold;
-                    return (
-                      <tr key={variant.id} className={isLowStock ? 'bg-red-50/30' : ''}>
-                        <td className="px-4 py-3 font-medium text-slate-900">
-                          {variant.size}
-                        </td>
-                        <td className="px-4 py-3 text-right">
-                          <span
-                            className={`inline-flex items-center gap-1.5 px-2 py-0.5 font-bold ${isLowStock ? 'text-red-600' : 'text-slate-900'
-                              }`}
-                          >
-                            {variant.stock}
-                          </span>
+            <div className="relative overflow-hidden border border-slate-200">
+              <div className="max-h-[410px] overflow-y-auto custom-scrollbar">
+                <table className="w-full text-sm text-left">
+                  <thead className="text-xs text-slate-500 uppercase bg-slate-50 border-b border-slate-200 sticky top-0 z-10">
+                    <tr>
+                      <th className="px-4 py-3 font-medium bg-slate-50">{sizeAttributeName}</th>
+                      {hasSecondAttribute && (
+                        <th className="px-4 py-3 font-medium bg-slate-50">{colorAttributeName}</th>
+                      )}
+                      <th className="px-4 py-3 font-medium text-right bg-slate-50">Stock</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {product.variants.sort((a, b) => a.order - b.order).map((variant) => {
+                      const isLowStock = variant.stock <= lowStockThreshold;
+                      return (
+                        <tr key={variant.id} className={isLowStock ? 'bg-red-50/30' : ''}>
+                          <td className="px-4 py-3 font-medium text-slate-900">
+                            {variant.size}
+                          </td>
+                          {hasSecondAttribute && (
+                            <td className="px-4 py-3 text-slate-600">
+                              {variant.color}
+                            </td>
+                          )}
+                          <td className="px-4 py-3 text-right">
+                            <span
+                              className={`inline-flex items-center gap-1.5 px-2 py-0.5 font-bold ${isLowStock ? 'text-red-600' : 'text-slate-900'
+                                }`}
+                            >
+                              {variant.stock}
+                            </span>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                    {product.variants.length === 0 && (
+                      <tr>
+                        <td colSpan={hasSecondAttribute ? 3 : 2} className="px-4 py-6 text-center text-slate-500">
+                          No variants available.
                         </td>
                       </tr>
-                    );
-                  })}
-                  {product.variants.length === 0 && (
-                    <tr>
-                      <td colSpan={2} className="px-4 py-6 text-center text-slate-500">
-                        No variants available.
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+              {/* Bottom scroll shadow indicator */}
+              <div className="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-slate-900/10 to-transparent pointer-events-none z-10" />
             </div>
 
             <div className="mt-4 pt-4 border-t border-slate-100">

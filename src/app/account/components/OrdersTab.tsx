@@ -7,11 +7,13 @@ import { useSearchParams } from "next/navigation";
 import { Calendar, Truck, AlertCircle, ChevronDown, Download, Loader2, Package, Check, CheckCircle2, Printer, PackageCheck, Compass } from "lucide-react";
 import { trackCustomerOrder } from "../../actions/pathao";
 import { formatBDT } from "@/utils/formatPrice";
+import { formatVariant } from "@/utils/formatVariant";
 import { AdminPagination } from "@/components/AdminPagination";
 
 interface OrderItem {
   id: string;
   size: string | null;
+  color?: string | null;
   quantity: number;
   price: number;
   requiresPrint: boolean;
@@ -245,7 +247,7 @@ export default function OrdersTab({ orders }: OrdersTabProps) {
                   <div className="px-5 pb-6 pt-5 space-y-6 animate-slideDown">
                     {/* Product List */}
                     <div className="space-y-3.5">
-                      <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                      <p className="text-[10px] font-medium uppercase tracking-wider text-slate-400">
                         Items Ordered
                       </p>
                       <div className="divide-y divide-slate-100">
@@ -266,9 +268,9 @@ export default function OrdersTab({ orders }: OrdersTabProps) {
                                 {item.product.name}
                               </h4>
                               <div className="flex items-center gap-3 mt-1.5 text-[10px] text-slate-400 font-normal">
-                                {item.size && (
+                                {formatVariant(item) && (
                                   <span className="bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded-sm">
-                                    Size: {item.size}
+                                    {formatVariant(item)}
                                   </span>
                                 )}
                                 <span>Qty: {item.quantity}</span>
@@ -294,22 +296,22 @@ export default function OrdersTab({ orders }: OrdersTabProps) {
 
                     {/* Order Progress Stepper */}
                     <div className="space-y-3">
-                      <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
-                        <Compass className="w-3.5 h-3.5 text-slate-500" /> Order Shipment Status
+                      <p className="text-[10px] font-medium uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+                        <Compass className="w-3.5 h-3.5 text-slate-400" /> Order Shipment Status
                       </p>
 
                       <div className="bg-slate-50/40 border border-slate-100/80 p-5 rounded-md">
                         {isSpecialStatus ? (
-                          <div className={`flex items-center gap-3 px-4 py-3 rounded-lg text-xs font-bold ${
-                            order.status === "CANCELLED" 
-                              ? "bg-rose-50 text-rose-700 border border-rose-100/60" 
+                          <div className={`flex items-center gap-3 px-4 py-3 rounded-lg text-xs font-medium ${
+                            order.status === "CANCELLED"
+                              ? "bg-rose-50 text-rose-700 border border-rose-100/60"
                               : order.status === "HOLD"
                               ? "bg-pink-50 text-pink-700 border border-pink-100/60"
                               : "bg-slate-50 text-slate-700 border border-slate-200"
                           }`}>
-                            <AlertCircle className={`w-4 h-4 shrink-0 ${order.status === "HOLD" ? "text-pink-500" : "text-rose-500"}`} />
+                            <AlertCircle className={`w-4 h-4 shrink-0 ${order.status === "HOLD" ? "text-pink-400" : "text-rose-400"}`} />
                             <div>
-                              <p className="font-semibold uppercase tracking-wider text-[10px]">Order {getStatusLabel(order.status)}</p>
+                              <p className="font-medium uppercase tracking-wider text-[10px]">Order {getStatusLabel(order.status)}</p>
                               <p className="font-normal text-slate-500 mt-0.5">
                                 {order.status === "CANCELLED"
                                   ? "This order has been cancelled. Please contact support if you have any questions."
@@ -367,12 +369,12 @@ export default function OrdersTab({ orders }: OrdersTabProps) {
                                           <Icon className="w-3.5 h-3.5 stroke-[2.5px]" />
                                         )}
                                       </div>
-                                      <span 
-                                        className={`mt-2 text-[10px] font-bold text-center leading-tight px-0.5 uppercase tracking-wide transition-colors ${
-                                          isActive 
-                                            ? "text-[#800020] font-extrabold" 
-                                            : isCompleted 
-                                              ? "text-emerald-600" 
+                                      <span
+                                        className={`mt-2 text-[10px] font-medium text-center leading-tight px-0.5 uppercase tracking-wide transition-colors ${
+                                          isActive
+                                            ? "text-[#800020] font-semibold"
+                                            : isCompleted
+                                              ? "text-emerald-600"
                                               : "text-slate-400"
                                         }`}
                                       >
@@ -426,9 +428,9 @@ export default function OrdersTab({ orders }: OrdersTabProps) {
                                       )}
                                     </div>
                                     <div className="pt-1.5">
-                                      <p 
-                                        className={`text-xs font-bold uppercase tracking-wider ${
-                                          isActive ? "text-[#800020] font-extrabold" : isCompleted ? "text-emerald-700" : "text-slate-400"
+                                      <p
+                                        className={`text-xs font-medium uppercase tracking-wider ${
+                                          isActive ? "text-[#800020] font-semibold" : isCompleted ? "text-emerald-700" : "text-slate-400"
                                         }`}
                                       >
                                         {step.title}
@@ -446,8 +448,8 @@ export default function OrdersTab({ orders }: OrdersTabProps) {
                     {/* Live Pathao Courier Tracking Timeline */}
                     {order.pathaoConsignmentId && (
                       <div className="space-y-3">
-                        <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
-                          <Truck className="w-3.5 h-3.5 text-slate-500" /> Live Delivery Status (Pathao Courier)
+                        <p className="text-[10px] font-medium uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+                          <Truck className="w-3.5 h-3.5 text-slate-400" /> Live Delivery Status (Pathao Courier)
                         </p>
 
                         <div className="bg-slate-50/40 border border-slate-100/80 p-4 rounded-md">

@@ -6,6 +6,7 @@ import { Plus, Trash2, Save, ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { CustomSelect } from "@/components/CustomSelect";
+import { formatVariant } from "@/utils/formatVariant";
 
 export default function PurchaseFormClient({
   products,
@@ -299,7 +300,7 @@ export default function PurchaseFormClient({
                       </td>
                       <td className="px-4 py-2 min-w-[150px]">
                         <CustomSelect
-                          options={availableVariants.map((v: any) => ({ value: v.id, label: v.size }))}
+                          options={availableVariants.map((v: any) => ({ value: v.id, label: formatVariant(v) || v.size }))}
                           value={item.variantId}
                           onChange={(val) => updateItem(item.id, "variantId", val)}
                           placeholder="-- Size --"

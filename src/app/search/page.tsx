@@ -2,6 +2,7 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import SidebarCart from "@/components/SidebarCart";
 import ProductCard from "@/components/ProductCard";
+import Breadcrumb from "@/components/Breadcrumb";
 import { getFooterData } from "@/lib/footer";
 import prisma from "@/lib/prisma";
 
@@ -26,25 +27,41 @@ export default async function SearchPage({
         ],
       },
       orderBy: { createdAt: "desc" },
-      include: { discount: true, variants: true },
+      include: {
+          discount: true,
+          mediaAssets: { orderBy: { sortOrder: "asc" } },
+          variants: {
+            include: { pricingMatrix: true }
+          }
+        },
     }).catch(e => { console.error(e); return []; }) : Promise.resolve([]),
     getFooterData()
   ]);
 
-  const products = productsRes;
-
-  products.forEach(product => {
-    if (product.variants) {
-      product.variants.sort((a, b) => (a.order || 0) - (b.order || 0));
-    }
+  const products = productsRes.map((product: any) => {
+    const sortedVariants = [...(product.variants || [])].sort((a: any, b: any) => (a.order || 0) - (b.order || 0));
+    const mappedVariants = sortedVariants.map((v: any) => ({
+      ...v,
+      pricingMatrix: v.pricingMatrix ? {
+        ...v.pricingMatrix,
+        basePrice: v.pricingMatrix.basePrice ? Number(v.pricingMatrix.basePrice) : 0,
+      } : null,
+    }));
+    const basePrice = mappedVariants[0]?.pricingMatrix?.basePrice || Number(product.price) || 0;
+    const images = (product.mediaAssets && product.mediaAssets.length > 0)
+      ? product.mediaAssets.map((a: any) => a.url)
+      : (product.images || []);
+    return { ...product, price: basePrice, variants: mappedVariants, images };
   });
 
   return (
     <main className="min-h-screen bg-white dark:bg-zinc-950">
       <Header />
 
-      <div className="container mx-auto py-2 md:py-12 px-4 md:px-0">
-
+      <div className="container mx-auto py-6 md:py-12 px-4 md:px-0">
+        <div className="mb-6">
+          <Breadcrumb items={[{ label: query ? `Search: "${query}"` : "Search" }]} />
+        </div>
 
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
           {products.map((product) => (

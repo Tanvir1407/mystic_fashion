@@ -67,7 +67,15 @@ export default async function AdminProductsPage({ searchParams }: { searchParams
         skip: (page - 1) * PER_PAGE,
         take: PER_PAGE,
         orderBy: { createdAt: "desc" },
-        include: { variants: true, brand: true }
+        include: {
+          variants: {
+            include: {
+              pricingMatrix: true,
+              stocks: true
+            }
+          },
+          brand: true
+        }
       }),
       prisma.product.count({ where: whereClause }),
       prisma.category.findMany({
@@ -168,7 +176,13 @@ export default async function AdminProductsPage({ searchParams }: { searchParams
             </thead>
             <tbody className="divide-y divide-slate-200">
               {products.map((product) => {
-                const totalStock = product.variants.reduce((acc: number, v: any) => acc + v.stock, 0);
+                const totalStock = product.variants.reduce((acc: number, v: any) => {
+                  const variantStock = v.stocks?.reduce((sum: number, s: any) => sum + s.physicalQuantity, 0) ?? 0;
+                  return acc + variantStock;
+                }, 0);
+                const firstVariant = product.variants[0];
+                const displayPrice = firstVariant?.pricingMatrix?.basePrice ? Number(firstVariant.pricingMatrix.basePrice) : 0;
+                const displayCostPrice = firstVariant?.pricingMatrix?.costPrice ? Number(firstVariant.pricingMatrix.costPrice) : null;
                 return (
                   <tr key={product.id} className="hover:bg-slate-50/50 transition-colors group">
                     <td className="px-2 py-4">
@@ -206,9 +220,9 @@ export default async function AdminProductsPage({ searchParams }: { searchParams
                     </td>
                     <td className="px-2 py-4 text-sm text-slate-600 font-mono">
                       <div className="flex flex-col">
-                        <span>{formatBDT(product.price)}</span>
-                        {product.purchasePrice && (
-                          <span className="text-[10px] text-slate-400 mt-0.5 ">Cost: {formatBDT(product.purchasePrice)}</span>
+                        <span>{formatBDT(displayPrice)}</span>
+                        {displayCostPrice !== null && (
+                          <span className="text-[10px] text-slate-400 mt-0.5 ">Cost: {formatBDT(displayCostPrice)}</span>
                         )}
                       </div>
                     </td>

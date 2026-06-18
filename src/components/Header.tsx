@@ -94,7 +94,7 @@ export default function Header() {
             className="absolute top-0 left-0 w-full bg-white dark:bg-zinc-950 z-[60] border-b border-slate-200 dark:border-zinc-800"
           >
             <div className="container mx-auto h-20 flex items-center px-4 gap-2">
-              <form onSubmit={handleSearch} className="flex-1 flex items-center border-[2px] border-primary bg-white dark:bg-zinc-900 overflow-hidden rounded-none h-12 focus-within:border-primary">
+              <form onSubmit={handleSearch} className="flex-1 flex items-center border border-slate-200 bg-white dark:bg-zinc-900 overflow-hidden rounded-none h-12 focus-within:border-primary">
                 <input
                   autoFocus
                   type="text"
@@ -158,7 +158,7 @@ export default function Header() {
           </div>
 
           {/* Center: Search Bar (Desktop only) */}
-          <form onSubmit={handleSearch} className="hidden md:flex items-center border-[2px] border-primary w-full max-w-md lg:max-w-xl xl:max-w-2xl bg-white overflow-hidden rounded-none h-11 focus-within:border-primary mx-4">
+          <form onSubmit={handleSearch} className="hidden md:flex items-center border border-slate-200 w-full max-w-md lg:max-w-xl xl:max-w-2xl bg-white overflow-hidden rounded-none h-11 focus-within:border-primary mx-4">
             <input
               type="text"
               placeholder="Search for Products..."
@@ -186,7 +186,7 @@ export default function Header() {
                 <span className="text-[10px] text-slate-500 leading-none">
                   {customerName ? "Hello," : "Sign In"}
                 </span>
-                <span className="text-xs font-bold text-slate-950 mt-0.5 leading-tight group-hover:text-primary transition-colors truncate max-w-[80px]">
+                <span className="text-xs font-medium text-slate-700 mt-0.5 leading-tight group-hover:text-primary transition-colors truncate max-w-[80px]">
                   {customerName ? customerName.split(" ")[0] : "Your Account"}
                 </span>
               </div>
@@ -204,7 +204,7 @@ export default function Header() {
                 <path d="M7.70365 10.1018H7.74942" stroke="currentColor" stroke-width="1.5" strokeLinecap="round" strokeLinejoin="round"></path>
                 <path d="M13.5343 10.1018H13.5801" stroke="currentColor" stroke-width="1.5" strokeLinecap="round" strokeLinejoin="round"></path>
               </svg>
-              <span className="absolute top-0 right-0 w-4 h-4 md:w-5 md:h-5 rounded-full bg-red-600 text-[10px] md:text-xs font-black text-white flex items-center justify-center border-2 border-white dark:border-zinc-950">
+              <span className="absolute top-0 right-0 w-4 h-4 md:w-5 md:h-5 rounded-full bg-primary text-[10px] md:text-xs font-medium text-white flex items-center justify-center border-2 border-white dark:border-zinc-950">
                 {mounted ? getTotalItems() : 0}
               </span>
             </button>
@@ -233,7 +233,7 @@ export default function Header() {
                       <>
                         {/* User Info */}
                         <div className="p-4 border-b border-slate-100 dark:border-zinc-800">
-                          <p className="text-sm font-bold text-slate-900 dark:text-zinc-100">
+                          <p className="text-sm font-medium text-slate-800 dark:text-zinc-100">
                             {customerName}
                           </p>
                           <p className="text-xs text-slate-500 dark:text-zinc-400">Customer Dashboard</p>
@@ -280,7 +280,7 @@ export default function Header() {
                         <Link
                           href="/auth/login"
                           onClick={() => setIsUserMenuOpen(false)}
-                          className="w-full inline-block px-4 py-2.5 text-sm font-bold text-white bg-primary hover:bg-opacity-90 transition-colors text-center"
+                          className="w-full inline-block px-4 py-2.5 text-sm font-medium text-white bg-primary hover:bg-[#600018] transition-colors text-center"
                         >
                           Sign In
                         </Link>
@@ -307,7 +307,7 @@ export default function Header() {
                   <div key={category.id} className="relative group py-2">
                     <Link
                       href={`/products?category=${encodeURIComponent(category.name.toLowerCase())}`}
-                      className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-zinc-300 hover:text-primary transition-colors flex items-center gap-1"
+                      className="text-xs font-medium uppercase tracking-wider text-slate-600 dark:text-zinc-300 hover:text-primary transition-colors flex items-center gap-1"
                     >
                       {category.name}
                       <ChevronDown className="w-3 h-3 transition-transform duration-200 group-hover:rotate-180" />
@@ -333,14 +333,14 @@ export default function Header() {
                 <Link
                   key={category.id}
                   href={`/products?category=${encodeURIComponent(category.name.toLowerCase())}`}
-                  className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-zinc-300 hover:text-primary transition-colors py-2"
+                  className="text-xs font-medium uppercase tracking-wider text-slate-600 dark:text-zinc-300 hover:text-primary transition-colors py-2"
                 >
                   {category.name}
                 </Link>
               );
             })}
           </div> : <div className="flex justify-center ">
-            <div className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-zinc-300 hover:text-primary transition-colors py-2">
+            <div className="text-xs font-medium text-slate-400 py-2">
               Loading categories...
             </div>
           </div>}
@@ -425,7 +425,7 @@ export default function Header() {
                 <path d="M6.34902 5.5984C6.34902 3.21232 8.28331 1.27803 10.6694 1.27803V1.27803C11.8184 1.27316 12.922 1.72619 13.7362 2.53695C14.5504 3.3477 15.0081 4.44939 15.0081 5.5984V5.5984" stroke="currentColor" stroke-width="2" strokeLinecap="round" strokeLinejoin="round"></path>
               </svg>
 
-              <span className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-white text-[11px] font-black text-primary flex items-center justify-center border-2 border-primary shadow-lg">
+              <span className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-white text-[11px] font-medium text-primary flex items-center justify-center border-2 border-primary shadow-lg">
                 {getTotalItems()}
               </span>
 

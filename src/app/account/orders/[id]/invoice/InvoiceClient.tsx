@@ -5,13 +5,16 @@ import Barcode from "react-barcode";
 import { formatBDT } from "@/utils/formatPrice";
 import { Printer, ArrowLeft } from "lucide-react";
 import Link from "next/link";
+import Breadcrumb from "@/components/Breadcrumb";
 import Image from "next/image";
+import { formatVariant } from "@/utils/formatVariant";
 
 interface OrderItem {
   id: string;
   quantity: number;
   price: number;
   size: string;
+  color?: string | null;
   product: {
     name: string;
   };
@@ -84,15 +87,13 @@ export default function InvoiceClient({
   };
 
   return (
-    <div className="min-h-screen bg-[#fafafa] py-12 print:py-0 text-[#1e293b] flex flex-col items-center font-sans antialiased">
+    <div className="min-h-screen print:min-h-0 bg-[#fafafa] py-12 print:py-0 text-[#1e293b] flex flex-col items-center font-sans antialiased">
       {/* Control Bar (Hidden on print) */}
       <div className="w-full max-w-[210mm] bg-white border border-slate-100 rounded-lg px-6 py-4 flex items-center justify-between shadow-xs mb-8 print:hidden">
-        <Link
-          href="/account"
-          className="text-xs font-semibold text-slate-500 hover:text-slate-900 flex items-center gap-2 transition-colors duration-200"
-        >
-          <ArrowLeft className="w-4 h-4" /> Back to Account
-        </Link>
+        <Breadcrumb items={[
+          { label: "My Account", href: "/account" },
+          { label: "Invoice" },
+        ]} />
         <button
           onClick={() => window.print()}
           className="px-5 py-2.5 bg-[#800020] hover:bg-[#600018] text-white text-xs font-semibold uppercase tracking-wider transition-all duration-200 flex items-center gap-2 rounded shadow-xs"
@@ -120,7 +121,9 @@ export default function InvoiceClient({
               box-shadow: none !important;
               border: none !important;
               padding: 0 !important;
-              min-height: auto !important;
+              min-height: 0 !important;
+              height: auto !important;
+              display: block !important;
             }
           }
           @page {
@@ -206,7 +209,7 @@ export default function InvoiceClient({
                 <tr className="border-b border-slate-300 text-[10px] font-semibold tracking-widest text-slate-400 uppercase text-left">
                   <th className="py-2.5 w-[8%] text-center">SL</th>
                   <th className="py-2.5 w-[47%]">Description</th>
-                  <th className="py-2.5 w-[12%] text-center">Size</th>
+                  <th className="py-2.5 w-[12%] text-center">Variant</th>
                   <th className="py-2.5 w-[10%] text-center">Qty</th>
                   <th className="py-2.5 w-[11%] text-right">Unit Price</th>
                   <th className="py-2.5 w-[12%] text-right">Total</th>
@@ -227,7 +230,7 @@ export default function InvoiceClient({
                         </div>
                       )}
                     </td>
-                    <td className="py-4 text-center font-light uppercase text-slate-600">{item.size || "N/A"}</td>
+                    <td className="py-4 text-center font-light uppercase text-slate-600">{formatVariant(item) || "N/A"}</td>
                     <td className="py-4 text-center font-light text-slate-600">{item.quantity}</td>
                     <td className="py-4 text-right font-light text-slate-600">{formatBDT(item.price)}</td>
                     <td className="py-4 text-right font-semibold text-slate-900 print:text-black">

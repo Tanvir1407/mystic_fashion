@@ -17,7 +17,7 @@ export default async function StaffPerformancePage({ params }: { params: { id: s
         role: { include: { permissions: true } },
         orders: {
           orderBy: { createdAt: "desc" },
-          include: { items: { include: { product: true } } },
+          include: { items: { include: { product: true, variant: true } } },
         },
       },
     }),

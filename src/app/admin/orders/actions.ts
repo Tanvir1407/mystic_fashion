@@ -11,6 +11,7 @@ import { getOrCreateSystemAccount, createDoubleEntryJournal } from "@/lib/accoun
 import { normalizePhone, validateStatusTransition } from "@/lib/utils";
 import { getEffectiveCommissionRate } from "@/lib/commission";
 import { executeOrderTransaction } from "@/lib/order-utils";
+import { updateStockDualWrite } from "@/lib/inventory";
 
 // ─── INTERNAL HELPERS ────────────────────────────────────────────────────────
 
@@ -51,31 +52,31 @@ async function _updateOrderStatus(orderId: string, status: OrderStatus, holdReas
 
       if (!oldIsHolding && newIsHolding) {
         for (const item of order.items) {
-          await tx.productVariant.update({
-            where: {
-              productId_size_color: {
-                productId: item.productId,
-                size: item.size,
-                color: (item as any).color || "Default",
-              },
-            },
-            data: { stock: { decrement: item.quantity } },
-          });
+          const variantId = item.variantId;
+          if (variantId) {
+            await updateStockDualWrite(tx, {
+              variantId,
+              quantityChange: -item.quantity,
+              movementType: "SALE",
+              referenceId: order.id,
+              referenceType: "ORDER_STATUS_CHANGE",
+            });
+          }
         }
       }
 
       if (oldIsHolding && !newIsHolding) {
         for (const item of order.items) {
-          await tx.productVariant.update({
-            where: {
-              productId_size_color: {
-                productId: item.productId,
-                size: item.size,
-                color: (item as any).color || "Default",
-              },
-            },
-            data: { stock: { increment: item.quantity } },
-          });
+          const variantId = item.variantId;
+          if (variantId) {
+            await updateStockDualWrite(tx, {
+              variantId,
+              quantityChange: item.quantity,
+              movementType: "RETURN",
+              referenceId: order.id,
+              referenceType: "ORDER_STATUS_CHANGE",
+            });
+          }
         }
       }
 
@@ -184,16 +185,16 @@ async function _deleteOrder(id: string) {
         ];
         if (stockHoldingStatuses.includes(order.status)) {
           for (const item of order.items) {
-            await tx.productVariant.update({
-              where: {
-                productId_size_color: {
-                  productId: item.productId,
-                  size: item.size,
-                  color: (item as any).color || "Default",
-                },
-              },
-              data: { stock: { increment: item.quantity } },
-            });
+            const variantId = item.variantId;
+            if (variantId) {
+              await updateStockDualWrite(tx, {
+                variantId,
+                quantityChange: item.quantity,
+                movementType: "RETURN",
+                referenceId: order.id,
+                referenceType: "ORDER_DELETE",
+              });
+            }
           }
         }
       }
@@ -234,16 +235,16 @@ export async function bulkDeleteOrders(orderIds: string[]) {
       for (const order of orders) {
         if (stockHoldingStatuses.includes(order.status)) {
           for (const item of order.items) {
-            await tx.productVariant.update({
-              where: {
-                productId_size_color: {
-                  productId: item.productId,
-                  size: item.size,
-                  color: (item as any).color || "Default",
-                },
-              },
-              data: { stock: { increment: item.quantity } },
-            });
+            const variantId = item.variantId;
+            if (variantId) {
+              await updateStockDualWrite(tx, {
+                variantId,
+                quantityChange: item.quantity,
+                movementType: "RETURN",
+                referenceId: order.id,
+                referenceType: "ORDER_BULK_DELETE",
+              });
+            }
           }
         }
       }
@@ -301,15 +302,13 @@ async function _restoreOrder(id: string) {
       ];
       if (stockHoldingStatuses.includes(order.status)) {
         for (const item of order.items) {
-          await tx.productVariant.update({
-            where: {
-              productId_size_color: {
-                productId: item.productId,
-                size: item.size,
-                color: (item as any).color || "Default",
-              },
-            },
-            data: { stock: { decrement: item.quantity } },
+          const variantId = item.variantId;
+          await updateStockDualWrite(tx, {
+            variantId,
+            quantityChange: -item.quantity,
+            movementType: "SALE",
+            referenceId: order.id,
+            referenceType: "ORDER_RESTORE",
           });
         }
       }
@@ -395,45 +394,67 @@ async function _updateOrderDetails(
           if (oldItem) {
             const diff = newItem.quantity - oldItem.quantity;
             if (diff !== 0 && isStockHolding) {
-              await tx.productVariant.update({
-                where: {
-                  productId_size_color: {
-                    productId: newItem.productId,
-                    size: newItem.size,
-                    color: (newItem as any).color || "Default",
+              let variantId = oldItem.variantId;
+              if (!variantId) {
+                const v = await tx.productVariant.findUnique({
+                  where: {
+                    productId_size_color: {
+                      productId: newItem.productId,
+                      size: newItem.size,
+                      color: (newItem as any).color || "Default",
+                    },
                   },
-                },
-                data: { stock: { decrement: diff } },
-              });
+                });
+                if (v) variantId = v.id;
+              }
+              if (variantId) {
+                await updateStockDualWrite(tx, {
+                  variantId,
+                  quantityChange: -diff,
+                  movementType: diff > 0 ? "SALE" : "RETURN",
+                  referenceId: order.id,
+                  referenceType: "ORDER_ITEM_UPDATE",
+                });
+              }
             }
             oldItemsMap.delete(newItem.id);
           } else {
             if (isStockHolding) {
-              await tx.productVariant.update({
-                where: {
-                  productId_size_color: {
-                    productId: newItem.productId,
-                    size: newItem.size,
-                    color: (newItem as any).color || "Default",
+              let variantId = (newItem as any).variantId;
+              if (!variantId) {
+                const v = await tx.productVariant.findUnique({
+                  where: {
+                    productId_size_color: {
+                      productId: newItem.productId,
+                      size: newItem.size,
+                      color: (newItem as any).color || "Default",
+                    },
                   },
-                },
-                data: { stock: { decrement: newItem.quantity } },
-              });
+                });
+                if (v) variantId = v.id;
+              }
+              if (variantId) {
+                await updateStockDualWrite(tx, {
+                  variantId,
+                  quantityChange: -newItem.quantity,
+                  movementType: "SALE",
+                  referenceId: order.id,
+                  referenceType: "ORDER_ITEM_ADD",
+                });
+              }
             }
           }
         }
 
         if (isStockHolding) {
           for (const remainingOld of oldItemsMap.values()) {
-            await tx.productVariant.update({
-              where: {
-                productId_size_color: {
-                  productId: remainingOld.productId,
-                  size: remainingOld.size,
-                  color: (remainingOld as any).color || "Default",
-                },
-              },
-              data: { stock: { increment: remainingOld.quantity } },
+            const variantId = remainingOld.variantId;
+            await updateStockDualWrite(tx, {
+              variantId,
+              quantityChange: remainingOld.quantity,
+              movementType: "RETURN",
+              referenceId: order.id,
+              referenceType: "ORDER_ITEM_REMOVE",
             });
           }
         }
@@ -441,11 +462,27 @@ async function _updateOrderDetails(
         await tx.orderItem.deleteMany({ where: { orderId: id } });
 
         for (const newItem of data.items) {
+          let variantId = (newItem as any).variantId;
+          if (!variantId) {
+            const v = await tx.productVariant.findUnique({
+              where: {
+                productId_size_color: {
+                  productId: newItem.productId,
+                  size: newItem.size,
+                  color: (newItem as any).color || "Default",
+                },
+              },
+            });
+            if (v) variantId = v.id;
+          }
+          if (!variantId) {
+            throw new Error(`Could not resolve variant ID for product ${newItem.productId} (Size: ${newItem.size})`);
+          }
           await tx.orderItem.create({
             data: {
               orderId: id,
               productId: newItem.productId,
-              size: newItem.size,
+              variantId: variantId,
               quantity: newItem.quantity,
               price: newItem.price,
               requiresPrint: newItem.requiresPrint,
@@ -554,8 +591,8 @@ export const updateOrderDetails = withAuditLog(_updateOrderDetails, {
   entityType: "Order",
   action: "UPDATE",
   getEntityId: (args) => args[0],
-  fetchBefore: (id) => prisma.order.findUnique({ where: { id }, include: { items: { include: { product: true } } } }),
-  fetchAfter: (id) => prisma.order.findUnique({ where: { id }, include: { items: { include: { product: true } } } }),
+  fetchBefore: (id) => prisma.order.findUnique({ where: { id }, include: { items: { include: { product: true, variant: true } } } }),
+  fetchAfter: (id) => prisma.order.findUnique({ where: { id }, include: { items: { include: { product: true, variant: true } } } }),
   describe: (args) => `Updated order details for ${args[0]}`,
 });
 
@@ -591,6 +628,7 @@ async function _createAdminOrder(data: {
   address: string;
   items: {
     productId: string;
+    variantId: string;
     size: string;
     quantity: number;
     price: number;
@@ -692,7 +730,7 @@ async function _createAdminOrder(data: {
               if (item.requiresPrint && item.printDetails && item.printDetails.length > 0) {
                 const printedItems = item.printDetails.map((pd) => ({
                   productId: item.productId,
-                  size: item.size,
+                  variantId: item.variantId,
                   quantity: 1,
                   price: item.price,
                   requiresPrint: true,
@@ -704,7 +742,7 @@ async function _createAdminOrder(data: {
                 if (remainingQty > 0) {
                   printedItems.push({
                     productId: item.productId,
-                    size: item.size,
+                    variantId: item.variantId,
                     quantity: remainingQty,
                     price: item.price,
                     requiresPrint: false,
@@ -718,7 +756,7 @@ async function _createAdminOrder(data: {
                 return [
                   {
                     productId: item.productId,
-                    size: item.size,
+                    variantId: item.variantId,
                     quantity: item.quantity,
                     price: item.price,
                     requiresPrint: item.requiresPrint || false,
@@ -819,7 +857,7 @@ export async function bulkSendToPathaoAction(orderIds: string[]) {
 
     const orders = await prisma.order.findMany({
       where: { id: { in: orderIds } },
-      include: { items: { include: { product: true } } },
+      include: { items: { include: { product: true, variant: true } } },
     });
 
     let successCount = 0;
@@ -861,7 +899,7 @@ export async function bulkSendToPathaoAction(orderIds: string[]) {
           item_description: order.items
             .map(
               (i) =>
-                `• ${i.product.name} (Size: ${i.size}, Qty: ${i.quantity})`
+                `• ${i.product.name} (Size: ${i.variant.size}, Qty: ${i.quantity})`
             )
             .join("\n"),
         };
@@ -961,7 +999,7 @@ export async function sendPathaoPickupManually(orderId: string) {
   try {
     const order = await prisma.order.findUnique({
       where: { id: orderId },
-      include: { items: { include: { product: true } } },
+      include: { items: { include: { product: true, variant: true } } },
     });
     if (!order) return { success: false, error: "Order not found" };
     if (order.pathaoConsignmentId)
@@ -998,7 +1036,7 @@ export async function sendPathaoPickupManually(orderId: string) {
       item_weight: 0.5,
       amount_to_collect: collectionAmount,
       item_description: order.items
-        .map((i) => `${i.product?.name || "Item"} (Size: ${i.size}, Qty: ${i.quantity})`)
+        .map((i) => `${i.product?.name || "Item"} (Size: ${i.variant?.size || "M"}, Qty: ${i.quantity})`)
         .join(", "),
     };
 
@@ -1053,7 +1091,7 @@ async function _processSalesReturn(data: {
 
       const orderItem = await tx.orderItem.findUnique({
         where: { id: orderItemId },
-        include: { product: true },
+        include: { product: true, variant: { include: { pricingMatrix: true } } },
       });
       if (!orderItem) throw new Error("Order item not found");
       if (orderItem.orderId !== orderId) {
@@ -1073,15 +1111,7 @@ async function _processSalesReturn(data: {
         throw new Error(`Cannot return ${returnQty} items. Only ${remainingQty} remaining.`);
       }
 
-      const variant = await tx.productVariant.findUnique({
-        where: {
-          productId_size_color: {
-            productId: orderItem.productId,
-            size: orderItem.size,
-            color: (orderItem as any).color || "Default",
-          },
-        },
-      });
+      const variant = orderItem.variant;
       if (!variant) throw new Error("Product variant not found");
 
       const status: ReturnStatus = returnActionType;
@@ -1090,7 +1120,7 @@ async function _processSalesReturn(data: {
       let printingLoss = 0;
 
       if (status === "WASTAGE") {
-        const purchasePrice = orderItem.product.purchasePrice ?? orderItem.product.price;
+        const purchasePrice = variant.pricingMatrix?.costPrice ? Number(variant.pricingMatrix.costPrice) : (variant.pricingMatrix?.basePrice ? Number(variant.pricingMatrix.basePrice) : orderItem.price);
         productLoss = purchasePrice * returnQty;
         printingLoss = orderItem.printCost * returnQty;
       }
@@ -1098,19 +1128,20 @@ async function _processSalesReturn(data: {
       const totalLoss = deliveryLoss + productLoss + printingLoss;
 
       if (status === "RESTOCKED") {
-        const previousQuantity = variant.stock;
-        const newQuantity = previousQuantity + returnQty;
-        await tx.productVariant.update({
-          where: { id: variant.id },
-          data: { stock: newQuantity },
+        const { previousPhysical, newPhysical } = await updateStockDualWrite(tx, {
+          variantId: variant.id,
+          quantityChange: returnQty,
+          movementType: "RETURN",
+          referenceId: orderId,
+          referenceType: "SALES_RETURN",
         });
         await tx.stockAdjustment.create({
           data: {
             variantId: variant.id,
             adjustmentType: "ADDITION",
             quantity: returnQty,
-            previousQuantity,
-            newQuantity,
+            previousQuantity: previousPhysical,
+            newQuantity: newPhysical,
             reason: `Sales Return Restock (Order: ${orderId})`,
           },
         });
@@ -1208,7 +1239,7 @@ async function _processFullSalesReturn(data: {
     await prisma.$transaction(async (tx) => {
       const order = await tx.order.findUnique({
         where: { id: orderId },
-        include: { items: { include: { product: true } } },
+        include: { items: { include: { product: true, variant: { include: { pricingMatrix: true } } } } },
       });
       if (!order) throw new Error("Order not found");
       if (order.items.length === 0) throw new Error("Order has no items");
@@ -1218,15 +1249,7 @@ async function _processFullSalesReturn(data: {
       let totalAccountingLoss = 0;
 
       for (const orderItem of order.items) {
-        const variant = await tx.productVariant.findUnique({
-          where: {
-            productId_size_color: {
-              productId: orderItem.productId,
-              size: orderItem.size,
-              color: (orderItem as any).color || "Default",
-            },
-          },
-        });
+        const variant = orderItem.variant;
         if (!variant) continue;
 
         const status: ReturnStatus = orderItem.requiresPrint ? "WASTAGE" : "RESTOCKED";
@@ -1235,7 +1258,7 @@ async function _processFullSalesReturn(data: {
         let printingLoss = 0;
 
         if (status === "WASTAGE") {
-          const purchasePrice = orderItem.product.purchasePrice ?? orderItem.product.price;
+          const purchasePrice = variant.pricingMatrix?.costPrice ? Number(variant.pricingMatrix.costPrice) : (variant.pricingMatrix?.basePrice ? Number(variant.pricingMatrix.basePrice) : orderItem.price);
           productLoss = purchasePrice * orderItem.quantity;
           printingLoss = orderItem.printCost * orderItem.quantity;
         }
@@ -1244,19 +1267,20 @@ async function _processFullSalesReturn(data: {
         totalAccountingLoss += itemLoss;
 
         if (status === "RESTOCKED") {
-          const previousQuantity = variant.stock;
-          const newQuantity = previousQuantity + orderItem.quantity;
-          await tx.productVariant.update({
-            where: { id: variant.id },
-            data: { stock: newQuantity },
+          const { previousPhysical, newPhysical } = await updateStockDualWrite(tx, {
+            variantId: variant.id,
+            quantityChange: orderItem.quantity,
+            movementType: "RETURN",
+            referenceId: orderId,
+            referenceType: "SALES_RETURN",
           });
           await tx.stockAdjustment.create({
             data: {
               variantId: variant.id,
               adjustmentType: "ADDITION",
               quantity: orderItem.quantity,
-              previousQuantity,
-              newQuantity,
+              previousQuantity: previousPhysical,
+              newQuantity: newPhysical,
               reason: `Full Sales Return Restock (Order: ${orderId})`,
             },
           });
@@ -1333,13 +1357,19 @@ export async function getRecentSalesReturns() {
 
 export async function getOrderById(id: string) {
   try {
-    const order = await prisma.order.findUnique({
+    const orderData = await prisma.order.findUnique({
       where: { id },
       include: {
         items: {
           include: {
             product: {
-              select: { name: true, price: true, purchasePrice: true, images: true },
+              select: { 
+                name: true,
+                mediaAssets: {
+                  select: { url: true },
+                  orderBy: { sortOrder: "asc" }
+                }
+              },
             },
           },
         },
@@ -1347,6 +1377,21 @@ export async function getOrderById(id: string) {
         exchangeOrders: { select: { id: true } },
       },
     });
+
+    if (!orderData) return { success: true, data: null };
+
+    const order = {
+      ...orderData,
+      items: orderData.items.map(item => ({
+        ...item,
+        product: {
+          name: item.product.name,
+          price: item.price,
+          purchasePrice: null,
+          images: item.product.mediaAssets.map(ma => ma.url)
+        }
+      }))
+    };
     return { success: true, data: order };
   } catch (error: any) {
     console.error("Get order by ID error:", error);
@@ -1359,7 +1404,7 @@ export async function searchOrdersForReturn(searchQuery: string) {
     const trimmed = searchQuery.trim();
     if (!trimmed) return { success: true, data: [] };
 
-    const orders = await prisma.order.findMany({
+    const ordersData = await prisma.order.findMany({
       where: {
         OR: [
           { id: { contains: trimmed, mode: "insensitive" } },
@@ -1371,7 +1416,13 @@ export async function searchOrdersForReturn(searchQuery: string) {
         items: {
           include: {
             product: {
-              select: { name: true, price: true, purchasePrice: true, images: true },
+              select: { 
+                name: true,
+                mediaAssets: {
+                  select: { url: true },
+                  orderBy: { sortOrder: "asc" }
+                }
+              },
             },
           },
         },
@@ -1380,6 +1431,19 @@ export async function searchOrdersForReturn(searchQuery: string) {
       },
       take: 10,
     });
+
+    const orders = ordersData.map(order => ({
+      ...order,
+      items: order.items.map(item => ({
+        ...item,
+        product: {
+          name: item.product.name,
+          price: item.price,
+          purchasePrice: null,
+          images: item.product.mediaAssets.map(ma => ma.url)
+        }
+      }))
+    }));
 
     return { success: true, data: orders };
   } catch (error: any) {

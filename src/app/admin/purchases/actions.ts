@@ -4,6 +4,8 @@ import prisma from "@/lib/prisma";
 import { withAuditLog } from "@/lib/audit";
 import { revalidatePath } from "next/cache";
 import { getOrCreateSystemAccount, createDoubleEntryJournal } from "@/lib/accounting";
+import { updateStockDualWrite } from "@/lib/inventory";
+import { Prisma } from "@/generated/prisma/client";
 
 // ─── PURCHASE CRUD ────────────────────────────────────────────────────────────
 
@@ -57,36 +59,39 @@ async function _createPurchase(
       });
 
       for (const item of items) {
-        const productBefore = await tx.product.findUnique({
-          where: { id: item.productId },
-          include: { variants: true },
+        const { previousPhysical } = await updateStockDualWrite(tx, {
+          variantId: item.variantId,
+          quantityChange: item.quantity,
+          movementType: "RECEIPT",
+          referenceId: purchase.id,
+          referenceType: "PURCHASE_RECEIPT",
         });
 
-        if (productBefore) {
-          const oldTotalStock = productBefore.variants.reduce(
-            (sum: number, v: any) => sum + v.stock,
-            0
-          );
-          const oldAvgPrice = productBefore.purchasePrice || 0;
+        const pricing = await tx.variantPricingMatrix.findUnique({
+          where: { variantId: item.variantId },
+        });
+        const oldCost = pricing?.costPrice ? Number(pricing.costPrice) : 0;
 
-          await tx.productVariant.update({
-            where: { id: item.variantId },
-            data: { stock: { increment: item.quantity } },
-          });
-
-          let newAvgPrice = item.unitPrice;
-          if (oldTotalStock > 0) {
-            const oldTotalValue = oldTotalStock * oldAvgPrice;
-            const newValueAdded = item.quantity * item.unitPrice;
-            const newTotalStock = oldTotalStock + item.quantity;
-            newAvgPrice = (oldTotalValue + newValueAdded) / newTotalStock;
-          }
-
-          await tx.product.update({
-            where: { id: item.productId },
-            data: { purchasePrice: newAvgPrice },
-          });
+        let newCost = item.unitPrice;
+        if (previousPhysical > 0) {
+          const oldTotalValue = previousPhysical * oldCost;
+          const newValueAdded = item.quantity * item.unitPrice;
+          const newTotalStock = previousPhysical + item.quantity;
+          newCost = (oldTotalValue + newValueAdded) / newTotalStock;
         }
+
+        await tx.variantPricingMatrix.upsert({
+          where: { variantId: item.variantId },
+          update: { costPrice: new Prisma.Decimal(newCost) },
+          create: {
+            variantId: item.variantId,
+            basePrice: new Prisma.Decimal(item.unitPrice),
+            costPrice: new Prisma.Decimal(newCost),
+            tierPrices: {},
+          },
+        });
+
+
       }
 
       const account = await getOrCreateSystemAccount(tx, "Inventory Purchases", "EXPENSE");
@@ -147,9 +152,12 @@ async function _updatePurchase(
       if (!existingPurchase) throw new Error("Purchase not found");
 
       for (const oldItem of existingPurchase.items) {
-        await tx.productVariant.update({
-          where: { id: oldItem.variantId },
-          data: { stock: { decrement: oldItem.quantity } },
+        await updateStockDualWrite(tx, {
+          variantId: oldItem.variantId,
+          quantityChange: -oldItem.quantity,
+          movementType: "ADJUSTMENT",
+          referenceId: purchaseId,
+          referenceType: "PURCHASE_UPDATE_REVERSAL",
         });
       }
 
@@ -185,36 +193,39 @@ async function _updatePurchase(
       });
 
       for (const item of items) {
-        const productBefore = await tx.product.findUnique({
-          where: { id: item.productId },
-          include: { variants: true },
+        const { previousPhysical } = await updateStockDualWrite(tx, {
+          variantId: item.variantId,
+          quantityChange: item.quantity,
+          movementType: "RECEIPT",
+          referenceId: purchaseId,
+          referenceType: "PURCHASE_RECEIPT",
         });
 
-        if (productBefore) {
-          const oldTotalStock = productBefore.variants.reduce(
-            (sum: number, v: any) => sum + v.stock,
-            0
-          );
-          const oldAvgPrice = productBefore.purchasePrice || 0;
+        const pricing = await tx.variantPricingMatrix.findUnique({
+          where: { variantId: item.variantId },
+        });
+        const oldCost = pricing?.costPrice ? Number(pricing.costPrice) : 0;
 
-          await tx.productVariant.update({
-            where: { id: item.variantId },
-            data: { stock: { increment: item.quantity } },
-          });
-
-          let newAvgPrice = item.unitPrice;
-          if (oldTotalStock > 0) {
-            const oldTotalValue = oldTotalStock * oldAvgPrice;
-            const newValueAdded = item.quantity * item.unitPrice;
-            const newTotalStock = oldTotalStock + item.quantity;
-            newAvgPrice = (oldTotalValue + newValueAdded) / newTotalStock;
-          }
-
-          await tx.product.update({
-            where: { id: item.productId },
-            data: { purchasePrice: newAvgPrice },
-          });
+        let newCost = item.unitPrice;
+        if (previousPhysical > 0) {
+          const oldTotalValue = previousPhysical * oldCost;
+          const newValueAdded = item.quantity * item.unitPrice;
+          const newTotalStock = previousPhysical + item.quantity;
+          newCost = (oldTotalValue + newValueAdded) / newTotalStock;
         }
+
+        await tx.variantPricingMatrix.upsert({
+          where: { variantId: item.variantId },
+          update: { costPrice: new Prisma.Decimal(newCost) },
+          create: {
+            variantId: item.variantId,
+            basePrice: new Prisma.Decimal(item.unitPrice),
+            costPrice: new Prisma.Decimal(newCost),
+            tierPrices: {},
+          },
+        });
+
+
       }
 
       const existingTransaction = await tx.transaction.findFirst({
@@ -289,9 +300,12 @@ async function _deletePurchase(id: string) {
       if (!purchase) throw new Error("Purchase not found");
 
       for (const item of purchase.items) {
-        await tx.productVariant.update({
-          where: { id: item.variantId },
-          data: { stock: { decrement: item.quantity } },
+        await updateStockDualWrite(tx, {
+          variantId: item.variantId,
+          quantityChange: -item.quantity,
+          movementType: "ADJUSTMENT",
+          referenceId: id,
+          referenceType: "PURCHASE_DELETE",
         });
       }
 
@@ -343,18 +357,24 @@ async function _updatePurchaseStatus(id: string, newStatus: string) {
 
       if (oldStatus === "COMPLETED" && newStatus !== "COMPLETED") {
         for (const item of purchase.items) {
-          await tx.productVariant.update({
-            where: { id: item.variantId },
-            data: { stock: { decrement: item.quantity } },
+          await updateStockDualWrite(tx, {
+            variantId: item.variantId,
+            quantityChange: -item.quantity,
+            movementType: "ADJUSTMENT",
+            referenceId: id,
+            referenceType: "PURCHASE_STATUS_CANCEL",
           });
         }
       }
 
       if (oldStatus !== "COMPLETED" && newStatus === "COMPLETED") {
         for (const item of purchase.items) {
-          await tx.productVariant.update({
-            where: { id: item.variantId },
-            data: { stock: { increment: item.quantity } },
+          await updateStockDualWrite(tx, {
+            variantId: item.variantId,
+            quantityChange: item.quantity,
+            movementType: "RECEIPT",
+            referenceId: id,
+            referenceType: "PURCHASE_STATUS_COMPLETE",
           });
         }
       }
@@ -398,9 +418,12 @@ async function _restorePurchase(id: string) {
       if (!purchase) throw new Error("Purchase not found after restore");
 
       for (const item of purchase.items) {
-        await tx.productVariant.update({
-          where: { id: item.variantId },
-          data: { stock: { increment: item.quantity } },
+        await updateStockDualWrite(tx, {
+          variantId: item.variantId,
+          quantityChange: item.quantity,
+          movementType: "RECEIPT",
+          referenceId: id,
+          referenceType: "PURCHASE_RESTORE",
         });
       }
 

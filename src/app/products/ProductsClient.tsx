@@ -6,6 +6,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { ChevronDown, ChevronUp, SlidersHorizontal, X, Check } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import ProductCard from "@/components/ProductCard";
+import Breadcrumb from "@/components/Breadcrumb";
 import { fetchProductsAction } from "./actions";
 
 interface Subcategory {
@@ -423,9 +424,12 @@ export default function ProductsClient({
         {/* Banner/Heading Block */}
         <div className="mb-8 md:mb-10 text-left border-b border-slate-200 dark:border-zinc-900 pb-6 flex flex-col md:flex-row md:items-end md:justify-between gap-4">
           <div>
-            <h1 className="text-xl md:text-2xl font-semibold text-slate-900 dark:text-zinc-50 ">
-              {activeHeadingText}
-            </h1>
+            <div className="mb-2">
+              <Breadcrumb items={[
+                ...(selectedCategory ? [{ label: activeHeadingText, href: undefined }] : [{ label: "All Products", href: undefined }])
+              ]} />
+            </div>
+          
           </div>
 
           {/* Quick Toolbar */}

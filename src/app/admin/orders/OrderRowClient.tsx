@@ -10,6 +10,7 @@ import { StatusAlertModal } from "@/components/StatusAlertModal";
 import { HoldReasonModal } from "@/components/HoldReasonModal";
 import { formatDateTime } from "@/utils/formatDate";
 import { formatBDT } from "@/utils/formatPrice";
+import { formatVariant } from "@/utils/formatVariant";
 import type { OrderStatus } from "@/generated/prisma/client";
 
 const STATUS_LABELS: Record<OrderStatus, string> = {
@@ -248,7 +249,7 @@ export default function OrderRowClient({
         <div className="flex flex-col gap-0.5">
           {items.map((item) => (
             <div key={item.id} className="text-xs font-medium text-slate-600">
-              <span className="text-slate-400">{item.quantity}x</span> {item.product.name} <span className="font-bold text-[#800020]">({item.size})</span>
+              <span className="text-slate-400">{item.quantity}x</span> {item.product.name} {formatVariant(item) && <span className="font-bold text-[#800020]">({formatVariant(item)})</span>}
             </div>
           ))}
         </div>

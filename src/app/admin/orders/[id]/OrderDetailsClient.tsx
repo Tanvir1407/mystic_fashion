@@ -21,6 +21,7 @@ import Link from "next/link";
 import UploadedImage from "@/components/UploadedImage";
 import { CustomSelect } from "@/components/CustomSelect";
 import { formatBDT, roundPrice } from "@/utils/formatPrice";
+import { formatVariant } from "@/utils/formatVariant";
 import { validateStatusTransition } from "@/lib/utils";
 import type { OrderStatus } from "@/generated/prisma/client";
 
@@ -39,7 +40,7 @@ const formatValue = (val: any, fieldKey?: string) => {
     if (fieldKey === "items" || (val[0] && typeof val[0] === "object" && "productId" in val[0])) {
       return val.map((item: any) => {
         const name = item.product?.name || item.productName || `Product (${item.productId?.slice(0, 8) || "Unknown"})`;
-        const sizeInfo = item.size ? ` (${item.size})` : "";
+        const sizeInfo = formatVariant(item) ? ` (${formatVariant(item)})` : "";
         const printInfo = item.requiresPrint ? ` [Print: ${item.printName || "No Name"}/${item.printNumber || "No No"}]` : "";
         return `${item.quantity}x ${name}${sizeInfo} @ ৳${item.price}${printInfo}`;
       }).join("\n");
@@ -910,7 +911,7 @@ export default function OrderDetailsClient({
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-bold text-slate-800 truncate">{item.product?.name}</p>
                         <div className="flex flex-wrap items-center gap-2 mt-1.5">
-                          <span className="text-[9px] font-extrabold bg-slate-800 text-white px-2 py-0.5 rounded tracking-widest uppercase">{item.size}</span>
+                          <span className="text-[9px] font-extrabold bg-slate-800 text-white px-2 py-0.5 rounded tracking-widest uppercase">{formatVariant(item)}</span>
                           <span className="text-xs font-semibold text-slate-500">@ {formatBDT(item.price)}</span>
                           {item.requiresPrint && (
                             <span className="text-[9px] font-bold bg-indigo-50 text-indigo-600 border border-indigo-100 px-2 py-0.5 rounded uppercase tracking-wider flex items-center gap-1">

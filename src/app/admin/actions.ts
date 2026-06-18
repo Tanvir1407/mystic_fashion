@@ -9,6 +9,7 @@ import { revalidatePath } from "next/cache";
 import bcrypt from "bcryptjs";
 import { createSession, destroySession } from "@/lib/auth";
 import { getRedirectUrlForSession } from "@/lib/permissions";
+import { updateStockDualWrite } from "@/lib/inventory";
 
 // ─── LOGIN RATE LIMITER ───────────────────────────────────────────────────────
 const _loginAttempts = new Map<string, { count: number; resetAt: number }>();
@@ -97,11 +98,23 @@ export async function adminLogout() {
 // ─── DELIVERY SETTINGS ────────────────────────────────────────────────────────
 
 export async function getDeliverySettings() {
-  return await prisma.deliverySetting.upsert({
-    where: { id: "default" },
-    update: {},
-    create: { id: "default", insideDhaka: 70, outsideDhaka: 120 },
-  });
+  try {
+    const settings = await prisma.deliverySetting.findUnique({
+      where: { id: "default" },
+    });
+    if (settings) return settings;
+
+    return await prisma.deliverySetting.create({
+      data: { id: "default", insideDhaka: 70, outsideDhaka: 120 },
+    });
+  } catch (error: any) {
+    if (error.code === "P2002") {
+      return await prisma.deliverySetting.findUnique({
+        where: { id: "default" },
+      }) ?? { id: "default", insideDhaka: 70, outsideDhaka: 120, updatedAt: new Date() };
+    }
+    throw error;
+  }
 }
 
 async function _updateDeliverySettings(insideDhaka?: number, outsideDhaka?: number, posFooter?: string) {
@@ -153,11 +166,23 @@ export const updateDeliverySettings = withAuditLog(_updateDeliverySettings, {
 // ─── INVENTORY SETTINGS ───────────────────────────────────────────────────────
 
 export async function getInventorySettings() {
-  return await prisma.inventorySetting.upsert({
-    where: { id: "default" },
-    update: {},
-    create: { id: "default", lowStockThreshold: 5 },
-  });
+  try {
+    const settings = await prisma.inventorySetting.findUnique({
+      where: { id: "default" },
+    });
+    if (settings) return settings;
+
+    return await prisma.inventorySetting.create({
+      data: { id: "default", lowStockThreshold: 5 },
+    });
+  } catch (error: any) {
+    if (error.code === "P2002") {
+      return await prisma.inventorySetting.findUnique({
+        where: { id: "default" },
+      }) ?? { id: "default", lowStockThreshold: 5, updatedAt: new Date() };
+    }
+    throw error;
+  }
 }
 
 async function _updateInventorySettings(lowStockThreshold: number) {
@@ -190,11 +215,23 @@ export const updateInventorySettings = withAuditLog(_updateInventorySettings, {
 // ─── DTF PRINT SETTINGS ───────────────────────────────────────────────────────
 
 export async function getDTFPrintSetting() {
-  return await prisma.dTFPrintSetting.upsert({
-    where: { id: "default" },
-    update: {},
-    create: { id: "default", printCost: 300 },
-  });
+  try {
+    const setting = await prisma.dTFPrintSetting.findUnique({
+      where: { id: "default" },
+    });
+    if (setting) return setting;
+
+    return await prisma.dTFPrintSetting.create({
+      data: { id: "default", printCost: 300 },
+    });
+  } catch (error: any) {
+    if (error.code === "P2002") {
+      return await prisma.dTFPrintSetting.findUnique({
+        where: { id: "default" },
+      }) ?? { id: "default", printCost: 300, updatedAt: new Date() };
+    }
+    throw error;
+  }
 }
 
 async function _updateDTFPrintSetting(printCost: number) {
@@ -233,13 +270,38 @@ export async function getLowStockProducts(options?: { limit?: number; page?: num
   const limit = options?.limit ?? 100;
   const skip = ((options?.page ?? 1) - 1) * limit;
 
-  return await prisma.product.findMany({
-    where: { variants: { some: { stock: { lte: threshold } } } },
-    include: { variants: true },
+  const productsData = await prisma.product.findMany({
+    where: {
+      variants: {
+        some: {
+          stocks: {
+            some: {
+              warehouse: { code: "WH-MAIN" },
+              physicalQuantity: { lte: threshold }
+            }
+          }
+        }
+      }
+    },
+    include: {
+      variants: {
+        include: {
+          stocks: true
+        }
+      }
+    },
     orderBy: { updatedAt: "desc" },
     take: limit,
     skip,
   });
+
+  return productsData.map(product => ({
+    ...product,
+    variants: product.variants.map(variant => ({
+      ...variant,
+      stock: variant.stocks.reduce((sum, s) => sum + s.physicalQuantity, 0)
+    }))
+  }));
 }
 
 async function _adjustStock(data: {
@@ -252,13 +314,29 @@ async function _adjustStock(data: {
     const { variantId, adjustmentType, quantity, reason } = data;
 
     const result = await prisma.$transaction(async (tx) => {
-      const variant = await tx.productVariant.findUnique({
-        where: { id: variantId },
-        select: { stock: true, id: true },
+      const warehouse = await tx.warehouse.findUnique({
+        where: { code: "WH-MAIN" },
       });
-      if (!variant) throw new Error("Product variant not found");
+      if (!warehouse) throw new Error("Warehouse 'WH-MAIN' not found");
 
-      const previousQuantity = variant.stock;
+      let stock = await tx.stock.findUnique({
+        where: { variantId_warehouseId: { variantId, warehouseId: warehouse.id } }
+      });
+
+      if (!stock) {
+        stock = await tx.stock.create({
+          data: {
+            variantId,
+            warehouseId: warehouse.id,
+            physicalQuantity: 0,
+            availableQuantity: 0,
+            reservedQuantity: 0,
+            version: 0
+          }
+        });
+      }
+
+      const previousQuantity = stock.physicalQuantity;
       let newQuantity = previousQuantity;
 
       if (adjustmentType === "ADDITION") newQuantity = previousQuantity + quantity;
@@ -269,9 +347,12 @@ async function _adjustStock(data: {
         throw new Error("Stock cannot go below zero");
       }
 
-      await tx.productVariant.update({
-        where: { id: variantId },
-        data: { stock: newQuantity },
+      await updateStockDualWrite(tx, {
+        variantId,
+        absoluteQuantity: newQuantity,
+        movementType: "ADJUSTMENT",
+        referenceType: "MANUAL_ADJUSTMENT",
+        referenceId: reason || undefined
       });
 
       const adjustment = await tx.stockAdjustment.create({
@@ -312,16 +393,32 @@ export async function bulkAdjustStock(
     const results = await prisma.$transaction(async (tx) => {
       const createdAdjustments = [];
 
+      const warehouse = await tx.warehouse.findUnique({
+        where: { code: "WH-MAIN" },
+      });
+      if (!warehouse) throw new Error("Warehouse 'WH-MAIN' not found");
+
       for (const adj of adjustments) {
         const { variantId, adjustmentType, quantity, reason } = adj;
 
-        const variant = await tx.productVariant.findUnique({
-          where: { id: variantId },
-          select: { stock: true, id: true },
+        let stock = await tx.stock.findUnique({
+          where: { variantId_warehouseId: { variantId, warehouseId: warehouse.id } }
         });
-        if (!variant) throw new Error(`Product variant not found: ${variantId}`);
 
-        const previousQuantity = variant.stock;
+        if (!stock) {
+          stock = await tx.stock.create({
+            data: {
+              variantId,
+              warehouseId: warehouse.id,
+              physicalQuantity: 0,
+              availableQuantity: 0,
+              reservedQuantity: 0,
+              version: 0
+            }
+          });
+        }
+
+        const previousQuantity = stock.physicalQuantity;
         let newQuantity = previousQuantity;
 
         if (adjustmentType === "ADDITION") newQuantity = previousQuantity + quantity;
@@ -332,9 +429,12 @@ export async function bulkAdjustStock(
           throw new Error(`Stock cannot go below zero for variant ${variantId}`);
         }
 
-        await tx.productVariant.update({
-          where: { id: variantId },
-          data: { stock: newQuantity },
+        await updateStockDualWrite(tx, {
+          variantId,
+          absoluteQuantity: newQuantity,
+          movementType: "ADJUSTMENT",
+          referenceType: "MANUAL_BULK_ADJUSTMENT",
+          referenceId: reason || undefined
         });
 
         const adjustment = await tx.stockAdjustment.create({

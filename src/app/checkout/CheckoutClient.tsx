@@ -10,6 +10,7 @@ import { ArrowLeft, CheckCircle2, X, ChevronDown, Ticket, Loader2, CheckCircle, 
 import { useState, useTransition, useEffect } from "react";
 import { placeOrderAction, validateCoupon, syncCartPrices } from "./actions";
 import { formatBDT } from "@/utils/formatPrice";
+import Breadcrumb from "@/components/Breadcrumb";
 import { CustomSelect } from "@/components/CustomSelect";
 import { getPathaoCities, getPathaoZones, getPathaoAreas } from "@/app/actions/pathao";
 
@@ -48,7 +49,7 @@ export default function CheckoutClient({
   const [phone, setPhone] = useState("");
   // DTF Modal State
   const [showDTFModal, setShowDTFModal] = useState(false);
-  const [activeItem, setActiveItem] = useState<{ id: string, size: string | undefined, editIndex: number } | null>(null);
+  const [activeItem, setActiveItem] = useState<{ id: string, size: string | undefined, color: string | undefined, editIndex: number } | null>(null);
   const [dtfForm, setDtfForm] = useState({
     type: "messi" as "messi" | "ronaldo" | "neymar" | "custom",
     name: "",
@@ -72,12 +73,12 @@ export default function CheckoutClient({
 
   useEffect(() => {
     if (items.length > 0) {
-      const productIds = items.map(i => i.id);
-      syncCartPrices(productIds).then((updatedPrices) => {
+      const cartItemsPayload = items.map(i => ({ id: i.id, size: i.size, color: i.color }));
+      syncCartPrices(cartItemsPayload).then((updatedPrices) => {
         updatedPrices.forEach(updated => {
           items.forEach(item => {
-            if (item.id === updated.id && item.price !== updated.price) {
-              updateItem(item.id, item.size, { price: updated.price });
+            if (item.id === updated.id && item.size === updated.size && item.color === updated.color && item.price !== updated.price) {
+              updateItem(item.id, item.size, item.color, { price: updated.price });
             }
           });
         });
@@ -303,13 +304,13 @@ export default function CheckoutClient({
     });
   };
 
-  const handleDTFToggle = (id: string, size: string | undefined, checked: boolean) => {
+  const handleDTFToggle = (id: string, size: string | undefined, color: string | undefined, checked: boolean) => {
     if (checked) {
-      setActiveItem({ id, size, editIndex: -1 });
+      setActiveItem({ id, size, color, editIndex: -1 });
       setDtfForm({ type: "messi", name: "Messi", number: "10" });
       setShowDTFModal(true);
     } else {
-      updateItem(id, size, {
+      updateItem(id, size, color, {
         requiresPrint: false,
         printName: "",
         printNumber: "",
@@ -329,7 +330,7 @@ export default function CheckoutClient({
     if (type === "ronaldo") { finalName = "Ronaldo"; finalNumber = "7"; }
     if (type === "neymar") { finalName = "Neymar"; finalNumber = "10"; }
 
-    const currentItem = items.find(i => i.id === activeItem.id && i.size === activeItem.size);
+    const currentItem = items.find(i => i.id === activeItem.id && i.size === activeItem.size && i.color === activeItem.color);
     let newDetails = currentItem?.printDetails ? [...currentItem.printDetails] : [];
 
     if (activeItem.editIndex >= 0) {
@@ -338,7 +339,7 @@ export default function CheckoutClient({
       newDetails.push({ name: finalName, number: finalNumber });
     }
 
-    updateItem(activeItem.id, activeItem.size, {
+    updateItem(activeItem.id, activeItem.size, activeItem.color, {
       requiresPrint: true,
       printName: finalName,
       printNumber: finalNumber,
@@ -355,26 +356,28 @@ export default function CheckoutClient({
         <Header />
 
         <div className="flex-1 flex flex-col items-center justify-center p-6 text-center animate-in fade-in duration-700">
-          <div className="mb-10">
-            <CheckCircle2 className="w-16 h-16 text-emerald-500 mx-auto" strokeWidth={1.5} />
+          <div className="mb-8">
+            <CheckCircle2 className="w-12 h-12 text-emerald-500 mx-auto" strokeWidth={1.5} />
           </div>
 
-          <h1 className="text-3xl font-black text-slate-900 mb-6 tracking-tight ">Order Confirmed!</h1>
+          <h1 className="text-2xl font-semibold text-slate-800 mb-4">Order Confirmed</h1>
 
-          <div className="max-w-md mx-auto space-y-4">
-            <p className="text-slate-600 leading-relaxed font-medium">
-              Thank you for shopping with <span className="text-slate-900 font-bold">Mystic Fashion</span>.
-              Your order (<span className="text-primary font-black tracking-tight underline decoration-slate-200 underline-offset-4">{confirmedOrderId}</span>) has been placed successfully and will be delivered soon.
+          <div className="max-w-md mx-auto space-y-3">
+            <p className="text-slate-500 leading-relaxed text-sm">
+              Thank you for shopping with <span className="text-slate-700 font-medium">Mystic Fashion</span>.
+              Your order{" "}
+              <span className="text-primary font-medium">({confirmedOrderId})</span>
+              {" "}has been placed successfully and will be delivered soon.
             </p>
 
-            <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest italic">
-              take this id for any future query about order
+            <p className="text-[11px] text-slate-400 uppercase tracking-widest">
+              Save this ID for future order queries
             </p>
           </div>
 
           <Link
             href="/"
-            className="mt-12 bg-primary text-white px-12 py-4 rounded-full font-black uppercase tracking-[0.2em] text-[10px] transition-all shadow-xl shadow-slate-200 active:scale-[0.98]"
+            className="mt-10 bg-primary text-white px-10 py-3 font-medium text-xs uppercase tracking-widest hover:bg-[#600018] transition-all"
           >
             Continue Shopping
           </Link>
@@ -393,12 +396,8 @@ export default function CheckoutClient({
 
 
 
-        <div className="mb-10 flex justify-between">
-          <h1 className="text-xl md:text-4xl font-black uppercase tracking-tight mt-6">Checkout</h1>
-          <Link href="/" className="inline-flex items-center gap-2 text-sm font-bold text-zinc-500 hover:text-primary transition-colors">
-            <ArrowLeft className="w-4 h-4" />
-            Back to Home
-          </Link>
+        <div className="mt-6 mb-8">
+          <Breadcrumb items={[{ label: "Checkout" }]} />
         </div>
 
         {/* DTF Instruction Banner (Classic & Modern) */}
@@ -433,7 +432,7 @@ export default function CheckoutClient({
             {/* Left Side: Customer Info Form */}
             <div className="w-full lg:w-3/5">
               <div className="bg-white p-6 md:p-8 border border-slate-200 shadow-sm">
-                <h2 className="text-xl font-bold uppercase tracking-wide mb-6 pb-4 border-b border-slate-100">Delivery Information</h2>
+                <h2 className="text-xs font-medium uppercase tracking-widest text-slate-400 mb-6 pb-4 border-b border-slate-100">Delivery Information</h2>
                 {/* Login Prompt Banner if guest checkout */}
                 {!customerSession && (
                   <div className="bg-rose-50/50 border border-rose-100 p-4 mb-6 flex items-center justify-between gap-4">
@@ -453,7 +452,7 @@ export default function CheckoutClient({
                 {/* Saved Address Cards for quick selection */}
                 {savedAddresses && savedAddresses.length > 0 && (
                   <div className="mb-6">
-                    <label className="text-xs font-black uppercase tracking-wider text-slate-500 block mb-2.5">Ship to Saved Address</label>
+                    <label className="text-xs font-medium uppercase tracking-widest text-slate-400 block mb-2.5">Ship to Saved Address</label>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       {savedAddresses.map((addr) => (
                         <button
@@ -481,7 +480,7 @@ export default function CheckoutClient({
                   {/* Name and Phone */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <label className="text-sm font-bold text-zinc-700">Full Name *</label>
+                      <label className="text-xs font-medium text-slate-500">Full Name *</label>
                       <input
                         name="fullName"
                         type="text"
@@ -492,7 +491,7 @@ export default function CheckoutClient({
                       />
                     </div>
                     <div className="space-y-2">
-                      <label className="text-sm font-bold text-zinc-700">Phone Number *</label>
+                      <label className="text-xs font-medium text-slate-500">Phone Number *</label>
                       <input
                         name="phone"
                         type="tel"
@@ -511,7 +510,7 @@ export default function CheckoutClient({
                   <div className="space-y-4">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <label className="text-sm font-bold text-zinc-700">Select City *</label>
+                        <label className="text-xs font-medium text-slate-500">Select City *</label>
                         <CustomSelect
                           options={cities}
                           value={selectedCityId?.toString() || ""}
@@ -530,7 +529,7 @@ export default function CheckoutClient({
                       </div>
 
                       <div className="space-y-2">
-                        <label className="text-sm font-bold text-zinc-700">Select Zone *</label>
+                        <label className="text-xs font-medium text-slate-500">Select Zone *</label>
                         <CustomSelect
                           options={zones}
                           value={selectedZoneId?.toString() || ""}
@@ -547,7 +546,7 @@ export default function CheckoutClient({
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <label className="text-sm font-bold text-zinc-700">Select Area *</label>
+                        <label className="text-xs font-medium text-slate-500">Select Area *</label>
                         <CustomSelect
                           options={areas}
                           value={selectedAreaId?.toString() || ""}
@@ -560,7 +559,7 @@ export default function CheckoutClient({
                     </div>
 
                     <div className="space-y-2">
-                      <label className="text-sm font-bold text-zinc-700">House / Road / Flat No. / Landmark *</label>
+                      <label className="text-xs font-medium text-slate-500">House / Road / Flat No. / Landmark *</label>
                       <textarea
                         name="address"
                         rows={3}
@@ -572,7 +571,7 @@ export default function CheckoutClient({
                     </div>
 
                     <div className="space-y-2 pt-2">
-                      <label className="text-sm font-bold text-zinc-700">Order Remarks (Optional)</label>
+                      <label className="text-xs font-medium text-slate-500">Order Remarks (Optional)</label>
                       <textarea name="remarks" rows={2} className="w-full bg-slate-50 border border-slate-200 px-4 py-3 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all resize-none text-sm" placeholder="Special instructions, gate codes, etc..." />
                     </div>
                   </div>
@@ -584,9 +583,9 @@ export default function CheckoutClient({
             {/* Right Side: Order Summary */}
             <div className="w-full lg:w-2/5">
               <div className="bg-white p-6 md:p-8 border border-slate-200 shadow-sm sticky top-32">
-                <h2 className="text-sm font-black uppercase tracking-[0.2em] text-slate-900 mb-8 pb-4 border-b border-slate-100 flex items-center justify-between">
+                <h2 className="text-xs font-medium uppercase tracking-widest text-slate-400 mb-6 pb-4 border-b border-slate-100 flex items-center justify-between">
                   <span>Order Summary</span>
-                  <span className="hidden md:block text-[10px] bg-slate-100 px-2 py-0.5 text-slate-500">{items.length} Items</span>
+                  <span className="text-[10px] text-slate-400">{items.length} Items</span>
                 </h2>
 
                 <div className="space-y-5 mb-8 max-h-[40vh] overflow-y-auto pr-2 custom-scrollbar">
@@ -600,17 +599,22 @@ export default function CheckoutClient({
                         </div>
                         <div className="flex-1 flex flex-col justify-between py-0.5">
                           <div>
-                            <h4 className="font-bold text-xs uppercase tracking-tight text-slate-800 line-clamp-1 group-hover:text-black transition-colors">{item.name}</h4>
-                            <div className="flex items-center gap-3 mt-1.5">
-                              {item.size && <span className="text-[10px] font-black uppercase bg-slate-100 px-1.5 py-0.5 text-slate-500">Size: {item.size}</span>}
-                              <span className="text-[10px] font-bold text-slate-400 uppercase">Qty: {item.quantity}</span>
+                            <h4 className="font-semibold text-xs  text-slate-800 line-clamp-1 group-hover:text-black transition-colors">{item.name}</h4>
+                            <div className="flex font-semibold items-center gap-3 mt-1.5">
+                              {item.size && item.size !== "Default" && (
+                                <span className="text-[10px] bg-slate-100 px-1.5 py-0.5 text-slate-500">{item.sizeAttributeName || "Size"}: {item.size}</span>
+                              )}
+                              {item.color && item.color !== "Default" && (
+                                <span className="text-[10px] bg-slate-100 px-1.5 py-0.5 text-slate-500">{item.colorAttributeName || "Color"}: {item.color}</span>
+                              )}
+                              <span className="text-[10px] font-semibold text-slate-400 uppercase">Qty: {item.quantity}</span>
                             </div>
                           </div>
                           <div className="flex items-center gap-2">
                             {item.originalPrice && item.originalPrice > item.price && (
                               <span className="text-[10px] font-bold text-slate-300 line-through">{formatBDT(item.originalPrice)}</span>
                             )}
-                            <p className="font-black text-slate-900 text-xs">{formatBDT(item.price)}</p>
+                            <p className="font-semibold text-slate-700 text-xs">{formatBDT(item.price)}</p>
                           </div>
                         </div>
                       </div>
@@ -622,7 +626,7 @@ export default function CheckoutClient({
                             <input
                               type="checkbox"
                               checked={item.requiresPrint}
-                              onChange={(e) => handleDTFToggle(item.id, item.size, e.target.checked)}
+                              onChange={(e) => handleDTFToggle(item.id, item.size, item.color, e.target.checked)}
                               className="w-4 h-4  border-slate-300 text-primary focus:ring-primary"
                             />
                             <span className="text-[10px] font-bold text-slate-600 uppercase">Add DTF Print (+৳{dtfCostPerItem})</span>
@@ -639,7 +643,7 @@ export default function CheckoutClient({
                                     <button
                                       onClick={(e) => {
                                         e.preventDefault();
-                                        setActiveItem({ id: item.id, size: item.size, editIndex: idx });
+                                        setActiveItem({ id: item.id, size: item.size, color: item.color, editIndex: idx });
                                         setDtfForm({ type: "custom", name: detail.name, number: detail.number });
                                         setShowDTFModal(true);
                                       }}
@@ -651,7 +655,7 @@ export default function CheckoutClient({
                                       onClick={(e) => {
                                         e.preventDefault();
                                         const newDetails = item.printDetails!.filter((_, i) => i !== idx);
-                                        updateItem(item.id, item.size, {
+                                        updateItem(item.id, item.size, item.color, {
                                           printDetails: newDetails,
                                           requiresPrint: newDetails.length > 0
                                         });
@@ -667,7 +671,7 @@ export default function CheckoutClient({
                                 <button
                                   onClick={(e) => {
                                     e.preventDefault();
-                                    setActiveItem({ id: item.id, size: item.size, editIndex: -1 });
+                                    setActiveItem({ id: item.id, size: item.size, color: item.color, editIndex: -1 });
                                     setDtfForm({ type: "custom", name: "", number: "" });
                                     setShowDTFModal(true);
                                   }}
@@ -695,7 +699,7 @@ export default function CheckoutClient({
                         onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
                         placeholder="COUPON CODE"
                         disabled={!!appliedCoupon}
-                        className="w-full pl-10 pr-4 py-3 bg-white border border-slate-200 text-xs font-black tracking-widest focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none disabled:text-slate-400"
+                        className="w-full pl-10 pr-4 py-3 bg-white border border-slate-200 text-xs font-medium tracking-widest focus:ring-1 focus:ring-primary/20 focus:border-primary transition-all outline-none disabled:text-slate-400"
                       />
                     </div>
                     {appliedCoupon ? (
@@ -727,29 +731,29 @@ export default function CheckoutClient({
                 </div>
 
                 <div className="space-y-3.5 mb-8">
-                  <div className="flex justify-between text-slate-500 text-xs font-bold uppercase tracking-tight">
+                  <div className="flex justify-between text-slate-400 text-xs font-medium">
                     <span>Subtotal</span>
                     <span className="text-slate-900">{formatBDT(baseSubtotal)}</span>
                   </div>
                   {totalDTFCost > 0 && (
-                    <div className="flex justify-between text-primary text-xs font-bold uppercase tracking-tight">
+                    <div className="flex justify-between text-primary text-xs font-medium">
                       <span>DTF Printing Cost</span>
                       <span>+{formatBDT(totalDTFCost)}</span>
                     </div>
                   )}
                   {totalItemDiscount > 0 && (
-                    <div className="flex justify-between text-slate-400 text-xs font-bold uppercase tracking-tight">
+                    <div className="flex justify-between text-slate-400 text-xs font-medium">
                       <span>Item Savings</span>
                       <span>-{formatBDT(totalItemDiscount)}</span>
                     </div>
                   )}
                   {couponDiscount > 0 && (
-                    <div className="flex justify-between text-slate-900 text-xs font-black uppercase tracking-tight">
+                    <div className="flex justify-between text-slate-700 text-xs font-medium">
                       <span className="flex items-center gap-1.5">Coupon ({appliedCoupon})</span>
                       <span>-{formatBDT(couponDiscount)}</span>
                     </div>
                   )}
-                  <div className="flex justify-between text-slate-500 text-xs font-bold uppercase tracking-tight">
+                  <div className="flex justify-between text-slate-400 text-xs font-medium">
                     <span>Delivery</span>
                     <span className="text-slate-900">
                       {selectedDistrict ? formatBDT(deliveryFee) : "--"}
@@ -759,14 +763,14 @@ export default function CheckoutClient({
 
                 <div className="border-t border-slate-100 pt-6 mb-6 flex justify-between items-end">
                   <div className="flex justify-between w-full">
-                    <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-1">Grand Total</span>
-                    <span className="text-3xl font-black text-slate-900 tracking-tighter">{formatBDT(total)}</span>
+                    <span className="text-[10px] font-medium uppercase tracking-widest text-slate-400">Grand Total</span>
+                    <span className="text-2xl font-semibold text-slate-800">{formatBDT(total)}</span>
                   </div>
                 </div>
 
                 {/* Payment Method Selector */}
                 <div className="mb-6 pt-4 border-t border-slate-100">
-                  <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-3">Payment Method</h3>
+                  <h3 className="text-[10px] font-medium uppercase tracking-widest text-slate-400 mb-3">Payment Method</h3>
                   <div className="flex bg-slate-50 border border-slate-200/80 p-1 w-full">
                     <button
                       type="button"
@@ -778,7 +782,7 @@ export default function CheckoutClient({
                           setBkashTrxId("");
                         }
                       }}
-                      className={`flex-1 text-center py-2.5  text-xs font-bold transition-all ${paymentMethod === "COD"
+                      className={`flex-1 text-center py-2.5 text-xs font-medium transition-all ${paymentMethod === "COD"
                         ? "bg-slate-900 text-white shadow-sm"
                         : "text-slate-600 hover:text-slate-950 hover:bg-slate-100/50"
                         }`}
@@ -792,7 +796,7 @@ export default function CheckoutClient({
                         setPaymentMethod("FULL");
                         setErrorMsg("");
                       }}
-                      className={`flex-1 text-center py-2.5 text-xs font-bold transition-all ${paymentMethod === "FULL"
+                      className={`flex-1 text-center py-2.5 text-xs font-medium transition-all ${paymentMethod === "FULL"
                         ? "bg-slate-900 text-white shadow-sm"
                         : "text-slate-600 hover:text-slate-950 hover:bg-slate-100/50"
                         }`}
