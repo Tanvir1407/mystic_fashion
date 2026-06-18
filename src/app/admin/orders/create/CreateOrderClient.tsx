@@ -21,6 +21,7 @@ interface Product {
 
 interface OrderItem {
   productId: string;
+  variantId: string;
   productName: string;
   size: string;           // internal DB key for variant lookup (ProductVariant.size)
   displayVariant?: string; // human-readable label for UI (e.g. "1KG / KING SIZE")
@@ -346,6 +347,7 @@ export default function CreateOrderClient({
 
       setOrderItems([...orderItems, {
         productId: selectedProduct.id,
+        variantId: variant.id,
         productName: selectedProduct.name,
         size: selectedSize,
         displayVariant,
@@ -442,7 +444,7 @@ export default function CreateOrderClient({
             pathaoZoneId: selectedZoneId || undefined, pathaoAreaId: selectedAreaId || undefined,
             isStorePickup, deliveryCharge: isStorePickup ? deliveryCharge : finalDeliveryCharge,
             items: orderItems.map(item => ({
-              productId: item.productId, size: item.size, quantity: item.quantity, price: item.price,
+              productId: item.productId, variantId: item.variantId, size: item.size, quantity: item.quantity, price: item.price,
               requiresPrint: item.requiresPrint, printCost: item.printCost, printDetails: item.printDetails
             })),
             exchangeRefOrderId: exchangeRefOrderId.trim(), exchangeItemNote: exchangeItemNote.trim(),
@@ -454,7 +456,7 @@ export default function CreateOrderClient({
             pathaoZoneId: selectedZoneId || undefined, pathaoAreaId: selectedAreaId || undefined,
             isStorePickup, deliveryCharge: isStorePickup ? deliveryCharge : finalDeliveryCharge,
             items: orderItems.map(item => ({
-              productId: item.productId, size: item.size, quantity: item.quantity, price: item.price,
+              productId: item.productId, variantId: item.variantId, size: item.size, quantity: item.quantity, price: item.price,
               requiresPrint: item.requiresPrint, printCost: item.printCost, printDetails: item.printDetails
             })),
             hasBackorderItems, tags, createdById: createdById || undefined,

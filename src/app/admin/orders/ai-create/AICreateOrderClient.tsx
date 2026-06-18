@@ -382,6 +382,7 @@ export default function AICreateOrderClient({
 
         return {
           productId: item.selectedProductId,
+          variantId: variant?.id || "",
           size: item.selectedVariantSize || item.size,
           quantity: item.quantity,
           price: item.unitPrice,

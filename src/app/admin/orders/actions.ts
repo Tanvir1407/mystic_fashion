@@ -628,6 +628,7 @@ async function _createAdminOrder(data: {
   address: string;
   items: {
     productId: string;
+    variantId: string;
     size: string;
     quantity: number;
     price: number;
@@ -729,7 +730,7 @@ async function _createAdminOrder(data: {
               if (item.requiresPrint && item.printDetails && item.printDetails.length > 0) {
                 const printedItems = item.printDetails.map((pd) => ({
                   productId: item.productId,
-                  size: item.size,
+                  variantId: item.variantId,
                   quantity: 1,
                   price: item.price,
                   requiresPrint: true,
@@ -741,7 +742,7 @@ async function _createAdminOrder(data: {
                 if (remainingQty > 0) {
                   printedItems.push({
                     productId: item.productId,
-                    size: item.size,
+                    variantId: item.variantId,
                     quantity: remainingQty,
                     price: item.price,
                     requiresPrint: false,
@@ -755,7 +756,7 @@ async function _createAdminOrder(data: {
                 return [
                   {
                     productId: item.productId,
-                    size: item.size,
+                    variantId: item.variantId,
                     quantity: item.quantity,
                     price: item.price,
                     requiresPrint: item.requiresPrint || false,
