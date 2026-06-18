@@ -177,7 +177,7 @@ export default async function AdminProductsPage({ searchParams }: { searchParams
             <tbody className="divide-y divide-slate-200">
               {products.map((product) => {
                 const totalStock = product.variants.reduce((acc: number, v: any) => {
-                  const variantStock = v.stocks?.reduce((sum: number, s: any) => sum + s.physicalQuantity, 0) ?? 0;
+                  const variantStock = v.stocks?.reduce((sum: number, s: any) => sum + s.availableQuantity, 0) ?? 0;
                   return acc + variantStock;
                 }, 0);
                 const firstVariant = product.variants[0];
