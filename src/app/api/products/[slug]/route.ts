@@ -22,7 +22,7 @@ export async function GET(_req: NextRequest, { params }: { params: { slug: strin
           orderBy: { order: "asc" },
           include: {
             pricingMatrix: true,
-            stocks: { where: { warehouse: { code: "WH-MAIN" } } }
+            stocks: { where: { warehouse: { code: "MAIN" } } }
           }
         },
       },

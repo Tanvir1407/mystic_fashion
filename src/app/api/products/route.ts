@@ -91,7 +91,7 @@ export async function GET(req: NextRequest) {
             orderBy: { order: "asc" },
             include: {
               pricingMatrix: true,
-              stocks: { where: { warehouse: { code: "WH-MAIN" } } }
+              stocks: { where: { warehouse: { code: "MAIN" } } }
             }
           },
         },

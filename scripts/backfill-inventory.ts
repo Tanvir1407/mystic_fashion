@@ -10,7 +10,7 @@ const prisma = new PrismaClient({
 // ─────────────────────────────────────────────────────────────────────────────
 
 const DRY_RUN = process.argv.includes("--dry-run");
-const WAREHOUSE_CODE = "WH-MAIN";
+const WAREHOUSE_CODE = "MAIN";
 
 // Legacy `stock` column removed from Prisma schema but still in the DB.
 type LegacyVariant = {

@@ -276,7 +276,7 @@ export async function getLowStockProducts(options?: { limit?: number; page?: num
         some: {
           stocks: {
             some: {
-              warehouse: { code: "WH-MAIN" },
+              warehouse: { code: "MAIN" },
               physicalQuantity: { lte: threshold }
             }
           }
@@ -314,10 +314,11 @@ async function _adjustStock(data: {
     const { variantId, adjustmentType, quantity, reason } = data;
 
     const result = await prisma.$transaction(async (tx) => {
-      const warehouse = await tx.warehouse.findUnique({
-        where: { code: "WH-MAIN" },
+      const warehouse = await tx.warehouse.upsert({
+        where: { code: "MAIN" },
+        create: { code: "MAIN", name: "Main Warehouse", address: "Central Fulfillment Center, Dhaka, Bangladesh", isActive: true },
+        update: {},
       });
-      if (!warehouse) throw new Error("Warehouse 'WH-MAIN' not found");
 
       let stock = await tx.stock.findUnique({
         where: { variantId_warehouseId: { variantId, warehouseId: warehouse.id } }
@@ -393,10 +394,11 @@ export async function bulkAdjustStock(
     const results = await prisma.$transaction(async (tx) => {
       const createdAdjustments = [];
 
-      const warehouse = await tx.warehouse.findUnique({
-        where: { code: "WH-MAIN" },
+      const warehouse = await tx.warehouse.upsert({
+        where: { code: "MAIN" },
+        create: { code: "MAIN", name: "Main Warehouse", address: "Central Fulfillment Center, Dhaka, Bangladesh", isActive: true },
+        update: {},
       });
-      if (!warehouse) throw new Error("Warehouse 'WH-MAIN' not found");
 
       for (const adj of adjustments) {
         const { variantId, adjustmentType, quantity, reason } = adj;

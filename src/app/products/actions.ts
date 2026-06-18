@@ -82,7 +82,7 @@ export async function getFilteredProductsList(params: {
         include: {
           pricingMatrix: true,
           stocks: {
-            where: { warehouse: { code: "WH-MAIN" } }
+            where: { warehouse: { code: "MAIN" } }
           }
         }
       }

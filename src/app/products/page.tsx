@@ -115,7 +115,7 @@ export default async function ProductsPage({
             sku: true,
             order: true,
             pricingMatrix: true,
-            stocks: { where: { warehouse: { code: "WH-MAIN" } } }
+            stocks: { where: { warehouse: { code: "MAIN" } } }
           }
         }
       },

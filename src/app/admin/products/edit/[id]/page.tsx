@@ -21,7 +21,7 @@ export default async function EditProductPage({ params }: { params: { id: string
           pricingMatrix: true,
           stocks: {
             where: {
-              warehouse: { code: "WH-MAIN" }
+              warehouse: { code: "MAIN" }
             }
           }
         }

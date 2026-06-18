@@ -14,15 +14,19 @@ export async function updateStockDualWrite(
   input: StockUpdateInput
 ) {
   const { variantId, quantityChange, absoluteQuantity, movementType, referenceId, referenceType } = input;
-  const warehouseCode = "WH-MAIN";
+  const warehouseCode = "MAIN";
 
-  // 1. Resolve Warehouse
-  const warehouse = await tx.warehouse.findUnique({
+  // 1. Resolve Warehouse — create on demand if missing (self-healing after migration)
+  const warehouse = await tx.warehouse.upsert({
     where: { code: warehouseCode },
+    create: {
+      code: warehouseCode,
+      name: "Main Warehouse",
+      address: "Central Fulfillment Center, Dhaka, Bangladesh",
+      isActive: true,
+    },
+    update: {},
   });
-  if (!warehouse) {
-    throw new Error(`Warehouse with code '${warehouseCode}' not found.`);
-  }
 
   // 2. Fetch Stock with OCC Version
   let stock = await tx.stock.findUnique({

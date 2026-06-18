@@ -33,7 +33,7 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
     recentOrders
   ] = await Promise.all([
     prisma.stock.aggregate({
-      where: { warehouse: { code: "WH-MAIN" } },
+      where: { warehouse: { code: "MAIN" } },
       _sum: { availableQuantity: true }
     }),
     prisma.orderItem.aggregate({

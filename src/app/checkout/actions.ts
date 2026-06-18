@@ -105,7 +105,7 @@ export async function placeOrderAction(payload: {
             },
             pricingMatrix: true,
             stocks: {
-              where: { warehouse: { code: "WH-MAIN" } },
+              where: { warehouse: { code: "MAIN" } },
             },
           },
         });

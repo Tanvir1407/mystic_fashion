@@ -130,7 +130,7 @@ export async function POST(req: NextRequest) {
             },
             pricingMatrix: true,
             stocks: {
-              where: { warehouse: { code: "WH-MAIN" } },
+              where: { warehouse: { code: "MAIN" } },
             },
           },
         });

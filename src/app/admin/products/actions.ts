@@ -111,7 +111,7 @@ async function _createProduct(data: {
     }
 
     const product = await prisma.$transaction(async (tx) => {
-      const warehouseCode = "WH-MAIN";
+      const warehouseCode = "MAIN";
       let warehouse = await tx.warehouse.findUnique({ where: { code: warehouseCode } });
       if (!warehouse) {
         warehouse = await tx.warehouse.create({
@@ -312,7 +312,7 @@ async function _updateProduct(
     }
 
     const product = await prisma.$transaction(async (tx) => {
-      const warehouseCode = "WH-MAIN";
+      const warehouseCode = "MAIN";
       let warehouse = await tx.warehouse.findUnique({ where: { code: warehouseCode } });
       if (!warehouse) {
         warehouse = await tx.warehouse.create({
@@ -573,7 +573,7 @@ export async function getProductsForOrder() {
         include: {
           pricingMatrix: true,
           stocks: {
-            where: { warehouse: { code: "WH-MAIN" } }
+            where: { warehouse: { code: "MAIN" } }
           }
         }
       }

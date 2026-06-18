@@ -101,7 +101,7 @@ async function main() {
       });
 
       const defaultWarehouse = await prisma.warehouse.findUnique({
-        where: { code: "WH-MAIN" }
+        where: { code: "MAIN" }
       });
 
       if (defaultWarehouse) {

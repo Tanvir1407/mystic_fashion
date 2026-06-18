@@ -43,7 +43,7 @@ export default async function ProductDetailView({ params }: { params: { id: stri
       variants: {
         include: {
           pricingMatrix: true,
-          stocks: { where: { warehouse: { code: 'WH-MAIN' } } },
+          stocks: { where: { warehouse: { code: 'MAIN' } } },
           stockAdjustments: {
             orderBy: { createdAt: 'desc' },
             take: 10,

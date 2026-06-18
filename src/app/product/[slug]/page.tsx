@@ -90,7 +90,7 @@ export default async function ProductPage({ params }: { params: { slug: string }
         variants: {
           include: {
             pricingMatrix: true,
-            stocks: { where: { warehouse: { code: "WH-MAIN" } } }
+            stocks: { where: { warehouse: { code: "MAIN" } } }
           }
         },
         sizeChart: true,
@@ -122,7 +122,7 @@ export default async function ProductPage({ params }: { params: { slug: string }
         variants: {
           include: {
             pricingMatrix: true,
-            stocks: { where: { warehouse: { code: "WH-MAIN" } } }
+            stocks: { where: { warehouse: { code: "MAIN" } } }
           }
         },
         sizeChart: true,
@@ -152,7 +152,7 @@ export default async function ProductPage({ params }: { params: { slug: string }
         variants: {
           include: {
             pricingMatrix: true,
-            stocks: { where: { warehouse: { code: "WH-MAIN" } } }
+            stocks: { where: { warehouse: { code: "MAIN" } } }
           }
         },
         sizeChart: true,

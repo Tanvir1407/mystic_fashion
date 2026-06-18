@@ -94,7 +94,7 @@ export async function GET() {
             color: true,
             pricingMatrix: { select: { basePrice: true } },
             stocks: {
-              where: { warehouse: { code: "WH-MAIN" } },
+              where: { warehouse: { code: "MAIN" } },
               select: { availableQuantity: true }
             }
           }
