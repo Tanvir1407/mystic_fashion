@@ -74,6 +74,8 @@ export default async function AccountPage() {
     pathaoCityId: addr.pathaoCityId,
     pathaoZoneId: addr.pathaoZoneId,
     pathaoAreaId: addr.pathaoAreaId,
+    zoneName: addr.zoneName,
+    areaName: addr.areaName,
     isDefault: addr.isDefault
   }));
 

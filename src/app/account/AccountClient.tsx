@@ -23,6 +23,8 @@ interface Address {
   pathaoCityId?: number | null;
   pathaoZoneId?: number | null;
   pathaoAreaId?: number | null;
+  zoneName?: string | null;
+  areaName?: string | null;
   isDefault: boolean;
 }
 

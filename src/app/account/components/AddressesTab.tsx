@@ -17,6 +17,8 @@ interface Address {
   pathaoCityId?: number | null;
   pathaoZoneId?: number | null;
   pathaoAreaId?: number | null;
+  zoneName?: string | null;
+  areaName?: string | null;
   isDefault: boolean;
 }
 
@@ -153,6 +155,8 @@ export default function AddressesTab({ addresses: initialAddresses, customer }: 
     }
 
     const cityName = cities.find(c => c.value === selectedCityId.toString())?.label || "";
+    const selectedZoneName = zones.find(z => z.value === selectedZoneId?.toString())?.label || "";
+    const selectedAreaName = areas.find(a => a.value === selectedAreaId?.toString())?.label || "";
 
     const payload = {
       id: editingAddress?.id,
@@ -164,6 +168,8 @@ export default function AddressesTab({ addresses: initialAddresses, customer }: 
       pathaoCityId: selectedCityId,
       pathaoZoneId: selectedZoneId,
       pathaoAreaId: selectedAreaId,
+      zoneName: selectedZoneName,
+      areaName: selectedAreaName,
       isDefault: isDefaultAddress
     };
 
@@ -247,7 +253,10 @@ export default function AddressesTab({ addresses: initialAddresses, customer }: 
                 <h4 className="font-semibold text-sm text-slate-900">{addr.fullName}</h4>
                 <p className="text-xs text-slate-500 font-light mt-1.5">{addr.phone}</p>
                 <p className="text-xs text-slate-600 mt-1 font-light leading-relaxed">{addr.address}</p>
-                <p className="text-xs font-semibold text-slate-400 mt-1.5">{addr.district}</p>
+                <div className="text-xs text-slate-500 font-light mt-1 space-y-0.5">
+                  {addr.areaName && <p>{addr.areaName}{addr.zoneName ? `, ${addr.zoneName}` : ""}</p>}
+                  <p className="font-medium text-slate-400">{addr.district}, Bangladesh</p>
+                </div>
               </div>
 
               <div className="flex items-center gap-3 mt-4 pt-3 border-t border-slate-100/60">

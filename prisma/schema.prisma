@@ -686,6 +686,8 @@ model CustomerAddress {
   pathaoCityId Int?
   pathaoZoneId Int?
   pathaoAreaId Int?
+  zoneName     String?
+  areaName     String?
   isDefault    Boolean  @default(false)
   createdAt    DateTime @default(now())
 

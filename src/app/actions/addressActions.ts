@@ -14,6 +14,8 @@ export async function saveCustomerAddressAction(payload: {
   pathaoCityId?: number | null;
   pathaoZoneId?: number | null;
   pathaoAreaId?: number | null;
+  zoneName?: string;
+  areaName?: string;
   isDefault?: boolean;
 }): Promise<{ success: boolean; error?: string; addressId?: string }> {
   try {
@@ -78,6 +80,8 @@ export async function saveCustomerAddressAction(payload: {
           pathaoCityId: payload.pathaoCityId,
           pathaoZoneId: payload.pathaoZoneId,
           pathaoAreaId: payload.pathaoAreaId,
+          zoneName: payload.zoneName || null,
+          areaName: payload.areaName || null,
           isDefault: payload.isDefault ?? false
         }
       });
@@ -93,6 +97,8 @@ export async function saveCustomerAddressAction(payload: {
           pathaoCityId: payload.pathaoCityId,
           pathaoZoneId: payload.pathaoZoneId,
           pathaoAreaId: payload.pathaoAreaId,
+          zoneName: payload.zoneName || null,
+          areaName: payload.areaName || null,
           isDefault: payload.isDefault ?? false
         }
       });
