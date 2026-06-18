@@ -26,17 +26,31 @@ export default async function SearchPage({
         ],
       },
       orderBy: { createdAt: "desc" },
-      include: { discount: true, variants: true },
+      include: {
+          discount: true,
+          mediaAssets: { orderBy: { sortOrder: "asc" } },
+          variants: {
+            include: { pricingMatrix: true }
+          }
+        },
     }).catch(e => { console.error(e); return []; }) : Promise.resolve([]),
     getFooterData()
   ]);
 
-  const products = productsRes;
-
-  products.forEach(product => {
-    if (product.variants) {
-      product.variants.sort((a, b) => (a.order || 0) - (b.order || 0));
-    }
+  const products = productsRes.map((product: any) => {
+    const sortedVariants = [...(product.variants || [])].sort((a: any, b: any) => (a.order || 0) - (b.order || 0));
+    const mappedVariants = sortedVariants.map((v: any) => ({
+      ...v,
+      pricingMatrix: v.pricingMatrix ? {
+        ...v.pricingMatrix,
+        basePrice: v.pricingMatrix.basePrice ? Number(v.pricingMatrix.basePrice) : 0,
+      } : null,
+    }));
+    const basePrice = mappedVariants[0]?.pricingMatrix?.basePrice || Number(product.price) || 0;
+    const images = (product.mediaAssets && product.mediaAssets.length > 0)
+      ? product.mediaAssets.map((a: any) => a.url)
+      : (product.images || []);
+    return { ...product, price: basePrice, variants: mappedVariants, images };
   });
 
   return (
