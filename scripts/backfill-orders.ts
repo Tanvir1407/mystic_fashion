@@ -6,24 +6,25 @@ import prisma from "../src/lib/prisma";
 //   npx tsx scripts/backfill-orders.ts --dry-run  # preview only
 // ─────────────────────────────────────────────────────────────────────────────
 //
+// Old OrderItem had: productId + size (no color column, no variantId).
+//
 // Strategy (cascade fallback):
-//   1. Exact match   — productId + size + color
-//   2. Size match    — productId + size, prefer color="Default", else first
-//   3. Product match — any variant for the product (ordered by `order` ASC)
-//   4. Unresolved    — logged; run heal-constraints.ts afterwards to assign
+//   1. Size match    — productId + size, prefer color="Default", else first
+//   2. Product match — any variant for the product (ordered by `order` ASC)
+//   3. Unresolved    — logged; run heal-constraints.ts afterwards to assign
 //                      a placeholder fallback variant for these items.
 // ─────────────────────────────────────────────────────────────────────────────
 
 const DRY_RUN = process.argv.includes("--dry-run");
 
-// OrderItem.size and OrderItem.color are legacy columns removed from the
-// Prisma schema. We must read them via $queryRaw.
+// OrderItem.size is a legacy column removed from the Prisma schema.
+// OrderItem had NO color column in the old schema.
+// We must read size via $queryRaw.
 type LegacyOrderItem = {
   id: string;
   orderId: string;
   productId: string;
   size: string | null;
-  color: string | null;
   variantId: string | null;
 };
 
@@ -39,10 +40,10 @@ async function main() {
   console.log(`Goal     : Link legacy OrderItem rows to the correct ProductVariant\n`);
 
   // ─── Fetch unlinked order items ─────────────────────────────────────────────
-  // variantId may be NULL (column was nullable when added via db push) or empty
-  // string (inserted with a blank default). Both cases need backfilling.
+  // variantId was added via db push as nullable TEXT. Old rows have NULL.
+  // color column never existed in old OrderItem — do NOT select it.
   const rawItems = await prisma.$queryRaw<LegacyOrderItem[]>`
-    SELECT id, "orderId", "productId", size, color, "variantId"
+    SELECT id, "orderId", "productId", size, "variantId"
     FROM "OrderItem"
     WHERE "variantId" IS NULL
        OR "variantId" = ''
@@ -62,26 +63,13 @@ async function main() {
 
   for (const item of rawItems) {
     const size = item.size && item.size.trim() !== "" ? item.size.trim() : null;
-    const color = item.color && item.color.trim() !== "" ? item.color.trim() : null;
 
     let variant: { id: string } | null = null;
 
-    // ── Strategy 1: exact match ────────────────────────────────────────────
-    if (size && color) {
-      variant = await prisma.productVariant.findUnique({
-        where: {
-          productId_size_color: {
-            productId: item.productId,
-            size,
-            color,
-          },
-        },
-        select: { id: true },
-      });
-    }
-
-    // ── Strategy 2: size match, prefer "Default" color ─────────────────────
-    if (!variant && size) {
+    // ── Strategy 1: size match, prefer "Default" color ─────────────────────
+    // Old OrderItem had no color column. Match on productId + size, and among
+    // those candidates prefer the "Default" color (the most common setup).
+    if (size) {
       const candidates = await prisma.productVariant.findMany({
         where: { productId: item.productId, size },
         select: { id: true, color: true },
@@ -95,7 +83,7 @@ async function main() {
       }
     }
 
-    // ── Strategy 3: any variant for this product ────────────────────────────
+    // ── Strategy 2: any variant for this product (size not found) ──────────
     if (!variant) {
       const candidates = await prisma.productVariant.findMany({
         where: { productId: item.productId },
@@ -109,7 +97,7 @@ async function main() {
     // ── Unresolved ─────────────────────────────────────────────────────────
     if (!variant) {
       console.warn(
-        `[WARN] No variant found — OrderItem ${item.id} | Product ${item.productId} | Size: ${size ?? "null"} | Color: ${color ?? "null"}`
+        `[WARN] No variant found — OrderItem ${item.id} | Product ${item.productId} | Size: ${size ?? "null"}`
       );
       unresolvedItems.push({ id: item.id, productId: item.productId, size });
       unresolved++;
@@ -146,9 +134,7 @@ async function main() {
       "Run `npx tsx scripts/heal-constraints.ts` to assign them a placeholder variant:\n"
     );
     unresolvedItems.forEach((i) =>
-      console.log(
-        `  OrderItem ${i.id} | Product ${i.productId} | Size: ${i.size ?? "null"}`
-      )
+      console.log(`  OrderItem ${i.id} | Product ${i.productId} | Size: ${i.size ?? "null"}`)
     );
   }
 
