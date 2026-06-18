@@ -160,6 +160,9 @@ model Product {
   isPublished   Boolean          @default(true)
   isCustomize   Boolean?         @default(false)
   trackStock    Boolean?         @default(false)
+  price         Float?
+  purchasePrice Float?
+  images        String[]         @default([])
   orderItems    OrderItem[]
   brand         Brand?           @relation(fields: [brandId], references: [id])
   categoryRel   Category?        @relation(fields: [categoryId], references: [id])
@@ -183,6 +186,7 @@ model ProductVariant {
   color            String            @default("Default")
   colorCode        String?
   sku              String?           @unique
+  stock            Int               @default(0)
   order            Int               @default(0)
   upc              String?           @unique
   qrCode           String?           @unique
@@ -325,6 +329,7 @@ model OrderItem {
   printName     String?
   printNumber   String?
   requiresPrint Boolean         @default(false)
+  size          String          @default("M")
   variantId     String?
   order         Order           @relation(fields: [orderId], references: [id], onDelete: Cascade)
   product       Product         @relation(fields: [productId], references: [id], onDelete: Restrict)
