@@ -9,24 +9,34 @@ import ProductsClient from "./ProductsClient";
 export const dynamic = "force-dynamic";
 
 // Helper to calculate product final price after active discount on server
+// Uses the lowest variant price if variant pricing is available
 const getFinalPrice = (product: any): number => {
-  let finalPrice = product.price;
+  const variantPrices = product.variants
+    ?.map((v: any) =>
+      v.pricingMatrix?.basePrice ? Number(v.pricingMatrix.basePrice) : null,
+    )
+    .filter((p: number | null): p is number => p !== null);
+
+  const basePrice = variantPrices?.length
+    ? Math.min(...variantPrices)
+    : product.price;
+
   if (product.discount && product.discount.active) {
     if (product.discount.discountType === "PERCENTAGE") {
-      finalPrice = product.price - (product.price * (product.discount.value / 100));
+      return Math.round(basePrice - basePrice * (product.discount.value / 100));
     } else {
-      finalPrice = Math.max(0, product.price - product.discount.value);
+      return Math.round(Math.max(0, basePrice - product.discount.value));
     }
   }
-  return Math.round(finalPrice);
+  return Math.round(basePrice);
 };
 
 export default async function ProductsPage({
   searchParams,
 }: {
-  searchParams: { 
-    category?: string; 
-    brand?: string; 
+  searchParams: {
+    category?: string;
+    brand?: string;
     subcategory?: string;
     minPrice?: string;
     maxPrice?: string;
@@ -48,24 +58,30 @@ export default async function ProductsPage({
 
   // Category filter (match name case-insensitively or match direct categoryRel ID)
   if (categoryParam) {
-    const isUuid = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(categoryParam);
+    const isUuid =
+      /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(
+        categoryParam,
+      );
     if (isUuid) {
       whereClause.categoryId = categoryParam;
     } else {
       whereClause.categoryRel = {
-        name: { equals: categoryParam, mode: "insensitive" }
+        name: { equals: categoryParam, mode: "insensitive" },
       };
     }
   }
 
   // Subcategory filter (match name case-insensitively or match direct subcategory ID)
   if (subcategoryParam) {
-    const isUuid = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(subcategoryParam);
+    const isUuid =
+      /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(
+        subcategoryParam,
+      );
     if (isUuid) {
       whereClause.subcategoryId = subcategoryParam;
     } else {
       whereClause.subcategory = {
-        name: { equals: subcategoryParam, mode: "insensitive" }
+        name: { equals: subcategoryParam, mode: "insensitive" },
       };
     }
   }
@@ -73,85 +89,99 @@ export default async function ProductsPage({
   // Brand filter (supports comma-separated list of IDs or a brand name)
   if (brandParam) {
     const brandsList = brandParam.split(",");
-    const isUuid = (str: string) => /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(str);
-    
+    const isUuid = (str: string) =>
+      /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(
+        str,
+      );
+
     if (brandsList.every(isUuid)) {
       whereClause.brandId = { in: brandsList };
     } else {
       whereClause.brand = {
-        name: { in: brandsList, mode: "insensitive" }
+        name: { in: brandsList, mode: "insensitive" },
       };
     }
   }
 
   // Fetch all filtered products, categories (active), brands (active), and footerData in concurrent queries
-  const [productsRes, categoriesRes, brandsRes, footerData] = await Promise.all([
-    prisma.product.findMany({
-      where: whereClause,
-      select: {
-        id: true,
-        slug: true,
-        name: true,
-        description: true,
-        price: true,
-        purchasePrice: true,
-        images: true,
-        team: true,
-        category: true,
-        brandId: true,
-        categoryId: true,
-        subcategoryId: true,
-        createdAt: true,
-        isFeatured: true,
-        featuredOrder: true,
-        isPublished: true,
-        trackStock: true,
-        brand: true,
-        categoryRel: true,
-        subcategory: true,
-        discount: true,
-        variants: {
+  const [productsRes, categoriesRes, brandsRes, footerData] = await Promise.all(
+    [
+      prisma.product
+        .findMany({
+          where: whereClause,
           select: {
             id: true,
-            size: true,
-            color: true,
-            colorCode: true,
-            sku: true,
-            stock: true,
-            order: true,
-          }
-        }
-      },
-      orderBy: { createdAt: "desc" },
-    }).catch((e) => {
-      console.error("Failed to fetch products:", e);
-      return [];
-    }),
-    prisma.category.findMany({
-      where: { active: true },
-      include: {
-        subcategories: {
+            slug: true,
+            name: true,
+            description: true,
+            price: true,
+            purchasePrice: true,
+            images: true,
+            team: true,
+            category: true,
+            brandId: true,
+            categoryId: true,
+            subcategoryId: true,
+            createdAt: true,
+            isFeatured: true,
+            featuredOrder: true,
+            isPublished: true,
+            trackStock: true,
+            brand: true,
+            categoryRel: true,
+            subcategory: true,
+            discount: true,
+            variants: {
+              select: {
+                id: true,
+                size: true,
+                color: true,
+                colorCode: true,
+                sku: true,
+                stock: true,
+                order: true,
+                pricingMatrix: {
+                  select: { basePrice: true },
+                },
+              },
+            },
+          },
+          orderBy: { createdAt: "desc" },
+        })
+        .catch((e) => {
+          console.error("Failed to fetch products:", e);
+          return [];
+        }),
+      prisma.category
+        .findMany({
+          where: { active: true },
+          include: {
+            subcategories: {
+              where: { active: true },
+              orderBy: { name: "asc" },
+            },
+          },
+          orderBy: { name: "asc" },
+        })
+        .catch((e) => {
+          console.error("Failed to fetch categories:", e);
+          return [];
+        }),
+      prisma.brand
+        .findMany({
           where: { active: true },
           orderBy: { name: "asc" },
-        },
-      },
-      orderBy: { name: "asc" },
-    }).catch((e) => {
-      console.error("Failed to fetch categories:", e);
-      return [];
-    }),
-    prisma.brand.findMany({
-      where: { active: true },
-      orderBy: { name: "asc" },
-    }).catch((e) => {
-      console.error("Failed to fetch brands:", e);
-      return [];
-    }),
-    getFooterData().catch((e) => {
-      console.error("Failed to fetch footer data:", e);
-      return null;
-    }),
-  ]);
+        })
+        .catch((e) => {
+          console.error("Failed to fetch brands:", e);
+          return [];
+        }),
+      getFooterData().catch((e) => {
+        console.error("Failed to fetch footer data:", e);
+        return null;
+      }),
+    ],
+  );
 
   // Sort product variants by the order field in place
   const rawProducts = productsRes || [];
@@ -172,8 +202,10 @@ export default async function ProductsPage({
 
   // Calculate the global min/max price range strictly for the filtered set (used to set the bounds of the sidebar price range UI)
   const allFinalPrices = priceFilteredProducts.map(getFinalPrice);
-  const globalMinPrice = allFinalPrices.length > 0 ? Math.min(...allFinalPrices) : 0;
-  const globalMaxPrice = allFinalPrices.length > 0 ? Math.max(...allFinalPrices) : 10000;
+  const globalMinPrice =
+    allFinalPrices.length > 0 ? Math.min(...allFinalPrices) : 0;
+  const globalMaxPrice =
+    allFinalPrices.length > 0 ? Math.max(...allFinalPrices) : 10000;
 
   // Apply selected Sorting options
   const sortedProducts = [...priceFilteredProducts];
@@ -191,9 +223,17 @@ export default async function ProductsPage({
       return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
     });
 
-    regularProducts.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    regularProducts.sort(
+      (a, b) =>
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+    );
 
-    sortedProducts.splice(0, sortedProducts.length, ...featuredProducts, ...regularProducts);
+    sortedProducts.splice(
+      0,
+      sortedProducts.length,
+      ...featuredProducts,
+      ...regularProducts,
+    );
   } else {
     // Mixed sorting for custom sort choices (e.g. price) or general catalog list
     if (sortParam === "price-asc") {
@@ -202,7 +242,10 @@ export default async function ProductsPage({
       sortedProducts.sort((a, b) => getFinalPrice(b) - getFinalPrice(a));
     } else {
       // default: newest
-      sortedProducts.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      sortedProducts.sort(
+        (a, b) =>
+          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+      );
     }
   }
 
@@ -210,31 +253,39 @@ export default async function ProductsPage({
   const totalCount = sortedProducts.length;
   const totalPages = Math.ceil(totalCount / limit);
   const currentPage = Math.min(Math.max(1, pageParam), totalPages || 1);
-  const paginatedProducts = sortedProducts.slice((currentPage - 1) * limit, currentPage * limit);
+  const paginatedProducts = sortedProducts.slice(
+    (currentPage - 1) * limit,
+    currentPage * limit,
+  );
 
   return (
     <main className="min-h-screen bg-white dark:bg-zinc-950">
       <Header />
-      
-      <Suspense fallback={
-        <div className="w-full bg-slate-50 dark:bg-zinc-950 py-6 animate-pulse border-t border-slate-200 dark:border-zinc-800 min-h-[600px]">
-          <div className="container mx-auto px-4 md:px-0">
-            <div className="h-7 bg-slate-200 dark:bg-zinc-800 w-48 mb-10" />
-            <div className="flex gap-2 relative items-start">
-              <div className="hidden md:block w-72 h-[500px] bg-slate-200 dark:bg-zinc-800 rounded-none flex-shrink-0" />
-              <div className="flex-1 grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2 md:gap-4">
-                {[...Array(8)].map((_, idx) => (
-                  <div key={idx} className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 h-96 rounded-none p-4 space-y-4">
-                    <div className="aspect-[3/4] bg-slate-100 dark:bg-zinc-800 w-full rounded-none" />
-                    <div className="h-4 bg-slate-200 dark:bg-zinc-800 w-2/3" />
-                    <div className="h-3 bg-slate-200 dark:bg-zinc-800 w-1/2" />
-                  </div>
-                ))}
+
+      <Suspense
+        fallback={
+          <div className="w-full bg-slate-50 dark:bg-zinc-950 py-6 animate-pulse border-t border-slate-200 dark:border-zinc-800 min-h-[600px]">
+            <div className="container mx-auto px-4 md:px-0">
+              <div className="h-7 bg-slate-200 dark:bg-zinc-800 w-48 mb-10" />
+              <div className="flex gap-2 relative items-start">
+                <div className="hidden md:block w-72 h-[500px] bg-slate-200 dark:bg-zinc-800 rounded-none flex-shrink-0" />
+                <div className="flex-1 grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2 md:gap-4">
+                  {[...Array(8)].map((_, idx) => (
+                    <div
+                      key={idx}
+                      className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 h-96 rounded-none p-4 space-y-4"
+                    >
+                      <div className="aspect-[3/4] bg-slate-100 dark:bg-zinc-800 w-full rounded-none" />
+                      <div className="h-4 bg-slate-200 dark:bg-zinc-800 w-2/3" />
+                      <div className="h-3 bg-slate-200 dark:bg-zinc-800 w-1/2" />
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      }>
+        }
+      >
         <ProductsClient
           products={paginatedProducts as any}
           categories={categoriesRes || []}

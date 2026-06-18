@@ -3,7 +3,13 @@
 import { useState, useMemo, useEffect } from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { ChevronDown, ChevronUp, SlidersHorizontal, X, Check } from "lucide-react";
+import {
+  ChevronDown,
+  ChevronUp,
+  SlidersHorizontal,
+  X,
+  Check,
+} from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import ProductCard from "@/components/ProductCard";
 
@@ -49,7 +55,11 @@ interface Product {
     value: number;
     active: boolean;
   } | null;
-  variants?: any[];
+  variants?: {
+    size: string;
+    stock: number;
+    pricingMatrix?: { basePrice?: number | string } | null;
+  }[];
 }
 
 interface ProductsClientProps {
@@ -70,16 +80,26 @@ interface ProductsClientProps {
 }
 
 // Helper to calculate product final price after active discount
+// Uses the lowest variant price if variant pricing is available
 const getFinalPrice = (product: Product): number => {
-  let finalPrice = product.price;
+  const variantPrices = product.variants
+    ?.map((v) =>
+      v.pricingMatrix?.basePrice ? Number(v.pricingMatrix.basePrice) : null,
+    )
+    .filter((p): p is number => p !== null);
+
+  const basePrice = variantPrices?.length
+    ? Math.min(...variantPrices)
+    : product.price;
+
   if (product.discount && product.discount.active) {
     if (product.discount.discountType === "PERCENTAGE") {
-      finalPrice = product.price - (product.price * (product.discount.value / 100));
+      return Math.round(basePrice - basePrice * (product.discount.value / 100));
     } else {
-      finalPrice = Math.max(0, product.price - product.discount.value);
+      return Math.round(Math.max(0, basePrice - product.discount.value));
     }
   }
-  return Math.round(finalPrice);
+  return Math.round(basePrice);
 };
 
 export default function ProductsClient({
@@ -103,32 +123,36 @@ export default function ProductsClient({
   const searchParams = useSearchParams();
 
   // State initialized directly with initial props for perfect server-client sync!
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(() => {
-    if (initialCategory) {
-      const foundCat = categories.find(
-        (c) =>
-          c.id === initialCategory ||
-          c.name.toLowerCase() === initialCategory.toLowerCase()
-      );
-      return foundCat ? foundCat.id : initialCategory;
-    }
-    return null;
-  });
-
-  const [selectedSubcategory, setSelectedSubcategory] = useState<string | null>(() => {
-    if (initialSubcategory) {
-      // Find subcategory ID if name was provided
-      const foundSub = categories
-        .flatMap((c) => c.subcategories)
-        .find(
-          (s) =>
-            s.id === initialSubcategory ||
-            s.name.toLowerCase() === initialSubcategory.toLowerCase()
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(
+    () => {
+      if (initialCategory) {
+        const foundCat = categories.find(
+          (c) =>
+            c.id === initialCategory ||
+            c.name.toLowerCase() === initialCategory.toLowerCase(),
         );
-      return foundSub ? foundSub.id : initialSubcategory;
-    }
-    return null;
-  });
+        return foundCat ? foundCat.id : initialCategory;
+      }
+      return null;
+    },
+  );
+
+  const [selectedSubcategory, setSelectedSubcategory] = useState<string | null>(
+    () => {
+      if (initialSubcategory) {
+        // Find subcategory ID if name was provided
+        const foundSub = categories
+          .flatMap((c) => c.subcategories)
+          .find(
+            (s) =>
+              s.id === initialSubcategory ||
+              s.name.toLowerCase() === initialSubcategory.toLowerCase(),
+          );
+        return foundSub ? foundSub.id : initialSubcategory;
+      }
+      return null;
+    },
+  );
 
   const [selectedBrands, setSelectedBrands] = useState<string[]>(() => {
     if (initialBrand) {
@@ -136,8 +160,7 @@ export default function ProductsClient({
       return brandsList.map((bParam) => {
         const foundBrand = brands.find(
           (b) =>
-            b.id === bParam ||
-            b.name.toLowerCase() === bParam.toLowerCase()
+            b.id === bParam || b.name.toLowerCase() === bParam.toLowerCase(),
         );
         return foundBrand ? foundBrand.id : bParam;
       });
@@ -149,14 +172,16 @@ export default function ProductsClient({
   const [maxPriceInput, setMaxPriceInput] = useState<string>(initialMaxPrice);
   const [sortBy, setSortBy] = useState<string>(initialSort);
   const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
-  
+
   // Expand category by default if selected category is active
-  const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>(() => {
+  const [expandedCategories, setExpandedCategories] = useState<
+    Record<string, boolean>
+  >(() => {
     if (initialCategory) {
       const foundCat = categories.find(
         (c) =>
           c.id === initialCategory ||
-          c.name.toLowerCase() === initialCategory.toLowerCase()
+          c.name.toLowerCase() === initialCategory.toLowerCase(),
       );
       if (foundCat) {
         return { [foundCat.id]: true };
@@ -171,7 +196,7 @@ export default function ProductsClient({
       const foundCat = categories.find(
         (c) =>
           c.id === initialCategory ||
-          c.name.toLowerCase() === initialCategory.toLowerCase()
+          c.name.toLowerCase() === initialCategory.toLowerCase(),
       );
       setSelectedCategory(foundCat ? foundCat.id : initialCategory);
       if (foundCat) {
@@ -187,7 +212,7 @@ export default function ProductsClient({
         .find(
           (s) =>
             s.id === initialSubcategory ||
-            s.name.toLowerCase() === initialSubcategory.toLowerCase()
+            s.name.toLowerCase() === initialSubcategory.toLowerCase(),
         );
       setSelectedSubcategory(foundSub ? foundSub.id : initialSubcategory);
     } else {
@@ -199,8 +224,7 @@ export default function ProductsClient({
       const brandIds = brandsList.map((bParam) => {
         const foundBrand = brands.find(
           (b) =>
-            b.id === bParam ||
-            b.name.toLowerCase() === bParam.toLowerCase()
+            b.id === bParam || b.name.toLowerCase() === bParam.toLowerCase(),
         );
         return foundBrand ? foundBrand.id : bParam;
       });
@@ -212,7 +236,16 @@ export default function ProductsClient({
     setMinPriceInput(initialMinPrice);
     setMaxPriceInput(initialMaxPrice);
     setSortBy(initialSort);
-  }, [initialCategory, initialBrand, initialSubcategory, initialMinPrice, initialMaxPrice, initialSort, categories, brands]);
+  }, [
+    initialCategory,
+    initialBrand,
+    initialSubcategory,
+    initialMinPrice,
+    initialMaxPrice,
+    initialSort,
+    categories,
+    brands,
+  ]);
 
   // Helper to update URL query params seamlessly
   const updateQueryParams = (updates: Record<string, string | undefined>) => {
@@ -247,7 +280,7 @@ export default function ProductsClient({
     const updatedBrands = selectedBrands.includes(brandId)
       ? selectedBrands.filter((id) => id !== brandId)
       : [...selectedBrands, brandId];
-    
+
     setSelectedBrands(updatedBrands);
 
     // Map brand IDs back to names for neat URL query readability
@@ -275,7 +308,11 @@ export default function ProductsClient({
     if (selectedCategory === categoryId) {
       setSelectedCategory(null);
       setSelectedSubcategory(null);
-      updateQueryParams({ category: undefined, subcategory: undefined, page: undefined });
+      updateQueryParams({
+        category: undefined,
+        subcategory: undefined,
+        page: undefined,
+      });
     } else {
       setSelectedCategory(categoryId);
       setSelectedSubcategory(null);
@@ -292,7 +329,10 @@ export default function ProductsClient({
   };
 
   // Select Subcategory
-  const handleSelectSubcategory = (subcategoryId: string | null, e: React.MouseEvent) => {
+  const handleSelectSubcategory = (
+    subcategoryId: string | null,
+    e: React.MouseEvent,
+  ) => {
     e.stopPropagation(); // Prevent category selection trigger
     if (selectedSubcategory === subcategoryId) {
       setSelectedSubcategory(null);
@@ -302,7 +342,10 @@ export default function ProductsClient({
       const subObj = categories
         .flatMap((c) => c.subcategories)
         .find((s) => s.id === subcategoryId);
-      updateQueryParams({ subcategory: subObj ? subObj.name.toLowerCase() : undefined, page: undefined });
+      updateQueryParams({
+        subcategory: subObj ? subObj.name.toLowerCase() : undefined,
+        page: undefined,
+      });
     }
   };
 
@@ -326,7 +369,14 @@ export default function ProductsClient({
       initialMaxPrice !== "" ||
       initialSort !== "newest"
     );
-  }, [selectedCategory, selectedSubcategory, selectedBrands, initialMinPrice, initialMaxPrice, initialSort]);
+  }, [
+    selectedCategory,
+    selectedSubcategory,
+    selectedBrands,
+    initialMinPrice,
+    initialMaxPrice,
+    initialSort,
+  ]);
 
   // Products are already fully filtered, sorted and sliced on the server component!
   const filteredProducts = products;
@@ -334,7 +384,9 @@ export default function ProductsClient({
   // Active Category/Subcategory text for heading
   const activeHeadingText = useMemo(() => {
     if (selectedSubcategory) {
-      const subObj = categories.flatMap((c) => c.subcategories).find((s) => s.id === selectedSubcategory);
+      const subObj = categories
+        .flatMap((c) => c.subcategories)
+        .find((s) => s.id === selectedSubcategory);
       if (subObj) return subObj.name;
     }
     if (selectedCategory) {
@@ -353,13 +405,13 @@ export default function ProductsClient({
     } else {
       let start = Math.max(1, currentPage - 2);
       let end = Math.min(totalPages, currentPage + 2);
-      
+
       if (start === 1) {
         end = maxVisible;
       } else if (end === totalPages) {
         start = totalPages - maxVisible + 1;
       }
-      
+
       for (let i = start; i <= end; i++) {
         pages.push(i);
       }
@@ -370,7 +422,6 @@ export default function ProductsClient({
   return (
     <div className="w-full bg-slate-50 dark:bg-zinc-950 py-6 border-t border-slate-200 dark:border-zinc-800">
       <div className="container mx-auto px-4 md:px-0">
-
         {/* Banner/Heading Block */}
         <div className="mb-8 md:mb-10 text-left border-b border-slate-200 dark:border-zinc-900 pb-6 flex flex-col md:flex-row md:items-end md:justify-between gap-4">
           <div>
@@ -391,7 +442,9 @@ export default function ProductsClient({
 
             {/* Desktop Sort Selector */}
             <div className="flex items-center gap-2 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 px-3 py-1.5 h-10 w-full md:w-56 rounded-none">
-              <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider">Sort:</span>
+              <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider">
+                Sort:
+              </span>
               <select
                 value={sortBy}
                 onChange={(e) => {
@@ -410,10 +463,8 @@ export default function ProductsClient({
         </div>
 
         <div className="flex gap-2 relative items-start">
-
           {/* LEFT SIDEBAR: FILTERS (DESKTOP) */}
           <aside className="hidden md:block w-72 flex-shrink-0 sticky top-24 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 p-6 space-y-6 rounded-none">
-
             {/* Header / Clear All */}
             <div className="flex items-center justify-between pb-4 border-b border-slate-100 dark:border-zinc-800">
               <h3 className="text-sm font-black text-slate-900 dark:text-zinc-50 flex items-center gap-2">
@@ -432,7 +483,9 @@ export default function ProductsClient({
 
             {/* Categories & Subcategories Filter */}
             <div className="space-y-3">
-              <h4 className="text-sm font-bold text-slate-900 dark:text-zinc-50">Categories</h4>
+              <h4 className="text-sm font-bold text-slate-900 dark:text-zinc-50">
+                Categories
+              </h4>
               <div className="space-y-1">
                 {categories.map((cat) => {
                   const isCatSelected = selectedCategory === cat.id;
@@ -456,7 +509,11 @@ export default function ProductsClient({
                             }}
                             className="p-0.5 hover:bg-slate-100 dark:hover:bg-zinc-700 rounded-none transition-colors"
                           >
-                            {isExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                            {isExpanded ? (
+                              <ChevronUp className="w-3.5 h-3.5" />
+                            ) : (
+                              <ChevronDown className="w-3.5 h-3.5" />
+                            )}
                           </button>
                         )}
                       </div>
@@ -465,11 +522,14 @@ export default function ProductsClient({
                       {isExpanded && cat.subcategories.length > 0 && (
                         <div className="pl-4 pr-1 py-1 space-y-1 border-l border-slate-100 dark:border-zinc-800 ml-3">
                           {cat.subcategories.map((sub) => {
-                            const isSubSelected = selectedSubcategory === sub.id;
+                            const isSubSelected =
+                              selectedSubcategory === sub.id;
                             return (
                               <button
                                 key={sub.id}
-                                onClick={(e) => handleSelectSubcategory(sub.id, e)}
+                                onClick={(e) =>
+                                  handleSelectSubcategory(sub.id, e)
+                                }
                                 className={`w-full text-left px-3 py-1.5 text-[11px] font-bold transition-colors hover:text-primary ${
                                   isSubSelected
                                     ? "text-primary bg-primary/5 border-r border-primary"
@@ -490,10 +550,14 @@ export default function ProductsClient({
 
             {/* Price Filter */}
             <div className="space-y-3 pt-4 border-t border-slate-100 dark:border-zinc-800">
-              <h4 className="text-sm font-bold text-slate-900 dark:text-zinc-50">Price Range (৳)</h4>
+              <h4 className="text-sm font-bold text-slate-900 dark:text-zinc-50">
+                Price Range (৳)
+              </h4>
               <div className="flex items-center gap-2">
                 <div className="flex-1 flex items-center bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 px-2 py-1.5 h-9 rounded-none">
-                  <span className="text-[10px] font-bold text-slate-400 mr-1.5">Min:</span>
+                  <span className="text-[10px] font-bold text-slate-400 mr-1.5">
+                    Min:
+                  </span>
                   <input
                     type="number"
                     value={minPriceInput}
@@ -506,7 +570,9 @@ export default function ProductsClient({
                 </div>
                 <span className="text-slate-400 text-xs font-bold">—</span>
                 <div className="flex-1 flex items-center bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 px-2 py-1.5 h-9 rounded-none">
-                  <span className="text-[10px] font-bold text-slate-400 mr-1.5">Max:</span>
+                  <span className="text-[10px] font-bold text-slate-400 mr-1.5">
+                    Max:
+                  </span>
                   <input
                     type="number"
                     value={maxPriceInput}
@@ -523,7 +589,9 @@ export default function ProductsClient({
             {/* Brands Filter */}
             {brands.length > 0 && (
               <div className="space-y-3 pt-4 border-t border-slate-100 dark:border-zinc-800">
-                <h4 className="text-sm font-bold text-slate-900 dark:text-zinc-50">Brands</h4>
+                <h4 className="text-sm font-bold text-slate-900 dark:text-zinc-50">
+                  Brands
+                </h4>
 
                 <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
                   {brands.map((brand) => {
@@ -541,7 +609,9 @@ export default function ProductsClient({
                               : "border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 group-hover:border-slate-400"
                           }`}
                         >
-                          {isBrandChecked && <Check className="w-3.5 h-3.5 stroke-[3]" />}
+                          {isBrandChecked && (
+                            <Check className="w-3.5 h-3.5 stroke-[3]" />
+                          )}
                         </div>
                         <span className="text-xs font-bold select-none">
                           {brand.name}
@@ -569,7 +639,11 @@ export default function ProductsClient({
                   <div className="mt-12 flex items-center justify-center gap-1.5 border-t border-slate-200 dark:border-zinc-900 pt-8">
                     <button
                       disabled={currentPage === 1}
-                      onClick={() => updateQueryParams({ page: (currentPage - 1).toString() })}
+                      onClick={() =>
+                        updateQueryParams({
+                          page: (currentPage - 1).toString(),
+                        })
+                      }
                       className="px-3.5 py-2 border border-slate-200 dark:border-zinc-800 text-xs font-bold text-slate-800 dark:text-zinc-200 bg-white dark:bg-zinc-900 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-50 dark:hover:bg-zinc-800 transition-colors rounded-none"
                     >
                       Prev
@@ -577,7 +651,9 @@ export default function ProductsClient({
                     {getPageNumbers().map((p) => (
                       <button
                         key={p}
-                        onClick={() => updateQueryParams({ page: p.toString() })}
+                        onClick={() =>
+                          updateQueryParams({ page: p.toString() })
+                        }
                         className={`px-3.5 py-2 text-xs font-bold transition-all border rounded-none ${
                           currentPage === p
                             ? "bg-primary border-primary text-white"
@@ -589,7 +665,11 @@ export default function ProductsClient({
                     ))}
                     <button
                       disabled={currentPage === totalPages}
-                      onClick={() => updateQueryParams({ page: (currentPage + 1).toString() })}
+                      onClick={() =>
+                        updateQueryParams({
+                          page: (currentPage + 1).toString(),
+                        })
+                      }
                       className="px-3.5 py-2 border border-slate-200 dark:border-zinc-800 text-xs font-bold text-slate-800 dark:text-zinc-200 bg-white dark:bg-zinc-900 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-50 dark:hover:bg-zinc-800 transition-colors rounded-none"
                     >
                       Next
@@ -606,7 +686,8 @@ export default function ProductsClient({
                   No matches found
                 </h3>
                 <p className="text-slate-500 dark:text-zinc-400 mt-1 text-sm max-w-xs font-medium">
-                  We couldn't find any products matching your active filter criteria.
+                  We couldn't find any products matching your active filter
+                  criteria.
                 </p>
                 {isAnyFilterActive && (
                   <button
@@ -669,10 +750,11 @@ export default function ProductsClient({
 
               {/* Mobile Filter Scrollable Body */}
               <div className="flex-1 overflow-y-auto p-4 space-y-6">
-
                 {/* Category Filter */}
                 <div className="space-y-3">
-                  <h4 className="text-xs font-black uppercase tracking-widest text-slate-400">Categories</h4>
+                  <h4 className="text-xs font-black uppercase tracking-widest text-slate-400">
+                    Categories
+                  </h4>
                   <div className="space-y-1">
                     {categories.map((cat) => {
                       const isCatSelected = selectedCategory === cat.id;
@@ -696,7 +778,11 @@ export default function ProductsClient({
                                 }}
                                 className="p-0.5 hover:bg-slate-100 dark:hover:bg-zinc-700 rounded-none transition-colors"
                               >
-                                {isExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                                {isExpanded ? (
+                                  <ChevronUp className="w-3.5 h-3.5" />
+                                ) : (
+                                  <ChevronDown className="w-3.5 h-3.5" />
+                                )}
                               </button>
                             )}
                           </div>
@@ -704,7 +790,8 @@ export default function ProductsClient({
                           {isExpanded && cat.subcategories.length > 0 && (
                             <div className="pl-4 pr-1 py-1 space-y-1 border-l border-slate-100 dark:border-zinc-800 ml-3">
                               {cat.subcategories.map((sub) => {
-                                const isSubSelected = selectedSubcategory === sub.id;
+                                const isSubSelected =
+                                  selectedSubcategory === sub.id;
                                 return (
                                   <button
                                     key={sub.id}
@@ -732,10 +819,14 @@ export default function ProductsClient({
 
                 {/* Price Filter */}
                 <div className="space-y-3 pt-4 border-t border-slate-100 dark:border-zinc-800">
-                  <h4 className="text-xs font-black uppercase tracking-widest text-slate-400">Price Range (৳)</h4>
+                  <h4 className="text-xs font-black uppercase tracking-widest text-slate-400">
+                    Price Range (৳)
+                  </h4>
                   <div className="flex items-center gap-2">
                     <div className="flex-1 flex items-center bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 px-2 py-1.5 h-9 rounded-none">
-                      <span className="text-[10px] font-bold text-slate-400 mr-1.5">Min:</span>
+                      <span className="text-[10px] font-bold text-slate-400 mr-1.5">
+                        Min:
+                      </span>
                       <input
                         type="number"
                         value={minPriceInput}
@@ -748,7 +839,9 @@ export default function ProductsClient({
                     </div>
                     <span className="text-slate-400 text-xs font-bold">—</span>
                     <div className="flex-1 flex items-center bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 px-2 py-1.5 h-9 rounded-none">
-                      <span className="text-[10px] font-bold text-slate-400 mr-1.5">Max:</span>
+                      <span className="text-[10px] font-bold text-slate-400 mr-1.5">
+                        Max:
+                      </span>
                       <input
                         type="number"
                         value={maxPriceInput}
@@ -765,10 +858,14 @@ export default function ProductsClient({
                 {/* Brands Filter */}
                 {brands.length > 0 && (
                   <div className="space-y-3 pt-4 border-t border-slate-100 dark:border-zinc-800">
-                    <h4 className="text-xs font-black uppercase tracking-widest text-slate-400">Brands</h4>
+                    <h4 className="text-xs font-black uppercase tracking-widest text-slate-400">
+                      Brands
+                    </h4>
                     <div className="space-y-1.5">
                       {brands.map((brand) => {
-                        const isBrandChecked = selectedBrands.includes(brand.id);
+                        const isBrandChecked = selectedBrands.includes(
+                          brand.id,
+                        );
                         return (
                           <label
                             key={brand.id}
@@ -782,7 +879,9 @@ export default function ProductsClient({
                                   : "border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-900"
                               }`}
                             >
-                              {isBrandChecked && <Check className="w-3.5 h-3.5 stroke-[3]" />}
+                              {isBrandChecked && (
+                                <Check className="w-3.5 h-3.5 stroke-[3]" />
+                              )}
                             </div>
                             <span className="text-xs font-bold select-none">
                               {brand.name}
@@ -804,12 +903,10 @@ export default function ProductsClient({
                   Apply Filters ({totalCount})
                 </button>
               </div>
-
             </motion.div>
           </>
         )}
       </AnimatePresence>
-
     </div>
   );
 }

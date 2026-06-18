@@ -11,7 +11,11 @@ interface ProductCardProps {
     price: number;
     images: string[];
     team: string;
-    variants: any[];
+    variants: {
+      size: string;
+      stock: number;
+      pricingMatrix?: { basePrice?: number | string } | null;
+    }[];
     trackStock?: boolean | null;
     discount?: {
       active: boolean;
@@ -24,20 +28,50 @@ interface ProductCardProps {
 
 
 export default function ProductCard({ product }: ProductCardProps) {
-  let finalPrice = product.price;
-  let isDiscounted = false;
-
-  if (product.discount && product.discount.active) {
-    isDiscounted = true;
-    if (product.discount.discountType === "PERCENTAGE") {
-      finalPrice = roundPrice(product.price - (product.price * (product.discount.value / 100)));
-    } else {
-      finalPrice = roundPrice(Math.max(0, product.price - product.discount.value));
-    }
-  }
-
   const totalStock = product.variants ? product.variants.reduce((acc, v) => acc + (v.stock || 0), 0) : 0;
   const isOutOfStock = !!(product.trackStock && totalStock <= 0);
+
+  // Compute variant price range
+  const variantPrices = product.variants
+    ?.map((v) => v.pricingMatrix?.basePrice ? Number(v.pricingMatrix.basePrice) : null)
+    .filter((p): p is number => p !== null);
+
+  const hasVariantPricing = variantPrices && variantPrices.length > 0;
+
+  let displayPrice: string;
+  let isDiscounted = false;
+
+  if (hasVariantPricing) {
+    const applyDiscount = (price: number) => {
+      if (product.discount && product.discount.active) {
+        isDiscounted = true;
+        if (product.discount.discountType === "PERCENTAGE") {
+          return roundPrice(price - (price * (product.discount.value / 100)));
+        }
+        return roundPrice(Math.max(0, price - product.discount.value));
+      }
+      return roundPrice(price);
+    };
+
+    const finalPrices = variantPrices.map(applyDiscount);
+    const lowestPrice = Math.min(...finalPrices);
+    const highestPrice = Math.max(...finalPrices);
+
+    displayPrice = lowestPrice === highestPrice
+      ? formatBDT(lowestPrice)
+      : `${formatBDT(lowestPrice)} - ${formatBDT(highestPrice)}`;
+  } else {
+    let finalPrice = product.price;
+    if (product.discount && product.discount.active) {
+      isDiscounted = true;
+      if (product.discount.discountType === "PERCENTAGE") {
+        finalPrice = roundPrice(product.price - (product.price * (product.discount.value / 100)));
+      } else {
+        finalPrice = roundPrice(Math.max(0, product.price - product.discount.value));
+      }
+    }
+    displayPrice = formatBDT(finalPrice);
+  }
 
   return (
     <Link href={`/product/${product.slug || product.id}`} className="group">
@@ -87,13 +121,13 @@ export default function ProductCard({ product }: ProductCardProps) {
               </span>
             ) : (
               <>
-                {isDiscounted && (
+                {isDiscounted && !hasVariantPricing && (
                   <span className="text-zinc-400 dark:text-zinc-500 font-medium text-sm line-through">
                     {formatBDT(product.price)}
                   </span>
                 )}
                 <span className="text-[#800020] font-black text-base md:text-lg">
-                  {formatBDT(finalPrice)}
+                  {displayPrice}
                 </span>
               </>
             )}
@@ -103,19 +137,6 @@ export default function ProductCard({ product }: ProductCardProps) {
           </h3>
 
         </div>
-
-        {/* Add to Bag */}
-        {/* <div className="px-3 pb-3 md:px-4 md:pb-4 mt-auto">
-          <AddToBagButton product={{
-            id: product.id,
-            name: product.name,
-            price: finalPrice,
-            originalPrice: isDiscounted ? product.price : undefined,
-            team: product.team,
-            image: product.images[0] || "",
-            variants: product.variants
-          }} />
-        </div> */}
       </div>
     </Link>
   );
