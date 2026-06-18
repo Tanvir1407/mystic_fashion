@@ -1,3 +1,0 @@
--- AlterTable
-ALTER TABLE "Order" ADD COLUMN     "deliveryCharge" DOUBLE PRECISION NOT NULL DEFAULT 0,
-ADD COLUMN     "isStorePickup" BOOLEAN NOT NULL DEFAULT false;
