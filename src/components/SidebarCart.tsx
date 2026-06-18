@@ -73,35 +73,23 @@ export default function SidebarCart() {
             {/* Cart Items */}
             <div className="flex-1 overflow-y-auto p-6 space-y-6">
               {items.length === 0 ? (
-                <div className="h-full flex flex-col items-center justify-center text-center space-y-8 px-4 pb-10">
-                  <div className="relative">
-                    {/* Soft background glow */}
-                    <div className="absolute inset-0 bg-primary/5 rounded-full blur-2xl transform scale-150"></div>
+                <div className="h-full flex flex-col items-center justify-center text-center gap-6 px-6 pb-10">
+                  <ShoppingBag className="w-10 h-10 text-slate-200 dark:text-zinc-700" strokeWidth={1.2} />
 
-                    {/* Icon Container */}
-                    <div className="w-32 h-32 bg-white dark:bg-zinc-900 border-2 border-dashed border-slate-200 dark:border-zinc-800 rounded-[2rem] rotate-3 flex items-center justify-center relative z-10 shadow-sm transition-transform hover:rotate-0 duration-500">
-                      <div className="-rotate-3 flex flex-col items-center">
-                        <ShoppingBag className="w-12 h-12 text-slate-300 mb-2" strokeWidth={1} />
-                        <div className="w-6 h-1 bg-primary/20 rounded-full"></div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="space-y-3 z-10 relative">
-                    <h3 className="text-2xl font-black uppercase tracking-tight text-zinc-900 dark:text-white">
-                      Your Bag is Empty
+                  <div className="space-y-2">
+                    <h3 className="text-base font-medium text-zinc-700 dark:text-zinc-300">
+                      Your bag is empty
                     </h3>
-                    <p className="text-slate-500 text-sm max-w-[240px] mx-auto leading-relaxed">
-                      Looks like you haven't made your choice yet. Let's find some premium gear for you.
+                    <p className="text-slate-400 text-xs leading-relaxed max-w-[200px] mx-auto">
+                      Add items to your cart and they'll appear here.
                     </p>
                   </div>
 
                   <button
                     onClick={toggleCart}
-                    className="relative z-10  dark:bg-white text-white dark:text-zinc-900 px-8 py-4 rounded-xl font-bold uppercase tracking-widest text-xs bg-primary transition-all shadow-xl shadow-black/5 active:scale-[0.98] overflow-hidden group"
+                    className="text-xs font-medium text-slate-500 border border-slate-200 dark:border-zinc-700 px-5 py-2 hover:border-primary hover:text-primary transition-colors"
                   >
-                    <span className="relative z-10 text-white transition-colors">Start Browsing</span>
-                    <div className="absolute inset-0 bg-primary translate-y-full group-hover:translate-y-0 transition-transform duration-300"></div>
+                    Start Browsing
                   </button>
                 </div>
               ) : (

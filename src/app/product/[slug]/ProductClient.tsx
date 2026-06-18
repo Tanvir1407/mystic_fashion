@@ -330,22 +330,22 @@ export default function ProductClient({ product, sizeChartData, deliveryData, re
             <div className="flex items-center gap-4 mb-3">
             </div>
 
-            <h1 className="text-2xl font-black text-zinc-900 mb-2  leading-[1.1] ">
+            <h1 className="text-xl md:text-2xl font-semibold text-zinc-900 mb-1.5 leading-snug">
               {product.name}
             </h1>
-            <p className="text-slate-500 font-medium mb-6 uppercase tracking-wider text-sm">{product.category} &bull; {product.team}</p>
+            <p className="text-slate-400 text-xs uppercase tracking-widest mb-5">{product.category} &bull; {product.team}</p>
 
-            <div className="flex items-end gap-4 mb-8">
-              <p className="text-3xl md:text-4xl font-black text-[#800020]">{formatBDT(finalPrice)}</p>
+            <div className="flex items-baseline gap-3 mb-7">
+              <p className="text-2xl md:text-3xl font-semibold text-[#800020]">{formatBDT(finalPrice)}</p>
               {isDiscounted ? (
-                <p className="text-lg font-bold text-zinc-400 line-through mb-1.5">{formatBDT(variantPrice)}</p>
+                <p className="text-sm text-zinc-400 line-through">{formatBDT(variantPrice)}</p>
               ) : null}
             </div>
 
             {/* Color Selector */}
             {availableColors.length > 0 && (
               <div className="mb-6">
-                <h3 className="font-semibold text-zinc-900 text-xs uppercase tracking-widest mb-3">Select {colorAttributeName}</h3>
+                <h3 className="font-medium text-zinc-500 text-xs uppercase tracking-widest mb-3">Select {colorAttributeName}</h3>
                 <div className="flex flex-wrap gap-2">
                   {availableColors.map((col) => {
                     const isAvailableForSelectedSize = selectedSize
@@ -377,7 +377,7 @@ export default function ProductClient({ product, sizeChartData, deliveryData, re
             {!isSizeLess && (
               <div className="mb-8">
                 <div className="flex justify-between items-center mb-3">
-                  <h3 className="font-semibold text-zinc-900 text-xs uppercase tracking-widest">Select {sizeAttributeName}</h3>
+                  <h3 className="font-medium text-zinc-500 text-xs uppercase tracking-widest">Select {sizeAttributeName}</h3>
                 </div>
 
                 {product.variants.length === 0 ? (
@@ -425,28 +425,28 @@ export default function ProductClient({ product, sizeChartData, deliveryData, re
 
             {/* Quantity and Action Buttons */}
             <div className="mb-10">
-              <h3 className="font-bold text-zinc-900 text-sm mb-3">Quantity</h3>
+              <h3 className="font-medium text-zinc-500 text-xs uppercase tracking-widest mb-3">Quantity</h3>
 
-              <div className="flex flex-col gap-3">
-                <div className="flex items-center gap-3">
+              <div className="flex flex-col gap-2.5">
+                <div className="flex items-center gap-2.5">
                   {/* Quantity Selector */}
-                  <div className="flex items-center bg-zinc-100 h-14 px-2 w-32 justify-between">
+                  <div className="flex items-center border border-slate-200 h-12 px-1 w-28 justify-between">
                     <button
                       onClick={decrementQuantity}
                       disabled={!isSelectionComplete}
-                      className="w-10 h-full flex items-center justify-center text-zinc-600 hover:text-zinc-900 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                      className="w-9 h-full flex items-center justify-center text-zinc-400 hover:text-zinc-800 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
                     >
-                      <Minus className="w-4 h-4" />
+                      <Minus className="w-3.5 h-3.5" />
                     </button>
-                    <div className="flex-1 flex items-center justify-center font-bold text-sm text-zinc-900">
+                    <div className="flex-1 flex items-center justify-center font-medium text-sm text-zinc-800">
                       {quantity}
                     </div>
                     <button
                       onClick={incrementQuantity}
                       disabled={!isSelectionComplete}
-                      className="w-10 h-full flex items-center justify-center text-zinc-600 hover:text-zinc-900 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                      className="w-9 h-full flex items-center justify-center text-zinc-400 hover:text-zinc-800 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
                     >
-                      <Plus className="w-4 h-4" />
+                      <Plus className="w-3.5 h-3.5" />
                     </button>
                   </div>
 
@@ -454,11 +454,11 @@ export default function ProductClient({ product, sizeChartData, deliveryData, re
                   <button
                     onClick={handleAddToCart}
                     disabled={!isSelectionComplete || (product.trackStock && selectedVariantStock <= 0)}
-                    className={`flex-1 h-14 font-bold text-sm transition-all flex items-center justify-center ${(!isSelectionComplete || (product.trackStock && selectedVariantStock <= 0))
-                      ? 'bg-zinc-100 text-zinc-400 cursor-not-allowed'
+                    className={`flex-1 h-12 font-medium text-sm transition-all flex items-center justify-center ${(!isSelectionComplete || (product.trackStock && selectedVariantStock <= 0))
+                      ? 'bg-slate-50 text-slate-300 cursor-not-allowed border border-slate-100'
                       : addedEffect
                         ? 'bg-green-600 text-white'
-                        : 'bg-primary text-white hover:opacity-95 active:scale-[0.98]'
+                        : 'bg-primary text-white hover:opacity-90 active:scale-[0.98]'
                       }`}
                   >
                     {getButtonText()}
@@ -469,9 +469,9 @@ export default function ProductClient({ product, sizeChartData, deliveryData, re
                 <button
                   onClick={handleBuyNow}
                   disabled={!isSelectionComplete || (product.trackStock && selectedVariantStock <= 0)}
-                  className={`w-full h-14 font-bold text-sm transition-all flex items-center justify-center ${(!isSelectionComplete || (product.trackStock && selectedVariantStock <= 0))
-                    ? 'bg-zinc-100 text-zinc-400 cursor-not-allowed'
-                    : 'bg-primary text-white hover:opacity-95 active:scale-[0.98]'
+                  className={`w-full h-12 font-medium text-sm transition-all flex items-center justify-center ${(!isSelectionComplete || (product.trackStock && selectedVariantStock <= 0))
+                    ? 'bg-slate-50 text-slate-300 cursor-not-allowed border border-slate-100'
+                    : 'bg-zinc-900 text-white hover:bg-zinc-800 active:scale-[0.98]'
                     }`}
                 >
                   Buy Now
