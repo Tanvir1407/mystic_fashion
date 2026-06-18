@@ -1,5 +1,6 @@
 import "./load-env";
-import prisma from "../src/lib/prisma";
+import { PrismaClient } from "../src/generated/prisma";
+const prisma = new PrismaClient();
 
 // ─── Usage ────────────────────────────────────────────────────────────────────
 //   npx tsx scripts/backfill-orders.ts            # execute
