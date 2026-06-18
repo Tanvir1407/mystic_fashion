@@ -182,7 +182,7 @@ model ProductVariant {
   size             String
   color            String            @default("Default")
   colorCode        String?
-  sku              String            @unique
+  sku              String?           @unique
   order            Int               @default(0)
   upc              String?           @unique
   qrCode           String?           @unique
@@ -325,10 +325,10 @@ model OrderItem {
   printName     String?
   printNumber   String?
   requiresPrint Boolean         @default(false)
-  variantId     String
+  variantId     String?
   order         Order           @relation(fields: [orderId], references: [id], onDelete: Cascade)
   product       Product         @relation(fields: [productId], references: [id], onDelete: Restrict)
-  variant       ProductVariant  @relation(fields: [variantId], references: [id], onDelete: Restrict)
+  variant       ProductVariant? @relation(fields: [variantId], references: [id], onDelete: Restrict)
   salesReturns  SalesReturn[]
 
   @@index([orderId])
