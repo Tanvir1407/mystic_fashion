@@ -91,28 +91,28 @@ export default function ProfileTab({ customer }: ProfileTabProps) {
         <div className="space-y-6 max-w-2xl mt-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-6 gap-x-8">
             <div className="border-b border-slate-100 pb-4">
-              <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">
+              <span className="text-[10px] font-medium uppercase tracking-wider text-slate-400">
                 Full Name
               </span>
-              <p className="font-semibold text-slate-900 text-sm mt-1">{customer.name}</p>
+              <p className="font-medium text-slate-700 text-sm mt-1">{customer.name}</p>
             </div>
             <div className="border-b border-slate-100 pb-4">
-              <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">
+              <span className="text-[10px] font-medium uppercase tracking-wider text-slate-400">
                 Phone Number
               </span>
-              <p className="font-semibold text-slate-900 text-sm mt-1">{customer.phone}</p>
+              <p className="font-medium text-slate-700 text-sm mt-1">{customer.phone}</p>
             </div>
             <div className="border-b border-slate-100 pb-4">
-              <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">
+              <span className="text-[10px] font-medium uppercase tracking-wider text-slate-400">
                 Email Address
               </span>
-              <p className="font-semibold text-slate-900 text-sm mt-1">{customer.email || "Not Provided"}</p>
+              <p className="font-medium text-slate-700 text-sm mt-1">{customer.email || "Not Provided"}</p>
             </div>
             <div className="border-b border-slate-100 pb-4">
-              <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">
+              <span className="text-[10px] font-medium uppercase tracking-wider text-slate-400">
                 Registration Date
               </span>
-              <p className="font-semibold text-slate-900 text-sm mt-1">{formatDate(customer.createdAt)}</p>
+              <p className="font-medium text-slate-700 text-sm mt-1">{formatDate(customer.createdAt)}</p>
             </div>
           </div>
         </div>
@@ -130,13 +130,13 @@ export default function ProfileTab({ customer }: ProfileTabProps) {
         <div className="max-w-md">
           {/* Status Messages */}
           {errorMsg && (
-            <div className="mb-5 p-3.5 bg-red-50 border-l-4 border-red-500 text-red-700 text-xs font-semibold flex items-center gap-2.5">
+            <div className="mb-5 p-3.5 bg-red-50 border-l-4 border-red-400 text-red-600 text-xs font-medium flex items-center gap-2.5">
               <AlertCircle className="w-4 h-4 text-red-600 flex-shrink-0" />
               <p className="flex-1">{errorMsg}</p>
             </div>
           )}
           {successMsg && (
-            <div className="mb-5 p-3.5 bg-emerald-50 border-l-4 border-emerald-500 text-emerald-700 text-xs font-semibold flex items-center gap-2.5">
+            <div className="mb-5 p-3.5 bg-emerald-50 border-l-4 border-emerald-400 text-emerald-700 text-xs font-medium flex items-center gap-2.5">
               <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0" />
               <p className="flex-1">{successMsg}</p>
             </div>
@@ -145,7 +145,7 @@ export default function ProfileTab({ customer }: ProfileTabProps) {
           <form onSubmit={handlePasswordChange} className="space-y-4">
             {/* Current Password */}
             <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-slate-700 block">Current Password</label>
+              <label className="text-xs font-medium text-slate-500 block">Current Password</label>
               <div className="relative">
                 <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
                   <Lock className="w-4 h-4" />
@@ -170,7 +170,7 @@ export default function ProfileTab({ customer }: ProfileTabProps) {
 
             {/* New Password */}
             <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-slate-700 block">New Password</label>
+              <label className="text-xs font-medium text-slate-500 block">New Password</label>
               <div className="relative">
                 <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
                   <Lock className="w-4 h-4" />
@@ -195,7 +195,7 @@ export default function ProfileTab({ customer }: ProfileTabProps) {
 
             {/* Confirm New Password */}
             <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-slate-700 block">Confirm New Password</label>
+              <label className="text-xs font-medium text-slate-500 block">Confirm New Password</label>
               <div className="relative">
                 <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
                   <Lock className="w-4 h-4" />
@@ -223,7 +223,7 @@ export default function ProfileTab({ customer }: ProfileTabProps) {
               <button
                 type="submit"
                 disabled={isPending}
-                className="px-6 h-11 bg-[#800020] text-white text-xs font-semibold uppercase tracking-widest hover:bg-[#600018] transition-colors disabled:opacity-70 flex items-center justify-center gap-2 rounded-none pt-0.5 shadow-sm"
+                className="px-6 h-11 bg-[#800020] text-white text-xs font-medium uppercase tracking-widest hover:bg-[#600018] transition-colors disabled:opacity-70 flex items-center justify-center gap-2"
               >
                 {isPending ? (
                   <>

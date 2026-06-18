@@ -102,21 +102,21 @@ export default function AccountClient({
     <div className="min-h-screen bg-slate-50 flex flex-col text-slate-800">
       <Header />
 
-      <main className="flex-1 container mx-auto px-4 py-10 max-w-6xl">
+      <main className="flex-1 container mx-auto px-4 py-8 max-w-6xl">
         <div className="mb-6">
           <Breadcrumb items={[{ label: "My Account" }]} />
         </div>
         {/* Welcome Section */}
-        <div className="bg-white rounded-xl border border-slate-100 p-6 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-6 mb-8">
-          <div className="flex items-center gap-5 text-center sm:text-left flex-col sm:flex-row">
-            <div className="w-16 h-16 rounded-full bg-[#800020]/5 text-[#800020] flex items-center justify-center font-medium text-2xl border border-[#800020]/10">
+        <div className="bg-white border border-slate-100 p-5 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-5 mb-6">
+          <div className="flex items-center gap-4 text-center sm:text-left flex-col sm:flex-row">
+            <div className="w-12 h-12 rounded-full bg-slate-50 text-slate-600 flex items-center justify-center font-medium text-lg border border-slate-200">
               {customer.name.charAt(0).toUpperCase()}
             </div>
             <div>
-              <h1 className="text-xl font-light text-slate-900 tracking-tight leading-tight">
-                Welcome, <span className="font-semibold">{customer.name}</span>
+              <h1 className="text-base font-medium text-slate-700 leading-tight">
+                {customer.name}
               </h1>
-              <p className="text-xs text-slate-400 mt-1">Member since {formatDate(customer.createdAt)}</p>
+              <p className="text-xs text-slate-400 mt-0.5">Member since {formatDate(customer.createdAt)}</p>
             </div>
           </div>
           <button
@@ -171,7 +171,7 @@ export default function AccountClient({
           </aside>
 
           {/* Right Main Content */}
-          <div className="flex-1 bg-white rounded-xl border border-slate-100 p-6 md:p-8 shadow-sm">
+          <div className="flex-1 bg-white border border-slate-100 p-5 md:p-7 shadow-sm">
             {/* ──────── TAB: ORDERS ──────── */}
             {activeTab === "orders" && <OrdersTab orders={orders} />}
 

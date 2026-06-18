@@ -220,7 +220,7 @@ export default function AddressesTab({ addresses: initialAddresses, customer }: 
           <p className="text-xs text-slate-400 mt-1 mb-6">Add your shipping details for lightning fast checkouts.</p>
           <button
             onClick={openAddModal}
-            className="bg-[#800020] text-white px-5 py-2.5 text-xs font-semibold tracking-wider uppercase hover:bg-[#600018] transition-colors rounded"
+            className="bg-[#800020] text-white px-5 py-2.5 text-xs font-medium hover:bg-[#600018] transition-colors rounded"
           >
             Add First Address
           </button>
@@ -294,7 +294,7 @@ export default function AddressesTab({ addresses: initialAddresses, customer }: 
             <form onSubmit={handleAddressSubmit} className="space-y-4">
               {/* Address label */}
               <div>
-                <label className="text-xs font-semibold  text-slate-600 block mb-1">
+                <label className="text-xs font-medium text-slate-500 block mb-1">
                   Address Label
                 </label>
                 <div className="flex gap-2">
@@ -303,7 +303,7 @@ export default function AddressesTab({ addresses: initialAddresses, customer }: 
                       key={l}
                       type="button"
                       onClick={() => setAddressLabel(l)}
-                      className={`flex-1 py-2 text-xs font-bold transition-all border ${addressLabel === l
+                      className={`flex-1 py-2 text-xs font-medium transition-all border ${addressLabel === l
                         ? "bg-[#800020] text-white border-primary"
                         : "bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100"
                         }`}
@@ -317,7 +317,7 @@ export default function AddressesTab({ addresses: initialAddresses, customer }: 
               {/* Recipient details */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="text-xs font-semibold  text-slate-600 block mb-1">
+                  <label className="text-xs font-medium text-slate-500 block mb-1">
                     Full Name *
                   </label>
                   <input
@@ -330,7 +330,7 @@ export default function AddressesTab({ addresses: initialAddresses, customer }: 
                   />
                 </div>
                 <div>
-                  <label className="text-xs font-semibold  text-slate-600 block mb-1">
+                  <label className="text-xs font-medium text-slate-500 block mb-1">
                     Phone Number *
                   </label>
                   <input
@@ -347,7 +347,7 @@ export default function AddressesTab({ addresses: initialAddresses, customer }: 
               {/* Pathao selectors */}
               <div className="space-y-3.5 pt-2 border-t border-slate-100">
                 <div>
-                  <label className="text-xs font-semibold  text-slate-600 block mb-1">
+                  <label className="text-xs font-medium text-slate-500 block mb-1">
                     City *
                   </label>
                   <CustomSelect
@@ -361,7 +361,7 @@ export default function AddressesTab({ addresses: initialAddresses, customer }: 
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="text-xs font-semibold  text-slate-600 block mb-1">
+                    <label className="text-xs font-medium text-slate-500 block mb-1">
                       Zone *
                     </label>
                     <CustomSelect
@@ -374,7 +374,7 @@ export default function AddressesTab({ addresses: initialAddresses, customer }: 
                     />
                   </div>
                   <div>
-                    <label className="text-xs font-semibold  text-slate-600 block mb-1">
+                    <label className="text-xs font-medium text-slate-500 block mb-1">
                       Area *
                     </label>
                     <CustomSelect
@@ -391,7 +391,7 @@ export default function AddressesTab({ addresses: initialAddresses, customer }: 
 
               {/* Specific Street Detail address */}
               <div>
-                <label className="text-xs font-semibold  text-slate-600 block mb-1">
+                <label className="text-xs font-medium text-slate-500 block mb-1">
                   House, Street, Flat details *
                 </label>
                 <textarea
@@ -424,14 +424,14 @@ export default function AddressesTab({ addresses: initialAddresses, customer }: 
                 <button
                   type="button"
                   onClick={() => setIsAddressModalOpen(false)}
-                  className="flex-1 py-2.5 border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-bold  transition-colors"
+                  className="flex-1 py-2.5 border border-slate-200 hover:bg-slate-50 text-slate-600 text-xs font-medium transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={isPending || loadingLocations}
-                  className="flex-1 py-2.5 bg-[#800020] hover:bg-[#600018] text-white text-xs font-bold  transition-colors flex items-center justify-center gap-2 disabled:opacity-75"
+                  className="flex-1 py-2.5 bg-[#800020] hover:bg-[#600018] text-white text-xs font-medium transition-colors flex items-center justify-center gap-2 disabled:opacity-75"
                 >
                   {isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : "Save Details"}
                 </button>
