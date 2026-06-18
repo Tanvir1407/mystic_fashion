@@ -39,6 +39,7 @@ export default async function Home() {
           orderBy: { createdAt: "desc" },
           include: {
             discount: true,
+            mediaAssets: { orderBy: { sortOrder: "asc" } },
             variants: {
               include: {
                 pricingMatrix: true
@@ -63,6 +64,7 @@ export default async function Home() {
             take: 4,
             include: {
               discount: true,
+              mediaAssets: { orderBy: { sortOrder: "asc" } },
               variants: {
                 include: {
                   pricingMatrix: true
@@ -90,6 +92,7 @@ export default async function Home() {
               take: remainingCount,
               include: {
               discount: true,
+              mediaAssets: { orderBy: { sortOrder: "asc" } },
               variants: {
                 include: {
                   pricingMatrix: true
@@ -142,10 +145,14 @@ export default async function Home() {
       return v;
     }) || [];
     const basePrice = variants[0]?.pricingMatrix?.basePrice ?? 0;
+    const images = (product.mediaAssets && product.mediaAssets.length > 0)
+      ? product.mediaAssets.map((a: any) => a.url)
+      : (product.images || []);
     return {
       ...product,
       price: basePrice,
-      variants
+      variants,
+      images
     };
   };
 
