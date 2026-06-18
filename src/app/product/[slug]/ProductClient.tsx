@@ -9,7 +9,8 @@ import { useRouter } from "next/navigation";
 import { formatBDT, roundPrice } from "@/utils/formatPrice";
 import ProductCard from "@/components/ProductCard";
 
-import { Check, ShoppingCart, ShoppingBag, Plus, Minus, ChevronLeft, ChevronRight, Play, Home } from "lucide-react";
+import { Check, ShoppingCart, ShoppingBag, Plus, Minus, ChevronLeft, ChevronRight, Play } from "lucide-react";
+import Breadcrumb from "@/components/Breadcrumb";
 
 interface Product {
   id: string;
@@ -263,21 +264,12 @@ export default function ProductClient({ product, sizeChartData, deliveryData, re
       <div className="container mx-auto px-4 py-8 md:py-16">
 
         {/* Breadcrumb */}
-        <nav className="flex items-center gap-1.5 text-xs text-slate-400 mb-6">
-          <Link href="/" className="flex items-center gap-1 hover:text-slate-600 transition-colors">
-            <Home className="w-3 h-3" />
-            <span>Home</span>
-          </Link>
-          <span>/</span>
-          <Link
-            href={`/products?category=${encodeURIComponent(product.category)}`}
-            className="hover:text-slate-600 transition-colors capitalize"
-          >
-            {product.category}
-          </Link>
-          <span>/</span>
-          <span className="text-slate-500 line-clamp-1">{product.name}</span>
-        </nav>
+        <div className="mb-6">
+          <Breadcrumb items={[
+            { label: product.category, href: `/products?category=${encodeURIComponent(product.category)}` },
+            { label: product.name },
+          ]} />
+        </div>
 
         {/* Top Product Section */}
         <div className="flex flex-col lg:flex-row items-start gap-8 lg:gap-12 mb-8">

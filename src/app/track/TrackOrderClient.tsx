@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { trackCustomerOrder } from "../actions/pathao";
 import { Search, Package, CheckCircle2, Truck, PackageCheck, AlertCircle, Compass, Printer, Check, Phone, ArrowRight } from "lucide-react";
+import Breadcrumb from "@/components/Breadcrumb";
 import { formatDate } from "@/utils/formatDate";
 import { formatBDT } from "@/utils/formatPrice";
 
@@ -254,8 +255,11 @@ export default function TrackOrderClient() {
   };
 
   return (
-    <main className="flex-1 bg-[#FAF9F6] py-16 px-4 sm:px-6">
+    <main className="flex-1 bg-[#FAF9F6] py-8 px-4 sm:px-6">
       <div className="max-w-2xl mx-auto w-full">
+        <div className="mb-8">
+          <Breadcrumb items={[{ label: "Track Order" }]} />
+        </div>
         {/* Header */}
         <div className="text-center mb-12">
           <h1 className="text-2xl sm:text-3xl font-extrabold text-zinc-900 mb-4 tracking-tight uppercase">

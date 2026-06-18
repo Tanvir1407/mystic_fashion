@@ -7,6 +7,7 @@ import Footer from "@/components/Footer";
 import SidebarCart from "@/components/SidebarCart";
 import { FooterData } from "@/lib/footer";
 import { LogOut, Package, MapPin, User } from "lucide-react";
+import Breadcrumb from "@/components/Breadcrumb";
 import { logoutCustomerAction } from "../actions/customerAuth";
 import OrdersTab from "./components/OrdersTab";
 import AddressesTab from "./components/AddressesTab";
@@ -102,6 +103,9 @@ export default function AccountClient({
       <Header />
 
       <main className="flex-1 container mx-auto px-4 py-10 max-w-6xl">
+        <div className="mb-6">
+          <Breadcrumb items={[{ label: "My Account" }]} />
+        </div>
         {/* Welcome Section */}
         <div className="bg-white rounded-xl border border-slate-100 p-6 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-6 mb-8">
           <div className="flex items-center gap-5 text-center sm:text-left flex-col sm:flex-row">

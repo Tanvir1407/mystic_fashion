@@ -2,6 +2,7 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import SidebarCart from "@/components/SidebarCart";
 import ProductCard from "@/components/ProductCard";
+import Breadcrumb from "@/components/Breadcrumb";
 import { getFooterData } from "@/lib/footer";
 import prisma from "@/lib/prisma";
 
@@ -57,8 +58,10 @@ export default async function SearchPage({
     <main className="min-h-screen bg-white dark:bg-zinc-950">
       <Header />
 
-      <div className="container mx-auto py-2 md:py-12 px-4 md:px-0">
-
+      <div className="container mx-auto py-6 md:py-12 px-4 md:px-0">
+        <div className="mb-6">
+          <Breadcrumb items={[{ label: query ? `Search: "${query}"` : "Search" }]} />
+        </div>
 
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
           {products.map((product) => (

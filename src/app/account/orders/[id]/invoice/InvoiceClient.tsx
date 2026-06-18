@@ -5,6 +5,7 @@ import Barcode from "react-barcode";
 import { formatBDT } from "@/utils/formatPrice";
 import { Printer, ArrowLeft } from "lucide-react";
 import Link from "next/link";
+import Breadcrumb from "@/components/Breadcrumb";
 import Image from "next/image";
 import { formatVariant } from "@/utils/formatVariant";
 
@@ -89,12 +90,10 @@ export default function InvoiceClient({
     <div className="min-h-screen bg-[#fafafa] py-12 print:py-0 text-[#1e293b] flex flex-col items-center font-sans antialiased">
       {/* Control Bar (Hidden on print) */}
       <div className="w-full max-w-[210mm] bg-white border border-slate-100 rounded-lg px-6 py-4 flex items-center justify-between shadow-xs mb-8 print:hidden">
-        <Link
-          href="/account"
-          className="text-xs font-semibold text-slate-500 hover:text-slate-900 flex items-center gap-2 transition-colors duration-200"
-        >
-          <ArrowLeft className="w-4 h-4" /> Back to Account
-        </Link>
+        <Breadcrumb items={[
+          { label: "My Account", href: "/account" },
+          { label: "Invoice" },
+        ]} />
         <button
           onClick={() => window.print()}
           className="px-5 py-2.5 bg-[#800020] hover:bg-[#600018] text-white text-xs font-semibold uppercase tracking-wider transition-all duration-200 flex items-center gap-2 rounded shadow-xs"

@@ -10,6 +10,7 @@ import { ArrowLeft, CheckCircle2, X, ChevronDown, Ticket, Loader2, CheckCircle, 
 import { useState, useTransition, useEffect } from "react";
 import { placeOrderAction, validateCoupon, syncCartPrices } from "./actions";
 import { formatBDT } from "@/utils/formatPrice";
+import Breadcrumb from "@/components/Breadcrumb";
 import { CustomSelect } from "@/components/CustomSelect";
 import { getPathaoCities, getPathaoZones, getPathaoAreas } from "@/app/actions/pathao";
 
@@ -393,12 +394,8 @@ export default function CheckoutClient({
 
 
 
-        <div className="mb-8 flex justify-between items-center mt-6">
-          <h1 className="text-lg font-medium uppercase tracking-widest text-zinc-700">Checkout</h1>
-          <Link href="/" className="inline-flex items-center gap-1.5 text-xs text-slate-400 hover:text-primary transition-colors">
-            <ArrowLeft className="w-3.5 h-3.5" />
-            Back to Home
-          </Link>
+        <div className="mt-6 mb-8">
+          <Breadcrumb items={[{ label: "Checkout" }]} />
         </div>
 
         {/* DTF Instruction Banner (Classic & Modern) */}
