@@ -154,11 +154,11 @@ export default function ProductCard({ product }: ProductCardProps) {
         <div className="px-3 pb-4 pt-3 flex flex-col gap-1.5 flex-1">
           <div className="flex items-baseline gap-2 mt-auto">
             {isDiscounted && (
-              <span className="text-zinc-400 dark:text-zinc-500 font-medium text-sm line-through">
+              <span className="text-zinc-400 dark:text-zinc-500  text-sm line-through">
                 {hasMultiplePrices ? `${formatBDT(originalMinPrice)} - ${formatBDT(originalMaxPrice)}` : formatBDT(originalMinPrice)}
               </span>
             )}
-            <span className="text-[#800020] font-black text-base md:text-lg">
+            <span className="text-[#800020] font-semibold text-sm md:text-base">
               {hasMultiplePrices ? `${formatBDT(minPrice)} - ${formatBDT(maxPrice)}` : formatBDT(finalPrice)}
             </span>
           </div>
