@@ -1,6 +1,8 @@
 import "./load-env";
 import { PrismaClient } from "../src/generated/prisma";
-const prisma = new PrismaClient();
+const prisma = new PrismaClient({
+  datasources: { db: { url: process.env.DATABASE_URL } },
+});
 
 async function main() {
   console.log("=== HEALING DATABASE CONSTRAINTS (OPTIMIZED) ===");
