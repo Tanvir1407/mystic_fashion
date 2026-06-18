@@ -429,9 +429,7 @@ export default function ProductsClient({
                 ...(selectedCategory ? [{ label: activeHeadingText, href: undefined }] : [{ label: "All Products", href: undefined }])
               ]} />
             </div>
-            <h1 className="text-xl md:text-2xl font-semibold text-slate-900 dark:text-zinc-50 ">
-              {activeHeadingText}
-            </h1>
+          
           </div>
 
           {/* Quick Toolbar */}
