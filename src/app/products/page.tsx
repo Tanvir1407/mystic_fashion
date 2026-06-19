@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import type { Metadata } from "next";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import SidebarCart from "@/components/SidebarCart";
@@ -7,6 +8,35 @@ import { getFooterData } from "@/lib/footer";
 import ProductsClient from "./ProductsClient";
 
 export const dynamic = "force-dynamic";
+
+export async function generateMetadata({
+  searchParams,
+}: {
+  searchParams: { category?: string; brand?: string };
+}): Promise<Metadata> {
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://mysticfashion.co";
+  const category = searchParams.category;
+  const brand = searchParams.brand;
+
+  const label = category || brand || null;
+  const title = label
+    ? `${label} | Mystic Fashion`
+    : "All Products | Mystic Fashion";
+  const description = label
+    ? `Shop premium ${label} at Mystic Fashion. Authentic quality with nationwide delivery across Bangladesh.`
+    : "Browse jerseys, sportswear & fashion apparel at Mystic Fashion. Authentic quality. Nationwide delivery.";
+  const canonical = label
+    ? `${baseUrl}/products?category=${encodeURIComponent(label)}`
+    : `${baseUrl}/products`;
+
+  return {
+    title,
+    description,
+    openGraph: { title, description, url: canonical, siteName: "Mystic Fashion", type: "website" },
+    twitter: { card: "summary_large_image", title, description },
+    alternates: { canonical },
+  };
+}
 
 // Helper to calculate product final price after active discount on server
 const getFinalPrice = (product: any): number => {

@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import SidebarCart from "@/components/SidebarCart";
@@ -5,6 +6,27 @@ import HomepageMain from "@/components/HomepageMain";
 import prisma from "@/lib/prisma";
 import { getFooterData } from "@/lib/footer";
 import nextDynamic from "next/dynamic";
+
+export const metadata: Metadata = {
+  title: "Mystic Fashion | Premium Jersey & Apparel in Bangladesh",
+  description: "Shop authentic jerseys, sportswear & fashion apparel at Mystic Fashion. Premium quality with nationwide delivery across Bangladesh.",
+  openGraph: {
+    title: "Mystic Fashion | Premium Jersey & Apparel",
+    description: "Shop authentic jerseys, sportswear & fashion apparel at Mystic Fashion.",
+    url: "https://mysticfashion.co",
+    siteName: "Mystic Fashion",
+    images: [{ url: "https://mysticfashion.co/og-image.jpg", width: 1200, height: 630, alt: "Mystic Fashion" }],
+    type: "website",
+    locale: "en_US",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Mystic Fashion | Premium Jersey & Apparel",
+    description: "Shop authentic jerseys, sportswear & fashion apparel at Mystic Fashion.",
+    images: ["https://mysticfashion.co/og-image.jpg"],
+  },
+  alternates: { canonical: "https://mysticfashion.co" },
+};
 
 const HeroCarousel = nextDynamic(() => import("@/components/HeroCarousel"), {
   ssr: false,

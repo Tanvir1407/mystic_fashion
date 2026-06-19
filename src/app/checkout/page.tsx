@@ -1,9 +1,16 @@
+import type { Metadata } from "next";
 import prisma from "@/lib/prisma";
 import CheckoutClient from "./CheckoutClient";
 import { getFooterData } from "@/lib/footer";
 import { getCustomerSession } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = {
+  title: "Checkout | Mystic Fashion",
+  description: "Complete your order at Mystic Fashion.",
+  robots: { index: false, follow: false },
+};
 
 export default async function CheckoutPage() {
   const session = await getCustomerSession();

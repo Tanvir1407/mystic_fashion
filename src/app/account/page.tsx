@@ -3,8 +3,24 @@ import prisma from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import AccountClient from "./AccountClient";
 import { getFooterData } from "@/lib/footer";
+import type { Metadata } from "next";
 
 export const dynamic = "force-dynamic";
+
+export async function generateMetadata(): Promise<Metadata> {
+  const session = await getCustomerSession();
+  if (!session) {
+    return { title: "My Account | Mystic Fashion" };
+  }
+  const customer = await prisma.customer.findUnique({
+    where: { id: session.customerId },
+    select: { name: true }
+  });
+  const name = customer?.name
+    ? customer.name.toUpperCase()
+    : "My Account";
+  return { title: `${name} | Mystic Fashion` };
+}
 
 export default async function AccountPage() {
   const session = await getCustomerSession();

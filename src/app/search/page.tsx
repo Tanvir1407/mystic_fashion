@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import SidebarCart from "@/components/SidebarCart";
@@ -7,6 +8,23 @@ import { getFooterData } from "@/lib/footer";
 import prisma from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
+
+export async function generateMetadata({
+  searchParams,
+}: {
+  searchParams: { q?: string };
+}): Promise<Metadata> {
+  const q = searchParams.q?.trim() || "";
+  const title = q ? `"${q}" — Search Results | Mystic Fashion` : "Search | Mystic Fashion";
+  const description = q
+    ? `Search results for "${q}" at Mystic Fashion. Find jerseys, sportswear & fashion apparel.`
+    : "Search products at Mystic Fashion.";
+  return {
+    title,
+    description,
+    robots: { index: false, follow: true },
+  };
+}
 
 export default async function SearchPage({
   searchParams,
