@@ -546,6 +546,11 @@ export async function uploadImage(formData: FormData) {
   const file = formData.get("file") as File;
   if (!file) throw new Error("No file received");
 
+  const MAX_SIZE = 500 * 1024; // 500KB
+  if (file.size > MAX_SIZE) {
+    throw new Error(`Image "${file.name}" is too large (${(file.size / 1024).toFixed(0)}KB). Maximum allowed size is 500KB.`);
+  }
+
   const bytes = await file.arrayBuffer();
   const buffer = Buffer.from(bytes);
 

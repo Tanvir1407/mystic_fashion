@@ -421,6 +421,14 @@ export default function ProductFormClient({
       filesToUpload = filesToUpload.slice(0, availableSlots);
     }
 
+    const MAX_SIZE = 500 * 1024; // 500KB
+    const oversized = filesToUpload.filter(f => f.size > MAX_SIZE);
+    if (oversized.length > 0) {
+      alert(`Image size must be 500KB or less. The following file(s) are too large:\n${oversized.map(f => `• ${f.name} (${(f.size / 1024).toFixed(0)}KB)`).join("\n")}`);
+      e.target.value = "";
+      return;
+    }
+
     setIsUploading(true);
 
     try {
@@ -756,7 +764,7 @@ export default function ProductFormClient({
                   <>
                     <Plus className="w-8 h-8 text-slate-400 mb-2" />
                     <span className="text-sm font-semibold text-slate-600">Click or drag images to upload</span>
-                    <span className="text-xs text-slate-400 mt-1">PNG, JPG up to 5MB • Max 20 images</span>
+                    <span className="text-xs text-slate-400 mt-1">PNG, JPG up to 500KB • Max 20 images</span>
                   </>
                 )}
               </div>
