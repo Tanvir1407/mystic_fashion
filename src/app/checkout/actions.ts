@@ -130,7 +130,7 @@ export async function placeOrderAction(payload: {
 
         calculatedSubtotal += roundPrice(finalPrice) * item.quantity;
 
-        const availableStock = variant.stocks?.[0]?.availableQuantity ?? variant.stock ?? 0;
+        const availableStock = variant.stocks?.[0]?.availableQuantity ?? 0;
         variantMap.set(`${item.id}_${item.size || "M"}_${targetColor}`, {
           id: variant.id,
           availableStock,

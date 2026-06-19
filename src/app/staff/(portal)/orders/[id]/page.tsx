@@ -16,7 +16,16 @@ export default async function StaffOrderDetailPage({ params }: { params: { id: s
     prisma.order.findFirst({
       where: { id: params.id, deletedAt: null },
       include: {
-        items: { include: { product: true, variant: true } },
+        items: {
+          include: {
+            product: {
+              include: {
+                mediaAssets: { select: { url: true }, orderBy: { sortOrder: "asc" } }
+              }
+            },
+            variant: { select: { size: true, color: true } }
+          }
+        },
         createdBy: true,
       },
     }),

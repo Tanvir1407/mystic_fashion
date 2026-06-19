@@ -18,14 +18,15 @@ export default async function ReturnsPage() {
       items: {
         include: {
           product: {
-            select: { 
+            select: {
               name: true,
               mediaAssets: {
                 select: { url: true },
                 orderBy: { sortOrder: "asc" }
               }
             }
-          }
+          },
+          variant: { select: { size: true, color: true } },
         }
       },
       salesReturns: { select: { orderItemId: true, quantity: true } },

@@ -33,6 +33,7 @@ interface OrderItem {
   price: number;
   requiresPrint: boolean;
   printCost: number;
+  variant?: { size: string; color?: string } | null;
   product: {
     name: string;
     price: number;
@@ -247,7 +248,7 @@ export default function ReturnsClient({
             createdAt: new Date(returnedData.createdAt),
             order: { customerName: selectedOrder?.customerName || "Unknown" },
             orderItem: { product: { name: selectedItem?.product.name || "Unknown" } },
-            variant: { size: selectedItem?.size || "M" },
+            variant: { size: selectedItem?.variant?.size || selectedItem?.size || "M" },
           };
           setReturns([newReturn, ...returns]);
           setReturnReason(""); setDeliveryLossAmount(0); setReturnCost(0);
@@ -423,7 +424,7 @@ export default function ReturnsClient({
                           <div className="flex-1 min-w-0">
                             <p className="text-sm font-semibold text-slate-900 truncate">{item.product.name}</p>
                             <div className="flex items-center gap-2 mt-1 flex-wrap">
-                              <span className="text-[10px] font-black bg-slate-900 text-white px-1.5 py-0.5 rounded tracking-widest">{item.size}</span>
+                              <span className="text-[10px] font-black bg-slate-900 text-white px-1.5 py-0.5 rounded tracking-widest">{item.variant?.size || item.size}</span>
                               <span className="text-xs text-slate-500">Qty: <span className="font-semibold text-slate-700">{rem}</span></span>
                               <span className="text-xs font-mono text-slate-600">{formatBDT(item.price)}</span>
                             </div>

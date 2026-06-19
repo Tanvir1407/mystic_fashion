@@ -303,6 +303,7 @@ async function _restoreOrder(id: string) {
       if (stockHoldingStatuses.includes(order.status)) {
         for (const item of order.items) {
           const variantId = item.variantId;
+          if (!variantId) continue;
           await updateStockDualWrite(tx, {
             variantId,
             quantityChange: -item.quantity,
@@ -449,6 +450,7 @@ async function _updateOrderDetails(
         if (isStockHolding) {
           for (const remainingOld of oldItemsMap.values()) {
             const variantId = remainingOld.variantId;
+            if (!variantId) continue;
             await updateStockDualWrite(tx, {
               variantId,
               quantityChange: remainingOld.quantity,
@@ -1380,7 +1382,7 @@ export async function getOrderById(id: string) {
         items: {
           include: {
             product: {
-              select: { 
+              select: {
                 name: true,
                 mediaAssets: {
                   select: { url: true },
@@ -1388,6 +1390,7 @@ export async function getOrderById(id: string) {
                 }
               },
             },
+            variant: { select: { size: true, color: true } },
           },
         },
         salesReturns: { select: { orderItemId: true, quantity: true } },
@@ -1433,7 +1436,7 @@ export async function searchOrdersForReturn(searchQuery: string) {
         items: {
           include: {
             product: {
-              select: { 
+              select: {
                 name: true,
                 mediaAssets: {
                   select: { url: true },
@@ -1441,6 +1444,7 @@ export async function searchOrdersForReturn(searchQuery: string) {
                 }
               },
             },
+            variant: { select: { size: true, color: true } },
           },
         },
         salesReturns: { select: { orderItemId: true, quantity: true } },
