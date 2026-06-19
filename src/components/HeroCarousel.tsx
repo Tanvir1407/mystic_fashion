@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { Swiper, SwiperSlide } from "swiper/react";
 import { Autoplay, Navigation, Pagination } from "swiper/modules";
 
@@ -69,13 +70,16 @@ export default function HeroCarousel({ slides }: { slides: Slide[] }) {
         {slides.map((slide, index) => (
           <SwiperSlide key={slide.id} className="relative w-full h-full group">
             <Link href={slide.link} className="absolute inset-0 z-10 block" aria-label={`View collection ${index + 1}`} />
-
-            {/* Added bg-no-repeat to ensure it never tiles on ultra-wide screens */}
-            <div
-              className="absolute inset-0 bg-cover bg-center bg-no-repeat"
-              style={{ backgroundImage: `url(${slide.image})` }}
-            >
-            </div>
+            <Image
+              src={slide.image}
+              alt={`Hero slide ${index + 1}`}
+              fill
+              className="object-cover object-center"
+              unoptimized={slide.image.startsWith("/uploads/")}
+              sizes="100vw"
+              priority={index === 0}
+              loading={index === 0 ? "eager" : "lazy"}
+            />
           </SwiperSlide>
         ))}
       </Swiper>

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import Image from "next/image";
+import UploadedImage from "./UploadedImage";
 import AddToBagButton from "./AddToBagButton";
 import { formatBDT, roundPrice } from "@/utils/formatPrice";
 
@@ -136,11 +136,11 @@ export default function ProductCard({ product }: ProductCardProps) {
         {/* Image Section */}
         <div className="relative w-full aspect-[3/4] bg-[#F5F5F5] dark:bg-zinc-800 overflow-hidden">
           {productImages[0] ? (
-            <Image
+            <UploadedImage
               src={productImages[0]}
               alt={product.name}
-              unoptimized={true}
               fill
+              sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
               className="object-cover transition-transform duration-500 group-hover:scale-105"
             />
           ) : (

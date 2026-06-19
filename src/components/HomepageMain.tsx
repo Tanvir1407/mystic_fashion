@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import Image from "next/image";
+import UploadedImage from "./UploadedImage";
 import ProductCard from "./ProductCard";
 
 // DB category type passed from the server
@@ -114,11 +114,11 @@ export default function HomepageMain({
                   className="group relative block aspect-square overflow-hidden bg-neutral-100 shadow-xs hover:shadow-md transition-all duration-300 w-[calc(50%-8px)] sm:w-[calc(33.333%-11px)] lg:w-44 flex-none"
                 >
                   {image ? (
-                    <Image
+                    <UploadedImage
                       src={image}
                       alt={label}
-                      unoptimized={true}
                       fill
+                      sizes="(max-width: 640px) calc(50vw - 8px), (max-width: 1024px) calc(33vw - 11px), 176px"
                       className="object-cover transition-transform duration-700 ease-out group-hover:scale-110"
                     />
                   ) : (
@@ -224,11 +224,11 @@ export default function HomepageMain({
               // Shared banner inner content
               const bannerInner = (
                 <>
-                  <Image
+                  <UploadedImage
                     src={catImage}
                     alt={catLabel}
-                    unoptimized={true}
                     fill
+                    sizes="(max-width: 768px) 100vw, 50vw"
                     className="object-cover opacity-65 transition-transform duration-700 ease-out group-hover/banner:scale-105"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-neutral-950 via-neutral-900/35 to-transparent z-10"></div>
