@@ -339,7 +339,7 @@ export default async function ProductPage({ params }: { params: { slug: string }
       />
       <Header />
       <main className="w-full">
-        <ProductClient product={product as any} sizeChartData={product.sizeChart || null} deliveryData={deliveryData} relatedProducts={relatedProducts} />
+        <ProductClient product={product as any} sizeChartData={product.sizeChart || null} relatedProducts={relatedProducts} />
       </main>
       <Footer config={footerData} />
       <SidebarCart />

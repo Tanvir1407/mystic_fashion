@@ -9,7 +9,7 @@ import { useRouter } from "next/navigation";
 import { formatBDT, roundPrice } from "@/utils/formatPrice";
 import ProductCard from "@/components/ProductCard";
 
-import { Check, ShoppingCart, ShoppingBag, Plus, Minus, ChevronLeft, ChevronRight, Play } from "lucide-react";
+import { ShoppingCart, ShoppingBag, Plus, Minus, ChevronLeft, ChevronRight, Play } from "lucide-react";
 import Breadcrumb from "@/components/Breadcrumb";
 
 interface Product {
@@ -39,7 +39,7 @@ interface Product {
   categoryRel?: any;
 }
 
-export default function ProductClient({ product, sizeChartData, deliveryData, relatedProducts }: { product: Product, sizeChartData?: any, deliveryData?: { insideDhaka: number, outsideDhaka: number }, relatedProducts?: any[] }) {
+export default function ProductClient({ product, sizeChartData, relatedProducts }: { product: Product, sizeChartData?: any, relatedProducts?: any[] }) {
   const router = useRouter();
 
   // Dynamic variant names based on PIM category attribute mapping
@@ -583,28 +583,6 @@ export default function ProductClient({ product, sizeChartData, deliveryData, re
               />
             </div>
 
-          </div>
-          <div className="space-y-6 text-zinc-600 leading-relaxed">
-            <h3 className="text-lg font-semibold text-zinc-900 uppercase tracking-tight mb-2">Delivery Details</h3>
-            <div className=" p-6 ">
-              <ul className="space-y-4">
-                <li className="flex items-start gap-3">
-                  <Check className="w-5 h-5 text-[#800020] flex-shrink-0 mt-0.5" />
-                  <div>
-                    <strong className="block text-zinc-900 mb-1">Inside Dhaka</strong>
-                    <p>Delivery in 2-3 working days. Charge: {deliveryData?.insideDhaka === 0 ? "Free" : `৳${deliveryData?.insideDhaka || 80}`}</p>
-                  </div>
-                </li>
-                <li className="flex items-start gap-3">
-                  <Check className="w-5 h-5 text-[#800020] flex-shrink-0 mt-0.5" />
-                  <div>
-                    <strong className="block text-zinc-900 mb-1">Outside Dhaka</strong>
-                    <p>Delivery in 3-5 working days. Charge: {deliveryData?.outsideDhaka === 0 ? "Free" : `৳${deliveryData?.outsideDhaka || 150}`}</p>
-                  </div>
-                </li>
-              </ul>
-            </div>
-            <p className="text-sm">Please make sure to record an unboxing video to claim any damages or missing items.</p>
           </div>
         </div>
 
