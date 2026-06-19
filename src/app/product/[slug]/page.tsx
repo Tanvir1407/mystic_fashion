@@ -15,8 +15,9 @@ export async function generateMetadata({ params }: { params: { slug: string } })
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://mysticfashion.co";
   const identifier = params.slug;
 
+  const isUuidMeta = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(identifier);
   const product = await prisma.product.findUnique({
-    where: identifier.includes('-') && identifier.length > 30 ? { id: identifier } : { slug: identifier },
+    where: isUuidMeta ? { id: identifier } : { slug: identifier },
     select: {
       name: true,
       description: true,
