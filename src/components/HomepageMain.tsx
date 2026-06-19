@@ -93,7 +93,7 @@ export default function HomepageMain({
     <div className="bg-[#FAFAFA] min-h-screen text-neutral-800 antialiased font-sans">
 
       {/* 1. SHOP BY CATEGORY SECTION */}
-      <section className="py-24 px-4 bg-white border-b border-neutral-100">
+      <section className="py-12 md:py-24 px-3 md:px-4 bg-white border-b border-neutral-100">
         <div className="container mx-auto">
           <div className="text-center mb-16">
             <h2 className="font-serif text-3xl md:text-4xl text-neutral-900 tracking-widest font-light uppercase">
@@ -140,7 +140,7 @@ export default function HomepageMain({
       </section>
 
       {/* 2. THE NEW ARRIVALS SECTION */}
-      <section className="py-24 px-4 bg-[#FAFAFA]">
+      <section className="py-12 md:py-24 px-3 md:px-4 bg-[#FAFAFA]">
         <div className="container mx-auto">
           <div className="text-center mb-12">
             <h2 className="font-serif text-3xl md:text-4xl text-neutral-900 tracking-widest font-light uppercase">
@@ -199,7 +199,7 @@ export default function HomepageMain({
       </section>
 
       {/* 3. DYNAMIC CATEGORY SHOWCASE SHOWROOMS */}
-      <section className="py-24 px-4 bg-white border-t border-neutral-100">
+      <section className="py-12 md:py-24 px-3 md:px-4 bg-white border-t border-neutral-100">
         <div className="container mx-auto">
           <div className="text-center mb-20">
             <h2 className="font-serif text-3xl md:text-4xl text-neutral-900 tracking-widest font-light uppercase">

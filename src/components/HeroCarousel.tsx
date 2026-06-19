@@ -26,7 +26,7 @@ export default function HeroCarousel({ slides }: { slides: Slide[] }) {
   if (slides.length === 0) return null;
 
   return (
-    <div className="container mx-auto relative overflow-hidden mt-0 md:mt-2 px-4 md:px-0">
+    <div className="w-full relative overflow-hidden mt-0 md:mt-2">
 
       {/* Critical CSS for uninitialized slider to prevent FOUC */}
       <style dangerouslySetInnerHTML={{

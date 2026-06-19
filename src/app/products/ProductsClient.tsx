@@ -419,7 +419,7 @@ export default function ProductsClient({
 
   return (
     <div className="w-full bg-slate-50 dark:bg-zinc-950 py-6 border-t border-slate-200 dark:border-zinc-800">
-      <div className="container mx-auto px-4 md:px-0">
+      <div className="container mx-auto px-2 md:px-6">
 
         {/* Banner/Heading Block */}
         <div className="mb-8 md:mb-10 text-left border-b border-slate-200 dark:border-zinc-900 pb-6 flex flex-col md:flex-row md:items-end md:justify-between gap-4">

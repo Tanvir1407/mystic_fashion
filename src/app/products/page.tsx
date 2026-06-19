@@ -100,7 +100,9 @@ export default async function ProductsPage({
         subcategoryId: true,
         createdAt: true,
         isFeatured: true,
+        featuredOrder: true,
         isPublished: true,
+        trackStock: true,
         brand: true,
         categoryRel: true,
         subcategory: true,
@@ -198,15 +200,27 @@ export default async function ProductsPage({
   const globalMinPrice = allFinalPrices.length > 0 ? Math.min(...allFinalPrices) : 0;
   const globalMaxPrice = allFinalPrices.length > 0 ? Math.max(...allFinalPrices) : 10000;
 
-  // Apply selected Sorting options
+  // Apply selected Sorting options — must match getFilteredProductsList in actions.ts exactly
+  // so that infinite-scroll page 2 (client-fetched) continues from where server page 1 left off.
   const sortedProducts = [...priceFilteredProducts];
   if (sortParam === "price-asc") {
     sortedProducts.sort((a, b) => getFinalPrice(a) - getFinalPrice(b));
   } else if (sortParam === "price-desc") {
     sortedProducts.sort((a, b) => getFinalPrice(b) - getFinalPrice(a));
+  } else if (categoryParam && sortParam !== "price-asc" && sortParam !== "price-desc") {
+    // Category + newest: featured products first (by featuredOrder), then regular by newest
+    const featuredProducts = sortedProducts.filter((p: any) => p.isFeatured);
+    const regularProducts = sortedProducts.filter((p: any) => !p.isFeatured);
+    featuredProducts.sort((a: any, b: any) => {
+      const orderA = a.featuredOrder ?? 0;
+      const orderB = b.featuredOrder ?? 0;
+      if (orderA !== orderB) return orderA - orderB;
+      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+    });
+    regularProducts.sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    sortedProducts.splice(0, sortedProducts.length, ...featuredProducts, ...regularProducts);
   } else {
-    // default: newest
-    sortedProducts.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    sortedProducts.sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   }
 
   // Paginate products
@@ -221,7 +235,7 @@ export default async function ProductsPage({
       
       <Suspense fallback={
         <div className="w-full bg-slate-50 dark:bg-zinc-950 py-6 animate-pulse border-t border-slate-200 dark:border-zinc-800 min-h-[600px]">
-          <div className="container mx-auto px-4 md:px-0">
+          <div className="container mx-auto px-2 md:px-6">
             <div className="h-7 bg-slate-200 dark:bg-zinc-800 w-48 mb-10" />
             <div className="flex gap-2 relative items-start">
               <div className="hidden md:block w-72 h-[500px] bg-slate-200 dark:bg-zinc-800 rounded-none flex-shrink-0" />
