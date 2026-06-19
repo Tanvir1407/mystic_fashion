@@ -14,6 +14,7 @@ const cormorant = Cormorant_Garamond({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || "https://mysticfashion.co"),
   title: "Mystic Fashion | Premium Jersey & Apparel",
   description: "Experience the luxury of premium jerseys and fashion apparel.",
   manifest: "/site.webmanifest",
