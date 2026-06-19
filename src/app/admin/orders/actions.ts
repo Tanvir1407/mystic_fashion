@@ -699,6 +699,23 @@ async function _createAdminOrder(data: {
         customerId = customer.id;
       }
 
+      // Guard: ensure every item has a valid variantId before touching the DB.
+      // The UI sends variantId, but we re-verify server-side to prevent NULL inserts.
+      for (const item of data.items) {
+        if (!item.variantId) {
+          const fallback = await tx.productVariant.findFirst({
+            where: { productId: item.productId, size: item.size },
+            select: { id: true },
+          });
+          if (!fallback) {
+            throw new Error(
+              `variantId missing for product ${item.productId} (Size: ${item.size}) and cannot be resolved automatically.`
+            );
+          }
+          item.variantId = fallback.id;
+        }
+      }
+
       const newOrder = await tx.order.create({
         data: {
           id: customId,
@@ -899,7 +916,7 @@ export async function bulkSendToPathaoAction(orderIds: string[]) {
           item_description: order.items
             .map(
               (i) =>
-                `• ${i.product.name} (Size: ${i.variant.size}, Qty: ${i.quantity})`
+                `• ${i.product?.name || "Item"} (Size: ${i.variant?.size || (i as any).size || "N/A"}, Qty: ${i.quantity})`
             )
             .join("\n"),
         };
@@ -1036,7 +1053,7 @@ export async function sendPathaoPickupManually(orderId: string) {
       item_weight: 0.5,
       amount_to_collect: collectionAmount,
       item_description: order.items
-        .map((i) => `${i.product?.name || "Item"} (Size: ${i.variant?.size || "M"}, Qty: ${i.quantity})`)
+        .map((i) => `${i.product?.name || "Item"} (Size: ${i.variant?.size || (i as any).size || "N/A"}, Qty: ${i.quantity})`)
         .join(", "),
     };
 

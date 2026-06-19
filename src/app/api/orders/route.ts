@@ -203,7 +203,10 @@ export async function POST(req: NextRequest) {
           items: {
             create: items.flatMap((item: any) => {
               const key = `${item.id}_${item.size || "M"}_${item.color || "Default"}`;
-              const variantId = variantMap.get(key)?.id || null;
+              const variantId = variantMap.get(key)?.id;
+              if (!variantId) {
+                throw new Error(`Variant could not be resolved for product ${item.id} (Size: ${item.size || "M"}).`);
+              }
 
               if (item.requiresPrint && item.printDetails?.length > 0) {
                 const printed = item.printDetails.map((pd: any) => ({

@@ -237,7 +237,10 @@ export async function placeOrderAction(payload: {
           items: {
             create: payload.items.flatMap((item) => {
               const key = `${item.id}_${item.size || "M"}_${item.color || "Default"}`;
-              const variantId = variantMap.get(key)?.id || null;
+              const variantId = variantMap.get(key)?.id;
+              if (!variantId) {
+                throw new Error(`Variant could not be resolved for "${item.name}" (Size: ${item.size || "M"}). Please refresh and try again.`);
+              }
 
               if (item.requiresPrint && item.printDetails && item.printDetails.length > 0) {
                 const printedItems = item.printDetails.map((pd: any) => ({

@@ -58,6 +58,27 @@ export async function createStaffOrder(data: {
         customerId = customer.id;
       }
 
+      // Resolve variantId for every item before creating the order.
+      // Items coming from staff UI only carry productId + size; we look up
+      // the matching ProductVariant here to guarantee variantId is never NULL.
+      const variantIdMap = new Map<string, string>();
+      for (const item of data.items) {
+        const key = `${item.productId}_${item.size}`;
+        if (!variantIdMap.has(key)) {
+          const variant = await tx.productVariant.findFirst({
+            where: { productId: item.productId, size: item.size },
+            select: { id: true },
+          });
+          if (!variant) {
+            throw new Error(
+              `Variant not found for product ${item.productId} (Size: ${item.size}). ` +
+              `Ensure the product has a variant with this size configured.`
+            );
+          }
+          variantIdMap.set(key, variant.id);
+        }
+      }
+
       return tx.order.create({
         data: {
           id: customId,
@@ -81,9 +102,11 @@ export async function createStaffOrder(data: {
           customerId,
           items: {
             create: data.items.flatMap((item) => {
+              const variantId = variantIdMap.get(`${item.productId}_${item.size}`)!;
               if (item.requiresPrint && item.printDetails?.length) {
                 const printed = item.printDetails.map((pd) => ({
                   productId: item.productId,
+                  variantId,
                   size: item.size,
                   quantity: 1,
                   price: item.price,
@@ -94,11 +117,11 @@ export async function createStaffOrder(data: {
                 }));
                 const remaining = item.quantity - item.printDetails.length;
                 if (remaining > 0) {
-                  printed.push({ productId: item.productId, size: item.size, quantity: remaining, price: item.price, requiresPrint: false, printName: null, printNumber: null, printCost: 0 });
+                  printed.push({ productId: item.productId, variantId, size: item.size, quantity: remaining, price: item.price, requiresPrint: false, printName: null, printNumber: null, printCost: 0 });
                 }
                 return printed;
               }
-              return [{ productId: item.productId, size: item.size, quantity: item.quantity, price: item.price, requiresPrint: item.requiresPrint || false, printName: item.printName || null, printNumber: item.printNumber || null, printCost: item.printCost || 0 }];
+              return [{ productId: item.productId, variantId, size: item.size, quantity: item.quantity, price: item.price, requiresPrint: item.requiresPrint || false, printName: item.printName || null, printNumber: item.printNumber || null, printCost: item.printCost || 0 }];
             }),
           },
         },
