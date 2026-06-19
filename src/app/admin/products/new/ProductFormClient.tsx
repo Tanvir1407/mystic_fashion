@@ -683,7 +683,7 @@ export default function ProductFormClient({
           <div className="bg-white border border-slate-200 rounded-none p-6 shadow-none">
             <div className="flex items-center justify-between mb-4 border-b border-slate-100 pb-2">
               <h2 className="text-sm font-bold text-slate-900 uppercase tracking-wider">Media Gallery</h2>
-              <span className={`text-xs font-semibold tabular-nums px-2 py-0.5 rounded ${images.length >= 20 ? 'bg-red-100 text-red-600' : images.length >= 15 ? 'bg-amber-100 text-amber-600' : 'bg-slate-100 text-slate-500'}`}>
+              <span className={`text-xs font-semibold tabular-nums px-2 py-0.5 rounded bg-slate-100 text-slate-500`}>
                 {images.length} / 20
               </span>
             </div>
