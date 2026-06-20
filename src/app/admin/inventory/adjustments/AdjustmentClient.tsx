@@ -12,7 +12,6 @@ import {
   Search,
   Plus
 } from "lucide-react";
-import Link from "next/link";
 import { bulkAdjustStock } from "../../actions";
 import { StatusAlertModal } from "@/components/StatusAlertModal";
 import { AdjustmentType } from "@/generated/prisma/client";
@@ -228,9 +227,6 @@ export default function AdjustmentClient({
       {/* Header Section */}
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-4">
-          <Link href="/admin/inventory" className="p-2 bg-slate-100 hover:bg-slate-200 rounded-md transition-colors text-slate-500">
-            <ArrowLeft className="w-5 h-5" />
-          </Link>
           <div>
             <h1 className="text-2xl font-semibold tracking-tight text-slate-900">Stock Adjustments</h1>
             <p className="text-sm text-slate-500 mt-1">Bulk edit inventory levels and track the adjustment history.</p>
