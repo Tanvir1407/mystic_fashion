@@ -64,7 +64,8 @@ export default async function Home() {
             mediaAssets: { orderBy: { sortOrder: "asc" } },
             variants: {
               include: {
-                pricingMatrix: true
+                pricingMatrix: true,
+                stocks: { where: { warehouse: { code: "MAIN" } } }
               }
             }
           }
@@ -89,7 +90,8 @@ export default async function Home() {
               mediaAssets: { orderBy: { sortOrder: "asc" } },
               variants: {
                 include: {
-                  pricingMatrix: true
+                  pricingMatrix: true,
+                  stocks: { where: { warehouse: { code: "MAIN" } } }
                 }
               }
             }
@@ -117,7 +119,8 @@ export default async function Home() {
               mediaAssets: { orderBy: { sortOrder: "asc" } },
               variants: {
                 include: {
-                  pricingMatrix: true
+                  pricingMatrix: true,
+                  stocks: { where: { warehouse: { code: "MAIN" } } }
                 }
               }
             }
@@ -151,21 +154,17 @@ export default async function Home() {
       }
       return Number(val) || 0;
     };
-    const variants = product.variants?.map((v: any) => {
-      if (v.pricingMatrix) {
-        return {
-          ...v,
-          pricingMatrix: {
-            ...v.pricingMatrix,
-            basePrice: toNumber(v.pricingMatrix.basePrice) ?? 0,
-            costPrice: toNumber(v.pricingMatrix.costPrice),
-            msrp: toNumber(v.pricingMatrix.msrp),
-            b2bPrice: toNumber(v.pricingMatrix.b2bPrice)
-          }
-        };
-      }
-      return v;
-    }) || [];
+    const variants = product.variants?.map((v: any) => ({
+      ...v,
+      stock: v.stocks?.[0]?.availableQuantity ?? 0,
+      pricingMatrix: v.pricingMatrix ? {
+        ...v.pricingMatrix,
+        basePrice: toNumber(v.pricingMatrix.basePrice) ?? 0,
+        costPrice: toNumber(v.pricingMatrix.costPrice),
+        msrp: toNumber(v.pricingMatrix.msrp),
+        b2bPrice: toNumber(v.pricingMatrix.b2bPrice)
+      } : null
+    })) || [];
     const basePrice = variants[0]?.pricingMatrix?.basePrice ?? 0;
     const images = (product.mediaAssets && product.mediaAssets.length > 0)
       ? product.mediaAssets.map((a: any) => a.url)
