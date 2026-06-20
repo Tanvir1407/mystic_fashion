@@ -121,6 +121,7 @@ export default function CreateOrderClient({
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedProductId, setSelectedProductId] = useState("");
   const [selectedSize, setSelectedSize] = useState("");
+  const [selectedColor, setSelectedColor] = useState("");
   // Dynamic PIM attribute selections: { [attrKey]: selectedValue }
   const [selectedAttrValues, setSelectedAttrValues] = useState<Record<string, string>>({});
   const [quantity, setQuantity] = useState(1);
@@ -239,6 +240,7 @@ export default function CreateOrderClient({
         setSelectedProductId(p.id);
         setSearchQuery(p.name);
         setSelectedSize("");
+        setSelectedColor("");
         setSelectedAttrValues({});
         setFocusedIndex(-1);
         // Instant target switch down to variant sizes element block
@@ -252,6 +254,24 @@ export default function CreateOrderClient({
 
   const selectedProduct = useMemo(() => products.find(p => p.id === selectedProductId), [products, selectedProductId]);
   const availableSizes = useMemo(() => selectedProduct?.variants || [], [selectedProduct]);
+
+  // Multi-color detection (uses built-in color field, not attributes JSON)
+  const colorGroups = useMemo(() => {
+    if (!selectedProduct) return [];
+    const seen = new Map<string, { color: string; colorCode?: string }>();
+    for (const v of selectedProduct.variants) {
+      const c = (v as any).color || "Default";
+      if (!seen.has(c)) seen.set(c, { color: c, colorCode: (v as any).colorCode });
+    }
+    return Array.from(seen.values());
+  }, [selectedProduct]);
+  const hasMultipleColors = colorGroups.length > 1;
+
+  // Sizes filtered by selected color (for multi-color products)
+  const sizesByColor = useMemo(() => {
+    if (!hasMultipleColors || !selectedColor) return availableSizes;
+    return availableSizes.filter((v: any) => (v.color || "Default") === selectedColor);
+  }, [availableSizes, hasMultipleColors, selectedColor]);
 
   // ─── Dynamic Attribute Cascade Logic ───────────────────────────────────────
   // Determine if this product uses PIM attributes (has non-empty attributes JSON)
@@ -326,11 +346,17 @@ export default function CreateOrderClient({
 
   const addToOrder = () => {
     if (!selectedProduct || !selectedSize) return;
+    if (hasMultipleColors && !selectedColor) return;
 
-    const variant = selectedProduct.variants.find((v: any) => v.size === selectedSize);
+    const variant = selectedProduct.variants.find((v: any) =>
+      v.size === selectedSize && (!hasMultipleColors || (v.color || "Default") === selectedColor)
+    );
     if (!variant) return;
 
-    const unitPrice = getDiscountedPrice(selectedProduct);
+    const variantBasePrice = variant.pricingMatrix?.basePrice
+      ? Number(variant.pricingMatrix.basePrice)
+      : selectedProduct.price;
+    const unitPrice = getDiscountedPrice({ ...selectedProduct, price: variantBasePrice });
     const existingIndex = orderItems.findIndex(
       item => item.productId === selectedProductId && item.size === selectedSize && !item.requiresPrint && !requiresPrint
     );
@@ -364,6 +390,7 @@ export default function CreateOrderClient({
     setSearchQuery("");
     setSelectedProductId("");
     setSelectedSize("");
+    setSelectedColor("");
     setSelectedAttrValues({});
     setQuantity(1);
     setRequiresPrint(false);
@@ -597,6 +624,7 @@ export default function CreateOrderClient({
                           setSelectedProductId(p.id);
                           setSearchQuery(p.name);
                           setSelectedSize("");
+                          setSelectedColor("");
                           setSelectedAttrValues({});
                           setFocusedIndex(-1);
                           setTimeout(() => {
@@ -609,7 +637,14 @@ export default function CreateOrderClient({
                       >
                         <div className="truncate font-medium text-xs pr-2">{p.name}</div>
                         <div className={`font-mono font-medium text-xs shrink-0 ${focusedIndex === idx ? "text-white" : "text-primary"}`}>
-                          {formatBDT(p.price)}
+                          {(() => {
+                            const prices = (p.variants || [])
+                              .map((v: any) => v.pricingMatrix?.basePrice ? Number(v.pricingMatrix.basePrice) : null)
+                              .filter((x: any): x is number => x !== null && x > 0);
+                            const min = prices.length > 0 ? Math.min(...prices) : p.price;
+                            const max = prices.length > 0 ? Math.max(...prices) : p.price;
+                            return min === max ? formatBDT(min) : `${formatBDT(min)} – ${formatBDT(max)}`;
+                          })()}
                         </div>
                       </button>
                     ))}
@@ -753,14 +788,54 @@ export default function CreateOrderClient({
                 ) : (
                   /* ── Legacy Flat Size Mode ── */
                   <>
-                    <label className="text-[10px] font-medium text-slate-500 uppercase tracking-wider block mb-1.5">SIZE SELECTION (STOCK)</label>
+                    {/* Color row — only shown when product has multiple colors */}
+                    {hasMultipleColors && (
+                      <>
+                        <label className="text-[10px] font-medium text-slate-500 uppercase tracking-wider block mb-1.5">COLOR</label>
+                        <div className="flex flex-wrap gap-1.5 mb-3">
+                          {colorGroups.map((c) => (
+                            <button
+                              key={c.color}
+                              type="button"
+                              onClick={() => {
+                                setSelectedColor(c.color);
+                                setSelectedSize("");
+                                setTimeout(() => {
+                                  const firstSizeBtn = sizeContainerRef.current?.querySelector<HTMLButtonElement>("button");
+                                  firstSizeBtn?.focus();
+                                }, 50);
+                              }}
+                              className={`px-2.5 py-1 text-xs font-semibold rounded border tracking-tight transition-all flex items-center gap-1.5 ${
+                                selectedColor === c.color
+                                  ? "bg-slate-900 border-slate-900 text-white shadow-sm"
+                                  : "bg-slate-50 border-slate-200 text-slate-700 hover:border-slate-400 hover:bg-slate-100"
+                              }`}
+                            >
+                              {c.colorCode && (
+                                <span
+                                  className="inline-block w-3 h-3 rounded-full border border-white/40 shrink-0"
+                                  style={{ backgroundColor: c.colorCode }}
+                                />
+                              )}
+                              {c.color}
+                            </button>
+                          ))}
+                        </div>
+                      </>
+                    )}
+
+                    <label className="text-[10px] font-medium text-slate-500 uppercase tracking-wider block mb-1.5">
+                      SIZE SELECTION (STOCK)
+                    </label>
                     <div ref={sizeContainerRef} className="flex flex-wrap gap-1.5 min-h-[28px] items-center">
-                      {availableSizes.map((v: any, idx: number) => {
+                      {(hasMultipleColors ? sizesByColor : availableSizes).map((v: any, idx: number) => {
                         const isOutOfStock = v.stock <= 0;
+                        const isDisabled = hasMultipleColors && !selectedColor;
                         return (
                           <button
                             key={v.id}
                             type="button"
+                            disabled={isDisabled}
                             onClick={() => {
                               setSelectedSize(v.size);
                               setTimeout(() => qtyInputRef.current?.focus(), 50);
@@ -783,17 +858,23 @@ export default function CreateOrderClient({
                                 qtyInputRef.current?.focus();
                               }
                             }}
-                            className={`px-2.5 py-1 text-xs font-semibold rounded border tracking-tight transition-all uppercase ${selectedSize === v.size
-                              ? "bg-slate-900 border-slate-900 text-white shadow-sm"
-                              : isOutOfStock
-                                ? "bg-orange-50 border-orange-200 text-orange-700 hover:bg-orange-100"
-                                : "bg-slate-50 border-slate-200 text-slate-700 hover:border-slate-400 hover:bg-slate-100"
-                              }`}
+                            className={`px-2.5 py-1 text-xs font-semibold rounded border tracking-tight transition-all uppercase ${
+                              isDisabled
+                                ? "opacity-30 cursor-not-allowed bg-slate-50 border-slate-200 text-slate-400"
+                                : selectedSize === v.size
+                                  ? "bg-slate-900 border-slate-900 text-white shadow-sm"
+                                  : isOutOfStock
+                                    ? "bg-orange-50 border-orange-200 text-orange-700 hover:bg-orange-100"
+                                    : "bg-slate-50 border-slate-200 text-slate-700 hover:border-slate-400 hover:bg-slate-100"
+                            }`}
                           >
                             {v.size} <span className="font-normal text-[10px]">({v.stock})</span>
                           </button>
                         );
                       })}
+                      {hasMultipleColors && !selectedColor && (
+                        <span className="text-xs text-slate-400 italic">— select a color first</span>
+                      )}
                     </div>
                   </>
                 )}
@@ -842,7 +923,7 @@ export default function CreateOrderClient({
                   ref={addToOrderBtnRef}
                   type="button"
                   onClick={addToOrder}
-                  disabled={!selectedProductId || !selectedSize}
+                  disabled={!selectedProductId || !selectedSize || (hasMultipleColors && !selectedColor)}
                   className="w-full h-[28px] bg-slate-700 text-white font-medium rounded flex items-center justify-center hover:bg-slate-800 disabled:bg-slate-100 disabled:text-slate-300 transition-all text-xs gap-1.5"
                 >
                   <Plus className="w-3.5 h-3.5" />
@@ -856,7 +937,7 @@ export default function CreateOrderClient({
           {selectedSize && (
             isAttrMode
               ? resolvedVariant && resolvedVariant.stock <= 0
-              : (availableSizes as any[]).find((v: any) => v.size === selectedSize)?.stock <= 0
+              : (hasMultipleColors ? sizesByColor : availableSizes as any[]).find((v: any) => v.size === selectedSize)?.stock <= 0
           ) && (
               <div className="text-[10px] font-medium text-orange-600 bg-orange-50 border border-orange-100 p-2 rounded">
                 ⚠ Backorder: Item is out of stock.

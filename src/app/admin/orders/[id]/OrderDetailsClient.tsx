@@ -538,7 +538,10 @@ export default function OrderDetailsClient({
   const handleAddNewProduct = () => {
     if (!newProductData.productId || !newProductData.size) { alert("Please select a product and size."); return; }
     const product = localProducts.find((p) => p.id === newProductData.productId);
-    let price = product.price;
+    const selectedVariant = product?.variants?.find((v: any) => v.id === newProductData.variantId);
+    let price = selectedVariant?.pricingMatrix?.basePrice
+      ? Number(selectedVariant.pricingMatrix.basePrice)
+      : product.price;
     if (product.discount) {
       price = product.discount.discountType === "PERCENTAGE"
         ? roundPrice(price - price * (product.discount.value / 100))
