@@ -160,7 +160,6 @@ model Product {
   isPublished   Boolean          @default(true)
   isCustomize   Boolean?         @default(false)
   trackStock    Boolean?         @default(false)
-  price         Float?
   purchasePrice Float?
   images        String[]         @default([])
   orderItems    OrderItem[]

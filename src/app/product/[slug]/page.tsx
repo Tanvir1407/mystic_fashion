@@ -187,7 +187,7 @@ export default async function ProductPage({ params }: { params: { slug: string }
 
   const basePrice = productRes.variants?.[0]?.pricingMatrix?.basePrice
     ? Number(productRes.variants[0].pricingMatrix.basePrice)
-    : productRes.price;
+    : 0;
 
   const displayImages = (productRes.mediaAssets && productRes.mediaAssets.length > 0)
     ? productRes.mediaAssets.map((asset: any) => asset.url)

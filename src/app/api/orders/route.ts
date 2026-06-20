@@ -141,7 +141,7 @@ export async function POST(req: NextRequest) {
 
         const basePrice = variant.pricingMatrix?.basePrice
           ? Number(variant.pricingMatrix.basePrice)
-          : variant.product.price;
+          : 0;
 
         let finalPrice = basePrice;
         const discount = variant.product.discount;

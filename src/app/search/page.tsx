@@ -65,7 +65,7 @@ export default async function SearchPage({
         basePrice: v.pricingMatrix.basePrice ? Number(v.pricingMatrix.basePrice) : 0,
       } : null,
     }));
-    const basePrice = mappedVariants[0]?.pricingMatrix?.basePrice || Number(product.price) || 0;
+    const basePrice = mappedVariants[0]?.pricingMatrix?.basePrice || 0;
     const images = (product.mediaAssets && product.mediaAssets.length > 0)
       ? product.mediaAssets.map((a: any) => a.url)
       : (product.images || []);

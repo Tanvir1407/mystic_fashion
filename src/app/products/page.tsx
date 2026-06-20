@@ -186,7 +186,7 @@ export default async function ProductsPage({
   const rawProducts = (productsRes || []).map((product: any) => {
     const basePrice = product.variants?.[0]?.pricingMatrix?.basePrice
       ? Number(product.variants[0].pricingMatrix.basePrice)
-      : product.price;
+      : 0;
 
     const displayImages = (product.mediaAssets && product.mediaAssets.length > 0)
       ? product.mediaAssets.map((asset: any) => asset.url)
