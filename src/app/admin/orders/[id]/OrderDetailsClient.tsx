@@ -439,6 +439,7 @@ export default function OrderDetailsClient({
       items: formData.items.map((i: any) => ({
         id: i.id,
         productId: i.productId,
+        variantId: i.variantId,
         size: i.size,
         quantity: i.quantity,
         price: i.price,
