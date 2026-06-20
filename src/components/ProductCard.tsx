@@ -106,11 +106,8 @@ export default function ProductCard({ product }: ProductCardProps) {
     }
   }
 
-  const totalStock = product.variants 
-    ? product.variants.reduce((acc, v) => {
-        const stockQty = v.stocks?.[0]?.availableQuantity ?? v.stock ?? 0;
-        return acc + stockQty;
-      }, 0) 
+  const totalStock = product.variants
+    ? product.variants.reduce((acc: number, v: any) => acc + (v.stock ?? 0), 0)
     : 0;
   const isOutOfStock = !!(product.trackStock && totalStock <= 0);
 

@@ -201,7 +201,7 @@ export default async function ProductPage({ params }: { params: { slug: string }
       const { pricingMatrix, ...rest } = v;
       return {
         ...rest,
-        stock: v.stocks?.[0]?.availableQuantity ?? v.stock ?? 0,
+        stock: v.stocks?.[0]?.availableQuantity ?? 0,
         price: pricingMatrix?.basePrice ? Number(pricingMatrix.basePrice) : basePrice
       };
     })

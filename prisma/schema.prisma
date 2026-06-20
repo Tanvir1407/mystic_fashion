@@ -186,7 +186,6 @@ model ProductVariant {
   color            String            @default("Default")
   colorCode        String?
   sku              String?           @unique
-  stock            Int               @default(0)
   order            Int               @default(0)
   upc              String?           @unique
   qrCode           String?           @unique

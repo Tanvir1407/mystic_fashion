@@ -84,7 +84,7 @@ export default async function ProductDetailView({ params }: { params: { id: stri
     images: displayImages,
     variants: productRes.variants.map((v: any) => ({
       ...v,
-      stock: v.stocks?.[0]?.availableQuantity ?? v.stock ?? 0
+      stock: v.stocks?.[0]?.availableQuantity ?? 0
     }))
   };
 
