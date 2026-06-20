@@ -36,7 +36,7 @@ const formatValue = (val: any, fieldKey?: string) => {
     if (fieldKey === "items" || (val[0] && typeof val[0] === "object" && "productId" in val[0])) {
       return val.map((item: any) => {
         const name = item.product?.name || item.productName || `Product (${item.productId?.slice(0, 8) || "Unknown"})`;
-        const sizeInfo = item.size ? ` (${item.size})` : "";
+        const sizeInfo = (item.variant?.size || item.size) ? ` (${item.variant?.size || item.size})` : "";
         const printInfo = item.requiresPrint ? ` [Print: ${item.printName || "No Name"}/${item.printNumber || "No No"}]` : "";
         return `${item.quantity}x ${name}${sizeInfo} @ ৳${item.price}${printInfo}`;
       }).join("\n");

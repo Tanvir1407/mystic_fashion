@@ -151,8 +151,8 @@ function OrderDetailCard({ order, pathaoInfo }: { order: any; pathaoInfo?: any }
           <div className="space-y-3">
             {order.items?.map((item: any, idx: number) => {
               const parts: string[] = [];
-              const size = item.size && item.size !== "Default" && item.size !== "none" ? item.size : null;
-              const color = item.color && item.color !== "Default" && item.color !== "none" ? item.color : null;
+              const size = item.variant?.size && item.variant.size !== "Default" && item.variant.size !== "none" ? item.variant.size : null;
+              const color = item.variant?.color && item.variant.color !== "Default" && item.variant.color !== "none" ? item.variant.color : null;
               if (color) parts.push(color);
               if (size) parts.push(size);
               const variantLabel = parts.join(" / ");
@@ -219,8 +219,8 @@ function PhoneOrdersList({ orders, onSelectOrder }: { orders: any[]; onSelectOrd
               <div className="mt-1 space-y-0.5">
                 {order.items?.slice(0, 2).map((i: any, idx: number) => {
                   const parts: string[] = [];
-                  const s = i.size && i.size !== "Default" && i.size !== "none" ? i.size : null;
-                  const c = i.color && i.color !== "Default" && i.color !== "none" ? i.color : null;
+                  const s = i.variant?.size && i.variant.size !== "Default" && i.variant.size !== "none" ? i.variant.size : null;
+                  const c = i.variant?.color && i.variant.color !== "Default" && i.variant.color !== "none" ? i.variant.color : null;
                   if (c) parts.push(c);
                   if (s) parts.push(s);
                   return (

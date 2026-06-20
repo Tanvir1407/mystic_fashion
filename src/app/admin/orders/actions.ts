@@ -352,7 +352,8 @@ async function _updateOrderDetails(
     items?: {
       id: string;
       productId: string;
-      size: string;
+      variantId?: string;
+      size?: string;
       quantity: number;
       price: number;
       requiresPrint: boolean;
@@ -395,7 +396,8 @@ async function _updateOrderDetails(
           if (oldItem) {
             const diff = newItem.quantity - oldItem.quantity;
             if (diff !== 0 && isStockHolding) {
-              let variantId = oldItem.variantId;
+              // Prefer variantId from the existing DB item — it's always correct
+              let variantId = oldItem.variantId ?? newItem.variantId;
               if (!variantId) {
                 const v = await tx.productVariant.findUnique({
                   where: {
@@ -464,8 +466,9 @@ async function _updateOrderDetails(
         await tx.orderItem.deleteMany({ where: { orderId: id } });
 
         for (const newItem of data.items) {
-          let variantId = (newItem as any).variantId;
-          if (!variantId) {
+          let variantId = newItem.variantId;
+
+          if (!variantId && newItem.size) {
             const v = await tx.productVariant.findUnique({
               where: {
                 productId_size_color: {
@@ -477,14 +480,16 @@ async function _updateOrderDetails(
             });
             if (v) variantId = v.id;
           }
+
           if (!variantId) {
-            throw new Error(`Could not resolve variant ID for product ${newItem.productId} (Size: ${newItem.size})`);
+            throw new Error(`Could not resolve variant ID for product ${newItem.productId}`);
           }
+
           await tx.orderItem.create({
             data: {
               orderId: id,
               productId: newItem.productId,
-              variantId: variantId,
+              variantId,
               quantity: newItem.quantity,
               price: newItem.price,
               requiresPrint: newItem.requiresPrint,
@@ -918,7 +923,7 @@ export async function bulkSendToPathaoAction(orderIds: string[]) {
           item_description: order.items
             .map(
               (i) =>
-                `• ${i.product?.name || "Item"} (Size: ${i.variant?.size || (i as any).size || "N/A"}, Qty: ${i.quantity})`
+                `• ${i.product?.name || "Item"} (Size: ${i.variant?.size || "N/A"}, Qty: ${i.quantity})`
             )
             .join("\n"),
         };
@@ -1055,7 +1060,7 @@ export async function sendPathaoPickupManually(orderId: string) {
       item_weight: 0.5,
       amount_to_collect: collectionAmount,
       item_description: order.items
-        .map((i) => `${i.product?.name || "Item"} (Size: ${i.variant?.size || (i as any).size || "N/A"}, Qty: ${i.quantity})`)
+        .map((i) => `${i.product?.name || "Item"} (Size: ${i.variant?.size || "N/A"}, Qty: ${i.quantity})`)
         .join(", "),
     };
 

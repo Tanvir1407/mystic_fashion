@@ -328,7 +328,6 @@ model OrderItem {
   printName     String?
   printNumber   String?
   requiresPrint Boolean         @default(false)
-  size          String          @default("M")
   variantId     String?
   order         Order           @relation(fields: [orderId], references: [id], onDelete: Cascade)
   product       Product         @relation(fields: [productId], references: [id], onDelete: Restrict)

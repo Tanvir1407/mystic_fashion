@@ -13,8 +13,6 @@ interface OrderItem {
   id: string;
   quantity: number;
   price: number;
-  size?: string;
-  color?: string;
   variant?: {
     size: string;
     color?: string;

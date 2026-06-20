@@ -356,6 +356,7 @@ export default function OrderDetailsClient({
 
   const [newProductData, setNewProductData] = useState({
     productId: "",
+    variantId: "",
     size: "",
     quantity: 1,
     requiresPrint: false,
@@ -440,7 +441,6 @@ export default function OrderDetailsClient({
         id: i.id,
         productId: i.productId,
         variantId: i.variantId,
-        size: i.size,
         quantity: i.quantity,
         price: i.price,
         requiresPrint: i.requiresPrint,
@@ -547,7 +547,7 @@ export default function OrderDetailsClient({
     setFormData({
       ...formData,
       items: [...formData.items, {
-        id: `new-${Date.now()}`, productId: product.id, product,
+        id: `new-${Date.now()}`, productId: product.id, variantId: newProductData.variantId, product,
         size: newProductData.size, quantity: newProductData.quantity, price,
         requiresPrint: newProductData.requiresPrint,
         printName: newProductData.requiresPrint ? newProductData.printName : "",
@@ -556,7 +556,7 @@ export default function OrderDetailsClient({
       }],
     });
     setIsAddingProduct(false);
-    setNewProductData({ productId: "", size: "", quantity: 1, requiresPrint: false, printName: "", printNumber: "", printCost: dtfSetting?.printCost || 300 });
+    setNewProductData({ productId: "", variantId: "", size: "", quantity: 1, requiresPrint: false, printName: "", printNumber: "", printCost: dtfSetting?.printCost || 300 });
   };
 
   // Financial calculations
@@ -990,9 +990,13 @@ export default function OrderDetailsClient({
                         <div>
                           <label className="text-[10px] font-bold uppercase text-slate-500 block mb-1">Size</label>
                           <CustomSelect
-                            options={(localProducts.find((p) => p.id === newProductData.productId)?.variants || []).map((v: any) => ({ value: v.size, label: `${v.size} (Stock: ${v.stock})` }))}
+                            options={(localProducts.find((p: any) => p.id === newProductData.productId)?.variants || []).map((v: any) => ({ value: v.size, label: `${v.size} (Stock: ${v.stock})` }))}
                             value={newProductData.size}
-                            onChange={(val) => setNewProductData({ ...newProductData, size: val })}
+                            onChange={(val) => {
+                              const prod = localProducts.find((p: any) => p.id === newProductData.productId);
+                              const variant = prod?.variants?.find((v: any) => v.size === val);
+                              setNewProductData({ ...newProductData, size: val, variantId: variant?.id || "" });
+                            }}
                             openUpwards
                           />
                         </div>
