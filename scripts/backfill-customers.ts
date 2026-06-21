@@ -1,5 +1,6 @@
 import './load-env';
 import prisma from '../src/lib/prisma';
+import { normalizePhone } from '../src/lib/utils';
 
 async function main() {
   console.log('--- Starting Customer Profile Backfill ---');
@@ -30,10 +31,11 @@ async function main() {
       console.warn(`Warning: Order ${order.id} has no phone number. Skipping.`);
       continue;
     }
-    if (!phoneToOrders[rawPhone]) {
-      phoneToOrders[rawPhone] = [];
+    const cleanPhone = normalizePhone(rawPhone);
+    if (!phoneToOrders[cleanPhone]) {
+      phoneToOrders[cleanPhone] = [];
     }
-    phoneToOrders[rawPhone].push(order);
+    phoneToOrders[cleanPhone].push(order);
   }
 
   const uniquePhones = Object.keys(phoneToOrders);
