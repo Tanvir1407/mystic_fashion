@@ -13,7 +13,7 @@ export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
 export const revalidate = 0;
 
-export default async function AdminProductsPage({ searchParams }: { searchParams: { page?: string, limit?: string, search?: string, category?: string, tab?: string } }) {
+export default async function AdminProductsPage({ searchParams }: { searchParams: { page?: string, limit?: string, search?: string, category?: string, tab?: string, featured?: string, hidden?: string } }) {
   const session = await getSession();
   const canView = hasPermission(session, "VIEW", "PRODUCTS");
   const canCreate = hasPermission(session, "CREATE", "PRODUCTS");
@@ -43,11 +43,19 @@ export default async function AdminProductsPage({ searchParams }: { searchParams
   const search = searchParams?.search || "";
   const category = searchParams?.category || "ALL";
   const tab = searchParams?.tab || "active";
+  const featuredOnly = searchParams?.featured === "true";
+  const hiddenOnly = searchParams?.hidden === "true";
   const PER_PAGE = [10, 20, 50, 100].includes(limit) ? limit : 10;
 
   const whereClause: any = tab === "trash" ? { deletedAt: { not: null } as any } : {};
   if (category !== "ALL") {
     whereClause.categoryRel = { name: { equals: category, mode: "insensitive" } };
+  }
+  if (featuredOnly) {
+    whereClause.isFeatured = true;
+  }
+  if (hiddenOnly) {
+    whereClause.isPublished = false;
   }
   if (search) {
     whereClause.OR = [
@@ -120,6 +128,8 @@ export default async function AdminProductsPage({ searchParams }: { searchParams
           currentSearch={search}
           currentCategory={category}
           categories={categories}
+          featuredOnly={featuredOnly}
+          hiddenOnly={hiddenOnly}
         />
       </div>
 
