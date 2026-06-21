@@ -127,6 +127,25 @@ export default function ProductFilterClient({
               <Star className={`w-4 h-4 ${featuredOnly ? "fill-amber-400 text-amber-400" : ""}`} />
               Featured
             </button>
+
+            {/* Hidden Filter Toggle */}
+            <button
+              onClick={() => {
+                const params = new URLSearchParams(window.location.search);
+                if (hiddenOnly) params.delete("hidden");
+                else params.set("hidden", "true");
+                params.set("page", "1");
+                router.push(`/admin/products?${params.toString()}`);
+              }}
+              className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold border transition-all ${
+                hiddenOnly
+                  ? "bg-red-50 border-red-300 text-red-700"
+                  : "bg-slate-50 border-slate-200 text-slate-500 hover:border-red-300 hover:text-red-600"
+              }`}
+            >
+              <EyeOff className="w-4 h-4" />
+              Hidden
+            </button>
           </div>
         </div>
       </div>
