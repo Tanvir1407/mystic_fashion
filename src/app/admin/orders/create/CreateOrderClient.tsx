@@ -255,24 +255,6 @@ export default function CreateOrderClient({
   const selectedProduct = useMemo(() => products.find(p => p.id === selectedProductId), [products, selectedProductId]);
   const availableSizes = useMemo(() => selectedProduct?.variants || [], [selectedProduct]);
 
-  // Multi-color detection (uses built-in color field, not attributes JSON)
-  const colorGroups = useMemo(() => {
-    if (!selectedProduct) return [];
-    const seen = new Map<string, { color: string; colorCode?: string }>();
-    for (const v of selectedProduct.variants) {
-      const c = (v as any).color || "Default";
-      if (!seen.has(c)) seen.set(c, { color: c, colorCode: (v as any).colorCode });
-    }
-    return Array.from(seen.values());
-  }, [selectedProduct]);
-  const hasMultipleColors = colorGroups.length > 1;
-
-  // Sizes filtered by selected color (for multi-color products)
-  const sizesByColor = useMemo(() => {
-    if (!hasMultipleColors || !selectedColor) return availableSizes;
-    return availableSizes.filter((v: any) => (v.color || "Default") === selectedColor);
-  }, [availableSizes, hasMultipleColors, selectedColor]);
-
   // ─── Dynamic Attribute Cascade Logic ───────────────────────────────────────
   // Determine if this product uses PIM attributes (has non-empty attributes JSON)
   const attrKeys = useMemo(() => {
@@ -288,6 +270,24 @@ export default function CreateOrderClient({
   }, [selectedProduct]);
 
   const isAttrMode = attrKeys.length > 0;
+
+  // Multi-color detection (uses built-in color field, not attributes JSON)
+  const colorGroups = useMemo(() => {
+    if (!selectedProduct) return [];
+    const seen = new Map<string, { color: string; colorCode?: string }>();
+    for (const v of selectedProduct.variants) {
+      const c = (v as any).color || "Default";
+      if (!seen.has(c)) seen.set(c, { color: c, colorCode: (v as any).colorCode });
+    }
+    return Array.from(seen.values());
+  }, [selectedProduct]);
+  const hasMultipleColors = !isAttrMode && colorGroups.length > 1;
+
+  // Sizes filtered by selected color (for multi-color products)
+  const sizesByColor = useMemo(() => {
+    if (!hasMultipleColors || !selectedColor) return availableSizes;
+    return availableSizes.filter((v: any) => (v.color || "Default") === selectedColor);
+  }, [availableSizes, hasMultipleColors, selectedColor]);
 
   // For each attr key, get unique values from variants (filtered by prior selections)
   const attrOptions = useMemo(() => {
@@ -348,9 +348,11 @@ export default function CreateOrderClient({
     if (!selectedProduct || !selectedSize) return;
     if (hasMultipleColors && !selectedColor) return;
 
-    const variant = selectedProduct.variants.find((v: any) =>
-      v.size === selectedSize && (!hasMultipleColors || (v.color || "Default") === selectedColor)
-    );
+    const variant = isAttrMode
+      ? resolvedVariant
+      : selectedProduct.variants.find((v: any) =>
+          v.size === selectedSize && (!hasMultipleColors || (v.color || "Default") === selectedColor)
+        );
     if (!variant) return;
 
     const variantBasePrice = variant.pricingMatrix?.basePrice
@@ -358,7 +360,7 @@ export default function CreateOrderClient({
       : selectedProduct.price;
     const unitPrice = getDiscountedPrice({ ...selectedProduct, price: variantBasePrice });
     const existingIndex = orderItems.findIndex(
-      item => item.productId === selectedProductId && item.size === selectedSize && !item.requiresPrint && !requiresPrint
+      item => item.productId === selectedProductId && item.variantId === variant.id && !item.requiresPrint && !requiresPrint
     );
 
     if (existingIndex > -1) {
