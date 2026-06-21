@@ -61,6 +61,7 @@ export default async function Home() {
           orderBy: { createdAt: "desc" },
           include: {
             discount: true,
+            categoryRel: { select: { name: true } },
             mediaAssets: { orderBy: { sortOrder: "asc" } },
             variants: {
               include: {
@@ -87,6 +88,7 @@ export default async function Home() {
             take: 4,
             include: {
               discount: true,
+              categoryRel: { select: { name: true } },
               mediaAssets: { orderBy: { sortOrder: "asc" } },
               variants: {
                 include: {
@@ -115,15 +117,16 @@ export default async function Home() {
               },
               take: remainingCount,
               include: {
-              discount: true,
-              mediaAssets: { orderBy: { sortOrder: "asc" } },
-              variants: {
-                include: {
-                  pricingMatrix: true,
-                  stocks: { where: { warehouse: { code: "MAIN" } } }
+                discount: true,
+                categoryRel: { select: { name: true } },
+                mediaAssets: { orderBy: { sortOrder: "asc" } },
+                variants: {
+                  include: {
+                    pricingMatrix: true,
+                    stocks: { where: { warehouse: { code: "MAIN" } } }
+                  }
                 }
               }
-            }
             });
             finalProducts = [...finalProducts, ...topSold];
           }
