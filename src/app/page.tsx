@@ -77,15 +77,13 @@ export default async function Home() {
     Promise.all(
       categoriesList.map(async (catName) => {
         try {
-          // Fetch featured products (up to 4) ordered by featuredOrder
-          const featured = await prisma.product.findMany({
+          // Fetch all featured products, then sort in JS so 0 goes last (1=first, 2=second, 0=unset→last)
+          const featuredRaw = await prisma.product.findMany({
             where: {
               isPublished: true,
               categoryRel: { name: { equals: catName, mode: "insensitive" } },
               isFeatured: true
             },
-            orderBy: { featuredOrder: "asc" },
-            take: 4,
             include: {
               discount: true,
               categoryRel: { select: { name: true } },
@@ -98,6 +96,10 @@ export default async function Home() {
               }
             }
           });
+
+          const featured = featuredRaw
+            .sort((a, b) => (a.featuredOrder || Infinity) - (b.featuredOrder || Infinity))
+            .slice(0, 4);
 
           let finalProducts = [...featured];
 

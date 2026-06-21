@@ -220,7 +220,7 @@ export default function ProductFormClient({
 
   const [isUploading, setIsUploading] = useState(false);
   const [isFeatured, setIsFeatured] = useState(initialData?.isFeatured || false);
-  const [featuredOrder, setFeaturedOrder] = useState<number>(initialData?.featuredOrder ?? 0);
+  const [featuredOrder, setFeaturedOrder] = useState<number>(initialData?.featuredOrder || 1);
   const [isPublished, setIsPublished] = useState(initialData?.isPublished ?? true);
   const [isCustomize, setIsCustomize] = useState(initialData?.isCustomize || false);
   const [trackStock, setTrackStock] = useState(initialData?.trackStock || false);
@@ -823,7 +823,7 @@ export default function ProductFormClient({
                       className="w-24 border border-amber-300 bg-amber-50 text-amber-900 text-sm px-2 py-1 focus:outline-none focus:ring-1 focus:ring-amber-500"
                       placeholder="0"
                     />
-                    <span className="text-[10px] text-amber-600">Lower number = shown first (0 = top)</span>
+                    <span className="text-[10px] text-amber-600">1 = first, 2 = second... 0 = last</span>
                   </div>
                 )}
               </div>
