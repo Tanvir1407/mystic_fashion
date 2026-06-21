@@ -189,7 +189,7 @@ export default async function ProductsPage({
 
     const displayImages = (product.mediaAssets && product.mediaAssets.length > 0)
       ? product.mediaAssets.map((asset: any) => asset.url)
-      : (product.images || []);
+      : [];
 
     const mappedVariants = product.variants?.map((v: any) => ({
       ...v,

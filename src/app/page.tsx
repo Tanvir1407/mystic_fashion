@@ -168,7 +168,7 @@ export default async function Home() {
     const basePrice = variants[0]?.pricingMatrix?.basePrice ?? 0;
     const images = (product.mediaAssets && product.mediaAssets.length > 0)
       ? product.mediaAssets.map((a: any) => a.url)
-      : (product.images || []);
+      : [];
     return {
       ...product,
       price: basePrice,

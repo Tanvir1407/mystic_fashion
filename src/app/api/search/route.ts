@@ -67,7 +67,7 @@ export async function GET(req: NextRequest) {
 
       const displayImages = (p.mediaAssets && p.mediaAssets.length > 0)
         ? p.mediaAssets.map((asset: any) => asset.url)
-        : ((p as any).images || []);
+        : [];
 
       return {
         id: p.id,

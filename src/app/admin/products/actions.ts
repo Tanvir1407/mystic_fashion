@@ -588,9 +588,7 @@ export async function getProductsForOrder() {
       ? Number(p.variants[0].pricingMatrix.basePrice)
       : 0;
 
-    const displayImages = (p.mediaAssets && p.mediaAssets.length > 0)
-      ? p.mediaAssets.map((asset: any) => asset.url)
-      : ((p as any).images || []);
+    const displayImages = p.mediaAssets?.map((asset: any) => asset.url) || [];
 
     return {
       ...p,

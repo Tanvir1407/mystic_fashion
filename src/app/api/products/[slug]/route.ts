@@ -38,7 +38,7 @@ export async function GET(_req: NextRequest, { params }: { params: { slug: strin
 
     const displayImages = (product.mediaAssets && product.mediaAssets.length > 0)
       ? product.mediaAssets.map((asset: any) => asset.url)
-      : ((product as any).images || []);
+      : [];
 
     let finalPrice = basePrice;
     if (product.discount?.active) {

@@ -191,7 +191,7 @@ export default async function ProductPage({ params }: { params: { slug: string }
 
   const displayImages = (productRes.mediaAssets && productRes.mediaAssets.length > 0)
     ? productRes.mediaAssets.map((asset: any) => asset.url)
-    : ((productRes as any).images || []);
+    : [];
 
   const product = {
     ...productRes,
@@ -249,7 +249,7 @@ export default async function ProductPage({ params }: { params: { slug: string }
       : rp.price;
     const rpDisplayImages = (rp.mediaAssets && rp.mediaAssets.length > 0)
       ? rp.mediaAssets.map((asset: any) => asset.url)
-      : (rp.images || []);
+      : [];
     return {
       ...rp,
       price: rpBasePrice,

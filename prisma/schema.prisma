@@ -160,7 +160,6 @@ model Product {
   isCustomize   Boolean?         @default(false)
   trackStock    Boolean?         @default(false)
   purchasePrice Float?
-  images        String[]         @default([])
   orderItems    OrderItem[]
   brand         Brand?           @relation(fields: [brandId], references: [id])
   categoryRel   Category?        @relation(fields: [categoryId], references: [id])
