@@ -217,7 +217,10 @@ export default async function ProductPage({ params }: { params: { slug: string }
     take: 4,
     include: {
       variants: {
-        include: { pricingMatrix: true }
+        include: {
+          pricingMatrix: true,
+          stocks: { where: { warehouse: { code: "MAIN" } } }
+        }
       },
       discount: true,
       mediaAssets: { orderBy: { sortOrder: "asc" } }
@@ -234,7 +237,10 @@ export default async function ProductPage({ params }: { params: { slug: string }
       take: 4 - relatedProductsRes.length,
       include: {
         variants: {
-          include: { pricingMatrix: true }
+          include: {
+            pricingMatrix: true,
+            stocks: { where: { warehouse: { code: "MAIN" } } }
+          }
         },
         discount: true,
         mediaAssets: { orderBy: { sortOrder: "asc" } }
@@ -258,6 +264,7 @@ export default async function ProductPage({ params }: { params: { slug: string }
         const { pricingMatrix, ...rest } = v;
         return {
           ...rest,
+          stock: v.stocks?.[0]?.availableQuantity ?? 0,
           price: pricingMatrix?.basePrice ? Number(pricingMatrix.basePrice) : rpBasePrice
         };
       })
