@@ -74,9 +74,10 @@ export async function updateStockDualWrite(
   // Allow negative stock only if tracked stock is disabled, but by default we guard
   // We will let the business logic validate if stock can go below zero.
   // For safety, we raise an error if subtraction exceeds available stock when checking out
-  if (movementType === "SALE" && newAvailable < 0) {
-    throw new Error(`Insufficient stock. Available: ${previousAvailable}, Requested: ${Math.abs(change)}`);
-  }
+  // NOTE: Commented out to allow negative stock (e.g. -1) for status updates and admin/staff orders as requested.
+  // if (movementType === "SALE" && newAvailable < 0) {
+  //   throw new Error(`Insufficient stock. Available: ${previousAvailable}, Requested: ${Math.abs(change)}`);
+  // }
 
   // 3. Perform OCC Update
   const updateResult = await tx.stock.updateMany({
