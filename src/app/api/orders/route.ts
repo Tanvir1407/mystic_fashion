@@ -211,7 +211,6 @@ export async function POST(req: NextRequest) {
               if (item.requiresPrint && item.printDetails?.length > 0) {
                 const printed = item.printDetails.map((pd: any) => ({
                   productId: item.id,
-                  size: item.size || "M",
                   variantId,
                   quantity: 1,
                   price: item.price,
@@ -224,7 +223,6 @@ export async function POST(req: NextRequest) {
                 if (remaining > 0) {
                   printed.push({
                     productId: item.id,
-                    size: item.size || "M",
                     variantId,
                     quantity: remaining,
                     price: item.price,
@@ -239,7 +237,6 @@ export async function POST(req: NextRequest) {
               return [
                 {
                   productId: item.id,
-                  size: item.size || "M",
                   variantId,
                   quantity: item.quantity,
                   price: item.price,

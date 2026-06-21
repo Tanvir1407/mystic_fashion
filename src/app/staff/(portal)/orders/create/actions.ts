@@ -107,7 +107,6 @@ export async function createStaffOrder(data: {
                 const printed = item.printDetails.map((pd) => ({
                   productId: item.productId,
                   variantId,
-                  size: item.size,
                   quantity: 1,
                   price: item.price,
                   requiresPrint: true,
@@ -117,11 +116,11 @@ export async function createStaffOrder(data: {
                 }));
                 const remaining = item.quantity - item.printDetails.length;
                 if (remaining > 0) {
-                  printed.push({ productId: item.productId, variantId, size: item.size, quantity: remaining, price: item.price, requiresPrint: false, printName: null, printNumber: null, printCost: 0 });
+                  printed.push({ productId: item.productId, variantId, quantity: remaining, price: item.price, requiresPrint: false, printName: null, printNumber: null, printCost: 0 });
                 }
                 return printed;
               }
-              return [{ productId: item.productId, variantId, size: item.size, quantity: item.quantity, price: item.price, requiresPrint: item.requiresPrint || false, printName: item.printName || null, printNumber: item.printNumber || null, printCost: item.printCost || 0 }];
+              return [{ productId: item.productId, variantId, quantity: item.quantity, price: item.price, requiresPrint: item.requiresPrint || false, printName: item.printName || null, printNumber: item.printNumber || null, printCost: item.printCost || 0 }];
             }),
           },
         },

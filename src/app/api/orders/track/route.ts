@@ -32,7 +32,6 @@ const orderSelect = {
   items: {
     select: {
       id: true,
-      size: true,
       quantity: true,
       price: true,
       requiresPrint: true,
@@ -40,6 +39,7 @@ const orderSelect = {
       printNumber: true,
       printCost: true,
       product: { select: { name: true, slug: true, mediaAssets: { select: { url: true }, orderBy: { sortOrder: "asc" }, take: 1 } } },
+      variant: { select: { size: true } },
     },
   },
 } as const;
@@ -74,7 +74,7 @@ function formatOrder(order: any) {
       productName: item.product.name,
       productImage: item.product.mediaAssets?.[0]?.url || null,
       productSlug: item.product.slug,
-      size: item.size,
+      size: item.variant?.size || "M",
       quantity: item.quantity,
       price: item.price,
       requiresPrint: item.requiresPrint,
