@@ -288,7 +288,8 @@ export async function getLowStockProducts(options?: { limit?: number; page?: num
         include: {
           stocks: true
         }
-      }
+      },
+      categoryRel: { select: { name: true } }
     },
     orderBy: { updatedAt: "desc" },
     take: limit,
@@ -297,6 +298,7 @@ export async function getLowStockProducts(options?: { limit?: number; page?: num
 
   return productsData.map(product => ({
     ...product,
+    category: product.categoryRel?.name || "",
     variants: product.variants.map(variant => ({
       ...variant,
       stock: variant.stocks.reduce((sum, s) => sum + s.physicalQuantity, 0)

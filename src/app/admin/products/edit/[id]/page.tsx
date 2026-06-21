@@ -55,13 +55,7 @@ export default async function EditProductPage({ params }: { params: { id: string
     } : null
   }));
 
-  let resolvedCategoryId = productRes.categoryId;
-  if (!resolvedCategoryId && productRes.category) {
-    const matchedCat = categories.find(c => c.name.toLowerCase() === productRes.category.toLowerCase());
-    if (matchedCat) {
-      resolvedCategoryId = matchedCat.id;
-    }
-  }
+  const resolvedCategoryId = productRes.categoryId;
 
   const product = {
     ...productRes,

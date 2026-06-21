@@ -196,6 +196,7 @@ export default async function ProductPage({ params }: { params: { slug: string }
   const product = {
     ...productRes,
     price: basePrice,
+    category: productRes.categoryRel?.name || "",
     images: displayImages,
     variants: productRes.variants.map((v: any) => {
       const { pricingMatrix, ...rest } = v;

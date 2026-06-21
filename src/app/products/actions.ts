@@ -130,7 +130,7 @@ export async function getFilteredProductsList(params: {
         : 0,
       images: displayImages,
       team: p.team,
-      category: p.category,
+      category: p.categoryRel?.name || "",
       brandId: p.brandId,
       categoryId: p.categoryId,
       subcategoryId: p.subcategoryId,

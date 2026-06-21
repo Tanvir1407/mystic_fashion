@@ -146,7 +146,6 @@ model Product {
   slug          String?          @unique
   description   String
   team          String?
-  category      String
   brandId       String?
   categoryId    String?
   subcategoryId String?

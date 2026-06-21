@@ -61,7 +61,6 @@ async function _createProduct(data: {
   price: number;
   images: (string | { url: string; boundAttributes?: any })[];
   team?: string;
-  category: string;
   brandId?: string | null;
   categoryId?: string | null;
   subcategoryId?: string | null;
@@ -131,7 +130,6 @@ async function _createProduct(data: {
           description: data.description,
 
           team: data.team || null,
-          category: data.category,
           brandId: data.brandId || null,
           categoryId: data.categoryId || null,
           subcategoryId: data.subcategoryId || null,
@@ -256,7 +254,6 @@ async function _updateProduct(
     price: number;
     images: (string | { url: string; boundAttributes?: any })[];
     team?: string;
-    category: string;
     brandId?: string | null;
     categoryId?: string | null;
     subcategoryId?: string | null;
@@ -333,7 +330,6 @@ async function _updateProduct(
           description: data.description,
 
           team: data.team || null,
-          category: data.category,
           brandId: data.brandId || null,
           categoryId: data.categoryId || null,
           subcategoryId: data.subcategoryId || null,
@@ -574,6 +570,7 @@ export async function getProductsForOrder() {
     include: {
       mediaAssets: { orderBy: { sortOrder: "asc" } },
       discount: true,
+      categoryRel: { select: { name: true } },
       variants: {
         include: {
           pricingMatrix: true,
@@ -598,6 +595,7 @@ export async function getProductsForOrder() {
     return {
       ...p,
       price: basePrice,
+      category: p.categoryRel?.name || "",
       images: displayImages,
       variants: p.variants.map(v => ({
         ...v,

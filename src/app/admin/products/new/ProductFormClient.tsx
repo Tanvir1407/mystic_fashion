@@ -542,7 +542,6 @@ export default function ProductFormClient({
       description: description.trim(),
       price: parseFloat(price),
       images: validImages, // Send the cleaned array of objects { url, boundAttributes }
-      category: categoryName,
       brandId: brandId || null,
       categoryId: categoryId || null,
       subcategoryId: subcategoryId || null,

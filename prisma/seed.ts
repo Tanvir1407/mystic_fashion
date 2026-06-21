@@ -132,7 +132,6 @@ async function main() {
         data: {
           name: "Argentina 2024 Home Jersey",
           slug: "argentina-2024-home-jersey",
-          category: "Jersey",
           description:
             "Official-style Argentina 2024 Home Kit. Light blue and white stripes, breathable dry-fit fabric.",
           team: "Argentina",
@@ -158,7 +157,6 @@ async function main() {
         data: {
           name: "Brazil 2024 Away Jersey",
           slug: "brazil-2024-away-jersey",
-          category: "Jersey",
           description:
             "Brazil 2024 Away Kit in all-white with green accents. Lightweight performance fabric.",
           team: "Brazil",
@@ -184,7 +182,6 @@ async function main() {
         data: {
           name: "Real Madrid 2024 Home Jersey",
           slug: "real-madrid-2024-home-jersey",
-          category: "Jersey",
           description:
             "Classic white Real Madrid home jersey for the 2024 season. Slim-fit tailored design.",
           team: "Real Madrid",
@@ -210,7 +207,6 @@ async function main() {
         data: {
           name: "Mystic Essential Tee",
           slug: "mystic-essential-tee",
-          category: "T-Shirt",
           description:
             "Everyday premium cotton tee. Available in black and white. Oversized fit.",
           brandId: brandMystic.id,
@@ -241,7 +237,6 @@ async function main() {
         data: {
           name: "Mystic Oversized Hoodie",
           slug: "mystic-oversized-hoodie",
-          category: "Hoodie",
           description:
             "Heavy GSM fleece hoodie with kangaroo pocket. Boxy oversized silhouette.",
           brandId: brandMystic.id,

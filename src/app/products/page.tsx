@@ -124,7 +124,6 @@ export default async function ProductsPage({
         name: true,
         description: true,
         team: true,
-        category: true,
         brandId: true,
         categoryId: true,
         subcategoryId: true,
@@ -134,7 +133,7 @@ export default async function ProductsPage({
         isPublished: true,
         trackStock: true,
         brand: true,
-        categoryRel: true,
+        categoryRel: { select: { name: true } },
         subcategory: true,
         discount: true,
         mediaAssets: { orderBy: { sortOrder: "asc" } },
@@ -208,6 +207,7 @@ export default async function ProductsPage({
     return {
       ...product,
       price: basePrice,
+      category: product.categoryRel?.name || "",
       purchasePrice: product.variants?.[0]?.pricingMatrix?.costPrice
         ? Number(product.variants[0].pricingMatrix.costPrice)
         : 0,

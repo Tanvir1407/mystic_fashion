@@ -55,7 +55,7 @@ export default async function Home() {
         prisma.product.findMany({
           where: {
             isPublished: true,
-            category: { equals: cat, mode: "insensitive" }
+            categoryRel: { name: { equals: cat, mode: "insensitive" } }
           },
           take: 4,
           orderBy: { createdAt: "desc" },
@@ -80,7 +80,7 @@ export default async function Home() {
           const featured = await prisma.product.findMany({
             where: {
               isPublished: true,
-              category: { equals: catName, mode: "insensitive" },
+              categoryRel: { name: { equals: catName, mode: "insensitive" } },
               isFeatured: true
             },
             orderBy: { featuredOrder: "asc" },
@@ -105,7 +105,7 @@ export default async function Home() {
             const topSold = await prisma.product.findMany({
               where: {
                 isPublished: true,
-                category: { equals: catName, mode: "insensitive" },
+                categoryRel: { name: { equals: catName, mode: "insensitive" } },
                 id: { notIn: finalProducts.map(p => p.id) }
               },
               orderBy: {
@@ -172,6 +172,7 @@ export default async function Home() {
     return {
       ...product,
       price: basePrice,
+      category: product.categoryRel?.name || "",
       variants,
       images
     };

@@ -40,7 +40,7 @@ export default async function SearchPage({
         OR: [
           { name: { contains: query, mode: 'insensitive' } },
           { team: { contains: query, mode: 'insensitive' } },
-          { category: { contains: query, mode: 'insensitive' } },
+          { categoryRel: { name: { contains: query, mode: 'insensitive' } } },
           { description: { contains: query, mode: 'insensitive' } },
         ],
       },
@@ -69,7 +69,7 @@ export default async function SearchPage({
     const images = (product.mediaAssets && product.mediaAssets.length > 0)
       ? product.mediaAssets.map((a: any) => a.url)
       : (product.images || []);
-    return { ...product, price: basePrice, variants: mappedVariants, images };
+    return { ...product, price: basePrice, category: (product as any).categoryRel?.name || "", variants: mappedVariants, images };
   });
 
   return (

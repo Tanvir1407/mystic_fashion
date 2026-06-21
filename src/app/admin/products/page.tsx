@@ -47,13 +47,13 @@ export default async function AdminProductsPage({ searchParams }: { searchParams
 
   const whereClause: any = tab === "trash" ? { deletedAt: { not: null } as any } : {};
   if (category !== "ALL") {
-    whereClause.category = category;
+    whereClause.categoryRel = { name: { equals: category, mode: "insensitive" } };
   }
   if (search) {
     whereClause.OR = [
       { name: { contains: search, mode: 'insensitive' } },
       { team: { contains: search, mode: 'insensitive' } },
-      { category: { contains: search, mode: 'insensitive' } },
+      { categoryRel: { name: { contains: search, mode: 'insensitive' } } },
     ];
   }
 
@@ -74,7 +74,8 @@ export default async function AdminProductsPage({ searchParams }: { searchParams
               stocks: true
             }
           },
-          brand: true
+          brand: true,
+          categoryRel: { select: { name: true } }
         }
       }),
       prisma.product.count({ where: whereClause }),
@@ -215,7 +216,7 @@ export default async function AdminProductsPage({ searchParams }: { searchParams
                             </>
                           )}
                         </div>
-                        <span className="text-xs text-slate-500">{product.category}</span>
+                        <span className="text-xs text-slate-500">{product.categoryRel?.name}</span>
                       </div>
                     </td>
                     <td className="px-2 py-4 text-sm text-slate-600 font-mono">

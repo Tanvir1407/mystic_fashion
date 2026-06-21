@@ -81,6 +81,7 @@ export default async function ProductDetailView({ params }: { params: { id: stri
     ...productRes,
     price: basePrice,
     purchasePrice: costPrice,
+    category: productRes.categoryRel?.name || "",
     images: displayImages,
     variants: productRes.variants.map((v: any) => ({
       ...v,
