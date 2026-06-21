@@ -216,7 +216,19 @@ export default function ProductClient({ product, sizeChartData, relatedProducts 
   // Find active variant matching selected size and color
   const activeVariant = product.variants.find((v) => {
     const matchesSize = selectedSize ? v.size === selectedSize : true;
-    const matchesColor = selectedColor ? v.color === selectedColor : true;
+    
+    let colorToMatch = selectedColor;
+    if (!colorToMatch && product.mediaAssets && product.mediaAssets[selectedImageIndex]) {
+      const asset = product.mediaAssets[selectedImageIndex];
+      if (asset.boundAttributes && typeof asset.boundAttributes === "object") {
+        const colorTag = asset.boundAttributes.color;
+        if (colorTag && colorTag !== "All" && colorTag !== "Default") {
+          colorToMatch = colorTag;
+        }
+      }
+    }
+
+    const matchesColor = colorToMatch ? v.color === colorToMatch : true;
     return matchesSize && matchesColor;
   }) || product.variants[0];
 
