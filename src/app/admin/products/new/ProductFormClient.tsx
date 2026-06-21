@@ -220,6 +220,7 @@ export default function ProductFormClient({
 
   const [isUploading, setIsUploading] = useState(false);
   const [isFeatured, setIsFeatured] = useState(initialData?.isFeatured || false);
+  const [featuredOrder, setFeaturedOrder] = useState<number>(initialData?.featuredOrder ?? 0);
   const [isPublished, setIsPublished] = useState(initialData?.isPublished ?? true);
   const [isCustomize, setIsCustomize] = useState(initialData?.isCustomize || false);
   const [trackStock, setTrackStock] = useState(initialData?.trackStock || false);
@@ -548,6 +549,7 @@ export default function ProductFormClient({
       sizeChartId: sizeChartId || null,
       discountId: discountId || null,
       isFeatured,
+      featuredOrder: isFeatured ? featuredOrder : 0,
       isPublished,
       isCustomize,
       trackStock,
@@ -794,18 +796,36 @@ export default function ProductFormClient({
                 </label>
               </div>
 
-              <div className="flex items-center gap-3 p-2 rounded-none">
-                <input
-                  type="checkbox"
-                  id="isFeatured"
-                  checked={isFeatured}
-                  onChange={(e) => setIsFeatured(e.target.checked)}
-                  className="w-5 h-5 text-amber-600 border-amber-300 rounded focus:ring-amber-500 cursor-pointer shrink-0"
-                />
-                <label htmlFor="isFeatured" className="flex flex-col cursor-pointer select-none">
-                  <span className="text-sm font-bold text-amber-900">Featured Product</span>
-                  <span className="text-[10px] text-amber-700 font-medium">Pin this product to the top of homepage</span>
-                </label>
+              <div className="flex flex-col gap-2 p-2 rounded-none">
+                <div className="flex items-center gap-3">
+                  <input
+                    type="checkbox"
+                    id="isFeatured"
+                    checked={isFeatured}
+                    onChange={(e) => setIsFeatured(e.target.checked)}
+                    className="w-5 h-5 text-amber-600 border-amber-300 rounded focus:ring-amber-500 cursor-pointer shrink-0"
+                  />
+                  <label htmlFor="isFeatured" className="flex flex-col cursor-pointer select-none">
+                    <span className="text-sm font-bold text-amber-900">Featured Product</span>
+                    <span className="text-[10px] text-amber-700 font-medium">Pin this product to the top of homepage</span>
+                  </label>
+                </div>
+                {isFeatured && (
+                  <div className="ml-8 flex flex-col gap-1">
+                    <label className="text-[10px] font-semibold text-amber-800 uppercase tracking-wider">
+                      Display Order
+                    </label>
+                    <input
+                      type="number"
+                      min={0}
+                      value={featuredOrder}
+                      onChange={(e) => setFeaturedOrder(Number(e.target.value))}
+                      className="w-24 border border-amber-300 bg-amber-50 text-amber-900 text-sm px-2 py-1 focus:outline-none focus:ring-1 focus:ring-amber-500"
+                      placeholder="0"
+                    />
+                    <span className="text-[10px] text-amber-600">Lower number = shown first (0 = top)</span>
+                  </div>
+                )}
               </div>
 
               <div className="flex items-center gap-3 p-2 rounded-none">
