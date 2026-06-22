@@ -72,6 +72,7 @@ async function _createProduct(data: {
   isCombo?: boolean;
   comboRequiredQty?: number;
   comboChildIds?: string[];
+  comboDefaultChildIds?: string[];
   variants: { size: string; color: string; colorCode?: string; sku?: string; stock: number; price?: number; attributes?: any }[];
 }) {
   try {
@@ -223,6 +224,7 @@ async function _createProduct(data: {
             parentProductId: prod.id,
             childProductId: childId,
             maxQuantity: 1,
+            isDefault: (data.comboDefaultChildIds ?? []).includes(childId),
           })),
         });
       }
@@ -278,6 +280,7 @@ async function _updateProduct(
     isCombo?: boolean;
     comboRequiredQty?: number;
     comboChildIds?: string[];
+    comboDefaultChildIds?: string[];
     variants: { size: string; color: string; colorCode?: string; sku?: string; stock: number; price?: number; attributes?: any }[];
   }
 ) {
@@ -486,6 +489,7 @@ async function _updateProduct(
               parentProductId: id,
               childProductId: childId,
               maxQuantity: 1,
+              isDefault: (data.comboDefaultChildIds ?? []).includes(childId),
             })),
           });
         }

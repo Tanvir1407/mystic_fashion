@@ -192,6 +192,7 @@ export default async function ProductPage({ params }: { params: { slug: string }
         parentProductId: option.parentProductId,
         childProductId: option.childProductId,
         maxQuantity: option.maxQuantity,
+        isDefault: option.isDefault ?? false,
         childProduct: {
           ...child,
           price: childBasePrice,

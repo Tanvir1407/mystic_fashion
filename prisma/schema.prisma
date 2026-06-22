@@ -825,9 +825,10 @@ model MediaAsset {
 
 model ComboConfiguration {
   id              String   @id @default(uuid())
-  parentProductId String   
-  childProductId  String   
+  parentProductId String
+  childProductId  String
   maxQuantity     Int      @default(1)
+  isDefault       Boolean  @default(false)
   createdAt       DateTime @default(now())
   
   parentProduct   Product  @relation("ParentCombo", fields: [parentProductId], references: [id], onDelete: Cascade)

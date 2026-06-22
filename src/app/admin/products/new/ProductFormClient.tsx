@@ -135,11 +135,14 @@ export default function ProductFormClient({
   discounts: any[],
   brands?: any[],
   categories?: any[],
-  allProducts?: { id: string, name: string }[]
+  allProducts?: { id: string, name: string, categoryId?: string | null, categoryRel?: { name: string } | null, mediaAssets?: { url: string }[] }[]
 }) {
   const [isCombo, setIsCombo] = useState(initialData?.isCombo || false);
-  const [comboRequiredQty, setComboRequiredQty] = useState<number>(initialData?.comboRequiredQty || 0);
+  const [comboRequiredQty, setComboRequiredQty] = useState<number>(initialData?.comboRequiredQty || 1);
   const [comboChildIds, setComboChildIds] = useState<string[]>(initialData?.comboChildIds || []);
+  const [comboDefaultChildIds, setComboDefaultChildIds] = useState<string[]>(initialData?.comboDefaultChildIds || []);
+  const [comboFilterCategory, setComboFilterCategory] = useState<string>("all");
+  const [comboSearch, setComboSearch] = useState("");
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [isSizeModalOpen, setIsSizeModalOpen] = useState(false);
@@ -521,6 +524,13 @@ export default function ProductFormClient({
     if (!name.trim()) return alert("Name is required.");
     if (!price || isNaN(Number(price))) return alert("Price must be a number.");
 
+    if (isCombo) {
+      if (!comboRequiredQty || comboRequiredQty < 1) return alert("Required Items Qty must be at least 1.");
+      if (comboChildIds.length < comboRequiredQty) {
+        return alert(`You must select at least ${comboRequiredQty} child product${comboRequiredQty > 1 ? 's' : ''} for this combo. Currently selected: ${comboChildIds.length}.`);
+      }
+    }
+
     if ((hasSize || hasColor) && variants.length === 0) {
       return alert("You must add or generate at least one Variant.");
     }
@@ -561,6 +571,7 @@ export default function ProductFormClient({
       isCombo,
       comboRequiredQty: isCombo ? Number(comboRequiredQty) : 0,
       comboChildIds: isCombo ? comboChildIds : [],
+      comboDefaultChildIds: isCombo ? comboDefaultChildIds.filter(id => comboChildIds.includes(id)) : [],
       variants: (hasSize || hasColor)
         ? variants.map(({ size, color, sku, price: vPrice, stock }) => {
           const variantAttributes: Record<string, string> = {};
@@ -779,6 +790,164 @@ export default function ProductFormClient({
               </div>
             </div>
           </div>
+          {/* Card 3: Combo Settings — left column, shown when isCombo */}
+          {isCombo && (
+            <div className="bg-white border border-slate-200 rounded-none p-6 shadow-none">
+              <h2 className="text-sm font-bold text-slate-900 uppercase tracking-wider mb-4 border-b border-slate-100 pb-2">
+                Combo Settings
+              </h2>
+              <div className="space-y-5">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Required Items Qty *</label>
+                  <input
+                    type="number"
+                    min={1}
+                    value={comboRequiredQty}
+                    onChange={(e) => setComboRequiredQty(parseInt(e.target.value) || 1)}
+                    className="w-40 px-4 py-2 border border-slate-300 rounded-none focus:outline-none focus:border-slate-900 text-sm font-mono"
+                    required
+                  />
+                </div>
+                {/* Selected products preview */}
+                {comboChildIds.length > 0 && (
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
+                        Selected Products
+                        <span className="ml-2 text-violet-600 font-mono normal-case">{comboChildIds.length} items</span>
+                      </label>
+                      <span className="text-[10px] text-slate-400">
+                        Star = default pre-selected for customer &nbsp;·&nbsp; {comboDefaultChildIds.filter(id => comboChildIds.includes(id)).length}/{comboRequiredQty} defaults set
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3">
+                      {comboChildIds.map((cid) => {
+                        const p = allProducts.find(p => p.id === cid);
+                        if (!p) return null;
+                        const thumbUrl = p.mediaAssets?.[0]?.url;
+                        const isDefault = comboDefaultChildIds.includes(cid);
+                        const defaultCount = comboDefaultChildIds.filter(id => comboChildIds.includes(id)).length;
+                        return (
+                          <div key={cid} className="relative flex flex-col">
+                            {/* Image */}
+                            <div className={`relative aspect-square w-full overflow-hidden bg-slate-100 border ${isDefault ? 'border-amber-400' : 'border-violet-300'}`}>
+                              {thumbUrl ? (
+                                <img src={thumbUrl} alt={p.name} className="w-full h-full object-cover" />
+                              ) : (
+                                <div className="w-full h-full bg-slate-100 flex items-center justify-center text-[9px] text-slate-400">No img</div>
+                              )}
+                              {/* Star badge — default toggle */}
+                              <button
+                                type="button"
+                                title={isDefault ? "Remove default" : "Set as default"}
+                                onClick={() => {
+                                  if (isDefault) {
+                                    setComboDefaultChildIds(comboDefaultChildIds.filter(id => id !== cid));
+                                  } else if (defaultCount < comboRequiredQty) {
+                                    setComboDefaultChildIds([...comboDefaultChildIds, cid]);
+                                  }
+                                }}
+                                className={`absolute top-1 left-1 w-5 h-5 rounded-full flex items-center justify-center shadow transition-colors ${isDefault ? 'bg-amber-400 text-white' : defaultCount >= comboRequiredQty ? 'bg-white/70 text-slate-300 cursor-not-allowed' : 'bg-white/70 text-slate-400 hover:text-amber-400'}`}
+                              >
+                                <svg className="w-2.5 h-2.5" viewBox="0 0 24 24" fill={isDefault ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2.5">
+                                  <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                                </svg>
+                              </button>
+                              {/* Remove button */}
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setComboChildIds(comboChildIds.filter(id => id !== cid));
+                                  setComboDefaultChildIds(comboDefaultChildIds.filter(id => id !== cid));
+                                }}
+                                className="absolute top-1 right-1 w-5 h-5 rounded-full bg-white/80 flex items-center justify-center text-slate-500 hover:text-red-500 hover:bg-white shadow"
+                              >
+                                <X className="w-2.5 h-2.5" />
+                              </button>
+                            </div>
+                            {/* Name */}
+                            <p className={`text-[10px] text-center mt-1 leading-tight line-clamp-2 px-0.5 ${isDefault ? 'text-amber-600 font-semibold' : 'text-violet-600 font-medium'}`}>
+                              {p.name}
+                            </p>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
+                    All Products
+                  </label>
+
+                  {/* Search + Category filter */}
+                  <div className="flex flex-col sm:flex-row gap-2 mb-3">
+                    <input
+                      type="text"
+                      value={comboSearch}
+                      onChange={(e) => setComboSearch(e.target.value)}
+                      placeholder="Search product..."
+                      className="flex-1 px-3 py-1.5 border border-slate-200 text-xs focus:outline-none focus:border-slate-900 bg-white"
+                    />
+                    <select
+                      value={comboFilterCategory}
+                      onChange={(e) => setComboFilterCategory(e.target.value)}
+                      className="px-3 py-1.5 border border-slate-200 text-xs focus:outline-none focus:border-slate-900 bg-white"
+                    >
+                      <option value="all">All Categories</option>
+                      {Array.from(new Set(allProducts.map(p => p.categoryRel?.name).filter(Boolean))).sort().map(cat => (
+                        <option key={cat} value={cat!}>{cat}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3 max-h-72 overflow-y-auto pr-1">
+                    {allProducts.filter(p => {
+                      const matchCat = comboFilterCategory === "all" || p.categoryRel?.name === comboFilterCategory;
+                      const matchSearch = !comboSearch.trim() || p.name.toLowerCase().includes(comboSearch.toLowerCase());
+                      return matchCat && matchSearch;
+                    }).map((p) => {
+                      const isChecked = comboChildIds.includes(p.id);
+                      const thumbUrl = p.mediaAssets?.[0]?.url;
+                      return (
+                        <div
+                          key={p.id}
+                          onClick={() => {
+                            if (isChecked) {
+                              setComboChildIds(comboChildIds.filter((cid) => cid !== p.id));
+                            } else {
+                              setComboChildIds([...comboChildIds, p.id]);
+                            }
+                          }}
+                          className={`relative flex flex-col cursor-pointer select-none group transition-all duration-150 ${isChecked ? '' : 'opacity-60 hover:opacity-100'}`}
+                        >
+                          <div className={`relative aspect-square w-full overflow-hidden bg-slate-100 border transition-all ${isChecked ? 'border-violet-500' : 'border-slate-200 group-hover:border-slate-400'}`}>
+                            {thumbUrl ? (
+                              <img src={thumbUrl} alt={p.name} className="w-full h-full object-cover" />
+                            ) : (
+                              <div className="w-full h-full bg-slate-100 flex items-center justify-center text-[9px] text-slate-400">No img</div>
+                            )}
+                            {isChecked && (
+                              <div className="absolute top-1 right-1 w-5 h-5 rounded-full bg-violet-600 flex items-center justify-center shadow">
+                                <svg className="w-2.5 h-2.5 text-white stroke-current" viewBox="0 0 24 24" fill="none" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                                  <polyline points="20 6 9 17 4 12" />
+                                </svg>
+                              </div>
+                            )}
+                          </div>
+                          <p className={`text-[10px] text-center mt-1 leading-tight line-clamp-2 px-0.5 ${isChecked ? 'text-violet-700 font-semibold' : 'text-slate-500'}`}>
+                            {p.name}
+                          </p>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
         </div>
 
         {/* Right Column (1/3 of Page) - Pricing, Sizing & Organization */}
@@ -1119,52 +1288,6 @@ export default function ProductFormClient({
             </div>
           </div>
 
-          {isCombo && (
-            <div className="bg-white border border-slate-200 rounded-none p-6 shadow-none">
-              <h2 className="text-sm font-bold text-slate-900 uppercase tracking-wider mb-4 border-b border-slate-100 pb-2">
-                Combo Settings
-              </h2>
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Required Items Qty *</label>
-                  <input
-                    type="number"
-                    min={1}
-                    value={comboRequiredQty}
-                    onChange={(e) => setComboRequiredQty(parseInt(e.target.value) || 0)}
-                    className="w-full px-4 py-2 border border-slate-300 rounded-none focus:outline-none focus:border-slate-900 text-sm font-mono"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Select Child Presets</label>
-                  <div className="border border-slate-200 max-h-60 overflow-y-auto p-3 space-y-2 bg-slate-50">
-                    {allProducts.map((p) => {
-                      const isChecked = comboChildIds.includes(p.id);
-                      return (
-                        <label key={p.id} className="flex items-center gap-2.5 cursor-pointer py-0.5 hover:bg-slate-100/50">
-                          <input
-                            type="checkbox"
-                            checked={isChecked}
-                            onChange={() => {
-                              if (isChecked) {
-                                setComboChildIds(comboChildIds.filter((cid) => cid !== p.id));
-                              } else {
-                                setComboChildIds([...comboChildIds, p.id]);
-                              }
-                            }}
-                            className="w-4 h-4 text-violet-600 border-slate-300 rounded"
-                          />
-                          <span className="text-xs font-medium text-slate-800">{p.name}</span>
-                        </label>
-                      );
-                    })}
-                  </div>
-                  <span className="text-[10px] text-slate-500 mt-1 block">Selected {comboChildIds.length} preset products</span>
-                </div>
-              </div>
-            </div>
-          )}
 
         </div>
       </div>

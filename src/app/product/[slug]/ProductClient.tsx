@@ -44,6 +44,7 @@ interface Product {
     parentProductId: string;
     childProductId: string;
     maxQuantity: number;
+    isDefault?: boolean;
     childProduct: {
       id: string;
       name: string;
@@ -67,8 +68,13 @@ interface Product {
 export default function ProductClient({ product, sizeChartData, relatedProducts }: { product: Product, sizeChartData?: any, relatedProducts?: any[] }) {
   const router = useRouter();
 
-  // Combo states
-  const [selectedComboItems, setSelectedComboItems] = useState<{ productId: string; name: string; quantity: number }[]>([]);
+  // Combo states — initialize with admin-set defaults
+  const [selectedComboItems, setSelectedComboItems] = useState<{ productId: string; name: string; quantity: number }[]>(() => {
+    if (!product.isCombo || !product.comboChildOptions) return [];
+    return product.comboChildOptions
+      .filter(o => o.isDefault)
+      .map(o => ({ productId: o.childProduct.id, name: o.childProduct.name, quantity: 1 }));
+  });
   const totalSelectedComboQty = selectedComboItems.reduce((sum, item) => sum + item.quantity, 0);
 
   const getChildStock = (childProduct: any) => {
@@ -498,8 +504,15 @@ export default function ProductClient({ product, sizeChartData, relatedProducts 
                   />
                 </div>
 
-                {/* Image grid */}
-                <div className="grid grid-cols-3 sm:grid-cols-4 gap-2.5 max-h-80 overflow-y-auto scrollbar-hide">
+                {/* Item count hint */}
+                {(product.comboChildOptions?.length ?? 0) > 0 && (
+                  <p className="text-[10px] text-zinc-400 mb-3">
+                    {product.comboChildOptions!.length} items available — pick any {product.comboRequiredQty}
+                  </p>
+                )}
+
+                {/* Image grid — no height cap, show all */}
+                <div className="grid grid-cols-3 sm:grid-cols-4 gap-2.5">
                   {product.comboChildOptions?.map((option) => {
                     const child = option.childProduct;
                     const childStock = getChildStock(child);
@@ -554,12 +567,6 @@ export default function ProductClient({ product, sizeChartData, relatedProducts 
                             </div>
                           )}
 
-                          {/* Low stock badge */}
-                          {!isOutOfStock && childStock < 5 && child.trackStock && (
-                            <div className="absolute bottom-1 left-1 bg-amber-500/90 text-white text-[8px] px-1 py-0.5 rounded font-medium">
-                              {childStock} left
-                            </div>
-                          )}
 
                           {/* Quantity stepper overlay for maxQty > 1 */}
                           {!isOutOfStock && option.maxQuantity > 1 && isSelected && (

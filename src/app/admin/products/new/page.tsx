@@ -13,7 +13,7 @@ export default async function NewProductPage() {
   });
   const allProducts = await prisma.product.findMany({
     where: { deletedAt: null },
-    select: { id: true, name: true },
+    select: { id: true, name: true, categoryId: true, categoryRel: { select: { name: true } }, mediaAssets: { select: { url: true }, take: 1 } },
     orderBy: { name: 'asc' }
   });
   

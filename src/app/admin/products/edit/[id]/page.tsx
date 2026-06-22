@@ -66,12 +66,13 @@ export default async function EditProductPage({ params }: { params: { id: string
     categoryId: resolvedCategoryId,
     isCombo: productRes.isCombo,
     comboRequiredQty: productRes.comboRequiredQty,
-    comboChildIds: productRes.comboChildOptions?.map((o: any) => o.childProductId) || []
+    comboChildIds: productRes.comboChildOptions?.map((o: any) => o.childProductId) || [],
+    comboDefaultChildIds: productRes.comboChildOptions?.filter((o: any) => o.isDefault).map((o: any) => o.childProductId) || []
   };
 
   const allProducts = await prisma.product.findMany({
     where: { deletedAt: null, id: { not: params.id } },
-    select: { id: true, name: true },
+    select: { id: true, name: true, categoryId: true, categoryRel: { select: { name: true } }, mediaAssets: { select: { url: true }, take: 1 } },
     orderBy: { name: 'asc' }
   });
 
