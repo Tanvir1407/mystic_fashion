@@ -1,6 +1,5 @@
 import Link from "next/link";
 import Image from "next/image";
-import AddToBagButton from "./AddToBagButton";
 import { getFinalPrice, formatPrice } from "@/lib/priceUtils";
 
 interface ProductCardProps {
@@ -8,7 +7,6 @@ interface ProductCardProps {
     id: string;
     slug?: string | null;
     name: string;
-    price: number;
     images: string[];
     team: string;
     variants: {
@@ -26,48 +24,65 @@ interface ProductCardProps {
 }
 
 export default function ProductCard({ product }: ProductCardProps) {
-  const totalStock = product.variants ? product.variants.reduce((acc, v) => acc + (v.stock || 0), 0) : 0;
+  // --- Stock Calculation ---
+  const totalStock =
+    product.variants?.reduce((acc, v) => acc + (v.stock || 0), 0) || 0;
   const isOutOfStock = !!(product.trackStock && totalStock <= 0);
-  const hasDiscount = !!(product.discount?.active);
+  const hasDiscount = !!product.discount?.active;
 
-  let displayPrice: string;
+  // --- Variant Price Extraction ---
+  // Collect all valid base prices from variants
+  const variantPrices =
+    product.variants
+      ?.map((v) =>
+        v.pricingMatrix?.basePrice ? Number(v.pricingMatrix.basePrice) : null,
+      )
+      .filter((p): p is number => p !== null) ?? [];
+
+  const hasVariantPricing = variantPrices.length > 0;
+
+  // --- Price Display Logic ---
+  let displayPrice: string | null = null;
   let isRange = false;
   let originalPrice: number | null = null;
 
-  // Compute variant price range
-  const variantPrices = product.variants
-    ?.map((v) => (v.pricingMatrix?.basePrice ? Number(v.pricingMatrix.basePrice) : null))
-    .filter((p): p is number => p !== null);
-
-  const hasVariantPricing = variantPrices && variantPrices.length > 0;
-
   if (hasVariantPricing) {
-    const finalPrices = variantPrices.map((p) => getFinalPrice(p, product.discount));
+    // Apply discount to each variant price
+    const finalPrices = variantPrices.map((p) =>
+      getFinalPrice(p, product.discount),
+    );
     const minPrice = Math.min(...finalPrices);
     const maxPrice = Math.max(...finalPrices);
+
     isRange = minPrice !== maxPrice;
 
     if (isRange) {
       displayPrice = `${formatPrice(minPrice)} – ${formatPrice(maxPrice)}`;
     } else {
       displayPrice = formatPrice(minPrice);
+      // Original price (before discount) of the first/only variant
       originalPrice = Math.min(...variantPrices);
     }
   } else {
-    const finalPrice = getFinalPrice(product.price, product.discount);
-    displayPrice = formatPrice(finalPrice);
-    originalPrice = product.price;
+    // No variant pricing data — show nothing (or fallback)
+    displayPrice = null;
+    isRange = false;
+    originalPrice = null;
   }
 
-  const showStrikethrough = hasDiscount && !isRange && originalPrice !== null;
+  // Show strikethrough only when:
+  // - There is an active discount
+  // - Price is NOT a range (single price)
+  // - We have an original price to show
+  const showStrikethrough =
+    hasDiscount && !isRange && originalPrice !== null && displayPrice !== null;
 
   return (
     <Link href={`/product/${product.slug || product.id}`} className="group">
       <div className="flex flex-col bg-white overflow-hidden transition-all duration-300 shadow-sm border border-transparent h-full relative">
-
         {/* Discount Badge */}
         {hasDiscount && !isOutOfStock && (
-          <div className="absolute top-3 right-3 z-10 bg-primary text-white text-[10px] font-black  px-2 py-1 ">
+          <div className="absolute top-3 right-3 z-10 bg-primary text-white text-[10px] font-black px-2 py-1">
             {product.discount!.discountType === "PERCENTAGE"
               ? `${product.discount!.value}% OFF`
               : `৳${product.discount!.value} OFF`}
@@ -80,9 +95,11 @@ export default function ProductCard({ product }: ProductCardProps) {
             <Image
               src={product.images[0]}
               alt={product.name}
-              unoptimized={true}
+              unoptimized
               fill
-              className={`object-cover transition-transform duration-500 group-hover:scale-105 ${isOutOfStock ? "opacity-60" : ""}`}
+              className={`object-cover transition-transform duration-500 group-hover:scale-105 ${
+                isOutOfStock ? "opacity-60" : ""
+              }`}
             />
           ) : (
             <div className="w-full h-full flex items-center justify-center text-slate-400 text-sm font-medium">
@@ -114,16 +131,22 @@ export default function ProductCard({ product }: ProductCardProps) {
                     {formatPrice(originalPrice!)}
                   </span>
                 )}
-                <span className="text-[#800020] font-black text-base md:text-lg">
-                  {displayPrice}
-                </span>
+                {displayPrice ? (
+                  <span className="text-[#800020] font-black text-base md:text-lg">
+                    {displayPrice}
+                  </span> 
+                ) : (
+                  <span className="text-zinc-400 text-sm font-medium">N/A</span>
+                )}
               </>
             )}
           </div>
+
           <h3 className="text-xs mm:text-sm md:text-[13px] font-medium text-zinc-800 dark:text-zinc-100 leading-snug line-clamp-2 group-hover:text-[#800020] transition-colors duration-300">
             {product.name}
           </h3>
 
+          {/* AddToBagButton was here — removed, see src/components/AddToBagButton.tsx if needed */}
         </div>
       </div>
     </Link>

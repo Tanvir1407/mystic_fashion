@@ -88,9 +88,9 @@ const getFinalPrice = (product: Product): number => {
     )
     .filter((p): p is number => p !== null);
 
-  const basePrice = variantPrices?.length
-    ? Math.min(...variantPrices)
-    : product.price;
+  if (!variantPrices?.length) return 0;
+
+  const basePrice = Math.min(...variantPrices);
 
   if (product.discount && product.discount.active) {
     if (product.discount.discountType === "PERCENTAGE") {
@@ -121,7 +121,7 @@ export default function ProductsClient({
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
- 
+
   // State initialized directly with initial props for perfect server-client sync!
   const [selectedCategory, setSelectedCategory] = useState<string | null>(
     () => {

@@ -6,7 +6,7 @@ import { useState } from "react";
 import { useCartStore } from "@/store/cartStore";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { formatBDT, roundPrice } from "@/utils/formatPrice";
+import { getFinalPrice, formatPrice } from "@/lib/priceUtils";
 
 import {
   Check,
@@ -88,32 +88,20 @@ export default function ProductClient({
     ? product.variants.find((v) => v.size === selectedSize)?.stock || 0
     : 0;
 
-  let basePrice = product.price;
-  if (selectedSize) {
-    const selectedVariant = product.variants.find(
-      (v) => v.size === selectedSize,
-    );
-    if (selectedVariant?.pricingMatrix?.basePrice) {
-      basePrice = Number(selectedVariant.pricingMatrix.basePrice);
-    }
-  }
+  const selectedVariant = selectedSize
+    ? product.variants.find((v) => v.size === selectedSize)
+    : undefined;
+  const basePrice = selectedVariant?.pricingMatrix?.basePrice
+    ? Number(selectedVariant.pricingMatrix.basePrice)
+    : undefined;
 
-  let finalPrice = basePrice;
-  let isDiscounted = false;
-
-  if (product.discount && product.discount.active) {
-    isDiscounted = true;
-    if (product.discount.discountType === "PERCENTAGE") {
-      finalPrice = roundPrice(
-        basePrice - basePrice * (product.discount.value / 100),
-      );
-    } else {
-      finalPrice = roundPrice(Math.max(0, basePrice - product.discount.value));
-    }
-  }
+  const finalPrice = basePrice !== undefined
+    ? getFinalPrice(basePrice, product.discount)
+    : undefined;
+  const isDiscounted = !!(product.discount?.active && basePrice !== undefined);
 
   const handleAddToCart = () => {
-    if (!selectedSize) return;
+    if (!selectedSize || finalPrice === undefined) return;
 
     addItem(
       {
@@ -238,14 +226,22 @@ export default function ProductClient({
             </p>
 
             <div className="flex items-end gap-4 mb-8">
-              <p className="text-3xl md:text-4xl font-black text-[#800020]">
-                {formatBDT(finalPrice)}
-              </p>
-              {isDiscounted ? (
-                <p className="text-lg font-bold text-zinc-400 line-through mb-1.5">
-                  {formatBDT(basePrice)}
+              {basePrice !== undefined ? (
+                <>
+                  <p className="text-3xl md:text-4xl font-black text-[#800020]">
+                    {formatPrice(finalPrice!)}
+                  </p>
+                  {isDiscounted && (
+                    <p className="text-lg font-bold text-zinc-400 line-through mb-1.5">
+                      {formatPrice(basePrice)}
+                    </p>
+                  )}
+                </>
+              ) : (
+                <p className="text-3xl md:text-4xl font-black text-zinc-300">
+                  Price not available
                 </p>
-              ) : null}
+              )}
             </div>
 
             {/* Size Selector */}
@@ -324,10 +320,12 @@ export default function ProductClient({
                     onClick={handleAddToCart}
                     disabled={
                       !selectedSize ||
+                      finalPrice === undefined ||
                       (product.trackStock && selectedVariantStock <= 0)
                     }
                     className={`flex-1 h-14 font-bold text-sm transition-all flex items-center justify-center ${
                       !selectedSize ||
+                      finalPrice === undefined ||
                       (product.trackStock && selectedVariantStock <= 0)
                         ? "bg-zinc-100 text-zinc-400 cursor-not-allowed"
                         : addedEffect
@@ -346,15 +344,17 @@ export default function ProductClient({
                 {/* Buy Now Button */}
                 <button
                   onClick={handleBuyNow}
-                  disabled={
-                    !selectedSize ||
-                    (product.trackStock && selectedVariantStock <= 0)
-                  }
-                  className={`w-full h-14 font-bold text-sm transition-all flex items-center justify-center ${
-                    !selectedSize ||
-                    (product.trackStock && selectedVariantStock <= 0)
-                      ? "bg-zinc-100 text-zinc-400 cursor-not-allowed"
-                      : "bg-primary text-white hover:opacity-95 active:scale-[0.98]"
+                    disabled={
+                      !selectedSize ||
+                      finalPrice === undefined ||
+                      (product.trackStock && selectedVariantStock <= 0)
+                    }
+                    className={`w-full h-14 font-bold text-sm transition-all flex items-center justify-center ${
+                      !selectedSize ||
+                      finalPrice === undefined ||
+                      (product.trackStock && selectedVariantStock <= 0)
+                        ? "bg-zinc-100 text-zinc-400 cursor-not-allowed"
+                        : "bg-primary text-white hover:opacity-95 active:scale-[0.98]"
                   }`}
                 >
                   Buy Now
@@ -364,6 +364,11 @@ export default function ProductClient({
               {!selectedSize && (
                 <p className="text-xs text-red-500 font-medium mt-3">
                   Please select a size to continue
+                </p>
+              )}
+              {selectedSize && finalPrice === undefined && (
+                <p className="text-xs text-amber-600 font-medium mt-3">
+                  Pricing not configured for this size
                 </p>
               )}
             </div>

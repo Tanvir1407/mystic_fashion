@@ -17,9 +17,9 @@ const getFinalPrice = (product: any): number => {
     )
     .filter((p: number | null): p is number => p !== null);
 
-  const basePrice = variantPrices?.length
-    ? Math.min(...variantPrices)
-    : product.price;
+  if (!variantPrices?.length) return 0;
+
+  const basePrice = Math.min(...variantPrices);
 
   if (product.discount && product.discount.active) {
     if (product.discount.discountType === "PERCENTAGE") {
