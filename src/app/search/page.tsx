@@ -26,7 +26,7 @@ export default async function SearchPage({
         ],
       },
       orderBy: { createdAt: "desc" },
-      include: { discount: true, variants: true },
+      include: { discount: true, variants: { include: { pricingMatrix: { select: { basePrice: true } } } } },
     }).catch(e => { console.error(e); return []; }) : Promise.resolve([]),
     getFooterData()
   ]);

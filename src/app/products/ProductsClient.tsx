@@ -121,7 +121,7 @@ export default function ProductsClient({
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-
+ 
   // State initialized directly with initial props for perfect server-client sync!
   const [selectedCategory, setSelectedCategory] = useState<string | null>(
     () => {

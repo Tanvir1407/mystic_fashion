@@ -1,7 +1,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import AddToBagButton from "./AddToBagButton";
-import { formatBDT, roundPrice } from "@/utils/formatPrice";
+import { getFinalPrice, formatPrice } from "@/lib/priceUtils";
 
 interface ProductCardProps {
   product: {
@@ -25,60 +25,48 @@ interface ProductCardProps {
   };
 }
 
-
-
 export default function ProductCard({ product }: ProductCardProps) {
   const totalStock = product.variants ? product.variants.reduce((acc, v) => acc + (v.stock || 0), 0) : 0;
   const isOutOfStock = !!(product.trackStock && totalStock <= 0);
+  const hasDiscount = !!(product.discount?.active);
+
+  let displayPrice: string;
+  let isRange = false;
+  let originalPrice: number | null = null;
 
   // Compute variant price range
   const variantPrices = product.variants
-    ?.map((v) => v.pricingMatrix?.basePrice ? Number(v.pricingMatrix.basePrice) : null)
+    ?.map((v) => (v.pricingMatrix?.basePrice ? Number(v.pricingMatrix.basePrice) : null))
     .filter((p): p is number => p !== null);
 
   const hasVariantPricing = variantPrices && variantPrices.length > 0;
 
-  let displayPrice: string;
-  let isDiscounted = false;
-
   if (hasVariantPricing) {
-    const applyDiscount = (price: number) => {
-      if (product.discount && product.discount.active) {
-        isDiscounted = true;
-        if (product.discount.discountType === "PERCENTAGE") {
-          return roundPrice(price - (price * (product.discount.value / 100)));
-        }
-        return roundPrice(Math.max(0, price - product.discount.value));
-      }
-      return roundPrice(price);
-    };
+    const finalPrices = variantPrices.map((p) => getFinalPrice(p, product.discount));
+    const minPrice = Math.min(...finalPrices);
+    const maxPrice = Math.max(...finalPrices);
+    isRange = minPrice !== maxPrice;
 
-    const finalPrices = variantPrices.map(applyDiscount);
-    const lowestPrice = Math.min(...finalPrices);
-    const highestPrice = Math.max(...finalPrices);
-
-    displayPrice = lowestPrice === highestPrice
-      ? formatBDT(lowestPrice)
-      : `${formatBDT(lowestPrice)} - ${formatBDT(highestPrice)}`;
-  } else {
-    let finalPrice = product.price;
-    if (product.discount && product.discount.active) {
-      isDiscounted = true;
-      if (product.discount.discountType === "PERCENTAGE") {
-        finalPrice = roundPrice(product.price - (product.price * (product.discount.value / 100)));
-      } else {
-        finalPrice = roundPrice(Math.max(0, product.price - product.discount.value));
-      }
+    if (isRange) {
+      displayPrice = `${formatPrice(minPrice)} – ${formatPrice(maxPrice)}`;
+    } else {
+      displayPrice = formatPrice(minPrice);
+      originalPrice = Math.min(...variantPrices);
     }
-    displayPrice = formatBDT(finalPrice);
+  } else {
+    const finalPrice = getFinalPrice(product.price, product.discount);
+    displayPrice = formatPrice(finalPrice);
+    originalPrice = product.price;
   }
+
+  const showStrikethrough = hasDiscount && !isRange && originalPrice !== null;
 
   return (
     <Link href={`/product/${product.slug || product.id}`} className="group">
       <div className="flex flex-col bg-white overflow-hidden transition-all duration-300 shadow-sm border border-transparent h-full relative">
 
         {/* Discount Badge */}
-        {isDiscounted && !isOutOfStock && (
+        {hasDiscount && !isOutOfStock && (
           <div className="absolute top-3 right-3 z-10 bg-primary text-white text-[10px] font-black  px-2 py-1 ">
             {product.discount!.discountType === "PERCENTAGE"
               ? `${product.discount!.value}% OFF`
@@ -121,9 +109,9 @@ export default function ProductCard({ product }: ProductCardProps) {
               </span>
             ) : (
               <>
-                {isDiscounted && !hasVariantPricing && (
+                {showStrikethrough && (
                   <span className="text-zinc-400 dark:text-zinc-500 font-medium text-sm line-through">
-                    {formatBDT(product.price)}
+                    {formatPrice(originalPrice!)}
                   </span>
                 )}
                 <span className="text-[#800020] font-black text-base md:text-lg">

@@ -61,10 +61,13 @@ export default function HomepageMain({
   const tabNames = ["All", ...categories.map((c) => c.name)];
   const [selectedTab, setSelectedTab] = useState("All");
 
+  console.log("dukse");
+
   // Filter products for the New Arrivals section dynamically
   const getNewArrivals = () => {
     const sortedByRecent = [...initialNewArrivalsProducts].sort(
-      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      (a, b) =>
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
     );
 
     if (selectedTab === "All") {
@@ -89,9 +92,9 @@ export default function HomepageMain({
 
   const newArrivalsProducts = getNewArrivals();
 
+   
   return (
     <div className="bg-[#FAFAFA] min-h-screen text-neutral-800 antialiased font-sans">
-
       {/* 1. SHOP BY CATEGORY SECTION */}
       <section className="py-24 px-4 bg-white border-b border-neutral-100">
         <div className="container mx-auto">
@@ -123,7 +126,9 @@ export default function HomepageMain({
                     />
                   ) : (
                     <div className="absolute inset-0 bg-neutral-200 flex items-center justify-center">
-                      <span className="text-neutral-400 text-xs font-medium">{cat.name}</span>
+                      <span className="text-neutral-400 text-xs font-medium">
+                        {cat.name}
+                      </span>
                     </div>
                   )}
                   <div className="absolute inset-0 bg-black/10 group-hover:bg-black/20 transition-colors duration-300"></div>
@@ -188,7 +193,11 @@ export default function HomepageMain({
           {newArrivalsProducts.length > 0 && (
             <div className="flex justify-center mt-16">
               <Link
-                href={selectedTab === "All" ? "/products" : `/products?category=${selectedTab}`}
+                href={
+                  selectedTab === "All"
+                    ? "/products"
+                    : `/products?category=${selectedTab}`
+                }
                 className="inline-flex items-center gap-2 border border-neutral-300 hover:border-neutral-800 text-neutral-800 hover:text-neutral-900 transition-colors px-8 py-3.5 text-xs font-bold uppercase tracking-widest bg-white"
               >
                 View All {selectedTab === "All" ? "Products" : selectedTab}
@@ -212,13 +221,18 @@ export default function HomepageMain({
             {categories.map((cat, idx) => {
               // Get top 4 products — 3 for desktop, 4 for mobile
               const catProducts = showroomProducts
-                .filter((p) => p.category?.toLowerCase() === cat.name.toLowerCase())
+                .filter(
+                  (p) => p.category?.toLowerCase() === cat.name.toLowerCase(),
+                )
                 .slice(0, 4);
 
               if (catProducts.length === 0) return null;
 
               const isEven = idx % 2 === 0;
-              const catImage = cat.image || FALLBACK_IMAGES[cat.name] || "/images/placeholder.png";
+              const catImage =
+                cat.image ||
+                FALLBACK_IMAGES[cat.name] ||
+                "/images/placeholder.png";
               const catLabel = getCategoryLabel(cat.name);
 
               // Shared banner inner content
@@ -253,8 +267,10 @@ export default function HomepageMain({
               );
 
               return (
-                <div key={cat.name} className="border-b border-neutral-100 pb-12 md:pb-20 last:border-0 last:pb-0">
-
+                <div
+                  key={cat.name}
+                  className="border-b border-neutral-100 pb-12 md:pb-20 last:border-0 last:pb-0"
+                >
                   {/* ── MOBILE LAYOUT: banner always on top, 4 products below ── */}
                   <div className="md:hidden space-y-4">
                     {/* Banner — full width, fixed height on mobile */}
@@ -279,7 +295,10 @@ export default function HomepageMain({
                         </div>
                         {/* 3 products right */}
                         {catProducts.slice(0, 3).map((product, i) => (
-                          <div key={product.id} className={`h-full ${i === 2 ? "hidden lg:block" : ""}`}>
+                          <div
+                            key={product.id}
+                            className={`h-full ${i === 2 ? "hidden lg:block" : ""}`}
+                          >
                             <ProductCard product={product} />
                           </div>
                         ))}
@@ -288,7 +307,10 @@ export default function HomepageMain({
                       <>
                         {/* 3 products left */}
                         {catProducts.slice(0, 3).map((product, i) => (
-                          <div key={product.id} className={`h-full ${i === 2 ? "hidden lg:block" : ""}`}>
+                          <div
+                            key={product.id}
+                            className={`h-full ${i === 2 ? "hidden lg:block" : ""}`}
+                          >
                             <ProductCard product={product} />
                           </div>
                         ))}
@@ -299,14 +321,12 @@ export default function HomepageMain({
                       </>
                     )}
                   </div>
-
                 </div>
               );
             })}
           </div>
         </div>
       </section>
-
     </div>
   );
 }

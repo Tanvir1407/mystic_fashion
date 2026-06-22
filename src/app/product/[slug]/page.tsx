@@ -104,7 +104,7 @@ export default async function ProductPage({
         orderBy: { createdAt: "desc" },
         include: {
           discount: true,
-          variants: true,
+          variants: { include: { pricingMatrix: { select: { basePrice: true } } } },
         },
       });
 
@@ -152,7 +152,7 @@ export default async function ProductPage({
           orderBy: { createdAt: "desc" },
           include: {
             discount: true,
-            variants: true,
+            variants: { include: { pricingMatrix: { select: { basePrice: true } } } },
           },
         });
         selected = [...selected, ...fallbackProducts];
