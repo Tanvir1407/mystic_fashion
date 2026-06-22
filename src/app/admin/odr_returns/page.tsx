@@ -45,10 +45,12 @@ export default async function ReturnsPage({
       salesReturns: { select: { orderItemId: true, quantity: true } },
     },
     orderBy: { createdAt: "desc" },
+    take: 100,
   });
 
   const orders = ordersData.map(order => ({
     ...order,
+    customerId: order.customerId,
     items: order.items.map(item => ({
       ...item,
       product: {
