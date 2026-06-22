@@ -931,6 +931,16 @@ export default function OrderDetailsClient({
                             </span>
                           )}
                         </div>
+                        {item.comboSelections && item.comboSelections.length > 0 && (
+                          <ul className="mt-1.5 space-y-0.5">
+                            {item.comboSelections.map((sel: any) => (
+                              <li key={sel.id} className="text-[10px] text-slate-500 flex items-center gap-1">
+                                <span className="w-1 h-1 rounded-full bg-slate-300 shrink-0" />
+                                {sel.quantity}× {sel.product?.name}
+                              </li>
+                            ))}
+                          </ul>
+                        )}
                         {item.requiresPrint && (
                           <p className="text-[10px] text-indigo-500 font-medium mt-0.5">
                             + {formatBDT(item.printCost * item.quantity)} DTF cost

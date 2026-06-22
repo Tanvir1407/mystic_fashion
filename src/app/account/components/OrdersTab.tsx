@@ -23,6 +23,11 @@ interface OrderItem {
     name: string;
     image: string | null;
   };
+  comboSelections?: {
+    id: string;
+    quantity: number;
+    product: { name: string };
+  }[];
 }
 
 interface Order {
@@ -277,6 +282,16 @@ export default function OrdersTab({ orders }: OrdersTabProps) {
                                 <span>Price: {formatBDT(item.price)}</span>
                               </div>
 
+                              {item.comboSelections && item.comboSelections.length > 0 && (
+                                <ul className="mt-2 space-y-0.5">
+                                  {item.comboSelections.map((sel: any) => (
+                                    <li key={sel.id} className="text-[10px] text-slate-400 flex items-center gap-1.5">
+                                      <span className="w-1 h-1 rounded-full bg-slate-300 shrink-0" />
+                                      {sel.quantity}× {sel.product.name}
+                                    </li>
+                                  ))}
+                                </ul>
+                              )}
                               {item.requiresPrint && (
                                 <div className="mt-2.5 text-[10px] bg-[#800020]/5 border border-[#800020]/10 text-primary px-2.5 py-0.5 rounded inline-flex items-center gap-1.5 font-medium">
                                   <span className="text-[#800020]/75">Jersey Print:</span>

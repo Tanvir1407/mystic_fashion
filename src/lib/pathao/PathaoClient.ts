@@ -75,6 +75,7 @@ class PathaoClient {
   private clientSecret: string;
   private username: string;
   private password: string;
+  private tokenKey: string; // 'pathao-sandbox' or 'pathao-production'
 
   constructor() {
     this.baseUrl = process.env.PATHAO_BASE_URL || 'https://courier-api-sandbox.pathao.com';
@@ -82,6 +83,7 @@ class PathaoClient {
     this.clientSecret = process.env.PATHAO_CLIENT_SECRET || '';
     this.username = process.env.PATHAO_USERNAME || '';
     this.password = process.env.PATHAO_PASSWORD || '';
+    this.tokenKey = this.baseUrl.includes('sandbox') ? 'pathao-sandbox' : 'pathao';
 
     if (!this.clientId || !this.clientSecret || !this.username || !this.password) {
       console.warn(
@@ -180,14 +182,14 @@ class PathaoClient {
 
     try {
       await prisma.apiToken.upsert({
-        where: { id: 'pathao' },
+        where: { id: this.tokenKey },
         update: {
           accessToken: tokenData.access_token,
           refreshToken: tokenData.refresh_token,
           expiresAt: expiresAt,
         },
         create: {
-          id: 'pathao',
+          id: this.tokenKey,
           accessToken: tokenData.access_token,
           refreshToken: tokenData.refresh_token,
           expiresAt: expiresAt,
@@ -207,7 +209,7 @@ class PathaoClient {
     try {
       // 1. Fetch stored token from database
       const storedToken = await prisma.apiToken.findUnique({
-        where: { id: 'pathao' },
+        where: { id: this.tokenKey },
       });
 
       if (storedToken) {

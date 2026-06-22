@@ -31,6 +31,11 @@ export async function GET(req: NextRequest) {
                 size: true,
                 color: true
               }
+            },
+            comboSelections: {
+              include: {
+                product: { select: { name: true } }
+              }
             }
           }
         }
@@ -62,7 +67,12 @@ export async function GET(req: NextRequest) {
         product: {
           name: item.product?.name || "Product",
           image: item.product?.mediaAssets?.[0]?.url || null
-        }
+        },
+        comboSelections: item.comboSelections?.map((sel) => ({
+          id: sel.id,
+          quantity: sel.quantity,
+          product: { name: sel.product?.name || "" }
+        })) || []
       }))
     }));
 

@@ -40,6 +40,11 @@ interface OrderItem {
     name: string;
     image: string | null;
   };
+  comboSelections?: {
+    id: string;
+    quantity: number;
+    product: { name: string };
+  }[];
 }
 
 interface Order {

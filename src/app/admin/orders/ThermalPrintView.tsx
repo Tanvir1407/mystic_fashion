@@ -21,6 +21,11 @@ interface OrderItem {
   printName?: string;
   printNumber?: string;
   printCost?: number;
+  comboSelections?: {
+    id: string;
+    quantity: number;
+    product: { name: string };
+  }[];
 }
 
 interface Order {
@@ -229,6 +234,15 @@ export default function ThermalPrintView({ orders, storePhone, storeAddress, pos
                           {item.product.name}
                           {formatVariant(item) ? ` - ${formatVariant(item)}` : ""}
                         </p>
+                        {item.comboSelections && item.comboSelections.length > 0 && (
+                          <div className="mt-0.5 space-y-0">
+                            {item.comboSelections.map((sel) => (
+                              <p key={sel.id} className="text-[8.5px] text-black/70 leading-tight">
+                                • {sel.quantity}× {sel.product.name}
+                              </p>
+                            ))}
+                          </div>
+                        )}
                         {item.requiresPrint && (
                           <div className="mt-0.5 text-[8.5px] font-black text-black/80 leading-normal italic">
                             Print Name: {item.printName} (#{item.printNumber})
