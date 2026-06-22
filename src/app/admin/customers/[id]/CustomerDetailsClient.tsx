@@ -16,7 +16,7 @@ import {
   EyeOff,
   ShieldAlert,
   Loader2,
-  InfoIcon
+  ExternalLink
 } from "lucide-react";
 import { toggleCustomerStatusAction, adminChangeCustomerPasswordAction } from "../actions";
 import { AdminPagination } from "@/components/AdminPagination";
@@ -439,7 +439,7 @@ export default function CustomerDetailsClient({
                           className="h-7 w-7 inline-flex items-center justify-center bg-slate-100 hover:bg-slate-200 text-slate-600 hover:text-slate-900 rounded transition-colors shadow-2xs"
                           title="View Order Details"
                         >
-                          <InfoIcon className="w-3.5 h-3.5" />
+                          <ExternalLink className="w-3.5 h-3.5" />
                         </button>
                       </td>
                     </tr>
