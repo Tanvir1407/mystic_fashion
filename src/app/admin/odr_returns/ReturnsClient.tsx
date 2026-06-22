@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useTransition, useMemo, useEffect, useCallback } from "react";
-import { useSearchParams, useRouter } from "next/navigation";
+import { useSearchParams, useRouter, usePathname } from "next/navigation";
+import { AdminPagination } from "@/components/AdminPagination";
 import {
   History,
   Save,
@@ -72,18 +73,64 @@ interface SalesReturn {
 export default function ReturnsClient({
   orders,
   initialReturns,
+  totalCount,
+  totalPages,
+  currentPage,
+  initialSummaries,
 }: {
   orders: Order[];
   initialReturns: SalesReturn[];
+  totalCount: number;
+  totalPages: number;
+  currentPage: number;
+  initialSummaries: {
+    deliveryLoss: number;
+    wastageLoss: number;
+    restockedCount: number;
+    returnCost: number;
+  };
 }) {
   const router = useRouter();
-  const [isPending, startTransition] = useTransition();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const [isSubmitPending, startSubmitTransition] = useTransition();
+  const [isSearchPending, startSearchTransition] = useTransition();
   const [returns, setReturns] = useState<SalesReturn[]>(initialReturns);
   const [fetchedOrders, setFetchedOrders] = useState<Order[]>([]);
   const [isSearching, setIsSearching] = useState(false);
-  const [activeTab, setActiveTab] = useState<"create" | "logs">("create");
   const [returnMode, setReturnMode] = useState<"FULL" | "PARTIAL">("FULL");
-  const [logSearchQuery, setLogSearchQuery] = useState("");
+
+  const activeTab = (searchParams.get("tab") as "create" | "logs") || "create";
+  const [logSearchQuery, setLogSearchQuery] = useState(searchParams.get("search") || "");
+
+  const setActiveTab = (tab: "create" | "logs") => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("tab", tab);
+    params.set("page", "1");
+    router.push(`${pathname}?${params.toString()}`);
+  };
+
+  useEffect(() => {
+    setReturns(initialReturns);
+  }, [initialReturns]);
+
+  useEffect(() => {
+    setLogSearchQuery(searchParams.get("search") || "");
+  }, [searchParams]);
+
+  const handleLogSearchChange = (val: string) => {
+    setLogSearchQuery(val);
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("page", "1");
+    if (val) {
+      params.set("search", val);
+    } else {
+      params.delete("search");
+    }
+    startSearchTransition(() => {
+      router.push(`${pathname}?${params.toString()}`);
+    });
+  };
 
   const allOrders = useMemo(() => {
     const merged = [...orders, ...fetchedOrders];
@@ -99,7 +146,6 @@ export default function ReturnsClient({
   const [returnReason, setReturnReason] = useState("");
   const [returnQty, setReturnQty] = useState<number | "">("");
 
-  const searchParams = useSearchParams();
   const queryOrderId = searchParams.get("orderId");
 
   useEffect(() => {
@@ -185,34 +231,15 @@ export default function ReturnsClient({
     }
   };
 
-  const summaries = useMemo(() => {
-    let deliveryLoss = 0, wastageLoss = 0, restockedCount = 0, returnCostTotal = 0;
-    returns.forEach((r) => {
-      deliveryLoss += r.deliveryLoss;
-      returnCostTotal += r.returnCost;
-      if (r.status === "WASTAGE") wastageLoss += r.productLoss + r.printingLoss;
-      else if (r.status === "RESTOCKED") restockedCount += r.quantity;
-    });
-    return { deliveryLoss, wastageLoss, restockedCount, returnCost: returnCostTotal };
-  }, [returns]);
-
-  const filteredReturns = useMemo(() => {
-    if (!logSearchQuery.trim()) return returns;
-    const query = logSearchQuery.toLowerCase().trim();
-    return returns.filter(
-      (r) =>
-        r.orderId.toLowerCase().includes(query) ||
-        r.order.customerName.toLowerCase().includes(query) ||
-        r.orderItem.product.name.toLowerCase().includes(query)
-    );
-  }, [returns, logSearchQuery]);
+  const summaries = initialSummaries;
+  const filteredReturns = returns;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedOrderId || returnReason.trim() === "") return;
     if (returnMode === "PARTIAL" && !selectedOrderItemId) return;
 
-    startTransition(async () => {
+    startSubmitTransition(async () => {
       if (returnMode === "FULL") {
         const res = await processFullSalesReturn({
           orderId: selectedOrderId,
@@ -242,15 +269,7 @@ export default function ReturnsClient({
           quantity: returnQty !== "" ? Number(returnQty) : undefined,
         });
         if (res.success) {
-          const returnedData = res.data;
-          const newReturn: SalesReturn = {
-            ...returnedData,
-            createdAt: new Date(returnedData.createdAt),
-            order: { customerName: selectedOrder?.customerName || "Unknown" },
-            orderItem: { product: { name: selectedItem?.product.name || "Unknown" } },
-            variant: { size: selectedItem?.variant?.size || "M" },
-          };
-          setReturns([newReturn, ...returns]);
+          router.refresh();
           setReturnReason(""); setDeliveryLossAmount(0); setReturnCost(0);
           setReturnCostPaid(false); setSelectedOrderId(""); setSelectedOrderItemId(""); setReturnQty("");
           setSuccessMessage("Partial return processed successfully!");
@@ -306,7 +325,7 @@ export default function ReturnsClient({
           <span className={`px-1.5 py-0.5 rounded-md text-[10px] font-bold ${
             activeTab === "logs" ? "bg-slate-100 text-slate-600" : "bg-slate-200 text-slate-500"
           }`}>
-            {returns.length}
+            {totalCount}
           </span>
         </button>
       </div>
@@ -527,10 +546,10 @@ export default function ReturnsClient({
 
                     <button
                       type="submit"
-                      disabled={isPending || !selectedOrderId || returnReason.trim() === "" || (returnMode === "PARTIAL" && !selectedOrderItemId)}
+                      disabled={isSubmitPending || !selectedOrderId || returnReason.trim() === "" || (returnMode === "PARTIAL" && !selectedOrderItemId)}
                       className="w-full h-11 bg-[#800020] hover:bg-[#600018] disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm font-semibold rounded-xl transition-colors flex items-center justify-center gap-2"
                     >
-                      {isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : (
+                      {isSubmitPending ? <Loader2 className="w-4 h-4 animate-spin" /> : (
                         <><Save className="w-4 h-4" />{returnMode === "FULL" ? "Process Full Return" : "Process Partial Return"}</>
                       )}
                     </button>
@@ -624,7 +643,7 @@ export default function ReturnsClient({
               <div className="flex items-center gap-2">
                 <History className="w-4 h-4 text-slate-400" />
                 <h2 className="text-sm font-semibold text-slate-900">Return Logs</h2>
-                <span className="text-[11px] font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-md">{filteredReturns.length}</span>
+                <span className="text-[11px] font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-md">{totalCount}</span>
               </div>
               <div className="relative w-full sm:w-60">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
@@ -632,9 +651,12 @@ export default function ReturnsClient({
                   type="text"
                   placeholder="Search by order, customer..."
                   value={logSearchQuery}
-                  onChange={(e) => setLogSearchQuery(e.target.value)}
+                  onChange={(e) => handleLogSearchChange(e.target.value)}
                   className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:border-slate-300 focus:bg-white transition-all"
                 />
+                {isSearchPending && (
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 border border-[#800020] border-t-transparent rounded-full animate-spin" />
+                )}
               </div>
             </div>
 
@@ -708,6 +730,7 @@ export default function ReturnsClient({
                 </tbody>
               </table>
             </div>
+            <AdminPagination currentPage={currentPage} totalPages={totalPages} />
           </div>
         </div>
       )}
