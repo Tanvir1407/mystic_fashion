@@ -9,11 +9,12 @@ export const revalidate = 0;
 export default async function ReturnsPage({
   searchParams,
 }: {
-  searchParams: { page?: string; limit?: string; search?: string; tab?: string };
+  searchParams: { page?: string; limit?: string; search?: string; tab?: string; status?: string };
 }) {
   const page = Number(searchParams?.page) || 1;
   const limit = Number(searchParams?.limit) || 10;
   const search = searchParams?.search || "";
+  const status = searchParams?.status || "ALL";
   const PER_PAGE = [10, 20, 50, 100].includes(limit) ? limit : 10;
 
   const now = new Date();
@@ -61,6 +62,9 @@ export default async function ReturnsPage({
 
   // Build the search where clause for Return Logs
   const returnWhereClause: any = {};
+  if (status !== "ALL") {
+    returnWhereClause.status = status;
+  }
   if (search.trim()) {
     const query = search.trim();
     returnWhereClause.OR = [
@@ -70,7 +74,7 @@ export default async function ReturnsPage({
     ];
   }
 
-  // Fetch paginated returns and aggregate summaries matching the search query
+  // Fetch paginated returns and aggregate summaries matching the filters
   const [returnsData, returnsCount, deliveryAndReturnSum, wastageSum, restockedSum] = await Promise.all([
     prisma.salesReturn.findMany({
       where: returnWhereClause,
@@ -130,6 +134,7 @@ export default async function ReturnsPage({
         totalPages={totalPages}
         currentPage={page}
         initialSummaries={summaries}
+        currentStatusFilter={status}
       />
     </Suspense>
   );

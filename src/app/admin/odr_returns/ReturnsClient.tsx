@@ -17,6 +17,7 @@ import {
   TrendingDown,
   Package,
   User,
+  X,
 } from "lucide-react";
 import Link from "next/link";
 import UploadedImage from "@/components/UploadedImage";
@@ -77,6 +78,7 @@ export default function ReturnsClient({
   totalPages,
   currentPage,
   initialSummaries,
+  currentStatusFilter,
 }: {
   orders: Order[];
   initialReturns: SalesReturn[];
@@ -89,6 +91,7 @@ export default function ReturnsClient({
     restockedCount: number;
     returnCost: number;
   };
+  currentStatusFilter: string;
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -110,6 +113,13 @@ export default function ReturnsClient({
     router.push(`${pathname}?${params.toString()}`);
   };
 
+  const handleStatusFilterChange = (val: string) => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("status", val);
+    params.set("page", "1");
+    router.push(`${pathname}?${params.toString()}`);
+  };
+
   useEffect(() => {
     setReturns(initialReturns);
   }, [initialReturns]);
@@ -118,12 +128,11 @@ export default function ReturnsClient({
     setLogSearchQuery(searchParams.get("search") || "");
   }, [searchParams]);
 
-  const handleLogSearchChange = (val: string) => {
-    setLogSearchQuery(val);
+  const triggerSearch = () => {
     const params = new URLSearchParams(searchParams.toString());
     params.set("page", "1");
-    if (val) {
-      params.set("search", val);
+    if (logSearchQuery.trim()) {
+      params.set("search", logSearchQuery.trim());
     } else {
       params.delete("search");
     }
@@ -645,18 +654,69 @@ export default function ReturnsClient({
                 <h2 className="text-sm font-semibold text-slate-900">Return Logs</h2>
                 <span className="text-[11px] font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-md">{totalCount}</span>
               </div>
-              <div className="relative w-full sm:w-60">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
-                <input
-                  type="text"
-                  placeholder="Search by order, customer..."
-                  value={logSearchQuery}
-                  onChange={(e) => handleLogSearchChange(e.target.value)}
-                  className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:border-slate-300 focus:bg-white transition-all"
+              <div className="flex flex-col sm:flex-row sm:items-center gap-3 w-full sm:w-auto">
+                <CustomSelect
+                  options={[
+                    { value: "ALL", label: "All Statuses" },
+                    { value: "RESTOCKED", label: "Restocked" },
+                    { value: "WASTAGE", label: "Wastage" },
+                  ]}
+                  value={currentStatusFilter}
+                  onChange={handleStatusFilterChange}
+                  heightClass="h-[36px]"
+                  className="w-full sm:w-36 text-xs font-semibold shadow-sm"
                 />
-                {isSearchPending && (
-                  <div className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 border border-[#800020] border-t-transparent rounded-full animate-spin" />
-                )}
+                <div className="relative w-full sm:w-80 group">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 group-focus-within:text-slate-900 transition-colors" />
+                  <input
+                    type="text"
+                    placeholder="Search by order, customer..."
+                    value={logSearchQuery}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setLogSearchQuery(val);
+                      if (val === "") {
+                        const params = new URLSearchParams(searchParams.toString());
+                        params.delete("search");
+                        params.set("page", "1");
+                        startSearchTransition(() => {
+                          router.push(`${pathname}?${params.toString()}`);
+                        });
+                      }
+                    }}
+                    onKeyDown={(e) => e.key === "Enter" && triggerSearch()}
+                    className="w-full pl-9 pr-24 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:border-slate-300 focus:bg-white transition-all outline-none font-medium text-slate-900 placeholder:text-slate-400"
+                  />
+                  <div className="absolute inset-y-0 right-0 pr-1 flex items-center gap-1">
+                    {logSearchQuery && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setLogSearchQuery("");
+                          const params = new URLSearchParams(searchParams.toString());
+                          params.delete("search");
+                          params.set("page", "1");
+                          startSearchTransition(() => {
+                            router.push(`${pathname}?${params.toString()}`);
+                          });
+                        }}
+                        className="p-1 hover:bg-slate-200 rounded-md transition-colors text-slate-400 hover:text-slate-600"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={triggerSearch}
+                      className="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white text-[10px] font-semibold rounded-lg transition-colors"
+                    >
+                      Search
+                    </button>
+                  </div>
+                  {isSearchPending && (
+                    <div className="absolute right-[92px] top-1/2 -translate-y-1/2 w-3.5 h-3.5 border border-[#800020] border-t-transparent rounded-full animate-spin" />
+                  )}
+                </div>
               </div>
             </div>
 
