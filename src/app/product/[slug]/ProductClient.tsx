@@ -480,37 +480,35 @@ export default function ProductClient({ product, sizeChartData, relatedProducts 
             {/* Combo Box Customizer */}
             {product.isCombo ? (
               <div className="mb-6">
-                <div className="flex justify-between items-center mb-2">
-                  <h3 className="font-semibold text-zinc-800 text-xs uppercase tracking-widest">
-                    Customize Your Box Set
-                  </h3>
-                  <span className="text-xs font-semibold text-[#800020]">
-                    Select exactly {product.comboRequiredQty} items
+                {/* Header */}
+                <div className="flex items-center justify-between mb-3">
+                  <p className="text-xs text-zinc-400 uppercase tracking-widest">Choose {product.comboRequiredQty} items</p>
+                  <span className={`text-xs font-semibold tabular-nums ${
+                    totalSelectedComboQty === (product.comboRequiredQty ?? 0) ? 'text-emerald-600' : 'text-zinc-400'
+                  }`}>
+                    {totalSelectedComboQty} / {product.comboRequiredQty} selected
                   </span>
                 </div>
-                
-                {/* Visual Progress Bar */}
-                <div className="w-full bg-slate-100 rounded-full h-5 mb-4 overflow-hidden relative shadow-inner border border-slate-200">
+
+                {/* Thin progress line */}
+                <div className="w-full h-px bg-slate-100 mb-4 overflow-hidden">
                   <div
-                    className="bg-gradient-to-r from-[#800020] to-rose-500 h-full rounded-full transition-all duration-300 ease-out"
+                    className="h-full bg-[#800020] transition-all duration-300"
                     style={{ width: `${Math.min(100, (totalSelectedComboQty / (product.comboRequiredQty || 1)) * 100)}%` }}
                   />
-                  <div className="absolute inset-0 flex items-center justify-center text-[10px] font-black text-zinc-800 tracking-wider">
-                    {totalSelectedComboQty} / {product.comboRequiredQty} SELECTED
-                  </div>
                 </div>
 
-                {/* Child Options checklist grid */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-96 overflow-y-auto pr-2 custom-scrollbar p-1 border border-slate-100 rounded-xl bg-slate-50/50">
+                {/* Image grid */}
+                <div className="grid grid-cols-3 sm:grid-cols-4 gap-2.5 max-h-80 overflow-y-auto scrollbar-hide">
                   {product.comboChildOptions?.map((option) => {
                     const child = option.childProduct;
                     const childStock = getChildStock(child);
                     const isOutOfStock = childStock <= 0;
-                    
+
                     const selection = selectedComboItems.find(item => item.productId === child.id);
                     const isSelected = !!selection;
                     const currentQty = selection ? selection.quantity : 0;
-                    
+
                     return (
                       <div
                         key={child.id}
@@ -524,56 +522,59 @@ export default function ProductClient({ product, sizeChartData, relatedProducts 
                             }
                           }
                         }}
-                        className={`flex items-center gap-3 p-2.5 rounded-xl border transition-all duration-200 cursor-pointer select-none ${
-                          isOutOfStock 
-                            ? 'bg-slate-100 opacity-55 border-slate-200 cursor-not-allowed'
-                            : isSelected 
-                              ? 'bg-rose-50/40 border-[#800020] shadow-sm'
-                              : 'bg-white border-slate-200 hover:border-slate-300'
+                        className={`relative flex flex-col cursor-pointer select-none transition-all duration-150 group ${
+                          isOutOfStock ? 'opacity-35 cursor-not-allowed' : ''
                         }`}
                       >
-                        {/* Thumbnail */}
-                        <div className="relative w-12 h-15 rounded-lg overflow-hidden bg-slate-100 flex-shrink-0 border border-slate-200">
+                        {/* Image card */}
+                        <div className={`relative aspect-square w-full overflow-hidden bg-slate-50 border transition-all duration-150 ${
+                          isSelected
+                            ? 'border-[#800020]'
+                            : 'border-slate-100 group-hover:border-slate-300'
+                        }`}>
                           {child.images && child.images[0] ? (
-                            <Image
-                              src={child.images[0]}
-                              alt={child.name}
-                              fill
-                              className="object-cover"
-                            />
+                            <Image src={child.images[0]} alt={child.name} fill className="object-cover" />
                           ) : (
-                            <div className="w-full h-full bg-slate-200 flex items-center justify-center text-[8px] text-slate-400">
-                              No Img
+                            <div className="w-full h-full bg-slate-100" />
+                          )}
+
+                          {/* Selected checkmark badge */}
+                          {isSelected && (
+                            <div className="absolute top-1.5 right-1.5 w-5 h-5 rounded-full bg-[#800020] flex items-center justify-center shadow-sm">
+                              <svg className="w-2.5 h-2.5 text-white stroke-current" viewBox="0 0 24 24" fill="none" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                                <polyline points="20 6 9 17 4 12" />
+                              </svg>
                             </div>
                           )}
-                        </div>
 
-                        {/* Name & Stock info */}
-                        <div className="flex-1 min-w-0">
-                          <h4 className="text-xs font-bold text-zinc-900 truncate">
-                            {child.name}
-                          </h4>
-                          {isOutOfStock ? (
-                            <span className="text-[10px] text-red-500 font-bold uppercase tracking-wider">Out of Stock</span>
-                          ) : childStock < 5 && child.trackStock ? (
-                            <span className="text-[10px] text-amber-600 font-semibold">Only {childStock} left</span>
-                          ) : (
-                            <span className="text-[10px] text-emerald-600 font-semibold">Available</span>
+                          {/* Out of stock overlay */}
+                          {isOutOfStock && (
+                            <div className="absolute inset-0 bg-white/60 flex items-end justify-center pb-1">
+                              <span className="text-[9px] text-red-400 font-medium">Out of stock</span>
+                            </div>
                           )}
-                        </div>
 
-                        {/* Control (Checkbox or Quantity Selector) */}
-                        <div onClick={(e) => e.stopPropagation()} className="flex items-center justify-end">
-                          {isOutOfStock ? null : option.maxQuantity > 1 && isSelected ? (
-                            <div className="flex items-center border border-slate-200 rounded-lg h-7 px-1 bg-white">
+                          {/* Low stock badge */}
+                          {!isOutOfStock && childStock < 5 && child.trackStock && (
+                            <div className="absolute bottom-1 left-1 bg-amber-500/90 text-white text-[8px] px-1 py-0.5 rounded font-medium">
+                              {childStock} left
+                            </div>
+                          )}
+
+                          {/* Quantity stepper overlay for maxQty > 1 */}
+                          {!isOutOfStock && option.maxQuantity > 1 && isSelected && (
+                            <div
+                              onClick={(e) => e.stopPropagation()}
+                              className="absolute bottom-0 left-0 right-0 flex items-center justify-between bg-white/90 border-t border-slate-100 px-1 py-0.5"
+                            >
                               <button
                                 type="button"
                                 onClick={() => handleDecrementChild(child.id)}
-                                className="w-5 h-full flex items-center justify-center text-slate-500 hover:text-rose-600"
+                                className="w-5 h-5 flex items-center justify-center text-slate-500 hover:text-rose-600"
                               >
-                                <Minus className="w-3 h-3" />
+                                <Minus className="w-2.5 h-2.5" />
                               </button>
-                              <span className="text-xs px-2 font-bold text-zinc-800">{currentQty}</span>
+                              <span className="text-[10px] font-bold text-zinc-800">{currentQty}</span>
                               <button
                                 type="button"
                                 onClick={() => {
@@ -582,27 +583,20 @@ export default function ProductClient({ product, sizeChartData, relatedProducts 
                                   }
                                 }}
                                 disabled={totalSelectedComboQty >= (product.comboRequiredQty ?? 0) || currentQty >= Math.min(option.maxQuantity, childStock)}
-                                className="w-5 h-full flex items-center justify-center text-slate-500 hover:text-[#800020] disabled:opacity-30"
+                                className="w-5 h-5 flex items-center justify-center text-slate-500 hover:text-[#800020] disabled:opacity-30"
                               >
-                                <Plus className="w-3 h-3" />
+                                <Plus className="w-2.5 h-2.5" />
                               </button>
-                            </div>
-                          ) : (
-                            <div
-                              className={`w-5 h-5 rounded-md border flex items-center justify-center transition-all ${
-                                isSelected
-                                  ? 'bg-[#800020] border-[#800020] text-white'
-                                  : 'border-slate-300 bg-white hover:border-slate-400'
-                              }`}
-                            >
-                              {isSelected && (
-                                <svg className="w-3 h-3 stroke-current" viewBox="0 0 24 24" fill="none" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                                  <polyline points="20 6 9 17 4 12" />
-                                </svg>
-                              )}
                             </div>
                           )}
                         </div>
+
+                        {/* Name below image */}
+                        <p className={`text-[10px] text-center mt-1.5 leading-tight truncate px-0.5 ${
+                          isSelected ? 'text-zinc-900 font-medium' : 'text-zinc-500'
+                        }`}>
+                          {child.name}
+                        </p>
                       </div>
                     );
                   })}
@@ -749,9 +743,9 @@ export default function ProductClient({ product, sizeChartData, relatedProducts 
               </div>
 
               {!isSelectionComplete && (
-                <p className="text-xs text-red-500 font-semibold mt-3 uppercase tracking-wider">
+                <p className="text-xs text-zinc-400 mt-3">
                   {product.isCombo ? (
-                    `Please select exactly ${product.comboRequiredQty} items to continue (currently ${totalSelectedComboQty} selected)`
+                    `Select ${(product.comboRequiredQty ?? 0) - totalSelectedComboQty} more item${(product.comboRequiredQty ?? 0) - totalSelectedComboQty > 1 ? 's' : ''} to continue`
                   ) : (
                     `Please select a ${
                       !selectedSize && isColorSelectionRequired && !selectedColor
