@@ -3,7 +3,6 @@ import { redirect } from "next/navigation";
 import prisma from "@/lib/prisma";
 import { getEffectiveCommissionRate, calcOrderCommission, calcPotentialCommission } from "@/lib/commission";
 import { formatBDT } from "@/utils/formatPrice";
-import { Plus } from "lucide-react";
 import Link from "next/link";
 import SalesCard from "./SalesCard";
 import OrdersCard from "./OrdersCard";
@@ -91,23 +90,15 @@ export default async function StaffDashboardPage() {
   const myRank = leaderboard.findIndex((s) => s.id === session.staffId) + 1;
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-bold text-slate-900">Welcome back, {session.username}</h1>
-          <p className="text-sm text-slate-500 mt-0.5">{monthName} {year}</p>
-        </div>
-        <Link
-          href="/staff/orders/create"
-          className="flex items-center gap-1.5 px-4 py-2 bg-[#800020] text-white text-sm font-semibold rounded-lg hover:bg-[#600018] transition-colors shadow-sm"
-        >
-          <Plus className="w-4 h-4" /> New Order
-        </Link>
+      <div>
+        <h1 className="text-xl font-bold text-slate-900">Welcome back, {session.username} 👋</h1>
+        <p className="text-sm text-slate-400 mt-0.5">{monthName} {year} · Your performance at a glance</p>
       </div>
 
       {/* 4 cards grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <SalesCard
           today={todayAgg._sum.totalAmount ?? 0}
           todayCount={todayAgg._count.id}
@@ -146,12 +137,12 @@ export default async function StaffDashboardPage() {
 
       {/* Pending banner */}
       {monthPending > 0 && (
-        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-center justify-between">
+        <div className="bg-amber-50 border border-amber-100 rounded-2xl px-5 py-4 flex items-center justify-between">
           <div>
-            <p className="text-xs font-bold text-amber-600 uppercase tracking-wide">Pending Commission — {monthName}</p>
-            <p className="text-2xl font-black text-amber-800 mt-0.5">{formatBDT(monthPending)}</p>
+            <p className="text-[10px] font-bold text-amber-500 uppercase tracking-wider">Pending Commission — {monthName}</p>
+            <p className="text-2xl font-black text-amber-700 mt-0.5">{formatBDT(monthPending)}</p>
           </div>
-          <Link href="/staff/payments" className="text-xs font-semibold text-amber-700 bg-amber-100 hover:bg-amber-200 px-3 py-2 rounded-lg transition-colors border border-amber-300">
+          <Link href="/staff/payments" className="text-xs font-semibold text-amber-600 bg-white hover:bg-amber-50 px-4 py-2 rounded-xl transition-colors border border-amber-100 shadow-sm">
             View History →
           </Link>
         </div>
