@@ -32,7 +32,10 @@ export default async function CustomerInvoicePage({
               size: true,
               color: true
             }
-          }
+          },
+          comboSelections: {
+            include: { product: { select: { name: true } } }
+          },
         }
       }
     }
@@ -79,7 +82,11 @@ export default async function CustomerInvoicePage({
       requiresPrint: item.requiresPrint,
       printName: item.printName || undefined,
       printNumber: item.printNumber || undefined,
-      printCost: item.printCost || undefined
+      printCost: item.printCost || undefined,
+      comboSelections: item.comboSelections?.map((sel: any) => ({
+        quantity: sel.quantity,
+        product: { name: sel.product?.name || "" },
+      })),
     }))
   };
 

@@ -11,6 +11,11 @@ export default async function NewProductPage() {
     orderBy: { name: 'asc' },
     include: { subcategories: { orderBy: { name: 'asc' } } }
   });
+  const allProducts = await prisma.product.findMany({
+    where: { deletedAt: null },
+    select: { id: true, name: true },
+    orderBy: { name: 'asc' }
+  });
   
-  return <ProductFormClient sizeCharts={sizeCharts} discounts={discounts} brands={brands} categories={categories} />;
+  return <ProductFormClient sizeCharts={sizeCharts} discounts={discounts} brands={brands} categories={categories} allProducts={allProducts} />;
 }

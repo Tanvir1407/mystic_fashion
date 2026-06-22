@@ -22,7 +22,14 @@ async function _updateOrderStatus(orderId: string, status: OrderStatus, holdReas
     await prisma.$transaction(async (tx) => {
       const order = await tx.order.findUnique({
         where: { id: orderId },
-        include: { items: true },
+        include: {
+          items: {
+            include: {
+              product: { select: { isCombo: true } },
+              comboSelections: { select: { productId: true, quantity: true } },
+            },
+          },
+        },
       });
 
       if (!order) throw new Error("Order not found");
@@ -50,33 +57,44 @@ async function _updateOrderStatus(orderId: string, status: OrderStatus, holdReas
       const oldIsHolding = isStockHolding(oldStatus);
       const newIsHolding = isStockHolding(newStatus);
 
+      const adjustItemStock = async (item: any, multiplier: 1 | -1, movementType: "SALE" | "RETURN") => {
+        if (item.product?.isCombo && item.comboSelections?.length > 0) {
+          for (const sel of item.comboSelections) {
+            const childVariant = await tx.productVariant.findFirst({
+              where: { productId: sel.productId },
+              orderBy: { order: "asc" },
+              select: { id: true },
+            });
+            if (childVariant) {
+              await updateStockDualWrite(tx, {
+                variantId: childVariant.id,
+                quantityChange: multiplier * sel.quantity * item.quantity,
+                movementType,
+                referenceId: order.id,
+                referenceType: "ORDER_STATUS_CHANGE",
+              });
+            }
+          }
+        } else if (item.variantId) {
+          await updateStockDualWrite(tx, {
+            variantId: item.variantId,
+            quantityChange: multiplier * item.quantity,
+            movementType,
+            referenceId: order.id,
+            referenceType: "ORDER_STATUS_CHANGE",
+          });
+        }
+      };
+
       if (!oldIsHolding && newIsHolding) {
         for (const item of order.items) {
-          const variantId = item.variantId;
-          if (variantId) {
-            await updateStockDualWrite(tx, {
-              variantId,
-              quantityChange: -item.quantity,
-              movementType: "SALE",
-              referenceId: order.id,
-              referenceType: "ORDER_STATUS_CHANGE",
-            });
-          }
+          await adjustItemStock(item, -1, "SALE");
         }
       }
 
       if (oldIsHolding && !newIsHolding) {
         for (const item of order.items) {
-          const variantId = item.variantId;
-          if (variantId) {
-            await updateStockDualWrite(tx, {
-              variantId,
-              quantityChange: item.quantity,
-              movementType: "RETURN",
-              referenceId: order.id,
-              referenceType: "ORDER_STATUS_CHANGE",
-            });
-          }
+          await adjustItemStock(item, 1, "RETURN");
         }
       }
 
@@ -644,6 +662,7 @@ async function _createAdminOrder(data: {
     printNumber?: string;
     printCost?: number;
     printDetails?: { name: string; number: string }[];
+    comboSelections?: { productId: string; name: string; quantity: number }[];
   }[];
   totalAmount: number;
   advancePaid: number;
@@ -787,6 +806,16 @@ async function _createAdminOrder(data: {
                     printName: item.printName || null,
                     printNumber: item.printNumber || null,
                     printCost: item.printCost || 0,
+                    ...(item.comboSelections?.length
+                      ? {
+                          comboSelections: {
+                            create: item.comboSelections.map((sel) => ({
+                              productId: sel.productId,
+                              quantity: sel.quantity,
+                            })),
+                          },
+                        }
+                      : {}),
                   },
                 ];
               }

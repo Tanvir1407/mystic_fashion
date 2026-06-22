@@ -114,6 +114,54 @@ export async function placeOrderAction(payload: {
           throw new Error(`Variant not found for Product "${item.name}" (Size: ${item.size || "M"}, Color: ${targetColor})`);
         }
 
+        // Validate combo configurations and selections if this is a combo product
+        if (variant.product.isCombo) {
+          if (!item.comboSelections || !Array.isArray(item.comboSelections) || item.comboSelections.length === 0) {
+            throw new Error(`Combo selections are required for product "${item.name}".`);
+          }
+          const totalQty = item.comboSelections.reduce((sum: number, s: any) => sum + s.quantity, 0);
+          if (totalQty !== variant.product.comboRequiredQty) {
+            throw new Error(`Invalid combo selections quantity for "${item.name}". Expected: ${variant.product.comboRequiredQty}, Selected: ${totalQty}.`);
+          }
+
+          for (const selection of item.comboSelections) {
+            // Find if this is a valid preset in ComboConfiguration
+            const config = await tx.comboConfiguration.findUnique({
+              where: {
+                parentProductId_childProductId: {
+                  parentProductId: item.id,
+                  childProductId: selection.productId
+                }
+              }
+            });
+            if (!config) {
+              throw new Error(`Product "${selection.name}" is not a valid child selection for combo "${item.name}".`);
+            }
+
+            // Check selection quantity does not exceed maxQuantity
+            if (selection.quantity > config.maxQuantity) {
+              throw new Error(`Quantity of "${selection.name}" selected (${selection.quantity}) exceeds maximum allowed (${config.maxQuantity}) in combo "${item.name}".`);
+            }
+
+            // Find default variant of child product to check stock
+            const childVariant = await tx.productVariant.findFirst({
+              where: { productId: selection.productId },
+              include: {
+                product: true,
+                stocks: { where: { warehouse: { code: "MAIN" } } }
+              }
+            });
+            if (!childVariant) {
+              throw new Error(`Child product variant not found for option "${selection.name}".`);
+            }
+
+            const childStock = childVariant.stocks?.[0]?.availableQuantity ?? 0;
+            if (childVariant.product.trackStock && childStock < (selection.quantity * item.quantity)) {
+              throw new Error(`Selected item "${selection.name}" does not have enough stock (Available: ${childStock}, Required: ${selection.quantity * item.quantity}).`);
+            }
+          }
+        }
+
         const basePrice = variant.pricingMatrix?.basePrice
           ? Number(variant.pricingMatrix.basePrice)
           : 0;
@@ -242,6 +290,13 @@ export async function placeOrderAction(payload: {
                 throw new Error(`Variant could not be resolved for "${item.name}" (Size: ${item.size || "M"}). Please refresh and try again.`);
               }
 
+              const comboSelectionsData = item.comboSelections && item.comboSelections.length > 0 ? {
+                create: item.comboSelections.map((sel: any) => ({
+                  productId: sel.productId,
+                  quantity: sel.quantity
+                }))
+              } : undefined;
+
               if (item.requiresPrint && item.printDetails && item.printDetails.length > 0) {
                 const printedItems = item.printDetails.map((pd: any) => ({
                   productId: item.id,
@@ -252,6 +307,7 @@ export async function placeOrderAction(payload: {
                   printName: pd.name || null,
                   printNumber: pd.number || null,
                   printCost: item.printCost || 0,
+                  comboSelections: comboSelectionsData,
                 }));
                 const remainingQty = item.quantity - item.printDetails.length;
                 if (remainingQty > 0) {
@@ -264,6 +320,7 @@ export async function placeOrderAction(payload: {
                     printName: null,
                     printNumber: null,
                     printCost: 0,
+                    comboSelections: comboSelectionsData,
                   });
                 }
                 return printedItems;
@@ -277,6 +334,7 @@ export async function placeOrderAction(payload: {
                   printName: item.printName || null,
                   printNumber: item.printNumber || null,
                   printCost: item.printCost || 0,
+                  comboSelections: comboSelectionsData,
                 }];
               }
             }),

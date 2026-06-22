@@ -24,6 +24,7 @@ interface OrderItem {
   printName?: string;
   printNumber?: string;
   printCost?: number;
+  comboSelections?: { quantity: number; product: { name: string } }[];
 }
 
 interface Order {
@@ -182,6 +183,15 @@ export default function InvoicePrintView({ orders }: { orders: Order[] }) {
                               {item.product.name}
                               {formatVariant(item) ? ` - ${formatVariant(item)}` : ""}
                             </p>
+                            {item.comboSelections && item.comboSelections.length > 0 && (
+                              <div className="mt-1 space-y-0.5">
+                                {item.comboSelections.map((sel, si) => (
+                                  <p key={si} className="text-[9px] text-gray-600 leading-tight">
+                                    • {sel.quantity}× {sel.product.name}
+                                  </p>
+                                ))}
+                              </div>
+                            )}
                             {item.requiresPrint && (
                               <div className="mt-1 text-[9px] font-bold text-gray-700 bg-gray-50 border border-gray-100 p-1 rounded-sm">
                                 CUSTOM PRINTING: {item.printName} (#{item.printNumber})

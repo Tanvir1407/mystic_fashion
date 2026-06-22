@@ -127,14 +127,19 @@ export default function ProductFormClient({
   sizeCharts,
   discounts,
   brands = [],
-  categories = []
+  categories = [],
+  allProducts = []
 }: {
   initialData?: any,
   sizeCharts: any[],
   discounts: any[],
   brands?: any[],
-  categories?: any[]
+  categories?: any[],
+  allProducts?: { id: string, name: string }[]
 }) {
+  const [isCombo, setIsCombo] = useState(initialData?.isCombo || false);
+  const [comboRequiredQty, setComboRequiredQty] = useState<number>(initialData?.comboRequiredQty || 0);
+  const [comboChildIds, setComboChildIds] = useState<string[]>(initialData?.comboChildIds || []);
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [isSizeModalOpen, setIsSizeModalOpen] = useState(false);
@@ -553,6 +558,9 @@ export default function ProductFormClient({
       isPublished,
       isCustomize,
       trackStock,
+      isCombo,
+      comboRequiredQty: isCombo ? Number(comboRequiredQty) : 0,
+      comboChildIds: isCombo ? comboChildIds : [],
       variants: (hasSize || hasColor)
         ? variants.map(({ size, color, sku, price: vPrice, stock }) => {
           const variantAttributes: Record<string, string> = {};
@@ -855,6 +863,27 @@ export default function ProductFormClient({
                   <span className="text-[10px] text-zinc-500 font-medium">Validate stock availability on storefront and during checkout.</span>
                 </label>
               </div>
+
+              <div className="flex items-center gap-3 p-2 rounded-none">
+                <input
+                  type="checkbox"
+                  id="isCombo"
+                  checked={isCombo}
+                  onChange={(e) => {
+                    setIsCombo(e.target.checked);
+                    if (e.target.checked) {
+                      setHasSize(false);
+                      setHasColor(false);
+                      setVariants([]);
+                    }
+                  }}
+                  className="w-5 h-5 text-violet-600 border-violet-300 rounded focus:ring-violet-500 cursor-pointer shrink-0"
+                />
+                <label htmlFor="isCombo" className="flex flex-col cursor-pointer select-none">
+                  <span className="text-sm font-bold text-violet-900">Is Combo / Box Set</span>
+                  <span className="text-[10px] text-zinc-500 font-medium">Allow customers to select multiple child items.</span>
+                </label>
+              </div>
             </div>
           </div>
 
@@ -1090,6 +1119,52 @@ export default function ProductFormClient({
             </div>
           </div>
 
+          {isCombo && (
+            <div className="bg-white border border-slate-200 rounded-none p-6 shadow-none">
+              <h2 className="text-sm font-bold text-slate-900 uppercase tracking-wider mb-4 border-b border-slate-100 pb-2">
+                Combo Settings
+              </h2>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Required Items Qty *</label>
+                  <input
+                    type="number"
+                    min={1}
+                    value={comboRequiredQty}
+                    onChange={(e) => setComboRequiredQty(parseInt(e.target.value) || 0)}
+                    className="w-full px-4 py-2 border border-slate-300 rounded-none focus:outline-none focus:border-slate-900 text-sm font-mono"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Select Child Presets</label>
+                  <div className="border border-slate-200 max-h-60 overflow-y-auto p-3 space-y-2 bg-slate-50">
+                    {allProducts.map((p) => {
+                      const isChecked = comboChildIds.includes(p.id);
+                      return (
+                        <label key={p.id} className="flex items-center gap-2.5 cursor-pointer py-0.5 hover:bg-slate-100/50">
+                          <input
+                            type="checkbox"
+                            checked={isChecked}
+                            onChange={() => {
+                              if (isChecked) {
+                                setComboChildIds(comboChildIds.filter((cid) => cid !== p.id));
+                              } else {
+                                setComboChildIds([...comboChildIds, p.id]);
+                              }
+                            }}
+                            className="w-4 h-4 text-violet-600 border-slate-300 rounded"
+                          />
+                          <span className="text-xs font-medium text-slate-800">{p.name}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                  <span className="text-[10px] text-slate-500 mt-1 block">Selected {comboChildIds.length} preset products</span>
+                </div>
+              </div>
+            </div>
+          )}
 
         </div>
       </div>
@@ -1114,47 +1189,49 @@ export default function ProductFormClient({
             )}
           </div>
 
-          <div className="flex flex-wrap items-center gap-6">
-            {(!mappedAttributes || mappedAttributes.length === 0 || mappedAttributes[0]) && (
-              <div className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  id="hasSize"
-                  checked={hasSize}
-                  onChange={(e) => {
-                    setHasSize(e.target.checked);
-                    if (!e.target.checked && !hasColor) {
-                      setVariants([]);
-                    }
-                  }}
-                  className="w-4 h-4 text-[#800020] border-slate-300 rounded focus:ring-[#800020] cursor-pointer"
-                />
-                <label htmlFor="hasSize" className="text-xs font-bold text-slate-700 cursor-pointer select-none">
-                  Enable {mappedAttributes[0]?.name || "Sizes"}
-                </label>
-              </div>
-            )}
+          {!isCombo && (
+            <div className="flex flex-wrap items-center gap-6">
+              {(!mappedAttributes || mappedAttributes.length === 0 || mappedAttributes[0]) && (
+                <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    id="hasSize"
+                    checked={hasSize}
+                    onChange={(e) => {
+                      setHasSize(e.target.checked);
+                      if (!e.target.checked && !hasColor) {
+                        setVariants([]);
+                      }
+                    }}
+                    className="w-4 h-4 text-[#800020] border-slate-300 rounded focus:ring-[#800020] cursor-pointer"
+                  />
+                  <label htmlFor="hasSize" className="text-xs font-bold text-slate-700 cursor-pointer select-none">
+                    Enable {mappedAttributes[0]?.name || "Sizes"}
+                  </label>
+                </div>
+              )}
 
-            {(!mappedAttributes || mappedAttributes.length === 0 || mappedAttributes[1]) && (
-              <div className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  id="hasColor"
-                  checked={hasColor}
-                  onChange={(e) => {
-                    setHasColor(e.target.checked);
-                    if (!hasSize && !e.target.checked) {
-                      setVariants([]);
-                    }
-                  }}
-                  className="w-4 h-4 text-[#800020] border-slate-300 rounded focus:ring-[#800020] cursor-pointer"
-                />
-                <label htmlFor="hasColor" className="text-xs font-bold text-slate-700 cursor-pointer select-none">
-                  Enable {mappedAttributes[1]?.name || "Colors"}
-                </label>
-              </div>
-            )}
-          </div>
+              {(!mappedAttributes || mappedAttributes.length === 0 || mappedAttributes[1]) && (
+                <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    id="hasColor"
+                    checked={hasColor}
+                    onChange={(e) => {
+                      setHasColor(e.target.checked);
+                      if (!hasSize && !e.target.checked) {
+                        setVariants([]);
+                      }
+                    }}
+                    className="w-4 h-4 text-[#800020] border-slate-300 rounded focus:ring-[#800020] cursor-pointer"
+                  />
+                  <label htmlFor="hasColor" className="text-xs font-bold text-slate-700 cursor-pointer select-none">
+                    Enable {mappedAttributes[1]?.name || "Colors"}
+                  </label>
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Option A: Simple Product (No variants) */}

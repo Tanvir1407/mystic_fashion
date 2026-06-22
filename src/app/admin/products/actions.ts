@@ -69,8 +69,9 @@ async function _createProduct(data: {
   isFeatured: boolean;
   featuredOrder?: number;
   isPublished: boolean;
-  isCustomize?: boolean | null;
-  trackStock: boolean;
+  isCombo?: boolean;
+  comboRequiredQty?: number;
+  comboChildIds?: string[];
   variants: { size: string; color: string; colorCode?: string; sku?: string; stock: number; price?: number; attributes?: any }[];
 }) {
   try {
@@ -140,6 +141,8 @@ async function _createProduct(data: {
           trackStock: data.trackStock,
           sizeChartId: data.sizeChartId || null,
           discountId: data.discountId || null,
+          isCombo: data.isCombo ?? false,
+          comboRequiredQty: data.comboRequiredQty ?? 0,
           variants: {
             create: data.variants.map((v, idx) => ({
               size: v.size,
@@ -214,6 +217,16 @@ async function _createProduct(data: {
         }
       }
 
+      if (data.isCombo && data.comboChildIds && data.comboChildIds.length > 0) {
+        await tx.comboConfiguration.createMany({
+          data: data.comboChildIds.map((childId) => ({
+            parentProductId: prod.id,
+            childProductId: childId,
+            maxQuantity: 1,
+          })),
+        });
+      }
+
       return prod;
     });
 
@@ -262,8 +275,9 @@ async function _updateProduct(
     isFeatured: boolean;
     featuredOrder?: number;
     isPublished: boolean;
-    isCustomize?: boolean | null;
-    trackStock: boolean;
+    isCombo?: boolean;
+    comboRequiredQty?: number;
+    comboChildIds?: string[];
     variants: { size: string; color: string; colorCode?: string; sku?: string; stock: number; price?: number; attributes?: any }[];
   }
 ) {
@@ -340,6 +354,8 @@ async function _updateProduct(
           trackStock: data.trackStock,
           sizeChartId: data.sizeChartId || null,
           discountId: data.discountId || null,
+          isCombo: data.isCombo ?? false,
+          comboRequiredQty: data.comboRequiredQty ?? 0,
         },
       });
 
@@ -460,6 +476,25 @@ async function _updateProduct(
         where: { productId: id, id: { notIn: keptVariantIds } },
       });
 
+      if (data.isCombo) {
+        await tx.comboConfiguration.deleteMany({
+          where: { parentProductId: id },
+        });
+        if (data.comboChildIds && data.comboChildIds.length > 0) {
+          await tx.comboConfiguration.createMany({
+            data: data.comboChildIds.map((childId) => ({
+              parentProductId: id,
+              childProductId: childId,
+              maxQuantity: 1,
+            })),
+          });
+        }
+      } else {
+        await tx.comboConfiguration.deleteMany({
+          where: { parentProductId: id },
+        });
+      }
+
       return prod;
     });
 
@@ -578,6 +613,19 @@ export async function getProductsForOrder() {
             where: { warehouse: { code: "MAIN" } }
           }
         }
+      },
+      comboChildOptions: {
+        include: {
+          childProduct: {
+            select: {
+              id: true,
+              name: true,
+              variants: {
+                select: { id: true, size: true, color: true }
+              }
+            }
+          }
+        }
       }
     },
     orderBy: { name: "asc" },
@@ -598,7 +646,14 @@ export async function getProductsForOrder() {
       variants: p.variants.map(v => ({
         ...v,
         stock: v.stocks?.[0]?.availableQuantity ?? 0
-      }))
+      })),
+      isCombo: p.isCombo,
+      comboRequiredQty: p.comboRequiredQty,
+      comboChildOptions: p.comboChildOptions?.map((o: any) => ({
+        id: o.childProduct.id,
+        name: o.childProduct.name,
+        variantId: o.childProduct.variants?.[0]?.id || ""
+      })) || []
     };
   });
 }

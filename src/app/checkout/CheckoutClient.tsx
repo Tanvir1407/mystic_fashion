@@ -49,7 +49,7 @@ export default function CheckoutClient({
   const [phone, setPhone] = useState("");
   // DTF Modal State
   const [showDTFModal, setShowDTFModal] = useState(false);
-  const [activeItem, setActiveItem] = useState<{ id: string, size: string | undefined, color: string | undefined, editIndex: number } | null>(null);
+  const [activeItem, setActiveItem] = useState<{ id: string, size: string | undefined, color: string | undefined, editIndex: number, comboSelections?: any[] } | null>(null);
   const [dtfForm, setDtfForm] = useState({
     type: "messi" as "messi" | "ronaldo" | "neymar" | "custom",
     name: "",
@@ -78,7 +78,7 @@ export default function CheckoutClient({
         updatedPrices.forEach(updated => {
           items.forEach(item => {
             if (item.id === updated.id && item.size === updated.size && item.color === updated.color && item.price !== updated.price) {
-              updateItem(item.id, item.size, item.color, { price: updated.price });
+              updateItem(item.id, item.size, item.color, { price: updated.price }, item.comboSelections);
             }
           });
         });
@@ -304,9 +304,9 @@ export default function CheckoutClient({
     });
   };
 
-  const handleDTFToggle = (id: string, size: string | undefined, color: string | undefined, checked: boolean) => {
+  const handleDTFToggle = (id: string, size: string | undefined, color: string | undefined, checked: boolean, comboSelections?: any[]) => {
     if (checked) {
-      setActiveItem({ id, size, color, editIndex: -1 });
+      setActiveItem({ id, size, color, editIndex: -1, comboSelections });
       setDtfForm({ type: "messi", name: "Messi", number: "10" });
       setShowDTFModal(true);
     } else {
@@ -316,7 +316,7 @@ export default function CheckoutClient({
         printNumber: "",
         printCost: 0,
         printDetails: []
-      });
+      }, comboSelections);
     }
   };
 
@@ -330,7 +330,8 @@ export default function CheckoutClient({
     if (type === "ronaldo") { finalName = "Ronaldo"; finalNumber = "7"; }
     if (type === "neymar") { finalName = "Neymar"; finalNumber = "10"; }
 
-    const currentItem = items.find(i => i.id === activeItem.id && i.size === activeItem.size && i.color === activeItem.color);
+    const isSelectionsEqual = (a?: any[], b?: any[]) => JSON.stringify(a || []) === JSON.stringify(b || []);
+    const currentItem = items.find(i => i.id === activeItem.id && i.size === activeItem.size && i.color === activeItem.color && isSelectionsEqual(i.comboSelections, activeItem.comboSelections));
     let newDetails = currentItem?.printDetails ? [...currentItem.printDetails] : [];
 
     if (activeItem.editIndex >= 0) {
@@ -345,7 +346,7 @@ export default function CheckoutClient({
       printNumber: finalNumber,
       printCost: dtfCostPerItem,
       printDetails: newDetails
-    });
+    }, activeItem.comboSelections);
     setShowDTFModal(false);
     setActiveItem(null);
   };
@@ -609,6 +610,20 @@ export default function CheckoutClient({
                               )}
                               <span className="text-[10px] font-semibold text-slate-400 uppercase">Qty: {item.quantity}</span>
                             </div>
+                            
+                            {/* Combo Selections list */}
+                            {item.comboSelections && item.comboSelections.length > 0 && (
+                              <div className="mt-2 bg-slate-50 p-2 border border-slate-100 rounded-sm">
+                                <p className="text-[9px] font-bold text-slate-500 uppercase tracking-wide mb-1">Selections:</p>
+                                <ul className="space-y-0.5 list-none pl-0">
+                                  {item.comboSelections.map((sel: any, sIdx: number) => (
+                                    <li key={sIdx} className="text-[9px] text-slate-600 font-medium truncate">
+                                      • {sel.name} (x{sel.quantity})
+                                    </li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
                           </div>
                           <div className="flex items-center gap-2">
                             {item.originalPrice && item.originalPrice > item.price && (
@@ -626,7 +641,7 @@ export default function CheckoutClient({
                             <input
                               type="checkbox"
                               checked={item.requiresPrint}
-                              onChange={(e) => handleDTFToggle(item.id, item.size, item.color, e.target.checked)}
+                              onChange={(e) => handleDTFToggle(item.id, item.size, item.color, e.target.checked, item.comboSelections)}
                               className="w-4 h-4  border-slate-300 text-primary focus:ring-primary"
                             />
                             <span className="text-[10px] font-bold text-slate-600 uppercase">Add DTF Print (+৳{dtfCostPerItem})</span>
@@ -643,7 +658,7 @@ export default function CheckoutClient({
                                     <button
                                       onClick={(e) => {
                                         e.preventDefault();
-                                        setActiveItem({ id: item.id, size: item.size, color: item.color, editIndex: idx });
+                                        setActiveItem({ id: item.id, size: item.size, color: item.color, editIndex: idx, comboSelections: item.comboSelections });
                                         setDtfForm({ type: "custom", name: detail.name, number: detail.number });
                                         setShowDTFModal(true);
                                       }}
@@ -658,7 +673,7 @@ export default function CheckoutClient({
                                         updateItem(item.id, item.size, item.color, {
                                           printDetails: newDetails,
                                           requiresPrint: newDetails.length > 0
-                                        });
+                                        }, item.comboSelections);
                                       }}
                                       className="text-red-500 hover:scale-110 transition-transform p-1"
                                     >
@@ -671,7 +686,7 @@ export default function CheckoutClient({
                                 <button
                                   onClick={(e) => {
                                     e.preventDefault();
-                                    setActiveItem({ id: item.id, size: item.size, color: item.color, editIndex: -1 });
+                                    setActiveItem({ id: item.id, size: item.size, color: item.color, editIndex: -1, comboSelections: item.comboSelections });
                                     setDtfForm({ type: "custom", name: "", number: "" });
                                     setShowDTFModal(true);
                                   }}

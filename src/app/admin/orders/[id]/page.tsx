@@ -21,7 +21,10 @@ export default async function SingleOrderPage({ params }: { params: { id: string
                 }
               }
             },
-            variant: true
+            variant: true,
+            comboSelections: {
+              include: { product: { select: { name: true } } }
+            },
           }
         },
         createdBy: true,

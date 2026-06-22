@@ -82,34 +82,51 @@ export default async function ProductPage({ params }: { params: { slug: string }
   // Match UUID pattern (standard Prisma UUID format)
   const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(identifier);
 
+  const productIncludes = {
+    variants: {
+      include: {
+        pricingMatrix: true,
+        stocks: { where: { warehouse: { code: "MAIN" } } }
+      }
+    },
+    sizeChart: true,
+    discount: true,
+    mediaAssets: { orderBy: { sortOrder: "asc" } },
+    categoryRel: {
+      include: {
+        attributeMappings: {
+          include: {
+            attribute: true
+          },
+          orderBy: {
+            sortOrder: "asc"
+          }
+        }
+      }
+    },
+    comboChildOptions: {
+      include: {
+        childProduct: {
+          include: {
+            variants: {
+              include: {
+                pricingMatrix: true,
+                stocks: { where: { warehouse: { code: "MAIN" } } }
+              }
+            },
+            mediaAssets: { orderBy: { sortOrder: "asc" } }
+          }
+        }
+      }
+    }
+  };
+
   let productRes = null;
 
   if (isUuid) {
     productRes = await prisma.product.findUnique({
       where: { id: identifier },
-      include: {
-        variants: {
-          include: {
-            pricingMatrix: true,
-            stocks: { where: { warehouse: { code: "MAIN" } } }
-          }
-        },
-        sizeChart: true,
-        discount: true,
-        mediaAssets: { orderBy: { sortOrder: "asc" } },
-        categoryRel: {
-          include: {
-            attributeMappings: {
-              include: {
-                attribute: true
-              },
-              orderBy: {
-                sortOrder: "asc"
-              }
-            }
-          }
-        },
-      }
+      include: productIncludes
     });
 
     // If found by ID and has a slug, do a 301 redirect to the slug-based URL!
@@ -119,29 +136,7 @@ export default async function ProductPage({ params }: { params: { slug: string }
   } else {
     productRes = await prisma.product.findUnique({
       where: { slug: identifier },
-      include: {
-        variants: {
-          include: {
-            pricingMatrix: true,
-            stocks: { where: { warehouse: { code: "MAIN" } } }
-          }
-        },
-        sizeChart: true,
-        discount: true,
-        mediaAssets: { orderBy: { sortOrder: "asc" } },
-        categoryRel: {
-          include: {
-            attributeMappings: {
-              include: {
-                attribute: true
-              },
-              orderBy: {
-                sortOrder: "asc"
-              }
-            }
-          }
-        },
-      }
+      include: productIncludes
     });
   }
 
@@ -149,29 +144,7 @@ export default async function ProductPage({ params }: { params: { slug: string }
   if (!productRes) {
     productRes = await prisma.product.findUnique({
       where: { id: identifier },
-      include: {
-        variants: {
-          include: {
-            pricingMatrix: true,
-            stocks: { where: { warehouse: { code: "MAIN" } } }
-          }
-        },
-        sizeChart: true,
-        discount: true,
-        mediaAssets: { orderBy: { sortOrder: "asc" } },
-        categoryRel: {
-          include: {
-            attributeMappings: {
-              include: {
-                attribute: true
-              },
-              orderBy: {
-                sortOrder: "asc"
-              }
-            }
-          }
-        },
-      }
+      include: productIncludes
     });
     if (productRes && productRes.slug) {
       redirect(`/product/${productRes.slug}`);
@@ -205,7 +178,35 @@ export default async function ProductPage({ params }: { params: { slug: string }
         stock: v.stocks?.[0]?.availableQuantity ?? 0,
         price: pricingMatrix?.basePrice ? Number(pricingMatrix.basePrice) : basePrice
       };
-    })
+    }),
+    comboChildOptions: productRes.comboChildOptions?.map((option: any) => {
+      const child = option.childProduct;
+      const childBasePrice = child.variants?.[0]?.pricingMatrix?.basePrice
+        ? Number(child.variants[0].pricingMatrix.basePrice)
+        : 0;
+      const childImages = (child.mediaAssets && child.mediaAssets.length > 0)
+        ? child.mediaAssets.map((asset: any) => asset.url)
+        : [];
+      return {
+        id: option.id,
+        parentProductId: option.parentProductId,
+        childProductId: option.childProductId,
+        maxQuantity: option.maxQuantity,
+        childProduct: {
+          ...child,
+          price: childBasePrice,
+          images: childImages,
+          variants: child.variants?.map((v: any) => {
+            const { pricingMatrix, ...rest } = v;
+            return {
+              ...rest,
+              stock: v.stocks?.[0]?.availableQuantity ?? 0,
+              price: pricingMatrix?.basePrice ? Number(pricingMatrix.basePrice) : childBasePrice
+            };
+          }) || []
+        }
+      };
+    }) || []
   };
 
   let relatedProductsRes = await prisma.product.findMany({

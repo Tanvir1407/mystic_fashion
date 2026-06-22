@@ -26,7 +26,8 @@ export default async function EditProductPage({ params }: { params: { id: string
           }
         }
       },
-      mediaAssets: true
+      mediaAssets: true,
+      comboChildOptions: true
     }
   });
 
@@ -62,9 +63,18 @@ export default async function EditProductPage({ params }: { params: { id: string
     price: basePrice,
     images: displayImages,
     variants: mappedVariants,
-    categoryId: resolvedCategoryId
+    categoryId: resolvedCategoryId,
+    isCombo: productRes.isCombo,
+    comboRequiredQty: productRes.comboRequiredQty,
+    comboChildIds: productRes.comboChildOptions?.map((o: any) => o.childProductId) || []
   };
 
-  return <ProductFormClient initialData={product} sizeCharts={sizeCharts} discounts={discounts} brands={brands} categories={categories} />;
+  const allProducts = await prisma.product.findMany({
+    where: { deletedAt: null, id: { not: params.id } },
+    select: { id: true, name: true },
+    orderBy: { name: 'asc' }
+  });
+
+  return <ProductFormClient initialData={product} sizeCharts={sizeCharts} discounts={discounts} brands={brands} categories={categories} allProducts={allProducts} />;
 }
 

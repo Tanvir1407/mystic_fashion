@@ -22,6 +22,8 @@ interface Product {
   category: string;
   isCustomize?: boolean | null;
   trackStock?: boolean;
+  isCombo?: boolean;
+  comboRequiredQty?: number;
   mediaAssets?: { url: string; boundAttributes?: any }[];
   variants: {
     id: string;
@@ -37,10 +39,72 @@ interface Product {
     value: number;
   } | null;
   categoryRel?: any;
+  comboChildOptions?: {
+    id: string;
+    parentProductId: string;
+    childProductId: string;
+    maxQuantity: number;
+    childProduct: {
+      id: string;
+      name: string;
+      description: string;
+      price: number;
+      images: string[];
+      team: string;
+      category: string;
+      trackStock?: boolean;
+      variants: {
+        id: string;
+        size: string;
+        color: string;
+        stock: number;
+        price?: number;
+      }[];
+    };
+  }[];
 }
 
 export default function ProductClient({ product, sizeChartData, relatedProducts }: { product: Product, sizeChartData?: any, relatedProducts?: any[] }) {
   const router = useRouter();
+
+  // Combo states
+  const [selectedComboItems, setSelectedComboItems] = useState<{ productId: string; name: string; quantity: number }[]>([]);
+  const totalSelectedComboQty = selectedComboItems.reduce((sum, item) => sum + item.quantity, 0);
+
+  const getChildStock = (childProduct: any) => {
+    if (!childProduct.trackStock) return Infinity;
+    return childProduct.variants?.reduce((sum: number, v: any) => sum + (v.stock ?? 0), 0) ?? 0;
+  };
+
+  const handleAddChild = (productId: string, name: string) => {
+    setSelectedComboItems(prev => {
+      const existing = prev.find(item => item.productId === productId);
+      if (existing) return prev;
+      return [...prev, { productId, name, quantity: 1 }];
+    });
+  };
+
+  const handleRemoveChild = (productId: string) => {
+    setSelectedComboItems(prev => prev.filter(item => item.productId !== productId));
+  };
+
+  const handleIncrementChild = (productId: string) => {
+    setSelectedComboItems(prev => prev.map(item => 
+      item.productId === productId ? { ...item, quantity: item.quantity + 1 } : item
+    ));
+  };
+
+  const handleDecrementChild = (productId: string) => {
+    setSelectedComboItems(prev => {
+      const existing = prev.find(item => item.productId === productId);
+      if (existing && existing.quantity > 1) {
+        return prev.map(item => 
+          item.productId === productId ? { ...item, quantity: item.quantity - 1 } : item
+        );
+      }
+      return prev.filter(item => item.productId !== productId);
+    });
+  };
 
   // Dynamic variant names based on PIM category attribute mapping
   const sizeAttributeName = product.categoryRel?.attributeMappings?.[0]?.attribute?.name || "Size";
@@ -93,14 +157,17 @@ export default function ProductClient({ product, sizeChartData, relatedProducts 
   // Unique sizes list
   const uniqueSizes = Array.from(new Set(product.variants.map((v) => v.size)));
 
-  // Auto-select size on mount if it's size-less
+  // Auto-select size on mount if it's size-less or if it is a combo product
   useEffect(() => {
-    if (product.variants.length > 0) {
+    if (product.isCombo) {
+      setSelectedSize("Default");
+      setSelectedColor("Default");
+    } else if (product.variants.length > 0) {
       if (isSizeLess) {
         setSelectedSize(product.variants[0].size);
       }
     }
-  }, [product.variants, isSizeLess]);
+  }, [product.variants, isSizeLess, product.isCombo]);
 
   // Unique colors list
   const availableColors = Array.from(
@@ -119,10 +186,22 @@ export default function ProductClient({ product, sizeChartData, relatedProducts 
   }, [availableColors]);
 
   const isColorSelectionRequired = availableColors.length > 0;
-  const isSelectionComplete = !!selectedSize && (!isColorSelectionRequired || !!selectedColor);
+  const isSelectionComplete = product.isCombo
+    ? (totalSelectedComboQty === (product.comboRequiredQty ?? 0))
+    : (!!selectedSize && (!isColorSelectionRequired || !!selectedColor));
 
   const getButtonText = () => {
     if (addedEffect) return 'Added To Cart';
+    if (product.isCombo) {
+      const required = product.comboRequiredQty ?? 0;
+      if (totalSelectedComboQty < required) {
+        return `Select ${required - totalSelectedComboQty} More Item${required - totalSelectedComboQty > 1 ? 's' : ''}`;
+      }
+      if (totalSelectedComboQty > required) {
+        return `Remove ${totalSelectedComboQty - required} Item${totalSelectedComboQty - required > 1 ? 's' : ''}`;
+      }
+      return 'Add To Cart';
+    }
     if (!selectedSize && isColorSelectionRequired && !selectedColor) {
       return `Select ${sizeAttributeName} & ${colorAttributeName}`;
     }
@@ -263,7 +342,7 @@ export default function ProductClient({ product, sizeChartData, relatedProducts 
       isCustomize: product.isCustomize ?? false,
       sizeAttributeName,
       colorAttributeName,
-    }, selectedSize!, quantity, selectedColor || undefined);
+    }, selectedSize!, quantity, selectedColor || undefined, product.isCombo ? selectedComboItems : undefined);
 
     setAddedEffect(true);
     setTimeout(() => setAddedEffect(false), 2000);
@@ -398,85 +477,220 @@ export default function ProductClient({ product, sizeChartData, relatedProducts 
               ) : null}
             </div>
 
-            {/* Color Selector */}
-            {availableColors.length > 0 && (
+            {/* Combo Box Customizer */}
+            {product.isCombo ? (
               <div className="mb-6">
-                <h3 className="font-medium text-zinc-500 text-xs uppercase tracking-widest mb-3">Select {colorAttributeName}</h3>
-                <div className="flex flex-wrap gap-2">
-                  {availableColors.map((col) => {
-                    const isAvailableForSelectedSize = selectedSize
-                      ? product.variants.some(v => v.color === col && v.size === selectedSize && (!product.trackStock || v.stock > 0))
-                      : product.variants.some(v => v.color === col && (!product.trackStock || v.stock > 0));
+                <div className="flex justify-between items-center mb-2">
+                  <h3 className="font-semibold text-zinc-800 text-xs uppercase tracking-widest">
+                    Customize Your Box Set
+                  </h3>
+                  <span className="text-xs font-semibold text-[#800020]">
+                    Select exactly {product.comboRequiredQty} items
+                  </span>
+                </div>
+                
+                {/* Visual Progress Bar */}
+                <div className="w-full bg-slate-100 rounded-full h-5 mb-4 overflow-hidden relative shadow-inner border border-slate-200">
+                  <div
+                    className="bg-gradient-to-r from-[#800020] to-rose-500 h-full rounded-full transition-all duration-300 ease-out"
+                    style={{ width: `${Math.min(100, (totalSelectedComboQty / (product.comboRequiredQty || 1)) * 100)}%` }}
+                  />
+                  <div className="absolute inset-0 flex items-center justify-center text-[10px] font-black text-zinc-800 tracking-wider">
+                    {totalSelectedComboQty} / {product.comboRequiredQty} SELECTED
+                  </div>
+                </div>
 
+                {/* Child Options checklist grid */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-96 overflow-y-auto pr-2 custom-scrollbar p-1 border border-slate-100 rounded-xl bg-slate-50/50">
+                  {product.comboChildOptions?.map((option) => {
+                    const child = option.childProduct;
+                    const childStock = getChildStock(child);
+                    const isOutOfStock = childStock <= 0;
+                    
+                    const selection = selectedComboItems.find(item => item.productId === child.id);
+                    const isSelected = !!selection;
+                    const currentQty = selection ? selection.quantity : 0;
+                    
                     return (
-                      <button
-                        key={col}
-                        type="button"
-                        onClick={() => handleColorSelect(col)}
-                        disabled={!isAvailableForSelectedSize}
-                        className={`h-12 px-6 flex items-center justify-center font-bold text-xs uppercase tracking-wider transition-colors border ${!isAvailableForSelectedSize
-                          ? 'opacity-20 border-slate-200 cursor-not-allowed select-none bg-slate-50 text-slate-400'
-                          : selectedColor === col
-                            ? 'bg-primary text-white border-primary'
-                            : 'bg-white text-zinc-900 border-zinc-200 hover:border-primary hover:text-primary'
-                          }`}
+                      <div
+                        key={child.id}
+                        onClick={() => {
+                          if (isOutOfStock) return;
+                          if (isSelected && option.maxQuantity === 1) {
+                            handleRemoveChild(child.id);
+                          } else if (!isSelected) {
+                            if (totalSelectedComboQty < (product.comboRequiredQty ?? 0)) {
+                              handleAddChild(child.id, child.name);
+                            }
+                          }
+                        }}
+                        className={`flex items-center gap-3 p-2.5 rounded-xl border transition-all duration-200 cursor-pointer select-none ${
+                          isOutOfStock 
+                            ? 'bg-slate-100 opacity-55 border-slate-200 cursor-not-allowed'
+                            : isSelected 
+                              ? 'bg-rose-50/40 border-[#800020] shadow-sm'
+                              : 'bg-white border-slate-200 hover:border-slate-300'
+                        }`}
                       >
-                        <span>{col}</span>
-                      </button>
+                        {/* Thumbnail */}
+                        <div className="relative w-12 h-15 rounded-lg overflow-hidden bg-slate-100 flex-shrink-0 border border-slate-200">
+                          {child.images && child.images[0] ? (
+                            <Image
+                              src={child.images[0]}
+                              alt={child.name}
+                              fill
+                              className="object-cover"
+                            />
+                          ) : (
+                            <div className="w-full h-full bg-slate-200 flex items-center justify-center text-[8px] text-slate-400">
+                              No Img
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Name & Stock info */}
+                        <div className="flex-1 min-w-0">
+                          <h4 className="text-xs font-bold text-zinc-900 truncate">
+                            {child.name}
+                          </h4>
+                          {isOutOfStock ? (
+                            <span className="text-[10px] text-red-500 font-bold uppercase tracking-wider">Out of Stock</span>
+                          ) : childStock < 5 && child.trackStock ? (
+                            <span className="text-[10px] text-amber-600 font-semibold">Only {childStock} left</span>
+                          ) : (
+                            <span className="text-[10px] text-emerald-600 font-semibold">Available</span>
+                          )}
+                        </div>
+
+                        {/* Control (Checkbox or Quantity Selector) */}
+                        <div onClick={(e) => e.stopPropagation()} className="flex items-center justify-end">
+                          {isOutOfStock ? null : option.maxQuantity > 1 && isSelected ? (
+                            <div className="flex items-center border border-slate-200 rounded-lg h-7 px-1 bg-white">
+                              <button
+                                type="button"
+                                onClick={() => handleDecrementChild(child.id)}
+                                className="w-5 h-full flex items-center justify-center text-slate-500 hover:text-rose-600"
+                              >
+                                <Minus className="w-3 h-3" />
+                              </button>
+                              <span className="text-xs px-2 font-bold text-zinc-800">{currentQty}</span>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  if (totalSelectedComboQty < (product.comboRequiredQty ?? 0) && currentQty < Math.min(option.maxQuantity, childStock)) {
+                                    handleIncrementChild(child.id);
+                                  }
+                                }}
+                                disabled={totalSelectedComboQty >= (product.comboRequiredQty ?? 0) || currentQty >= Math.min(option.maxQuantity, childStock)}
+                                className="w-5 h-full flex items-center justify-center text-slate-500 hover:text-[#800020] disabled:opacity-30"
+                              >
+                                <Plus className="w-3 h-3" />
+                              </button>
+                            </div>
+                          ) : (
+                            <div
+                              className={`w-5 h-5 rounded-md border flex items-center justify-center transition-all ${
+                                isSelected
+                                  ? 'bg-[#800020] border-[#800020] text-white'
+                                  : 'border-slate-300 bg-white hover:border-slate-400'
+                              }`}
+                            >
+                              {isSelected && (
+                                <svg className="w-3 h-3 stroke-current" viewBox="0 0 24 24" fill="none" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                                  <polyline points="20 6 9 17 4 12" />
+                                </svg>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      </div>
                     );
                   })}
                 </div>
               </div>
-            )}
+            ) : (
+              <>
+                {/* Color Selector */}
+                {availableColors.length > 0 && (
+                  <div className="mb-6">
+                    <h3 className="font-medium text-zinc-500 text-xs uppercase tracking-widest mb-3">Select {colorAttributeName}</h3>
+                    <div className="flex flex-wrap gap-2">
+                      {availableColors.map((col) => {
+                        const isAvailableForSelectedSize = selectedSize
+                          ? product.variants.some(v => v.color === col && v.size === selectedSize && (!product.trackStock || v.stock > 0))
+                          : product.variants.some(v => v.color === col && (!product.trackStock || v.stock > 0));
 
-            {/* Size Selector */}
-            {!isSizeLess && (
-              <div className="mb-8">
-                <div className="flex justify-between items-center mb-3">
-                  <h3 className="font-medium text-zinc-500 text-xs uppercase tracking-widest">Select {sizeAttributeName}</h3>
-                </div>
-
-                {product.variants.length === 0 ? (
-                  <p className="text-red-500 font-medium text-sm">Size map not configured yet.</p>
-                ) : (
-                  <div className="flex flex-wrap gap-2">
-                    {uniqueSizes.map((sz) => {
-                      const matchingVariants = product.variants.filter(v => v.size === sz);
-                      const isOutOfStock = product.trackStock && !matchingVariants.some(v => v.stock > 0);
-                      const isAvailableForSelectedColor = selectedColor
-                        ? matchingVariants.some(v => v.color === selectedColor)
-                        : true;
-
-                      return (
-                        <button
-                          key={sz}
-                          type="button"
-                          onClick={() => {
-                            if (isOutOfStock) return;
-                            handleSizeSelect(sz);
-                          }}
-                          disabled={isOutOfStock || !isAvailableForSelectedColor}
-                          className={`h-12 px-6 flex items-center justify-center font-semibold text-sm transition-colors border ${isOutOfStock
-                            ? 'border-dashed border-slate-300 text-slate-400 bg-slate-50/50 cursor-not-allowed select-none'
-                            : !isAvailableForSelectedColor
-                              ? 'opacity-20 border-slate-200 cursor-not-allowed text-slate-400 bg-slate-50'
-                              : selectedSize === sz
+                        return (
+                          <button
+                            key={col}
+                            type="button"
+                            onClick={() => handleColorSelect(col)}
+                            disabled={!isAvailableForSelectedSize}
+                            className={`h-12 px-6 flex items-center justify-center font-bold text-xs uppercase tracking-wider transition-colors border ${!isAvailableForSelectedSize
+                              ? 'opacity-20 border-slate-200 cursor-not-allowed select-none bg-slate-50 text-slate-400'
+                              : selectedColor === col
                                 ? 'bg-primary text-white border-primary'
                                 : 'bg-white text-zinc-900 border-zinc-200 hover:border-primary hover:text-primary'
-                            }`}
-                          style={{
-                            background: isOutOfStock
-                              ? 'linear-gradient(135deg, transparent 50%, #cbd5e1 50%, #cbd5e1 52%, transparent 52%)'
-                              : undefined
-                          }}
-                        >
-                          <span>{sz}</span>
-                        </button>
-                      );
-                    })}
+                              }`}
+                          >
+                            <span>{col}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
                 )}
-              </div>
+
+                {/* Size Selector */}
+                {!isSizeLess && (
+                  <div className="mb-8">
+                    <div className="flex justify-between items-center mb-3">
+                      <h3 className="font-medium text-zinc-500 text-xs uppercase tracking-widest">Select {sizeAttributeName}</h3>
+                    </div>
+
+                    {product.variants.length === 0 ? (
+                      <p className="text-red-500 font-medium text-sm">Size map not configured yet.</p>
+                    ) : (
+                      <div className="flex flex-wrap gap-2">
+                        {uniqueSizes.map((sz) => {
+                          const matchingVariants = product.variants.filter(v => v.size === sz);
+                          const isOutOfStock = product.trackStock && !matchingVariants.some(v => v.stock > 0);
+                          const isAvailableForSelectedColor = selectedColor
+                            ? matchingVariants.some(v => v.color === selectedColor)
+                            : true;
+
+                          return (
+                            <button
+                              key={sz}
+                              type="button"
+                              onClick={() => {
+                                if (isOutOfStock) return;
+                                handleSizeSelect(sz);
+                              }}
+                              disabled={isOutOfStock || !isAvailableForSelectedColor}
+                              className={`h-12 px-6 flex items-center justify-center font-semibold text-sm transition-colors border ${isOutOfStock
+                                ? 'border-dashed border-slate-300 text-slate-400 bg-slate-50/50 cursor-not-allowed select-none'
+                                : !isAvailableForSelectedColor
+                                  ? 'opacity-20 border-slate-200 cursor-not-allowed text-slate-400 bg-slate-50'
+                                  : selectedSize === sz
+                                    ? 'bg-primary text-white border-primary'
+                                    : 'bg-white text-zinc-900 border-zinc-200 hover:border-primary hover:text-primary'
+                                }`}
+                              style={{
+                                background: isOutOfStock
+                                  ? 'linear-gradient(135deg, transparent 50%, #cbd5e1 50%, #cbd5e1 52%, transparent 52%)'
+                                  : undefined
+                              }}
+                            >
+                              <span>{sz}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </>
             )}
 
             {/* Quantity and Action Buttons */}
@@ -535,14 +749,18 @@ export default function ProductClient({ product, sizeChartData, relatedProducts 
               </div>
 
               {!isSelectionComplete && (
-                <p className="text-xs text-red-500 font-medium mt-3">
-                  Please select a {
-                    !selectedSize && isColorSelectionRequired && !selectedColor
-                      ? `${sizeAttributeName.toLowerCase()} and ${colorAttributeName.toLowerCase()}`
-                      : !selectedSize
-                        ? sizeAttributeName.toLowerCase()
-                        : colorAttributeName.toLowerCase()
-                  } to continue
+                <p className="text-xs text-red-500 font-semibold mt-3 uppercase tracking-wider">
+                  {product.isCombo ? (
+                    `Please select exactly ${product.comboRequiredQty} items to continue (currently ${totalSelectedComboQty} selected)`
+                  ) : (
+                    `Please select a ${
+                      !selectedSize && isColorSelectionRequired && !selectedColor
+                        ? `${sizeAttributeName.toLowerCase()} and ${colorAttributeName.toLowerCase()}`
+                        : !selectedSize
+                          ? sizeAttributeName.toLowerCase()
+                          : colorAttributeName.toLowerCase()
+                    } to continue`
+                  )}
                 </p>
               )}
             </div>

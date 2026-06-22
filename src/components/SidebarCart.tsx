@@ -1,7 +1,7 @@
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
-import { X, ShoppingBag, Trash2, Plus, Minus } from "lucide-react";
+import { X, ShoppingBag, Plus, Minus } from "lucide-react";
 import { useCartStore } from "../store/cartStore";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
@@ -18,16 +18,19 @@ export default function SidebarCart() {
     router.push('/checkout');
   };
 
-
-
   useEffect(() => {
     if (isOpen && items.length > 0) {
       const cartItemsPayload = items.map((i: any) => ({ id: i.id, size: i.size, color: i.color }));
       syncCartPrices(cartItemsPayload).then((updatedPrices) => {
         updatedPrices.forEach((updated: any) => {
           items.forEach((item: any) => {
-            if (item.id === updated.id && item.size === updated.size && item.color === updated.color && item.price !== updated.price) {
-              updateItem(item.id, item.size, item.color, { price: updated.price });
+            if (
+              item.id === updated.id &&
+              item.size === updated.size &&
+              item.color === updated.color &&
+              item.price !== updated.price
+            ) {
+              updateItem(item.id, item.size, item.color, { price: updated.price }, item.comboSelections);
             }
           });
         });
@@ -87,7 +90,10 @@ export default function SidebarCart() {
                 </div>
               ) : (
                 items.map((item) => (
-                  <div key={`${item.id}-${item.size}-${item.color || "Default"}`} className="flex gap-3 pb-5 border-b border-slate-100 dark:border-zinc-900 last:border-0 last:pb-0">
+                  <div
+                    key={`${item.id}-${item.size || ""}-${item.color || "Default"}-${JSON.stringify(item.comboSelections || [])}`}
+                    className="flex gap-3 pb-5 border-b border-slate-100 dark:border-zinc-900 last:border-0 last:pb-0"
+                  >
                     {/* Image */}
                     <div className="relative w-16 h-20 bg-slate-50 dark:bg-zinc-900 overflow-hidden flex-shrink-0">
                       {item.image ? (
@@ -107,7 +113,7 @@ export default function SidebarCart() {
                           {item.name}
                         </h3>
                         <button
-                          onClick={() => removeItem(item.id, item.size, item.color)}
+                          onClick={() => removeItem(item.id, item.size, item.color, item.comboSelections)}
                           className="flex-shrink-0 p-0.5 text-slate-300 hover:text-red-400 transition-colors"
                         >
                           <X className="w-3 h-3" />
@@ -128,6 +134,20 @@ export default function SidebarCart() {
                         )}
                       </div>
 
+                      {/* Combo Selections list */}
+                      {item.comboSelections && item.comboSelections.length > 0 && (
+                        <div className="mt-1 bg-slate-50 dark:bg-zinc-900/50 p-1.5 border border-slate-100 dark:border-zinc-900/50 rounded-sm">
+                          <p className="text-[9px] font-bold text-zinc-500 uppercase tracking-wide mb-1">Selections:</p>
+                          <ul className="space-y-0.5 list-none pl-0">
+                            {item.comboSelections.map((sel: any, sIdx: number) => (
+                              <li key={sIdx} className="text-[9px] text-zinc-600 dark:text-zinc-400 font-medium truncate">
+                                • {sel.name} (x{sel.quantity})
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+
                       {/* Price + Quantity */}
                       <div className="flex items-center justify-between mt-auto pt-1">
                         <p className="text-sm font-semibold text-zinc-800 dark:text-zinc-100">
@@ -135,14 +155,14 @@ export default function SidebarCart() {
                         </p>
                         <div className="flex items-center gap-2">
                           <button
-                            onClick={() => updateQuantity(item.id, item.quantity - 1, item.size, item.color)}
+                            onClick={() => updateQuantity(item.id, item.quantity - 1, item.size, item.color, item.comboSelections)}
                             className="w-5 h-5 flex items-center justify-center text-white bg-primary hover:bg-[#600018] transition-colors"
                           >
                             <Minus className="w-2.5 h-2.5" />
                           </button>
                           <span className="text-xs font-medium text-zinc-700 dark:text-zinc-300 w-4 text-center">{item.quantity}</span>
                           <button
-                            onClick={() => updateQuantity(item.id, item.quantity + 1, item.size, item.color)}
+                            onClick={() => updateQuantity(item.id, item.quantity + 1, item.size, item.color, item.comboSelections)}
                             className="w-5 h-5 flex items-center justify-center text-white bg-primary hover:bg-[#600018] transition-colors"
                           >
                             <Plus className="w-2.5 h-2.5" />

@@ -22,6 +22,7 @@ interface OrderItem {
   printName?: string;
   printNumber?: string;
   printCost?: number;
+  comboSelections?: { quantity: number; product: { name: string } }[];
 }
 
 interface Order {
@@ -221,6 +222,15 @@ export default function InvoiceClient({
                     <td className="py-4 text-center font-light text-slate-400">{idx + 1}</td>
                     <td className="py-4 pr-4">
                       <p className="font-semibold text-slate-900 print:text-black">{item.product.name}</p>
+                      {item.comboSelections && item.comboSelections.length > 0 && (
+                        <div className="mt-1.5 space-y-0.5">
+                          {item.comboSelections.map((sel, si) => (
+                            <p key={si} className="text-[10px] text-slate-500 font-light">
+                              • {sel.quantity}× {sel.product.name}
+                            </p>
+                          ))}
+                        </div>
+                      )}
                       {item.requiresPrint && (
                         <div className="mt-1.5 text-[10px] text-slate-500 font-light flex flex-wrap items-center gap-1.5 leading-none">
                           <span className="font-medium text-[#800020] uppercase text-[9px] tracking-wider border border-[#800020]/20 px-1.5 py-0.5 rounded-sm">Jersey Print</span>

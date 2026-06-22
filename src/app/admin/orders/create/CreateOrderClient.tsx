@@ -17,6 +17,9 @@ interface Product {
   price: number;
   variants: { id: string; size: string; stock: number }[];
   discount?: { value: number; discountType: "FLAT" | "PERCENTAGE" } | null;
+  isCombo?: boolean;
+  comboRequiredQty?: number;
+  comboChildOptions?: { id: string; childProductId: string; maxQuantity: number; childProduct: { id: string; name: string; trackStock?: boolean; variants: { stock: number }[] } }[];
 }
 
 interface OrderItem {
@@ -31,6 +34,7 @@ interface OrderItem {
   requiresPrint?: boolean;
   printCost?: number;
   printDetails?: { name: string; number: string }[];
+  comboSelections?: { productId: string; name: string; quantity: number }[];
 }
 
 interface StaffMember {
@@ -130,6 +134,10 @@ export default function CreateOrderClient({
   // DTF Customization Info
   const [requiresPrint, setRequiresPrint] = useState(false);
   const [pendingPrintDetails, setPendingPrintDetails] = useState<{ name: string; number: string }[]>([]);
+
+  // Combo selection state
+  const [pendingComboSelections, setPendingComboSelections] = useState<{ productId: string; name: string; quantity: number }[]>([]);
+  const totalPendingComboQty = pendingComboSelections.reduce((s, i) => s + i.quantity, 0);
 
   // Page Load Initial Focus Hook
   useEffect(() => {
@@ -345,7 +353,34 @@ export default function CreateOrderClient({
   };
 
   const addToOrder = () => {
-    if (!selectedProduct || !selectedSize) return;
+    if (!selectedProduct) return;
+
+    // Combo products bypass size/variant checks
+    if (selectedProduct.isCombo) {
+      const required = selectedProduct.comboRequiredQty ?? 0;
+      if (totalPendingComboQty !== required) return;
+      const defaultVariant = selectedProduct.variants.find((v: any) => v.size === "Default") || selectedProduct.variants[0];
+      if (!defaultVariant) return;
+
+      const unitPrice = getDiscountedPrice(selectedProduct);
+      setOrderItems(prev => [...prev, {
+        productId: selectedProduct.id,
+        variantId: defaultVariant.id,
+        productName: selectedProduct.name,
+        size: defaultVariant.size,
+        quantity,
+        price: unitPrice,
+        stock: defaultVariant.stock,
+        comboSelections: [...pendingComboSelections],
+      }]);
+
+      setSearchQuery(""); setSelectedProductId(""); setSelectedSize(""); setSelectedColor("");
+      setSelectedAttrValues({}); setQuantity(1); setPendingComboSelections([]);
+      productSearchRef.current?.focus();
+      return;
+    }
+
+    if (!selectedSize) return;
     if (hasMultipleColors && !selectedColor) return;
 
     const variant = isAttrMode
@@ -397,6 +432,7 @@ export default function CreateOrderClient({
     setQuantity(1);
     setRequiresPrint(false);
     setPendingPrintDetails([]);
+    setPendingComboSelections([]);
     productSearchRef.current?.focus();
   };
 
@@ -474,7 +510,8 @@ export default function CreateOrderClient({
             isStorePickup, deliveryCharge: isStorePickup ? deliveryCharge : finalDeliveryCharge,
             items: orderItems.map(item => ({
               productId: item.productId, variantId: item.variantId, size: item.size, quantity: item.quantity, price: item.price,
-              requiresPrint: item.requiresPrint, printCost: item.printCost, printDetails: item.printDetails
+              requiresPrint: item.requiresPrint, printCost: item.printCost, printDetails: item.printDetails,
+              comboSelections: item.comboSelections,
             })),
             exchangeRefOrderId: exchangeRefOrderId.trim(), exchangeItemNote: exchangeItemNote.trim(),
             tags, createdById: createdById || undefined,
@@ -486,7 +523,8 @@ export default function CreateOrderClient({
             isStorePickup, deliveryCharge: isStorePickup ? deliveryCharge : finalDeliveryCharge,
             items: orderItems.map(item => ({
               productId: item.productId, variantId: item.variantId, size: item.size, quantity: item.quantity, price: item.price,
-              requiresPrint: item.requiresPrint, printCost: item.printCost, printDetails: item.printDetails
+              requiresPrint: item.requiresPrint, printCost: item.printCost, printDetails: item.printDetails,
+              comboSelections: item.comboSelections,
             })),
             hasBackorderItems, tags, createdById: createdById || undefined,
           });
@@ -628,6 +666,7 @@ export default function CreateOrderClient({
                           setSelectedSize("");
                           setSelectedColor("");
                           setSelectedAttrValues({});
+                          setPendingComboSelections([]);
                           setFocusedIndex(-1);
                           setTimeout(() => {
                             const firstBtn = sizeContainerRef.current?.querySelector("button");
@@ -664,6 +703,62 @@ export default function CreateOrderClient({
                     <label className="text-[10px] font-medium text-slate-500 uppercase tracking-wider block mb-1.5">VARIANT SELECTION (STOCK)</label>
                     <div className="text-slate-400 italic text-xs leading-6 min-h-[28px] flex items-center">Select a product first to view available attributes</div>
                   </>
+                ) : selectedProduct?.isCombo ? (
+                  /* ── Combo Product Child Selector ── */
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <label className="text-[10px] font-medium text-slate-500 uppercase tracking-wider">
+                        Combo Items
+                      </label>
+                      <span className={`text-[10px] font-bold ${totalPendingComboQty === (selectedProduct.comboRequiredQty ?? 0) ? "text-emerald-600" : "text-slate-400"}`}>
+                        {totalPendingComboQty} / {selectedProduct.comboRequiredQty ?? 0} selected
+                      </span>
+                    </div>
+                    <div className="space-y-1.5 max-h-[200px] overflow-y-auto pr-1">
+                      {(selectedProduct.comboChildOptions ?? []).map((option) => {
+                        const child = option.childProduct;
+                        const childStock = child.trackStock
+                          ? child.variants.reduce((s: number, v: any) => s + (v.stock ?? 0), 0)
+                          : Infinity;
+                        const sel = pendingComboSelections.find(s => s.productId === child.id);
+                        const qty = sel?.quantity ?? 0;
+                        const canAdd = totalPendingComboQty < (selectedProduct.comboRequiredQty ?? 0) && qty < Math.min(option.maxQuantity, childStock);
+                        return (
+                          <div key={option.id} className={`flex items-center justify-between gap-2 px-2.5 py-2 rounded border text-xs transition-colors ${qty > 0 ? "border-emerald-200 bg-emerald-50" : "border-slate-100 bg-white"}`}>
+                            <span className="font-medium text-slate-700 truncate flex-1">{child.name}</span>
+                            {childStock === 0 && <span className="text-[9px] text-rose-500 font-semibold shrink-0">OOS</span>}
+                            <div className="flex items-center gap-1 shrink-0">
+                              <button type="button"
+                                onClick={() => {
+                                  if (qty <= 0) return;
+                                  setPendingComboSelections(prev =>
+                                    qty === 1 ? prev.filter(s => s.productId !== child.id) : prev.map(s => s.productId === child.id ? { ...s, quantity: s.quantity - 1 } : s)
+                                  );
+                                }}
+                                disabled={qty === 0}
+                                className="w-5 h-5 flex items-center justify-center rounded bg-slate-100 hover:bg-slate-200 text-slate-600 disabled:opacity-30 transition-colors text-xs font-bold">
+                                −
+                              </button>
+                              <span className={`w-5 text-center font-bold text-xs ${qty > 0 ? "text-emerald-700" : "text-slate-300"}`}>{qty}</span>
+                              <button type="button"
+                                onClick={() => {
+                                  if (!canAdd) return;
+                                  setPendingComboSelections(prev => {
+                                    const ex = prev.find(s => s.productId === child.id);
+                                    if (ex) return prev.map(s => s.productId === child.id ? { ...s, quantity: s.quantity + 1 } : s);
+                                    return [...prev, { productId: child.id, name: child.name, quantity: 1 }];
+                                  });
+                                }}
+                                disabled={!canAdd}
+                                className="w-5 h-5 flex items-center justify-center rounded bg-slate-100 hover:bg-slate-200 text-slate-600 disabled:opacity-30 transition-colors text-xs font-bold">
+                                +
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
                 ) : isAttrMode ? (
                   /* ── PIM Cascaded Attribute Mode ── */
                   <div ref={sizeContainerRef} className="space-y-3">
@@ -925,7 +1020,7 @@ export default function CreateOrderClient({
                   ref={addToOrderBtnRef}
                   type="button"
                   onClick={addToOrder}
-                  disabled={!selectedProductId || !selectedSize || (hasMultipleColors && !selectedColor)}
+                  disabled={!selectedProductId || (selectedProduct?.isCombo ? totalPendingComboQty !== (selectedProduct.comboRequiredQty ?? 0) : (!selectedSize || (hasMultipleColors && !selectedColor)))}
                   className="w-full h-[28px] bg-slate-700 text-white font-medium rounded flex items-center justify-center hover:bg-slate-800 disabled:bg-slate-100 disabled:text-slate-300 transition-all text-xs gap-1.5"
                 >
                   <Plus className="w-3.5 h-3.5" />
@@ -1559,6 +1654,13 @@ export default function CreateOrderClient({
                           <div className="font-medium text-slate-800 text-xs">{item.productName}</div>
                           {item.stock <= 0 && (
                             <span className="mt-0.5 inline-block text-[8px] font-medium text-orange-600 bg-orange-50 px-1 py-0 rounded">BACKORDER</span>
+                          )}
+                          {item.comboSelections && item.comboSelections.length > 0 && (
+                            <div className="mt-1 space-y-0.5">
+                              {item.comboSelections.map((sel, si) => (
+                                <span key={si} className="block text-[9px] text-slate-500">• {sel.quantity}× {sel.name}</span>
+                              ))}
+                            </div>
                           )}
                           {item.requiresPrint && (
                             <div className="mt-1 flex flex-wrap gap-1">
