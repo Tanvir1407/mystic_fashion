@@ -31,7 +31,6 @@ export default function ProductCard({ product }: ProductCardProps) {
   const hasDiscount = !!product.discount?.active;
 
   // --- Variant Price Extraction ---
-  // Collect all valid base prices from variants
   const variantPrices =
     product.variants
       ?.map((v) =>
@@ -45,8 +44,16 @@ export default function ProductCard({ product }: ProductCardProps) {
   let displayPrice: string | null = null;
   let isRange = false;
   let originalPrice: number | null = null;
+  let originalMinPrice: number | null = null;
+  let originalMaxPrice: number | null = null;
 
   if (hasVariantPricing) {
+    // Original prices (before discount)
+    const originalMin = Math.min(...variantPrices);
+    const originalMax = Math.max(...variantPrices);
+    originalMinPrice = originalMin;
+    originalMaxPrice = originalMax;
+
     // Apply discount to each variant price
     const finalPrices = variantPrices.map((p) =>
       getFinalPrice(p, product.discount),
@@ -60,22 +67,28 @@ export default function ProductCard({ product }: ProductCardProps) {
       displayPrice = `${formatPrice(minPrice)} – ${formatPrice(maxPrice)}`;
     } else {
       displayPrice = formatPrice(minPrice);
-      // Original price (before discount) of the first/only variant
       originalPrice = Math.min(...variantPrices);
     }
   } else {
-    // No variant pricing data — show nothing (or fallback)
     displayPrice = null;
     isRange = false;
     originalPrice = null;
+    originalMinPrice = null;
+    originalMaxPrice = null;
   }
 
-  // Show strikethrough only when:
-  // - There is an active discount
-  // - Price is NOT a range (single price)
-  // - We have an original price to show
-  const showStrikethrough =
+  // Show strikethrough conditions:
+  // 1. Single price → show originalPrice with strikethrough
+  const showSingleStrikethrough =
     hasDiscount && !isRange && originalPrice !== null && displayPrice !== null;
+
+  // 2. Range → show original range with strikethrough
+  const showRangeStrikethrough =
+    hasDiscount &&
+    isRange &&
+    originalMinPrice !== null &&
+    originalMaxPrice !== null &&
+    displayPrice !== null;
 
   return (
     <Link href={`/product/${product.slug || product.id}`} className="group">
@@ -119,22 +132,33 @@ export default function ProductCard({ product }: ProductCardProps) {
 
         {/* Product Info */}
         <div className="px-3 pb-4 pt-3 flex flex-col gap-1.5 flex-1">
-          <div className="flex items-center gap-2 mt-auto min-h-[28px]">
+          <div className="flex flex-wrap items-center gap-2 mt-auto min-h-[28px]">
             {isOutOfStock ? (
               <span className="text-rose-600 dark:text-rose-400 font-black text-xs uppercase tracking-wider bg-rose-50 dark:bg-rose-950/30 px-2.5 py-0.5 rounded-sm border border-rose-100 dark:border-rose-900/40">
                 Stock Out
               </span>
             ) : (
               <>
-                {showStrikethrough && (
+                {/* Strikethrough for SINGLE price */}
+                {showSingleStrikethrough && (
                   <span className="text-zinc-400 dark:text-zinc-500 font-medium text-sm line-through">
                     {formatPrice(originalPrice!)}
                   </span>
                 )}
+
+                {/* Strikethrough for RANGE price */}
+                {showRangeStrikethrough && (
+                  <span className="text-zinc-400 dark:text-zinc-500 font-medium text-xs line-through">
+                    {formatPrice(originalMinPrice!)} –{" "}
+                    {formatPrice(originalMaxPrice!)}
+                  </span>
+                )}
+
+                {/* Main Display Price */}
                 {displayPrice ? (
                   <span className="text-[#800020] font-black text-base md:text-lg">
                     {displayPrice}
-                  </span> 
+                  </span>
                 ) : (
                   <span className="text-zinc-400 text-sm font-medium">N/A</span>
                 )}
