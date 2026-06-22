@@ -15,21 +15,21 @@ export default function OrdersCard({
   const max = Math.max(...sparkline.map(d => d.count), 1);
 
   return (
-    <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm">
-      <div className="flex items-center gap-2.5 px-5 py-4 border-b border-slate-100">
-        <div className="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center">
+    <div className="bg-white rounded-2xl border border-slate-100 overflow-hidden shadow-sm">
+      <div className="flex items-center gap-3 px-5 py-4 border-b border-slate-100">
+        <div className="w-8 h-8 rounded-xl bg-emerald-50 flex items-center justify-center">
           <ShoppingBag className="w-4 h-4 text-emerald-600" />
         </div>
         <div>
-          <h3 className="text-sm font-bold text-slate-900">Orders</h3>
+          <h3 className="text-sm font-bold text-slate-800">Orders</h3>
           <p className="text-xs text-slate-400">{monthName} overview</p>
         </div>
       </div>
 
       {/* Primary stat */}
-      <div className="px-5 pt-4 pb-3">
+      <div className="px-5 pt-5 pb-3">
         <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">This Month</p>
-        <p className="text-3xl font-black text-emerald-700 mt-0.5">{month}</p>
+        <p className="text-3xl font-black text-emerald-600 mt-1">{month}</p>
         <p className="text-xs text-slate-400 mt-0.5">{formatBDT(monthSales)}</p>
       </div>
 
@@ -42,17 +42,17 @@ export default function OrdersCard({
             return (
               <div key={d.date} className="flex-1 flex flex-col items-center gap-1 group relative">
                 <div
-                  className={`w-full rounded-t-sm transition-all ${isToday ? "bg-emerald-500" : "bg-emerald-100 group-hover:bg-emerald-300"}`}
+                  className={`w-full rounded-t transition-all ${isToday ? "bg-emerald-500" : "bg-slate-100 group-hover:bg-emerald-200"}`}
                   style={{ height: `${Math.max(4, pct)}%`, minHeight: d.count > 0 ? "6px" : "2px" }}
                 />
-                <div className="absolute bottom-full mb-1 left-1/2 -translate-x-1/2 bg-slate-900 text-white text-[9px] font-bold px-1.5 py-1 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none z-10">
+                <div className="absolute bottom-full mb-1 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-[9px] font-semibold px-1.5 py-1 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none z-10">
                   {d.date}: {d.count} order{d.count !== 1 ? "s" : ""}
                 </div>
               </div>
             );
           })}
         </div>
-        <div className="flex justify-between mt-1">
+        <div className="flex justify-between mt-1.5">
           {sparkline.map((d, i) => (
             <span key={i} className={`flex-1 text-center text-[9px] ${i === sparkline.length - 1 ? "text-emerald-600 font-bold" : "text-slate-300"}`}>
               {d.date}
@@ -63,15 +63,15 @@ export default function OrdersCard({
 
       {/* Sub-stats */}
       <div className="grid grid-cols-2 divide-x divide-slate-100 border-t border-slate-100">
-        <div className="px-4 py-3">
+        <div className="px-5 py-3.5">
           <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Today</p>
-          <p className="text-base font-black text-slate-900 mt-0.5">{today} order{today !== 1 ? "s" : ""}</p>
-          <p className="text-[10px] text-slate-400">{formatBDT(todaySales)}</p>
+          <p className="text-base font-black text-slate-800 mt-1">{today} order{today !== 1 ? "s" : ""}</p>
+          <p className="text-[10px] text-slate-400 mt-0.5">{formatBDT(todaySales)}</p>
         </div>
-        <div className="px-4 py-3">
+        <div className="px-5 py-3.5">
           <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">All Time</p>
-          <p className="text-base font-black text-slate-900 mt-0.5">{total}</p>
-          <p className="text-[10px] text-slate-400">total orders</p>
+          <p className="text-base font-black text-slate-800 mt-1">{total}</p>
+          <p className="text-[10px] text-slate-400 mt-0.5">total orders</p>
         </div>
       </div>
     </div>
