@@ -15,14 +15,12 @@ export interface SessionPayload {
 }
 
 export async function createSession(payload: SessionPayload) {
-  console.log(`[Auth] createSession called with payload:`, JSON.stringify(payload));
   try {
     const session = await new SignJWT(payload)
       .setProtectedHeader({ alg: 'HS256' })
       .setIssuedAt()
       .setExpirationTime('7d')
       .sign(encodedSecret);
-    console.log(`[Auth] JWT Session generated successfully (length: ${session.length})`);
 
     const cookieStore = cookies();
     cookieStore.set('admin-session', session, {
@@ -31,7 +29,6 @@ export async function createSession(payload: SessionPayload) {
       maxAge: 60 * 60 * 24 * 7, // 1 week
       path: '/',
     });
-    console.log(`[Auth] Cookie 'admin-session' set successfully in cookieStore`);
     return session;
   } catch (error) {
     console.error(`[Auth] Error in createSession:`, error);
@@ -83,14 +80,12 @@ export interface CustomerSessionPayload {
 }
 
 export async function createCustomerSession(payload: CustomerSessionPayload) {
-  console.log(`[Auth] createCustomerSession called with payload:`, JSON.stringify(payload));
   try {
     const session = await new SignJWT(payload)
       .setProtectedHeader({ alg: 'HS256' })
       .setIssuedAt()
       .setExpirationTime('30d') // Persistent session for 30 days
       .sign(encodedSecret);
-    console.log(`[Auth] Customer JWT Session generated successfully`);
 
     try {
       const cookieStore = cookies();
@@ -100,7 +95,6 @@ export async function createCustomerSession(payload: CustomerSessionPayload) {
         maxAge: 60 * 60 * 24 * 30, // 30 days
         path: '/',
       });
-      console.log(`[Auth] Cookie 'customer-session' set successfully`);
     } catch (cookieError: any) {
       console.warn(`[Auth] Cookies could not be set (non-request context):`, cookieError.message);
     }

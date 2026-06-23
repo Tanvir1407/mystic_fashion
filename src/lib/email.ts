@@ -27,10 +27,9 @@ interface SendEmailPayload {
 }
 
 export async function sendEmail({ to, subject, html }: SendEmailPayload): Promise<{ success: boolean; error?: string }> {
-  console.log(`[Email Service] Attempting to send email to ${to} (Subject: "${subject}")`);
-
   if (!transporter) {
-    console.warn(`
+    if (process.env.NODE_ENV !== 'production') {
+      console.warn(`
 ⚠️  [Email Service] SMTP configuration is incomplete. 
    Please set SMTP_HOST, SMTP_PORT, SMTP_USER, and SMTP_PASS in your environment.
    
@@ -41,6 +40,7 @@ export async function sendEmail({ to, subject, html }: SendEmailPayload): Promis
    ${html}
    ----------------------
     `);
+    }
     // Return success in development to prevent locking progress when SMTP credentials are not yet configured.
     return { success: true };
   }
