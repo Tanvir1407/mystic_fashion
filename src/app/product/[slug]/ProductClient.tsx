@@ -387,7 +387,7 @@ export default function ProductClient({ product, sizeChartData, relatedProducts 
 
   return (
     <div className="bg-white min-h-screen pb-16">
-      <div className="container mx-auto px-2 md:px-4 py-6 md:py-16">
+      <div className="container mx-auto px-2 md:px-4 py-6 ">
 
         {/* Breadcrumb */}
         <div className="mb-6">

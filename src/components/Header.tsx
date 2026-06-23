@@ -12,6 +12,11 @@ import { logoutCustomerAction } from "@/app/actions/customerAuth";
 
 import Image from "next/image";
 
+// Module-level cache — survives re-mounts during client-side navigation.
+// Categories and session are fetched once and reused on subsequent page transitions.
+let _cachedCategories: any[] | null = null;
+let _cachedCustomerName: string | null | undefined = undefined; // undefined = not yet fetched
+
 export default function Header({ serverCategories }: { serverCategories?: any[] }) {
   const router = useRouter();
   const [mounted, setMounted] = useState(false);
@@ -21,24 +26,40 @@ export default function Header({ serverCategories }: { serverCategories?: any[] 
   const [searchQuery, setSearchQuery] = useState("");
   const { getTotalItems, toggleCart } = useCartStore();
   const pathname = usePathname();
-  const [customerName, setCustomerName] = useState<string | null>(null);
+  const [customerName, setCustomerName] = useState<string | null>(
+    _cachedCustomerName !== undefined ? _cachedCustomerName : null
+  );
   const userMenuRef = useRef<HTMLDivElement>(null);
 
-  const [categories, setCategories] = useState<any[]>(serverCategories ?? []);
+  const [categories, setCategories] = useState<any[]>(
+    serverCategories?.length ? serverCategories : (_cachedCategories ?? [])
+  );
 
   useEffect(() => {
     setMounted(true);
-    if (serverCategories?.length) return;
-    getHeaderCategories().then((res) => {
-      if (res.success && res.categories && res.categories.length > 0) {
-        setCategories(res.categories);
-      }
-    });
-    getCurrentCustomerSessionAction().then((session) => {
-      if (session) {
-        setCustomerName(session.name);
-      }
-    });
+
+    // Seed the cache from serverCategories if provided by the page
+    if (serverCategories?.length) {
+      _cachedCategories = serverCategories;
+    }
+
+    // Fetch categories only if not yet cached
+    if (!_cachedCategories) {
+      getHeaderCategories().then((res) => {
+        if (res.success && res.categories && res.categories.length > 0) {
+          _cachedCategories = res.categories;
+          setCategories(res.categories);
+        }
+      });
+    }
+
+    // Fetch customer session only on first load (undefined = never fetched)
+    if (_cachedCustomerName === undefined) {
+      getCurrentCustomerSessionAction().then((session) => {
+        _cachedCustomerName = session?.name ?? null;
+        setCustomerName(_cachedCustomerName);
+      });
+    }
   }, []);
 
   // Close user menu when clicking outside
@@ -68,6 +89,8 @@ export default function Header({ serverCategories }: { serverCategories?: any[] 
 
   const handleLogout = async () => {
     await logoutCustomerAction();
+    _cachedCustomerName = null;
+    setCustomerName(null);
     setIsUserMenuOpen(false);
     router.push("/");
   };
