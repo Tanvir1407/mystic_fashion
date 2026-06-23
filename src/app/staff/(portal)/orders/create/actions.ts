@@ -60,23 +60,38 @@ export async function createStaffOrder(data: {
 
       // Resolve variantId for every item before creating the order.
       // Items coming from staff UI only carry productId + size; we look up
-      // the matching ProductVariant here to guarantee variantId is never NULL.
+      // the matching ProductVariant in a single batch query to guarantee
+      // variantId is never NULL.
+      const lookupKeys = data.items.map(item => ({
+        productId: item.productId,
+        size: item.size,
+      }));
+      const uniqueLookupKeys = Array.from(
+        new Map(lookupKeys.map(k => [`${k.productId}_${k.size}`, k])).values()
+      );
+      const variants = await tx.productVariant.findMany({
+        where: {
+          OR: uniqueLookupKeys.map(k => ({
+            productId: k.productId,
+            size: k.size,
+          })),
+        },
+        select: { id: true, productId: true, size: true },
+      });
       const variantIdMap = new Map<string, string>();
+      for (const v of variants) {
+        variantIdMap.set(`${v.productId}_${v.size}`, v.id);
+      }
       for (const item of data.items) {
         const key = `${item.productId}_${item.size}`;
-        if (!variantIdMap.has(key)) {
-          const variant = await tx.productVariant.findFirst({
-            where: { productId: item.productId, size: item.size },
-            select: { id: true },
-          });
-          if (!variant) {
-            throw new Error(
-              `Variant not found for product ${item.productId} (Size: ${item.size}). ` +
-              `Ensure the product has a variant with this size configured.`
-            );
-          }
-          variantIdMap.set(key, variant.id);
+        const resolvedId = variantIdMap.get(key);
+        if (!resolvedId) {
+          throw new Error(
+            `Variant not found for product ${item.productId} (Size: ${item.size}). ` +
+            `Ensure the product has a variant with this size configured.`
+          );
         }
+        variantIdMap.set(key, resolvedId);
       }
 
       return tx.order.create({

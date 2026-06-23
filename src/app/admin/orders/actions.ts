@@ -57,17 +57,31 @@ async function _updateOrderStatus(orderId: string, status: OrderStatus, holdReas
       const oldIsHolding = isStockHolding(oldStatus);
       const newIsHolding = isStockHolding(newStatus);
 
+      // ── Batch pre-fetch child variants for combo stock adjustments ──────
+      const comboChildIds = order.items
+        .flatMap(item => item.comboSelections?.map(s => s.productId) ?? []);
+      const uniqueComboChildIds = [...new Set(comboChildIds)];
+      const childVariantMap = new Map<string, string>();
+      if (uniqueComboChildIds.length > 0) {
+        const childVariants = await tx.productVariant.findMany({
+          where: { productId: { in: uniqueComboChildIds } },
+          orderBy: { order: "asc" },
+          select: { id: true, productId: true },
+        });
+        for (const cv of childVariants) {
+          if (!childVariantMap.has(cv.productId)) {
+            childVariantMap.set(cv.productId, cv.id);
+          }
+        }
+      }
+
       const adjustItemStock = async (item: any, multiplier: 1 | -1, movementType: "SALE" | "RETURN") => {
         if (item.product?.isCombo && item.comboSelections?.length > 0) {
           for (const sel of item.comboSelections) {
-            const childVariant = await tx.productVariant.findFirst({
-              where: { productId: sel.productId },
-              orderBy: { order: "asc" },
-              select: { id: true },
-            });
-            if (childVariant) {
+            const variantId = childVariantMap.get(sel.productId);
+            if (variantId) {
               await updateStockDualWrite(tx, {
-                variantId: childVariant.id,
+                variantId,
                 quantityChange: multiplier * sel.quantity * item.quantity,
                 movementType,
                 referenceId: order.id,
@@ -175,11 +189,17 @@ export const updateOrderStatus = withAuditLog(_updateOrderStatus, {
 });
 
 export async function bulkUpdateOrderStatus(orderIds: string[], status: OrderStatus) {
-  const results = [];
-  for (const id of orderIds) {
-    const res = await updateOrderStatus(id, status);
-    results.push(res);
-  }
+  const results: { success: boolean; error?: string }[] = [];
+  await prisma.$transaction(async (tx) => {
+    for (const id of orderIds) {
+      try {
+        const res = await updateOrderStatus(id, status);
+        results.push(res);
+      } catch (e: unknown) {
+        results.push({ success: false, error: (e as Error).message });
+      }
+    }
+  });
   return results;
 }
 
@@ -409,24 +429,42 @@ async function _updateOrderDetails(
         const isStockHolding = stockHoldingStatuses.includes(order.status);
         const oldItemsMap = new Map(order.items.map((i) => [i.id, i]));
 
+        // ── Batch pre-fetch: collect variant lookup keys for items missing variantId ──
+        const lookupKeys = data.items
+          .filter(item => !item.variantId)
+          .map(item => ({
+            productId: item.productId,
+            size: item.size,
+            color: String((item as any).color || "Default"),
+          }));
+        const uniqueLookupKeys = Array.from(
+          new Map(lookupKeys.map(k => [`${k.productId}_${k.size}_${k.color}`, k])).values()
+        );
+        const variantIdLookup = new Map<string, string>();
+        if (uniqueLookupKeys.length > 0) {
+          const resolvedVariants = await tx.productVariant.findMany({
+            where: {
+              OR: uniqueLookupKeys.map(k => ({
+                productId: k.productId,
+                size: k.size,
+                color: k.color,
+              })),
+            },
+            select: { id: true, productId: true, size: true, color: true },
+          });
+          for (const v of resolvedVariants) {
+            variantIdLookup.set(`${v.productId}_${v.size}_${v.color}`, v.id);
+          }
+        }
+
         for (const newItem of data.items) {
           const oldItem = oldItemsMap.get(newItem.id);
           if (oldItem) {
             const diff = newItem.quantity - oldItem.quantity;
             if (diff !== 0 && isStockHolding) {
-              // Prefer variantId from the existing DB item — it's always correct
               let variantId = oldItem.variantId ?? newItem.variantId;
               if (!variantId) {
-                const v = await tx.productVariant.findUnique({
-                  where: {
-                    productId_size_color: {
-                      productId: newItem.productId,
-                      size: newItem.size,
-                      color: (newItem as any).color || "Default",
-                    },
-                  },
-                });
-                if (v) variantId = v.id;
+                variantId = variantIdLookup.get(`${newItem.productId}_${newItem.size}_${(newItem as any).color || "Default"}`) ?? undefined;
               }
               if (variantId) {
                 await updateStockDualWrite(tx, {
@@ -441,18 +479,9 @@ async function _updateOrderDetails(
             oldItemsMap.delete(newItem.id);
           } else {
             if (isStockHolding) {
-              let variantId = (newItem as any).variantId;
+              let variantId: string | undefined = (newItem as any).variantId;
               if (!variantId) {
-                const v = await tx.productVariant.findUnique({
-                  where: {
-                    productId_size_color: {
-                      productId: newItem.productId,
-                      size: newItem.size,
-                      color: (newItem as any).color || "Default",
-                    },
-                  },
-                });
-                if (v) variantId = v.id;
+                variantId = variantIdLookup.get(`${newItem.productId}_${newItem.size}_${(newItem as any).color || "Default"}`);
               }
               if (variantId) {
                 await updateStockDualWrite(tx, {
@@ -484,19 +513,10 @@ async function _updateOrderDetails(
         await tx.orderItem.deleteMany({ where: { orderId: id } });
 
         for (const newItem of data.items) {
-          let variantId = newItem.variantId;
+          let variantId: string | undefined = newItem.variantId;
 
           if (!variantId && newItem.size) {
-            const v = await tx.productVariant.findUnique({
-              where: {
-                productId_size_color: {
-                  productId: newItem.productId,
-                  size: newItem.size,
-                  color: (newItem as any).color || "Default",
-                },
-              },
-            });
-            if (v) variantId = v.id;
+            variantId = variantIdLookup.get(`${newItem.productId}_${newItem.size}_${(newItem as any).color || "Default"}`);
           }
 
           if (!variantId) {
@@ -593,12 +613,10 @@ async function _updateOrderDetails(
           include: { lines: true },
         });
         if (journalEntry) {
-          for (const line of journalEntry.lines) {
-            await tx.journalLine.update({
-              where: { id: line.id },
-              data: { amount: newTotalAmount },
-            });
-          }
+          await tx.journalLine.updateMany({
+            where: { journalEntryId: journalEntry.id },
+            data: { amount: newTotalAmount },
+          });
         }
       }
     });
@@ -727,18 +745,36 @@ async function _createAdminOrder(data: {
 
       // Guard: ensure every item has a valid variantId before touching the DB.
       // The UI sends variantId, but we re-verify server-side to prevent NULL inserts.
-      for (const item of data.items) {
-        if (!item.variantId) {
-          const fallback = await tx.productVariant.findFirst({
-            where: { productId: item.productId, size: item.size },
-            select: { id: true },
-          });
-          if (!fallback) {
+      const itemsMissingVariant = data.items.filter(item => !item.variantId);
+      if (itemsMissingVariant.length > 0) {
+        const lookupKeys = itemsMissingVariant.map(item => ({
+          productId: item.productId,
+          size: item.size,
+        }));
+        const uniqueLookupKeys = Array.from(
+          new Map(lookupKeys.map(k => [`${k.productId}_${k.size}`, k])).values()
+        );
+        const fallbacks = await tx.productVariant.findMany({
+          where: {
+            OR: uniqueLookupKeys.map(k => ({
+              productId: k.productId,
+              size: k.size,
+            })),
+          },
+          select: { id: true, productId: true, size: true },
+        });
+        const fallbackMap = new Map<string, string>();
+        for (const fb of fallbacks) {
+          fallbackMap.set(`${fb.productId}_${fb.size}`, fb.id);
+        }
+        for (const item of itemsMissingVariant) {
+          const fallbackId = fallbackMap.get(`${item.productId}_${item.size}`);
+          if (!fallbackId) {
             throw new Error(
               `variantId missing for product ${item.productId} (Size: ${item.size}) and cannot be resolved automatically.`
             );
           }
-          item.variantId = fallback.id;
+          item.variantId = fallbackId;
         }
       }
 
@@ -966,15 +1002,9 @@ export async function bulkSendToPathaoAction(orderIds: string[]) {
         const res = await pathaoClient.createOrder(payload);
 
         if (res.consignment_id) {
-          const orderBefore = await prisma.order.findUnique({
-            where: { id: order.id },
-            include: { items: true },
-          });
-
-          const updatedOrder = await prisma.order.update({
+          await prisma.order.update({
             where: { id: order.id },
             data: { pathaoConsignmentId: res.consignment_id, status: "SHIPPED" },
-            include: { items: true },
           });
 
           const auditContext = await getAuditContext();
@@ -987,8 +1017,8 @@ export async function bulkSendToPathaoAction(orderIds: string[]) {
               entityType: "Order",
               entityId: order.id,
               description: `Pathao pickup requested for order ${order.id} (Consignment: ${res.consignment_id}) — status set to SHIPPED`,
-              dataBefore: orderBefore as any,
-              dataAfter: updatedOrder as any,
+              dataBefore: { id: order.id, status: order.status, pathaoConsignmentId: order.pathaoConsignmentId },
+              dataAfter: { id: order.id, status: "SHIPPED", pathaoConsignmentId: res.consignment_id },
               changedFields: ["pathaoConsignmentId", "status"],
               ipAddress: auditContext.ipAddress,
               userAgent: auditContext.userAgent,

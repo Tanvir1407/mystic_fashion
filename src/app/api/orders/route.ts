@@ -114,26 +114,44 @@ export async function POST(req: NextRequest) {
       let calculatedSubtotal = 0;
       const variantMap = new Map<string, { id: string; availableStock: number; trackStock: boolean }>();
 
+      // ── Batch pre-fetch: collect all unique variant keys ──────────────────
+      const variantKeys = items.map((item: any) => ({
+        productId: item.id,
+        size: item.size || "M",
+        color: String(item.color || "Default"),
+      }));
+      const uniqueVariantKeys = Array.from(
+        new Map(variantKeys.map((k: {productId: string; size: string; color: string}) => [`${k.productId}_${k.size}_${k.color}`, k])).values()
+      );
+
+      // ── Execute batch query ───────────────────────────────────────────────
+      const variants = await tx.productVariant.findMany({
+        where: {
+          OR: uniqueVariantKeys.map(k => ({
+            productId_size_color: {
+              productId: k.productId,
+              size: k.size,
+              color: k.color,
+            },
+          })),
+        },
+        include: {
+          product: { include: { discount: true } },
+          pricingMatrix: true,
+          stocks: { where: { warehouse: { code: "MAIN" } } },
+        },
+      });
+
+      const variantLookup = new Map<string, (typeof variants)[number]>();
+      for (const v of variants) {
+        variantLookup.set(`${v.productId}_${v.size}_${v.color}`, v);
+      }
+
+      // ── Process items using in-memory lookups ─────────────────────────────
       for (const item of items) {
         const targetColor = item.color || "Default";
-        const variant = await tx.productVariant.findUnique({
-          where: {
-            productId_size_color: {
-              productId: item.id,
-              size: item.size || "M",
-              color: targetColor,
-            },
-          },
-          include: {
-            product: {
-              include: { discount: true },
-            },
-            pricingMatrix: true,
-            stocks: {
-              where: { warehouse: { code: "MAIN" } },
-            },
-          },
-        });
+        const key = `${item.id}_${item.size || "M"}_${targetColor}`;
+        const variant = variantLookup.get(key);
 
         if (!variant) {
           throw new Error(`Variant not found for Product "${item.name || item.id}" (Size: ${item.size || "M"}, Color: ${targetColor})`);
@@ -156,7 +174,7 @@ export async function POST(req: NextRequest) {
         calculatedSubtotal += roundPrice(finalPrice) * item.quantity;
 
         const availableStock = variant.stocks?.[0]?.availableQuantity ?? 0;
-        variantMap.set(`${item.id}_${item.size || "M"}_${targetColor}`, {
+        variantMap.set(key, {
           id: variant.id,
           availableStock,
           trackStock: variant.product.trackStock ?? false,

@@ -89,26 +89,93 @@ export async function placeOrderAction(payload: {
       let calculatedSubtotal = 0;
       const variantMap = new Map<string, { id: string; availableStock: number; trackStock: boolean }>();
 
+      // ── Batch pre-fetch: collect all unique variant keys ──────────────────
+      const variantKeys = payload.items.map(item => ({
+        productId: item.id,
+        size: item.size || "M",
+        color: String(item.color || "Default"),
+      }));
+      const uniqueVariantKeys = Array.from(
+        new Map(variantKeys.map(k => [`${k.productId}_${k.size}_${k.color}`, k])).values()
+      );
+
+      // ── Batch pre-fetch: collect all combo configuration + child variant keys ──
+      const comboPairs: { parentProductId: string; childProductId: string }[] = [];
+      const childProductIds = new Set<string>();
       for (const item of payload.items) {
-        const targetColor = item.color || "Default";
-        const variant = await tx.productVariant.findUnique({
+        if (item.comboSelections && Array.isArray(item.comboSelections)) {
+          for (const sel of item.comboSelections) {
+            comboPairs.push({ parentProductId: item.id, childProductId: sel.productId });
+            childProductIds.add(sel.productId);
+          }
+        }
+      }
+      const uniqueComboPairs = Array.from(
+        new Map(comboPairs.map(p => [`${p.parentProductId}_${p.childProductId}`, p])).values()
+      );
+
+      // ── Execute all batch queries ────────────────────────────────────────
+      const [variants, comboConfigs, childVariants] = await Promise.all([
+        tx.productVariant.findMany({
           where: {
-            productId_size_color: {
-              productId: item.id,
-              size: item.size || "M",
-              color: targetColor,
-            },
+            OR: uniqueVariantKeys.map(k => ({
+              productId_size_color: {
+                productId: k.productId,
+                size: k.size,
+                color: k.color,
+              },
+            })),
           },
           include: {
-            product: {
-              include: { discount: true },
-            },
+            product: { include: { discount: true } },
             pricingMatrix: true,
-            stocks: {
-              where: { warehouse: { code: "MAIN" } },
-            },
+            stocks: { where: { warehouse: { code: "MAIN" } } },
           },
-        });
+        }),
+        uniqueComboPairs.length > 0
+          ? tx.comboConfiguration.findMany({
+              where: {
+                OR: uniqueComboPairs.map(p => ({
+                  parentProductId_childProductId: {
+                    parentProductId: p.parentProductId,
+                    childProductId: p.childProductId,
+                  },
+                })),
+              },
+            })
+          : Promise.resolve([] as Awaited<ReturnType<typeof tx.comboConfiguration.findMany>>),
+        childProductIds.size > 0
+          ? tx.productVariant.findMany({
+              where: { productId: { in: [...childProductIds] } },
+              include: {
+                product: true,
+                stocks: { where: { warehouse: { code: "MAIN" } } },
+              },
+            })
+          : Promise.resolve([] as Awaited<ReturnType<typeof tx.productVariant.findMany>>),
+      ]);
+
+      // ── Build lookup maps ─────────────────────────────────────────────────
+      const variantLookup = new Map<string, (typeof variants)[number]>();
+      for (const v of variants) {
+        variantLookup.set(`${v.productId}_${v.size}_${v.color}`, v);
+      }
+      const comboConfigLookup = new Map<string, (typeof comboConfigs)[number]>();
+      for (const c of comboConfigs) {
+        comboConfigLookup.set(`${c.parentProductId}_${c.childProductId}`, c);
+      }
+      const childVariantLookup = new Map<string, (typeof childVariants)[number]>();
+      for (const cv of childVariants) {
+        if (!childVariantLookup.has(cv.productId)) {
+          childVariantLookup.set(cv.productId, cv);
+        }
+      }
+
+      // ── Process items using in-memory lookups ─────────────────────────────
+      for (const item of payload.items) {
+        const targetColor = item.color || "Default";
+        const key = `${item.id}_${item.size || "M"}_${targetColor}`;
+        const variant = variantLookup.get(key);
 
         if (!variant) {
           throw new Error(`Variant not found for Product "${item.name}" (Size: ${item.size || "M"}, Color: ${targetColor})`);
@@ -125,32 +192,17 @@ export async function placeOrderAction(payload: {
           }
 
           for (const selection of item.comboSelections) {
-            // Find if this is a valid preset in ComboConfiguration
-            const config = await tx.comboConfiguration.findUnique({
-              where: {
-                parentProductId_childProductId: {
-                  parentProductId: item.id,
-                  childProductId: selection.productId
-                }
-              }
-            });
+            const configKey = `${item.id}_${selection.productId}`;
+            const config = comboConfigLookup.get(configKey);
             if (!config) {
               throw new Error(`Product "${selection.name}" is not a valid child selection for combo "${item.name}".`);
             }
 
-            // Check selection quantity does not exceed maxQuantity
             if (selection.quantity > config.maxQuantity) {
               throw new Error(`Quantity of "${selection.name}" selected (${selection.quantity}) exceeds maximum allowed (${config.maxQuantity}) in combo "${item.name}".`);
             }
 
-            // Find default variant of child product to check stock
-            const childVariant = await tx.productVariant.findFirst({
-              where: { productId: selection.productId },
-              include: {
-                product: true,
-                stocks: { where: { warehouse: { code: "MAIN" } } }
-              }
-            });
+            const childVariant = childVariantLookup.get(selection.productId);
             if (!childVariant) {
               throw new Error(`Child product variant not found for option "${selection.name}".`);
             }
@@ -179,7 +231,7 @@ export async function placeOrderAction(payload: {
         calculatedSubtotal += roundPrice(finalPrice) * item.quantity;
 
         const availableStock = variant.stocks?.[0]?.availableQuantity ?? 0;
-        variantMap.set(`${item.id}_${item.size || "M"}_${targetColor}`, {
+        variantMap.set(key, {
           id: variant.id,
           availableStock,
           trackStock: variant.product.trackStock ?? false,

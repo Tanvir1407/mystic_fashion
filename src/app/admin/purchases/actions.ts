@@ -58,6 +58,16 @@ async function _createPurchase(
         },
       });
 
+      // ── Batch pre-fetch pricing matrices ────────────────────────────────
+      const variantIds = items.map(i => i.variantId);
+      const pricingMatrices = await tx.variantPricingMatrix.findMany({
+        where: { variantId: { in: variantIds } },
+      });
+      const pricingMap = new Map<string, (typeof pricingMatrices)[number]>();
+      for (const pm of pricingMatrices) {
+        pricingMap.set(pm.variantId, pm);
+      }
+
       for (const item of items) {
         const { previousPhysical } = await updateStockDualWrite(tx, {
           variantId: item.variantId,
@@ -67,9 +77,7 @@ async function _createPurchase(
           referenceType: "PURCHASE_RECEIPT",
         });
 
-        const pricing = await tx.variantPricingMatrix.findUnique({
-          where: { variantId: item.variantId },
-        });
+        const pricing = pricingMap.get(item.variantId);
         const oldCost = pricing?.costPrice ? Number(pricing.costPrice) : 0;
 
         let newCost = item.unitPrice;
@@ -192,6 +200,16 @@ async function _updatePurchase(
         },
       });
 
+      // ── Batch pre-fetch pricing matrices ────────────────────────────────
+      const variantIds = items.map(i => i.variantId);
+      const pricingMatrices = await tx.variantPricingMatrix.findMany({
+        where: { variantId: { in: variantIds } },
+      });
+      const pricingMap = new Map<string, (typeof pricingMatrices)[number]>();
+      for (const pm of pricingMatrices) {
+        pricingMap.set(pm.variantId, pm);
+      }
+
       for (const item of items) {
         const { previousPhysical } = await updateStockDualWrite(tx, {
           variantId: item.variantId,
@@ -201,9 +219,7 @@ async function _updatePurchase(
           referenceType: "PURCHASE_RECEIPT",
         });
 
-        const pricing = await tx.variantPricingMatrix.findUnique({
-          where: { variantId: item.variantId },
-        });
+        const pricing = pricingMap.get(item.variantId);
         const oldCost = pricing?.costPrice ? Number(pricing.costPrice) : 0;
 
         let newCost = item.unitPrice;

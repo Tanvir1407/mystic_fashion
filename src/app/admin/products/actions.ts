@@ -377,6 +377,25 @@ async function _updateProduct(
         });
       }
 
+      // ── Batch pre-fetch existing variants and stock ──────────────────────────
+      const existingVariants = await tx.productVariant.findMany({
+        where: { productId: id },
+        select: { id: true, size: true, color: true },
+      });
+      const existingVariantIds = existingVariants.map(v => v.id);
+      const existingStocks = existingVariantIds.length > 0
+        ? await tx.stock.findMany({
+            where: {
+              variantId: { in: existingVariantIds },
+              warehouseId: warehouse.id,
+            },
+          })
+        : [];
+      const stockMap = new Map<string, (typeof existingStocks)[number]>();
+      for (const s of existingStocks) {
+        stockMap.set(s.variantId, s);
+      }
+
       const upserted = [];
       for (let idx = 0; idx < data.variants.length; idx++) {
         const v = data.variants[idx];
@@ -409,14 +428,7 @@ async function _updateProduct(
           },
         });
 
-        const existingStock = await tx.stock.findUnique({
-          where: {
-            variantId_warehouseId: {
-              variantId: variant.id,
-              warehouseId: warehouse.id,
-            },
-          },
-        });
+        const existingStock = stockMap.get(variant.id);
 
         if (existingStock) {
           const diff = v.stock - existingStock.physicalQuantity;
