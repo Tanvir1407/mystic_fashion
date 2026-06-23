@@ -1,3 +1,5 @@
+"use client";
+
 import Link from "next/link";
 import { memo, useMemo } from "react";
 import UploadedImage from "./UploadedImage";
