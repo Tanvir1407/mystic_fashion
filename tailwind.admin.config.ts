@@ -5,7 +5,16 @@ const config: Config = {
   content: [
     "./src/app/admin/**/*.{js,ts,jsx,tsx,mdx}",
     "./src/app/staff/**/*.{js,ts,jsx,tsx,mdx}",
-    "./src/components/**/*.{js,ts,jsx,tsx,mdx}",
+    // Admin-only components
+    "./src/components/CancelReasonModal.tsx",
+    "./src/components/DeleteWarningModal.tsx",
+    "./src/components/HoldReasonModal.tsx",
+    "./src/components/StatusAlertModal.tsx",
+    // Shared components (used in both portals)
+    "./src/components/AdminPagination.tsx",
+    "./src/components/CustomSelect.tsx",
+    "./src/components/Toaster.tsx",
+    "./src/components/UploadedImage.tsx",
   ],
   theme: {
     container: {
