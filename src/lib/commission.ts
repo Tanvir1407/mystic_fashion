@@ -3,7 +3,7 @@ import prisma from "@/lib/prisma";
 export async function getEffectiveCommissionRate(staffId: string): Promise<number> {
   const [staff, globalSetting] = await Promise.all([
     prisma.staff.findUnique({ where: { id: staffId }, select: { commissionRate: true } }),
-    prisma.commissionSetting.findUnique({ where: { id: "default" } }),
+    prisma.commissionSetting.findUnique({ where: { id: "default" }, select: { commissionRate: true } }),
   ]);
 
   if (staff?.commissionRate != null) return staff.commissionRate;
