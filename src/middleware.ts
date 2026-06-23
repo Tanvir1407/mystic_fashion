@@ -3,8 +3,11 @@ import type { NextRequest } from 'next/server';
 import { jwtVerify } from 'jose';
 import { getRedirectUrlForSession } from './lib/permissions';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'fallback-mystic-secret-key-123';
-const encodedSecret = new TextEncoder().encode(JWT_SECRET);
+const jwtSecret = process.env.JWT_SECRET;
+if (!jwtSecret) {
+  throw new Error("CRITICAL: JWT_SECRET is not defined in environment variables.");
+}
+const encodedSecret = new TextEncoder().encode(jwtSecret);
 
 export async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname;

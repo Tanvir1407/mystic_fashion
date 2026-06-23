@@ -1,8 +1,11 @@
 import { SignJWT, jwtVerify } from 'jose';
 import { cookies } from 'next/headers';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'fallback-mystic-secret-key-123';
-const encodedSecret = new TextEncoder().encode(JWT_SECRET);
+const jwtSecret = process.env.JWT_SECRET;
+if (!jwtSecret) {
+  throw new Error("CRITICAL: JWT_SECRET is not defined in environment variables.");
+}
+const encodedSecret = new TextEncoder().encode(jwtSecret);
 const COOKIE_NAME = 'staff-session';
 
 export interface StaffSessionPayload {
