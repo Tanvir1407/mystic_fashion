@@ -5,6 +5,7 @@ import { formatDate } from "@/utils/formatDate";
 import Barcode from "react-barcode";
 import { formatBDT, roundPrice } from "@/utils/formatPrice";
 import { formatVariant } from "@/utils/formatVariant";
+import Image from "next/image";
 
 interface OrderItem {
   id: string;
@@ -155,10 +156,13 @@ export default function ThermalPrintView({ orders, storePhone, storeAddress, pos
             {/* Header: Logo and dynamic/default Shop Details */}
             <div className="flex justify-between items-start mb-2" style={{ gap: "2mm" }}>
               <div className="flex flex-col text-left">
-                <img
+                <Image
                   src="/images/logo.png"
                   alt="MYSTIC Logo"
+                  width={120}
+                  height={36}
                   className="h-9 w-auto object-contain object-left"
+                  priority
                 />
               </div>
 

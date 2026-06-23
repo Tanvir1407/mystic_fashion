@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import UploadedImage from "@/components/UploadedImage";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useCartStore } from "@/store/cartStore";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -154,17 +154,19 @@ export default function ProductClient({ product, sizeChartData, relatedProducts 
   };
 
   // Determine if product is size-less (e.g. only contains size "Default" or "-")
-  const isSizeLess = product.variants.length === 0 ||
+  const isSizeLess = useMemo(() => product.variants.length === 0 ||
     (product.variants.length === 1 &&
       (product.variants[0].size.toLowerCase() === "default" ||
         product.variants[0].size === "-" ||
-        product.variants[0].size === ""));
+        product.variants[0].size === "")), [product.variants]);
 
   // Unique sizes list
-  const uniqueSizes = Array.from(new Set(product.variants.map((v) => v.size)));
+  const uniqueSizes = useMemo(() => Array.from(new Set(product.variants.map((v) => v.size))), [product.variants]);
 
   // Auto-select size on mount if it's size-less or if it is a combo product
+  const autoSizeRan = useRef(false);
   useEffect(() => {
+    if (autoSizeRan.current) return;
     if (product.isCombo) {
       setSelectedSize("Default");
       setSelectedColor("Default");
@@ -173,28 +175,33 @@ export default function ProductClient({ product, sizeChartData, relatedProducts 
         setSelectedSize(product.variants[0].size);
       }
     }
-  }, [product.variants, isSizeLess, product.isCombo]);
+    autoSizeRan.current = true;
+  }, [product.id, isSizeLess, product.isCombo, product.variants.length]);
 
   // Unique colors list
-  const availableColors = Array.from(
+  const availableColors = useMemo(() => Array.from(
     new Set(
       product.variants
         .map((v) => v.color)
         .filter((c) => c && c.toLowerCase() !== "default" && c.toLowerCase() !== "all" && c.toLowerCase() !== "")
     )
-  );
+  ), [product.variants]);
 
   // Auto-select color on mount if there's only one option
+  const autoColorRan = useRef(false);
   useEffect(() => {
+    if (autoColorRan.current) return;
     if (availableColors.length === 1) {
       setSelectedColor(availableColors[0]);
     }
-  }, [availableColors]);
+    autoColorRan.current = true;
+  }, [product.id, availableColors.length]);
 
   const isColorSelectionRequired = availableColors.length > 0;
-  const isSelectionComplete = product.isCombo
+  const isSelectionComplete = useMemo(() => product.isCombo
     ? (totalSelectedComboQty === (product.comboRequiredQty ?? 0))
-    : (!!selectedSize && (!isColorSelectionRequired || !!selectedColor));
+    : (!!selectedSize && (!isColorSelectionRequired || !!selectedColor)),
+    [product.isCombo, totalSelectedComboQty, product.comboRequiredQty, selectedSize, isColorSelectionRequired, selectedColor]);
 
   const getButtonText = () => {
     if (addedEffect) return 'Added To Cart';
@@ -299,7 +306,7 @@ export default function ProductClient({ product, sizeChartData, relatedProducts 
   };
 
   // Find active variant matching selected size and color
-  const activeVariant = product.variants.find((v) => {
+  const activeVariant = useMemo(() => product.variants.find((v) => {
     const matchesSize = selectedSize ? v.size === selectedSize : true;
     
     let colorToMatch = selectedColor;
@@ -315,25 +322,27 @@ export default function ProductClient({ product, sizeChartData, relatedProducts 
 
     const matchesColor = colorToMatch ? v.color === colorToMatch : true;
     return matchesSize && matchesColor;
-  }) || product.variants[0];
+  }) || product.variants[0], [product.variants, selectedSize, selectedColor, selectedImageIndex, product.mediaAssets]);
 
-  const totalStock = product.variants.reduce((acc, v) => acc + v.stock, 0);
+  const totalStock = useMemo(() => product.variants.reduce((acc, v) => acc + v.stock, 0), [product.variants]);
 
   const selectedVariantStock = activeVariant?.stock || 0;
 
   const variantPrice = activeVariant?.price ?? product.price;
 
-  let finalPrice = variantPrice;
-  let isDiscounted = false;
-
-  if (product.discount && product.discount.active) {
-    isDiscounted = true;
-    if (product.discount.discountType === "PERCENTAGE") {
-      finalPrice = roundPrice(variantPrice - (variantPrice * (product.discount.value / 100)));
-    } else {
-      finalPrice = roundPrice(Math.max(0, variantPrice - product.discount.value));
+  const { finalPrice, isDiscounted } = useMemo(() => {
+    let fp = variantPrice;
+    let id = false;
+    if (product.discount && product.discount.active) {
+      id = true;
+      if (product.discount.discountType === "PERCENTAGE") {
+        fp = roundPrice(variantPrice - (variantPrice * (product.discount.value / 100)));
+      } else {
+        fp = roundPrice(Math.max(0, variantPrice - product.discount.value));
+      }
     }
-  }
+    return { finalPrice: fp, isDiscounted: id };
+  }, [variantPrice, product.discount?.active, product.discount?.discountType, product.discount?.value]);
 
   const handleAddToCart = () => {
     if (!isSelectionComplete) return;

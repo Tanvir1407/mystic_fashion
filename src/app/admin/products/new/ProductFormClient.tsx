@@ -8,6 +8,7 @@ import { slugify } from "@/utils/slugify";
 import { Plus, Trash2, Save, ArrowLeft, GripVertical, Bold, Italic, Underline, List, ListOrdered, Undo, Redo, Eraser, X, Loader2, ChevronDown } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 
 function generateSKUCode({
   brandName,
@@ -722,7 +723,7 @@ export default function ProductFormClient({
                   {images.map((img, idx) => (
                     <div key={idx} className="relative group border border-slate-200 rounded-none overflow-hidden bg-slate-50 shadow-none flex flex-col justify-between">
                       <div className="relative aspect-square w-full">
-                        <img src={img.url} alt={`Uploaded ${idx}`} className="w-full h-full object-cover" />
+                        <Image src={img.url} alt={`Uploaded ${idx}`} fill sizes="(max-width: 768px) 50vw, 25vw" className="object-cover" />
                         <button
                           type="button"
                           onClick={() => removeImage(idx)}
@@ -832,7 +833,7 @@ export default function ProductFormClient({
                             {/* Image */}
                             <div className={`relative aspect-square w-full overflow-hidden bg-slate-100 border ${isDefault ? 'border-amber-400' : 'border-violet-300'}`}>
                               {thumbUrl ? (
-                                <img src={thumbUrl} alt={p.name} className="w-full h-full object-cover" />
+                                <Image src={thumbUrl} alt={p.name} fill sizes="(max-width: 768px) 50vw, 25vw" className="object-cover" />
                               ) : (
                                 <div className="w-full h-full bg-slate-100 flex items-center justify-center text-[9px] text-slate-400">No img</div>
                               )}
@@ -924,7 +925,7 @@ export default function ProductFormClient({
                         >
                           <div className={`relative aspect-square w-full overflow-hidden bg-slate-100 border transition-all ${isChecked ? 'border-violet-500' : 'border-slate-200 group-hover:border-slate-400'}`}>
                             {thumbUrl ? (
-                              <img src={thumbUrl} alt={p.name} className="w-full h-full object-cover" />
+                              <Image src={thumbUrl} alt={p.name} fill sizes="(max-width: 768px) 50vw, 25vw" className="object-cover" />
                             ) : (
                               <div className="w-full h-full bg-slate-100 flex items-center justify-center text-[9px] text-slate-400">No img</div>
                             )}

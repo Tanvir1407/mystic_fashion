@@ -19,6 +19,7 @@ import {
 import { updateInventorySettings } from "../../actions";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 
 export default function InventoryClient({ initialSettings, products }: { initialSettings: any, products: any[] }) {
   const router = useRouter();
@@ -183,7 +184,13 @@ export default function InventoryClient({ initialSettings, products }: { initial
                             <div className="flex items-center gap-3">
                               <div className="w-10 h-10 rounded border border-slate-200 overflow-hidden bg-slate-50 shrink-0">
                                 {product.mediaAssets?.[0]?.url || product.images?.[0] ? (
-                                  <img src={product.mediaAssets?.[0]?.url || product.images[0]} alt="" className="w-full h-full object-cover" />
+                                  <Image
+                                    src={product.mediaAssets?.[0]?.url || product.images[0]}
+                                    alt=""
+                                    width={40}
+                                    height={40}
+                                    className="object-cover"
+                                  />
                                 ) : (
                                   <div className="w-full h-full flex items-center justify-center text-[8px] text-slate-400 font-bold uppercase">No Img</div>
                                 )}

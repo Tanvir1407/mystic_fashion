@@ -20,10 +20,10 @@ export default function SidebarCart() {
 
   useEffect(() => {
     if (isOpen && items.length > 0) {
-      const cartItemsPayload = items.map((i: any) => ({ id: i.id, size: i.size, color: i.color }));
+      const cartItemsPayload = items.map((i) => ({ id: i.id, size: i.size, color: i.color }));
       syncCartPrices(cartItemsPayload).then((updatedPrices) => {
-        updatedPrices.forEach((updated: any) => {
-          items.forEach((item: any) => {
+        updatedPrices.forEach((updated) => {
+          items.forEach((item) => {
             if (
               item.id === updated.id &&
               item.size === updated.size &&
@@ -36,7 +36,7 @@ export default function SidebarCart() {
         });
       });
     }
-  }, [isOpen, items.length]);
+  }, [isOpen, items]);
 
   return (
     <AnimatePresence>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import Link from "next/link";
 import UploadedImage from "./UploadedImage";
 import ProductCard from "./ProductCard";
@@ -61,14 +61,12 @@ export default function HomepageMain({
   const tabNames = ["All", ...categories.map((c) => c.name)];
   const [selectedTab, setSelectedTab] = useState("All");
 
-  // Filter products for the New Arrivals section dynamically
-  const getNewArrivals = () => {
+  const newArrivalsProducts = useMemo(() => {
     const sortedByRecent = [...initialNewArrivalsProducts].sort(
       (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
     );
 
     if (selectedTab === "All") {
-      // 'All' tab: 4 recent products, each from a unique category
       const selected: any[] = [];
       const seenCategories = new Set<string>();
       for (const p of sortedByRecent) {
@@ -85,9 +83,7 @@ export default function HomepageMain({
         .filter((p) => p.category?.toLowerCase() === selectedTab.toLowerCase())
         .slice(0, 4);
     }
-  };
-
-  const newArrivalsProducts = getNewArrivals();
+  }, [selectedTab, initialNewArrivalsProducts]);
 
   return (
     <div className="bg-[#FAFAFA] min-h-screen text-neutral-800 antialiased font-sans">

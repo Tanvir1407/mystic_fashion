@@ -2,15 +2,7 @@
 
 import { useState } from "react";
 import { Save, Loader2 } from "lucide-react";
-
-async function updateCommissionRate(rate: number) {
-  const res = await fetch("/api/admin/settings/commission", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ commissionRate: rate }),
-  });
-  return res.json();
-}
+import { updateCommissionSettingsAction } from "./actions";
 
 export default function CommissionSettingsClient({ initialRate }: { initialRate: number }) {
   const [rate, setRate] = useState(String(initialRate));
@@ -21,7 +13,7 @@ export default function CommissionSettingsClient({ initialRate }: { initialRate:
     e.preventDefault();
     setLoading(true);
     setSaved(false);
-    await updateCommissionRate(parseFloat(rate) || 0);
+    await updateCommissionSettingsAction(parseFloat(rate) || 0);
     setLoading(false);
     setSaved(true);
     setTimeout(() => setSaved(false), 3000);

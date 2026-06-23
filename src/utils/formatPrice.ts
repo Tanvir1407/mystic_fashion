@@ -8,6 +8,29 @@ export function roundPrice(price: number): number {
 }
 
 /**
+ * Safely parses a price value from various formats (number, string, Decimal object).
+ */
+export function parsePrice(val: unknown): number {
+  if (val === null || val === undefined) return 0;
+  if (typeof val === "number") return val;
+  if (typeof val === "string") return parseFloat(val) || 0;
+  if (typeof val === "object") {
+    const obj = val as Record<string, unknown>;
+    if (typeof obj.toNumber === "function") {
+      return (obj as { toNumber: () => number }).toNumber();
+    }
+    if (obj.d && Array.isArray(obj.d)) {
+      const sign = obj.s === -1 ? "-" : "";
+      const base = (obj.d as number[]).join("");
+      const exponent = typeof obj.e === "number" ? (obj.e as number) : 0;
+      const parsed = parseFloat(sign + base) * Math.pow(10, exponent - (base.length - 1));
+      return isNaN(parsed) ? 0 : parsed;
+    }
+  }
+  return Number(val) || 0;
+}
+
+/**
  * Formats a price as a BDT string with no decimal places.
  * Uses standard rounding before formatting.
  *

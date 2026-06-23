@@ -7,7 +7,7 @@ import { FooterData } from "@/lib/footer";
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowLeft, CheckCircle2, X, ChevronDown, Ticket, Loader2, CheckCircle, Tag, Edit2, Sparkles } from "lucide-react";
-import { useState, useTransition, useEffect } from "react";
+import { useState, useTransition, useEffect, useMemo, useCallback } from "react";
 import { placeOrderAction, validateCoupon, syncCartPrices } from "./actions";
 import { formatBDT } from "@/utils/formatPrice";
 import Breadcrumb from "@/components/Breadcrumb";
@@ -19,13 +19,15 @@ export default function CheckoutClient({
   footerData,
   dtfCostPerItem = 300,
   customerSession,
-  savedAddresses = []
+  savedAddresses = [],
+  serverCities = null,
 }: {
   deliveryData: { insideDhaka: number, outsideDhaka: number },
   footerData: FooterData,
   dtfCostPerItem?: number,
   customerSession?: { id: string, name: string, phone: string, email?: string | null } | null,
-  savedAddresses?: any[]
+  savedAddresses?: any[],
+  serverCities?: { value: string, label: string }[] | null,
 }) {
   const { items, getTotalPrice, clearCart, updateItem } = useCartStore();
   const [isSubmitted, setIsSubmitted] = useState(false);
@@ -96,8 +98,12 @@ export default function CheckoutClient({
   }, []);
 
 
-  // Fetch Pathao Cities on mount
+  // Fetch Pathao Cities on mount (skip if pre-fetched server-side)
   useEffect(() => {
+    if (serverCities && serverCities.length > 0) {
+      setCities(serverCities);
+      return;
+    }
     async function fetchCities() {
       setLoadingCities(true);
       const res = await getPathaoCities();
@@ -107,7 +113,7 @@ export default function CheckoutClient({
       setLoadingCities(false);
     }
     fetchCities();
-  }, []);
+  }, [serverCities]);
 
   const handleSelectAddress = async (addr: any) => {
     setFullName(addr.fullName || "");
@@ -197,18 +203,18 @@ export default function CheckoutClient({
   const deliveryFee = selectedDistrict ? (isDhaka ? deliveryData.insideDhaka : deliveryData.outsideDhaka) : 0;
 
   // Pricing Logic (Excluding DTF from discounts)
-  const baseSubtotal = getTotalPrice();
-  const totalDTFCost = items.reduce((sum, item) => {
+  const baseSubtotal = useMemo(() => getTotalPrice(), [items]);
+  const totalDTFCost = useMemo(() => items.reduce((sum, item) => {
     if (!item.requiresPrint) return sum;
     const printCount = item.printDetails?.length || 1;
     return sum + (printCount * dtfCostPerItem);
-  }, 0);
-  const total = baseSubtotal - couponDiscount + totalDTFCost + (items.length > 0 ? deliveryFee : 0);
+  }, 0), [items, dtfCostPerItem]);
+  const total = useMemo(() => baseSubtotal - couponDiscount + totalDTFCost + (items.length > 0 ? deliveryFee : 0), [baseSubtotal, couponDiscount, totalDTFCost, items.length, deliveryFee]);
 
-  const originalBaseSubtotal = items.reduce((total, item) => total + (item.originalPrice || item.price) * item.quantity, 0);
-  const totalItemDiscount = originalBaseSubtotal - baseSubtotal;
+  const originalBaseSubtotal = useMemo(() => items.reduce((total, item) => total + (item.originalPrice || item.price) * item.quantity, 0), [items]);
+  const totalItemDiscount = useMemo(() => originalBaseSubtotal - baseSubtotal, [originalBaseSubtotal, baseSubtotal]);
 
-  const handleApplyCoupon = async (codeToUse = couponCode, phoneToUse = phone) => {
+  const handleApplyCoupon = useCallback(async (codeToUse = couponCode, phoneToUse = phone) => {
     if (!codeToUse) return;
     setIsValidating(true);
     setCouponError("");
@@ -225,17 +231,16 @@ export default function CheckoutClient({
       setAppliedCoupon("");
     }
     setIsValidating(false);
-  };
+  }, [couponCode, phone, items, deliveryFee, couponSessionId]);
 
   // Auto-revalidate coupon if items, phone, or delivery fee changes
   useEffect(() => {
-    if (appliedCoupon) {
-      const delayDebounce = setTimeout(() => {
-        handleApplyCoupon(appliedCoupon, phone);
-      }, 600);
-      return () => clearTimeout(delayDebounce);
-    }
-  }, [phone, items.length, deliveryFee]);
+    if (!appliedCoupon) return;
+    const delayDebounce = setTimeout(() => {
+      handleApplyCoupon(appliedCoupon, phone);
+    }, 600);
+    return () => clearTimeout(delayDebounce);
+  }, [appliedCoupon, phone, deliveryFee, handleApplyCoupon]);
 
   const [isPending, startTransition] = useTransition();
 

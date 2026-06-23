@@ -1,7 +1,8 @@
 import Link from "next/link";
+import { memo, useMemo } from "react";
 import UploadedImage from "./UploadedImage";
 import AddToBagButton from "./AddToBagButton";
-import { formatBDT, roundPrice } from "@/utils/formatPrice";
+import { formatBDT, roundPrice, parsePrice } from "@/utils/formatPrice";
 
 interface ProductCardProps {
   product: {
@@ -21,95 +22,80 @@ interface ProductCardProps {
   };
 }
 
-export default function ProductCard({ product }: ProductCardProps) {
-  // Helper to parse decimal objects/strings to numbers safely
-  const parsePrice = (val: any): number => {
-    if (val === null || val === undefined) return 0;
-    if (typeof val === "number") return val;
-    if (typeof val === "string") return parseFloat(val) || 0;
-    if (typeof val === "object") {
-      if (typeof val.toNumber === "function") {
-        return val.toNumber();
-      }
-      if (val.d && Array.isArray(val.d)) {
-        const sign = val.s === -1 ? "-" : "";
-        const base = val.d.join("");
-        const exponent = typeof val.e === "number" ? val.e : 0;
-        const parsed = parseFloat(sign + base) * Math.pow(10, exponent - (base.length - 1));
-        return isNaN(parsed) ? 0 : parsed;
+const ProductCard = memo(function ProductCard({ product }: ProductCardProps) {
+  const derived = useMemo(() => {
+    const productPrice = parsePrice(product.price);
+    let finalPrice = productPrice;
+    let isDiscounted = false;
+
+    if (product.discount && product.discount.active) {
+      isDiscounted = true;
+      if (product.discount.discountType === "PERCENTAGE") {
+        finalPrice = roundPrice(productPrice - (productPrice * (product.discount.value / 100)));
+      } else {
+        finalPrice = roundPrice(Math.max(0, productPrice - product.discount.value));
       }
     }
-    return Number(val) || 0;
-  };
 
-  const productPrice = parsePrice(product.price);
-  let finalPrice = productPrice;
-  let isDiscounted = false;
+    let hasMultiplePrices = false;
+    let minPrice = finalPrice;
+    let maxPrice = finalPrice;
+    let originalMinPrice = productPrice;
+    let originalMaxPrice = productPrice;
+
+    if (product.variants && product.variants.length > 0) {
+      const variantPrices = product.variants.map((v: any) => {
+        let vPrice = productPrice;
+        if (v.price !== undefined) {
+          vPrice = parsePrice(v.price);
+        } else if (v.pricingMatrix?.basePrice !== undefined) {
+          vPrice = parsePrice(v.pricingMatrix.basePrice);
+        }
+        return vPrice;
+      });
+
+      const vMin = Math.min(...variantPrices);
+      const vMax = Math.max(...variantPrices);
+
+      if (vMax > vMin) {
+        hasMultiplePrices = true;
+        originalMinPrice = vMin;
+        originalMaxPrice = vMax;
+        minPrice = vMin;
+        maxPrice = vMax;
+
+        if (product.discount && product.discount.active) {
+          if (product.discount.discountType === "PERCENTAGE") {
+            minPrice = roundPrice(vMin - (vMin * (product.discount.value / 100)));
+            maxPrice = roundPrice(vMax - (vMax * (product.discount.value / 100)));
+          } else {
+            minPrice = roundPrice(Math.max(0, vMin - product.discount.value));
+            maxPrice = roundPrice(Math.max(0, vMax - product.discount.value));
+          }
+        }
+      } else if (vMin > 0) {
+        originalMinPrice = vMin;
+        finalPrice = vMin;
+        if (product.discount && product.discount.active) {
+          if (product.discount.discountType === "PERCENTAGE") {
+            finalPrice = roundPrice(vMin - (vMin * (product.discount.value / 100)));
+          } else {
+            finalPrice = roundPrice(Math.max(0, vMin - product.discount.value));
+          }
+        }
+      }
+    }
+
+    const totalStock = product.variants
+      ? product.variants.reduce((acc: number, v: any) => acc + (v.stock ?? 0), 0)
+      : 0;
+    const isOutOfStock = !!(product.trackStock && totalStock <= 0);
+
+    return { finalPrice, isDiscounted, hasMultiplePrices, minPrice, maxPrice, originalMinPrice, originalMaxPrice, totalStock, isOutOfStock };
+  }, [product.id, product.price, product.discount?.active, product.discount?.value, product.discount?.discountType, product.variants, product.trackStock]);
+
+  const { finalPrice, isDiscounted, hasMultiplePrices, minPrice, maxPrice, originalMinPrice, originalMaxPrice, isOutOfStock } = derived;
   const productImages = product.images || [];
-
-  if (product.discount && product.discount.active) {
-    isDiscounted = true;
-    if (product.discount.discountType === "PERCENTAGE") {
-      finalPrice = roundPrice(productPrice - (productPrice * (product.discount.value / 100)));
-    } else {
-      finalPrice = roundPrice(Math.max(0, productPrice - product.discount.value));
-    }
-  }
-
-  let hasMultiplePrices = false;
-  let minPrice = finalPrice;
-  let maxPrice = finalPrice;
-  let originalMinPrice = productPrice;
-  let originalMaxPrice = productPrice;
-
-  if (product.variants && product.variants.length > 0) {
-    const variantPrices = product.variants.map((v: any) => {
-      let vPrice = productPrice;
-      if (v.price !== undefined) {
-         vPrice = parsePrice(v.price);
-      } else if (v.pricingMatrix?.basePrice !== undefined) {
-         vPrice = parsePrice(v.pricingMatrix.basePrice);
-      }
-      return vPrice;
-    });
-
-    const vMin = Math.min(...variantPrices);
-    const vMax = Math.max(...variantPrices);
-    
-    if (vMax > vMin) {
-       hasMultiplePrices = true;
-       originalMinPrice = vMin;
-       originalMaxPrice = vMax;
-       
-       minPrice = vMin;
-       maxPrice = vMax;
-       
-       if (product.discount && product.discount.active) {
-         if (product.discount.discountType === "PERCENTAGE") {
-           minPrice = roundPrice(vMin - (vMin * (product.discount.value / 100)));
-           maxPrice = roundPrice(vMax - (vMax * (product.discount.value / 100)));
-         } else {
-           minPrice = roundPrice(Math.max(0, vMin - product.discount.value));
-           maxPrice = roundPrice(Math.max(0, vMax - product.discount.value));
-         }
-       }
-    } else if (vMin > 0) {
-       originalMinPrice = vMin;
-       finalPrice = vMin;
-       if (product.discount && product.discount.active) {
-         if (product.discount.discountType === "PERCENTAGE") {
-           finalPrice = roundPrice(vMin - (vMin * (product.discount.value / 100)));
-         } else {
-           finalPrice = roundPrice(Math.max(0, vMin - product.discount.value));
-         }
-       }
-    }
-  }
-
-  const totalStock = product.variants
-    ? product.variants.reduce((acc: number, v: any) => acc + (v.stock ?? 0), 0)
-    : 0;
-  const isOutOfStock = !!(product.trackStock && totalStock <= 0);
 
   return (
     <Link href={`/product/${product.slug || product.id}`} className="group">
@@ -166,4 +152,6 @@ export default function ProductCard({ product }: ProductCardProps) {
       </div>
     </Link>
   );
-}
+});
+
+export default ProductCard;

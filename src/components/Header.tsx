@@ -12,7 +12,7 @@ import { logoutCustomerAction } from "@/app/actions/customerAuth";
 
 import Image from "next/image";
 
-export default function Header() {
+export default function Header({ serverCategories }: { serverCategories?: any[] }) {
   const router = useRouter();
   const [mounted, setMounted] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -24,11 +24,11 @@ export default function Header() {
   const [customerName, setCustomerName] = useState<string | null>(null);
   const userMenuRef = useRef<HTMLDivElement>(null);
 
-  const [categories, setCategories] = useState<any[]>([
-  ]);
+  const [categories, setCategories] = useState<any[]>(serverCategories ?? []);
 
   useEffect(() => {
     setMounted(true);
+    if (serverCategories?.length) return;
     getHeaderCategories().then((res) => {
       if (res.success && res.categories && res.categories.length > 0) {
         setCategories(res.categories);

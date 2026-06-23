@@ -3,6 +3,7 @@ import prisma from "@/lib/prisma";
 import CheckoutClient from "./CheckoutClient";
 import { getFooterData } from "@/lib/footer";
 import { getCustomerSession } from "@/lib/auth";
+import { getPathaoCities } from "@/app/actions/pathao";
 
 export const dynamic = "force-dynamic";
 
@@ -50,7 +51,7 @@ export default async function CheckoutPage() {
     }
   }
 
-  const [delivery, dtfSetting, footerData] = await Promise.all([
+  const [delivery, dtfSetting, footerData, citiesRes] = await Promise.all([
     prisma.deliverySetting.findUnique({ where: { id: "default" } }),
     prisma.dTFPrintSetting.upsert({
       where: { id: "default" },
@@ -58,10 +59,14 @@ export default async function CheckoutPage() {
       create: { id: "default", printCost: 300 },
     }),
     getFooterData(),
+    getPathaoCities(),
   ]);
 
   const deliveryData = delivery || { insideDhaka: 80, outsideDhaka: 150 };
   const dtfCostPerItem = dtfSetting.printCost;
+  const serverCities = citiesRes.success && citiesRes.data
+    ? citiesRes.data.map((c: any) => ({ value: c.city_id.toString(), label: c.city_name }))
+    : null;
 
   return (
     <CheckoutClient
@@ -70,6 +75,7 @@ export default async function CheckoutPage() {
       dtfCostPerItem={dtfCostPerItem}
       customerSession={customerSession}
       savedAddresses={savedAddresses}
+      serverCities={serverCities}
     />
   );
 }

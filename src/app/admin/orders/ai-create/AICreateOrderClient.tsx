@@ -27,6 +27,7 @@ import {
 import Link from "next/link";
 import { createAdminOrder } from "../actions";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import { formatBDT, roundPrice } from "@/utils/formatPrice";
 
 // ─── Types ───────────────────────────────────────────────────────────────
@@ -1000,10 +1001,12 @@ function OrderCard({
                                     >
                                       <div className="w-7 h-7 rounded bg-slate-100 flex-shrink-0 overflow-hidden border border-slate-200">
                                         {p.images?.[0] ? (
-                                          <img
+                                          <Image
                                             src={p.images[0]}
                                             alt=""
-                                            className="w-full h-full object-cover"
+                                            width={28}
+                                            height={28}
+                                            className="object-cover"
                                           />
                                         ) : (
                                           <div className="w-full h-full flex items-center justify-center text-[7px] text-slate-400 font-bold">
