@@ -102,6 +102,7 @@ async function _storeTransaction(data: {
   try {
     const account = await prisma.chartOfAccount.findUnique({
       where: { id: data.accountId },
+      select: { type: true },
     });
 
     if (!account) throw new Error("Account not found");
@@ -354,8 +355,8 @@ async function _reconcileCourierDues(data: {
 }) {
   try {
     const [courierAcc, receivingAcc] = await Promise.all([
-      prisma.chartOfAccount.findUnique({ where: { id: data.courierAccountId } }),
-      prisma.chartOfAccount.findUnique({ where: { id: data.receivingAccountId } }),
+      prisma.chartOfAccount.findUnique({ where: { id: data.courierAccountId }, select: { id: true } }),
+      prisma.chartOfAccount.findUnique({ where: { id: data.receivingAccountId }, select: { id: true } }),
     ]);
 
     if (!courierAcc || !receivingAcc) throw new Error("Accounts not found");

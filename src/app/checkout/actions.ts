@@ -36,7 +36,8 @@ export async function placeOrderAction(payload: {
 
       if (sessionCustomerId) {
         const existingCustomer = await tx.customer.findUnique({
-          where: { id: sessionCustomerId }
+          where: { id: sessionCustomerId },
+          select: { id: true },
         });
 
         if (existingCustomer) {
@@ -58,6 +59,7 @@ export async function placeOrderAction(payload: {
         if (phone) {
           let customer = await tx.customer.findUnique({
             where: { phone },
+            select: { id: true, name: true, address: true },
           });
 
           if (!customer) {
@@ -442,7 +444,8 @@ export async function validateCoupon(
 
     if (res.isValid && sessionId) {
       const coupon = await prisma.coupon.findUnique({
-        where: { code: code.toUpperCase() }
+        where: { code: code.toUpperCase() },
+        select: { id: true },
       });
       if (coupon) {
         const phoneMatch = phone ? normalizePhone(phone) : null;
@@ -462,7 +465,8 @@ export async function validateCoupon(
       }
     } else if (!res.isValid && sessionId && code) {
       const coupon = await prisma.coupon.findUnique({
-        where: { code: code.toUpperCase() }
+        where: { code: code.toUpperCase() },
+        select: { id: true },
       });
       if (coupon) {
         await prisma.couponLock.deleteMany({

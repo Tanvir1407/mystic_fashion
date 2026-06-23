@@ -22,9 +22,11 @@ async function _updateOrderStatus(orderId: string, status: OrderStatus, holdReas
     await prisma.$transaction(async (tx) => {
       const order = await tx.order.findUnique({
         where: { id: orderId },
-        include: {
+        select: {
+          id: true, status: true, tags: true, totalAmount: true,
           items: {
-            include: {
+            select: {
+              variantId: true, quantity: true,
               product: { select: { isCombo: true } },
               comboSelections: { select: { productId: true, quantity: true } },
             },
@@ -183,8 +185,8 @@ export const updateOrderStatus = withAuditLog(_updateOrderStatus, {
   entityType: "Order",
   action: "UPDATE",
   getEntityId: (args) => args[0],
-  fetchBefore: (id) => prisma.order.findUnique({ where: { id } }),
-  fetchAfter: (id) => prisma.order.findUnique({ where: { id } }),
+  fetchBefore: (id) => prisma.order.findUnique({ where: { id }, select: { id: true, customerName: true, status: true, totalAmount: true, pathaoConsignmentId: true, createdAt: true, updatedAt: true } }),
+  fetchAfter: (id) => prisma.order.findUnique({ where: { id }, select: { id: true, customerName: true, status: true, totalAmount: true, pathaoConsignmentId: true, createdAt: true, updatedAt: true } }),
   describe: (args) => `Updated order ${args[0]} status to ${args[1]}`,
 });
 
@@ -250,7 +252,7 @@ export const deleteOrder = withAuditLog(_deleteOrder, {
   entityType: "Order",
   action: "DELETE",
   getEntityId: (args) => args[0],
-  fetchBefore: (id) => prisma.order.findUnique({ where: { id }, include: { items: true } }),
+  fetchBefore: (id) => prisma.order.findUnique({ where: { id }, select: { id: true, customerName: true, status: true, totalAmount: true, phone: true, district: true, address: true, advancePaid: true, discountAmount: true, deliveryCharge: true, createdAt: true, updatedAt: true, items: { select: { id: true, productId: true, variantId: true, quantity: true, price: true } } } }),
   describe: (args) => `Deleted order ${args[0]}`,
 });
 
@@ -634,8 +636,8 @@ export const updateOrderDetails = withAuditLog(_updateOrderDetails, {
   entityType: "Order",
   action: "UPDATE",
   getEntityId: (args) => args[0],
-  fetchBefore: (id) => prisma.order.findUnique({ where: { id }, include: { items: { include: { product: true, variant: true } } } }),
-  fetchAfter: (id) => prisma.order.findUnique({ where: { id }, include: { items: { include: { product: true, variant: true } } } }),
+  fetchBefore: (id) => prisma.order.findUnique({ where: { id }, select: { id: true, customerName: true, status: true, totalAmount: true, advancePaid: true, discountAmount: true, deliveryCharge: true, createdAt: true, updatedAt: true, items: { select: { id: true, productId: true, variantId: true, quantity: true, price: true } } } }),
+  fetchAfter: (id) => prisma.order.findUnique({ where: { id }, select: { id: true, customerName: true, status: true, totalAmount: true, advancePaid: true, discountAmount: true, deliveryCharge: true, createdAt: true, updatedAt: true, items: { select: { id: true, productId: true, variantId: true, quantity: true, price: true } } } }),
   describe: (args) => `Updated order details for ${args[0]}`,
 });
 
@@ -878,7 +880,7 @@ export const createAdminOrder = withAuditLog(_createAdminOrder, {
   getEntityId: () => null,
   getEntityIdFromResult: (r: any) => r?.orderId ?? null,
   fetchAfter: (id) =>
-    prisma.order.findUnique({ where: { id }, include: { items: true } }),
+    prisma.order.findUnique({ where: { id }, select: { id: true, customerName: true, status: true, totalAmount: true, createdAt: true, items: { select: { id: true, productId: true, variantId: true, quantity: true, price: true } } } }),
   describe: (args) =>
     `Created admin order for "${args[0].customerName}" (৳${args[0].totalAmount})`,
 });
@@ -927,7 +929,7 @@ export const createExchangeOrder = withAuditLog(_createExchangeOrder, {
   getEntityId: () => null,
   getEntityIdFromResult: (r: any) => r?.orderId ?? null,
   fetchAfter: (id) =>
-    prisma.order.findUnique({ where: { id }, include: { items: true } }),
+    prisma.order.findUnique({ where: { id }, select: { id: true, customerName: true, status: true, totalAmount: true, createdAt: true, items: { select: { id: true, productId: true, variantId: true, quantity: true, price: true } } } }),
   describe: (args) =>
     `Created exchange order for "${args[0].customerName}" (Ref: ${args[0].exchangeRefOrderId}, ৳${args[0].totalAmount})`,
 });
@@ -1057,7 +1059,7 @@ export async function bulkSendToPathaoAction(orderIds: string[]) {
 
 export async function cancelPathaoPickupAction(orderId: string) {
   try {
-    const order = await prisma.order.findUnique({ where: { id: orderId } });
+    const order = await prisma.order.findUnique({ where: { id: orderId }, select: { id: true, pathaoConsignmentId: true } });
     if (!order) return { success: false, error: "Order not found" };
     if (!order.pathaoConsignmentId)
       return { success: false, error: "No Pathao pickup to cancel" };
