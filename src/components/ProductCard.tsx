@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { memo, useMemo } from "react";
 import UploadedImage from "./UploadedImage";
-import AddToBagButton from "./AddToBagButton";
 import { formatBDT, roundPrice, parsePrice } from "@/utils/formatPrice";
 
 interface ProductCardProps {
