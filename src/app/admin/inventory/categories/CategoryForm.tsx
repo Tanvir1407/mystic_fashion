@@ -5,6 +5,7 @@ import { createCategory, updateCategory } from "../catalog-actions";
 import { Loader2, X, Save, ImagePlus, RefreshCw } from "lucide-react";
 import Image from "next/image";
 import { uploadImage } from "@/app/admin/products/actions";
+import { useToastStore } from "@/store/toastStore";
 
 interface CategoryFormProps {
   category?: any;
@@ -20,6 +21,7 @@ export function CategoryForm({ category, onClose, onSuccess }: CategoryFormProps
   const [image, setImage] = useState<string | null | undefined>(category?.image ?? null);
   const [sortOrder, setSortOrder] = useState<number>(category?.sortOrder ?? 0);
   const [uploading, setUploading] = useState(false);
+  const { showToast } = useToastStore();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -50,15 +52,17 @@ export function CategoryForm({ category, onClose, onSuccess }: CategoryFormProps
 
   const handleImageUpload = async (file: File) => {
     setUploading(true);
-    const fd = new FormData();
-    fd.append("file", file);
     try {
+      const fd = new FormData();
+      fd.append("file", file);
+      fd.append("title", name || "category");
       const path = await uploadImage(fd);
       setImage(path);
-    } catch (e) {
-      alert("Image upload failed.");
+    } catch (err: any) {
+      showToast(err?.message || "Image upload failed.", "error");
+    } finally {
+      setUploading(false);
     }
-    setUploading(false);
   };
 
   return (

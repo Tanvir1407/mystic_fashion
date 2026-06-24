@@ -9,6 +9,7 @@ import { Plus, Trash2, Save, ArrowLeft, GripVertical, Bold, Italic, Underline, L
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
+import { useToastStore } from "@/store/toastStore";
 
 function generateSKUCode({
   brandName,
@@ -144,6 +145,7 @@ export default function ProductFormClient({
   const [comboDefaultChildIds, setComboDefaultChildIds] = useState<string[]>(initialData?.comboDefaultChildIds || []);
   const [comboFilterCategory, setComboFilterCategory] = useState<string>("all");
   const [comboSearch, setComboSearch] = useState("");
+  const { showToast } = useToastStore();
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [isSizeModalOpen, setIsSizeModalOpen] = useState(false);
@@ -434,7 +436,10 @@ export default function ProductFormClient({
     const MAX_SIZE = 500 * 1024; // 500KB
     const oversized = filesToUpload.filter(f => f.size > MAX_SIZE);
     if (oversized.length > 0) {
-      alert(`Image size must be 500KB or less. The following file(s) are too large:\n${oversized.map(f => `• ${f.name} (${(f.size / 1024).toFixed(0)}KB)`).join("\n")}`);
+      showToast(
+        `Too large: ${oversized.map(f => `${f.name} (${(f.size / 1024).toFixed(0)}KB)`).join(", ")}. Max 500KB per image.`,
+        "error"
+      );
       e.target.value = "";
       return;
     }
@@ -446,19 +451,15 @@ export default function ProductFormClient({
       for (const file of filesToUpload) {
         const formData = new FormData();
         formData.append("file", file);
+        formData.append("title", name || file.name);
         const url = await uploadImage(formData);
-
-        // ✅ FIX 1: Shudhu valid url ashlei push korbe, undefined ashle korbe na
         if (url && typeof url === 'string') {
           newImages.push({ url, boundAttributes: {} });
-        } else {
-          console.warn("Upload response did not return a valid URL:", url);
         }
       }
       setImages((prev) => [...prev, ...newImages]);
-    } catch (err) {
-      alert("Failed to upload image. Please try again.");
-      console.error("Image upload error:", err);
+    } catch (err: any) {
+      showToast(err?.message || "Image upload failed. Please try again.", "error");
     } finally {
       setIsUploading(false);
       e.target.value = "";

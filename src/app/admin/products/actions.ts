@@ -4,8 +4,9 @@ import prisma from "@/lib/prisma";
 import { Prisma } from "@/generated/prisma/client";
 import { withAuditLog } from "@/lib/audit";
 import { revalidatePath } from "next/cache";
-import { writeFile, mkdir } from "fs/promises";
+import { mkdir } from "fs/promises";
 import { join } from "path";
+import sharp from "sharp";
 import { slugify } from "@/utils/slugify";
 
 function formatPrismaError(error: any): string {
@@ -601,7 +602,13 @@ export async function uploadImage(formData: FormData) {
   const bytes = await file.arrayBuffer();
   const buffer = Buffer.from(bytes);
 
-  const uniqueName = `${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.-]/g, "_")}`;
+  // Extract title from formData, fallback to sanitized filename
+  const rawTitle = (formData.get("title") as string)?.trim();
+  const titleSlug = rawTitle ? slugify(rawTitle) : null;
+  const fallback = slugify(file.name.replace(/\.[^.]+$/, ""));
+  const slug = titleSlug || fallback || "product";
+
+  const uniqueName = `${slug}-${Date.now()}.webp`;
 
   const publicUploadsDir = join(process.cwd(), "public", "uploads");
   try {
@@ -609,7 +616,10 @@ export async function uploadImage(formData: FormData) {
   } catch (e) { }
 
   const filePath = join(publicUploadsDir, uniqueName);
-  await writeFile(filePath, buffer);
+  await sharp(buffer)
+    .resize({ width: 1920, withoutEnlargement: true })
+    .webp({ quality: 80 })
+    .toFile(filePath);
 
   return `/uploads/${uniqueName}`;
 }
