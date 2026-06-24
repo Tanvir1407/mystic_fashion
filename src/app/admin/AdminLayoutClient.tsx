@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { adminLogout } from "./actions";
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import {
   Package,
   ShoppingCart,
@@ -110,6 +110,35 @@ export default function AdminLayoutClient({ children, session }: { children: Rea
   const [openGroups, setOpenGroups] = useState<string[]>([]);
   const [notifications, setNotifications] = useState<any[]>([]);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [isNavigating, setIsNavigating] = useState(false);
+  const prevNavKey = useRef(`${pathname}__${searchParams?.toString()}`);
+
+  // Clear when navigation completes
+  useEffect(() => {
+    const currentKey = `${pathname}__${searchParams?.toString()}`;
+    if (prevNavKey.current !== currentKey) {
+      prevNavKey.current = currentKey;
+      setIsNavigating(false);
+    }
+  }, [pathname, searchParams]);
+
+  // Detect any admin link click instantly — no need to touch each <Link>
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      const anchor = (e.target as Element).closest("a");
+      if (!anchor?.href) return;
+      try {
+        const url = new URL(anchor.href, window.location.origin);
+        const currentKey = `${pathname}__${searchParams?.toString()}`;
+        const targetKey = `${url.pathname}__${url.search.replace("?", "")}`;
+        if (url.origin === window.location.origin && url.pathname.startsWith("/admin") && targetKey !== currentKey) {
+          setIsNavigating(true);
+        }
+      } catch { /* ignore */ }
+    };
+    document.addEventListener("click", handler, true);
+    return () => document.removeEventListener("click", handler, true);
+  }, [pathname, searchParams]);
 
   const fetchNotifications = async () => {
     try {
@@ -537,7 +566,13 @@ export default function AdminLayoutClient({ children, session }: { children: Rea
           </header>
 
           {/* Page Content */}
-          <main className="flex-1 overflow-y-auto bg-slate-50 print:bg-white print:overflow-visible">
+          <main className="flex-1 overflow-y-auto bg-slate-50 print:bg-white print:overflow-visible relative">
+            {/* Navigation progress bar — sits at top of content area, non-blocking */}
+            {isNavigating && (
+              <div className="absolute top-0 left-0 right-0 z-50 h-[2px] overflow-hidden bg-slate-100">
+                <div className="h-full bg-[#800020] animate-[navBar_1.4s_ease-in-out_infinite]" />
+              </div>
+            )}
             <div className="p-6 md:p-8 mx-auto print:p-0 print:max-w-none">
               {isAllowed ? (
                 children
