@@ -78,27 +78,31 @@ function SlideModal({
     startTransition(async () => {
       try {
         if (mode === "add") {
-          const created = await createHeroSlide({
+          const result: any = await createHeroSlide({
             image: form.image,
             link: form.link || "/",
             label: form.label || undefined,
             sortOrder: form.sortOrder,
           });
+          const created: Slide = result?.data ?? result;
+          if (!created?.id) throw new Error("Failed to create slide.");
           onSaved(created);
           showToast("Slide added successfully.", "success");
         } else if (mode === "edit" && slide) {
-          await updateHeroSlide(slide.id, {
+          const result: any = await updateHeroSlide(slide.id, {
             image: form.image,
             link: form.link || "/",
             label: form.label || undefined,
             sortOrder: form.sortOrder,
           });
-          onSaved({ ...slide, ...form, label: form.label || undefined });
+          if (result?.success === false) throw new Error(result.error || "Update failed.");
+          const updated: Slide = result?.data ?? { ...slide, ...form, label: form.label || null };
+          onSaved(updated);
           showToast("Slide updated.", "success");
         }
         onClose();
-      } catch {
-        showToast("Something went wrong. Please try again.", "error");
+      } catch (err: any) {
+        showToast(err?.message || "Something went wrong. Please try again.", "error");
       }
     });
   };
