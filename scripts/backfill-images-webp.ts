@@ -37,9 +37,7 @@ import "./load-env";
 import path from "path";
 import fs from "fs";
 import sharp from "sharp";
-import { PrismaClient } from "../src/generated/prisma";
-
-const prisma = new PrismaClient();
+import prisma from "../src/lib/prisma";
 
 // ─── CLI Args ─────────────────────────────────────────────────────────────────
 const DRY_RUN   = process.argv.includes("--dry-run");
