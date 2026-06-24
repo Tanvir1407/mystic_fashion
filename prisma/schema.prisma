@@ -171,6 +171,8 @@ model Product {
   subcategory   Subcategory?     @relation(fields: [subcategoryId], references: [id])
   variants      ProductVariant[]
   purchaseItems PurchaseItem[]
+  //relation media asstes 
+  mediaAssets   MediaAsset[] // Multi-image support
 
   @@index([deletedAt])
   @@index([brandId])
@@ -735,4 +737,21 @@ model VariantPricingMatrix {
   variant ProductVariant @relation(fields: [variantId], references: [id], onDelete: Cascade)
 
   @@index([variantId])
+}
+
+model MediaAsset {
+  id              String   @id @default(uuid())
+  productId       String
+  url             String // image path or URL
+  altText         String? // optional alt text for accessibility
+  isPrimary       Boolean  @default(false) // main image for product
+  sortOrder       Int      @default(0)
+  boundAttributes Json? // e.g., {"color": "Red"} or {"size": "L", "color": "Blue"}
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([productId, url])
+  @@index([productId])
 }

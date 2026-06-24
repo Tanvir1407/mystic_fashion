@@ -26,7 +26,6 @@ import { revalidatePath } from "next/cache";
 import { writeFile, mkdir } from "fs/promises";
 import { join } from "path";
 import { slugify } from "@/utils/slugify";
-import { log } from "console";
 
 // ─── PRODUCT CRUD ─────────────────────────────────────────────────────────────
 
@@ -115,6 +114,7 @@ async function _createProduct(data: {
         description: data.description,
         price: 0, // Keep legacy field for backward compatibility (fallback during migration)
         images: data.images,
+      
         team: data.team,
         category: data.category,
         brandId: data.brandId || null,
@@ -301,6 +301,19 @@ async function _updateProduct(
         },
       });
 
+      // Step 1b: Sync MediaAsset rows — delete all, recreate from current images
+      await tx.mediaAsset.deleteMany({ where: { productId: id } });
+      if (data.images.length > 0) {
+        await tx.mediaAsset.createMany({
+          data: data.images.map((url, i) => ({
+            productId: id,
+            url,
+            isPrimary: i === 0,
+            sortOrder: i,
+          })),
+        });
+      }
+
       // Step 2: Process all variants in parallel for performance
       // Uses Promise.all to run upsert operations concurrently
       const upsertPromises = data.variants.map(async (v, index) => {
@@ -365,6 +378,9 @@ async function _updateProduct(
       return await tx.product.findUnique({
         where: { id },
         include: {
+          mediaAssets: {
+            orderBy: { sortOrder: "asc" },
+          },
           variants: {
             include: {
               pricingMatrix: true, // Include pricing data for each variant
