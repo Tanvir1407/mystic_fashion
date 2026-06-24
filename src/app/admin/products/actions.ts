@@ -590,13 +590,14 @@ export const restoreProduct = withAuditLog(_restoreProduct, {
 
 // ─── IMAGE UPLOAD ─────────────────────────────────────────────────────────────
 
-export async function uploadImage(formData: FormData) {
+// maxWidth: 1920 for hero/banners, 800 for product/category thumbnails
+export async function uploadImage(formData: FormData, maxWidth = 800) {
   const file = formData.get("file") as File;
   if (!file) throw new Error("No file received");
 
-  const MAX_SIZE = 500 * 1024; // 500KB
+  const MAX_SIZE = 2 * 1024 * 1024; // 2MB raw — WebP conversion reduces significantly
   if (file.size > MAX_SIZE) {
-    throw new Error(`Image "${file.name}" is too large (${(file.size / 1024).toFixed(0)}KB). Maximum allowed size is 500KB.`);
+    throw new Error(`Image "${file.name}" is too large (${(file.size / 1024 / 1024).toFixed(1)}MB). Maximum allowed size is 2MB.`);
   }
 
   const bytes = await file.arrayBuffer();
@@ -617,7 +618,7 @@ export async function uploadImage(formData: FormData) {
 
   const filePath = join(publicUploadsDir, uniqueName);
   await sharp(buffer)
-    .resize({ width: 1920, withoutEnlargement: true })
+    .resize({ width: maxWidth, withoutEnlargement: true })
     .webp({ quality: 80 })
     .toFile(filePath);
 

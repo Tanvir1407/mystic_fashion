@@ -75,8 +75,7 @@ export default function HeroCarousel({ slides }: { slides: Slide[] }) {
               alt={`Hero slide ${index + 1}`}
               fill
               className="object-cover object-center"
-              unoptimized={slide.image.startsWith("/uploads/")}
-              sizes="100vw"
+              sizes="(max-width: 640px) 640px, (max-width: 1080px) 1080px, 1920px"
               priority={index === 0}
               loading={index === 0 ? "eager" : "lazy"}
             />

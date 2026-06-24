@@ -61,7 +61,7 @@ function SlideModal({
       const fd = new FormData();
       fd.append("file", file);
       fd.append("title", "hero-slide");
-      const path = await uploadImage(fd);
+      const path = await uploadImage(fd, 1920);
       setForm(f => ({ ...f, image: path }));
     } catch (err: any) {
       showToast(err?.message || "Image upload failed.", "error");
