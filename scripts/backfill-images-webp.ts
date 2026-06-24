@@ -39,9 +39,7 @@ import fs from "fs";
 import sharp from "sharp";
 import { PrismaClient } from "../src/generated/prisma";
 
-const prisma = new PrismaClient({
-  datasources: { db: { url: process.env.DATABASE_URL } },
-});
+const prisma = new PrismaClient();
 
 // ─── CLI Args ─────────────────────────────────────────────────────────────────
 const DRY_RUN   = process.argv.includes("--dry-run");
