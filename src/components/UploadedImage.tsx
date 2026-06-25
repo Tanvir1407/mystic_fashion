@@ -9,6 +9,7 @@ type UploadedImageProps = ImageProps & { src: string };
 export default function UploadedImage({ src, alt, ...props }: UploadedImageProps) {
   const [error, setError] = useState(false);
   const [fellback, setFellback] = useState<string | null>(null);
+  const [triedExts, setTriedExts] = useState<string[]>([]);
 
   // /uploads/* images are served directly — bypassing the Next.js optimizer.
   // The optimizer runs conversion in-process (AVIF/WebP encoding is CPU-heavy)
@@ -25,14 +26,11 @@ export default function UploadedImage({ src, alt, ...props }: UploadedImageProps
       src.endsWith(".webp")
     ) {
       const fallbackExtensions = [".jpg", ".png", ".jpeg"];
-      const tried = fellback || src;
-      const next = fallbackExtensions.find(ext => {
-        const candidate = src.replace(/\.webp$/, ext);
-        return candidate !== tried;
-      });
+      const next = fallbackExtensions.find(ext => !triedExts.includes(ext));
       if (next) {
+        setTriedExts(prev => [...prev, next]);
         setFellback(src.replace(/\.webp$/, next));
-        return; // re-render with fallback extension
+        return;
       }
     }
     setError(true);
