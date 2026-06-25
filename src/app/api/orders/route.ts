@@ -128,11 +128,9 @@ export async function POST(req: NextRequest) {
       const variants = await tx.productVariant.findMany({
         where: {
           OR: uniqueVariantKeys.map(k => ({
-            productId_size_color: {
-              productId: k.productId,
-              size: k.size,
-              color: k.color,
-            },
+            productId: k.productId,
+            size: k.size,
+            color: k.color,
           })),
         },
         include: {

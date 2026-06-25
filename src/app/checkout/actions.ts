@@ -121,11 +121,9 @@ export async function placeOrderAction(payload: {
         tx.productVariant.findMany({
           where: {
             OR: uniqueVariantKeys.map(k => ({
-              productId_size_color: {
-                productId: k.productId,
-                size: k.size,
-                color: k.color,
-              },
+              productId: k.productId,
+              size: k.size,
+              color: k.color,
             })),
           },
           include: {
@@ -138,10 +136,8 @@ export async function placeOrderAction(payload: {
           ? tx.comboConfiguration.findMany({
               where: {
                 OR: uniqueComboPairs.map(p => ({
-                  parentProductId_childProductId: {
-                    parentProductId: p.parentProductId,
-                    childProductId: p.childProductId,
-                  },
+                  parentProductId: p.parentProductId,
+                  childProductId: p.childProductId,
                 })),
               },
             })
