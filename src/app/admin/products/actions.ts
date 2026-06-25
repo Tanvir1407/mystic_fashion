@@ -113,8 +113,13 @@ async function _createProduct(data: {
         slug: finalSlug,
         description: data.description,
         price: 0, // Keep legacy field for backward compatibility (fallback during migration)
-        images: data.images,
-      
+        mediaAssets: {
+          create: data.images.map((url, index) => ({
+            url,
+            isPrimary: index === 0,
+            sortOrder: index,
+          })),
+        },
         team: data.team,
         category: data.category,
         brandId: data.brandId || null,
@@ -151,6 +156,7 @@ async function _createProduct(data: {
       },
       // Return the created data with all relations loaded
       include: {
+        mediaAssets: { orderBy: { sortOrder: "asc" } },
         variants: {
           include: {
             pricingMatrix: true, // Load pricing data for immediate use
@@ -285,7 +291,6 @@ async function _updateProduct(
           slug: finalSlug,
           description: data.description,
           price: data.price, // Keep legacy field updated
-          images: data.images,
           team: data.team,
           category: data.category,
           brandId: data.brandId || null,
@@ -305,11 +310,11 @@ async function _updateProduct(
       await tx.mediaAsset.deleteMany({ where: { productId: id } });
       if (data.images.length > 0) {
         await tx.mediaAsset.createMany({
-          data: data.images.map((url, i) => ({
+          data: data.images.map((url, index) => ({
             productId: id,
             url,
-            isPrimary: i === 0,
-            sortOrder: i,
+            isPrimary: index === 0,
+            sortOrder: index,
           })),
         });
       }
@@ -545,7 +550,11 @@ export async function uploadImage(formData: FormData) {
  */
 export async function getProductsForOrder() {
   return await prisma.product.findMany({
-    include: { variants: true, discount: true },
+    include: {
+      variants: true,
+      discount: true,
+      mediaAssets: { orderBy: { sortOrder: "asc" } },
+    },
     orderBy: { name: "asc" },
   });
 }

@@ -36,7 +36,7 @@ interface Product {
   description: string;
   price: number;
   purchasePrice: number | null;
-  images: string[];
+  mediaAssets: { url: string }[];
   team: string | null;
   category: string;
   brandId: string | null;

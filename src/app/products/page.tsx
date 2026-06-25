@@ -116,7 +116,7 @@ export default async function ProductsPage({
             description: true,
             price: true,
             purchasePrice: true,
-            images: true,
+            mediaAssets: { orderBy: { sortOrder: "asc" }, select: { url: true, id: true } },
             team: true,
             category: true,
             brandId: true,

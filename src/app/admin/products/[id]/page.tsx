@@ -44,6 +44,7 @@ export default async function ProductDetailView({ params }: { params: { id: stri
         include: { order: true },
       },
       purchaseItems: true,
+      mediaAssets: { orderBy: { sortOrder: "asc" } },
     },
   });
 
@@ -192,24 +193,24 @@ export default async function ProductDetailView({ params }: { params: { id: stri
             <div className="flex flex-col md:flex-row gap-6">
               {/* Image Gallery */}
               <div className="w-full md:w-1/3 space-y-3">
-                {product.images.length > 0 ? (
+                {product.mediaAssets.length > 0 ? (
                   <>
                     <div className="relative aspect-square w-full bg-slate-50 border border-slate-200 overflow-hidden">
                       <UploadedImage
-                        src={product.images[0]}
+                        src={product.mediaAssets[0].url}
                         alt={product.name}
                         fill
                         className="object-cover"
                       />
                     </div>
-                    {product.images.length > 1 && (
+                    {product.mediaAssets.length > 1 && (
                       <div className="grid grid-cols-4 gap-2">
-                        {product.images.slice(1, 5).map((img, idx) => (
+                        {product.mediaAssets.slice(1, 5).map((asset, idx) => (
                           <div
-                            key={idx}
+                            key={asset.id}
                             className="relative aspect-square w-full bg-slate-50 border border-slate-200 overflow-hidden"
                           >
-                            <UploadedImage src={img} alt={`${product.name} ${idx}`} fill className="object-cover" />
+                            <UploadedImage src={asset.url} alt={`${product.name} ${idx}`} fill className="object-cover" />
                           </div>
                         ))}
                       </div>

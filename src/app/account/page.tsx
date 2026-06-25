@@ -25,7 +25,7 @@ export default async function AccountPage() {
               product: {
                 select: {
                   name: true,
-                  images: true
+                  mediaAssets: { orderBy: { sortOrder: "asc" }, select: { url: true } }
                 }
               }
             }
@@ -91,7 +91,7 @@ export default async function AccountPage() {
       printNumber: item.printNumber,
       product: {
         name: item.product?.name || "Product",
-        image: item.product?.images?.[0] || null
+        image: item.product?.mediaAssets?.[0]?.url || null
       }
     }))
   }));

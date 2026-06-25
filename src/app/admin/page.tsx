@@ -82,7 +82,7 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
               select: {
                 name: true,
                 purchasePrice: true,
-                images: true
+                mediaAssets: { orderBy: { sortOrder: "asc" }, select: { url: true } }
               }
             }
           }
@@ -164,7 +164,7 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
           name: item.product?.name || "Unknown Product",
           sold: item.quantity,
           revenue: sale,
-          image: item.product?.images?.[0] || ""
+          image: item.product?.mediaAssets?.[0]?.url || ""
         });
       }
     });

@@ -182,8 +182,8 @@ export default function InventoryClient({ initialSettings, products }: { initial
                           <td className="px-4 py-4">
                             <div className="flex items-center gap-3">
                               <div className="w-10 h-10 rounded border border-slate-200 overflow-hidden bg-slate-50 shrink-0">
-                                {product.images?.[0] ? (
-                                  <img src={product.images[0]} alt="" className="w-full h-full object-cover" />
+                                {product.mediaAssets?.[0]?.url ? (
+                                  <img src={product.mediaAssets[0].url} alt="image" className="w-full h-full object-cover" />
                                 ) : (
                                   <div className="w-full h-full flex items-center justify-center text-[8px] text-slate-400 font-bold uppercase">No Img</div>
                                 )}

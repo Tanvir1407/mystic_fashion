@@ -18,7 +18,7 @@ export default async function ReturnsPage() {
       items: {
         include: {
           product: {
-            select: { name: true, price: true, purchasePrice: true, images: true }
+            select: { name: true, price: true, purchasePrice: true, mediaAssets: { orderBy: { sortOrder: "asc" }, select: { url: true } } }
           }
         }
       },

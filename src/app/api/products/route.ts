@@ -84,6 +84,7 @@ export async function GET(req: NextRequest) {
           categoryRel: { select: { id: true, name: true } },
           subcategory: { select: { id: true, name: true } },
           variants: { orderBy: { order: "asc" } },
+          mediaAssets: { orderBy: { sortOrder: "asc" } },
         },
       }),
     ]);
@@ -94,7 +95,7 @@ export async function GET(req: NextRequest) {
       slug: p.slug,
       price: p.price,
       finalPrice: calcFinalPrice(p),
-      images: p.images,
+      images: p.mediaAssets.map((ma) => ma.url),
       isFeatured: p.isFeatured,
       isCustomize: p.isCustomize,
       trackStock: p.trackStock,

@@ -25,7 +25,7 @@ interface Product {
   name: string;
   description: string;
   price: number;
-  images: string[];
+  mediaAssets: { url: string }[];
   team: string;
   category: string;
   isCustomize?: boolean | null;
@@ -55,17 +55,17 @@ export default function ProductClient({
 }) {
   const router = useRouter();
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
-  const selectedImage = product.images[selectedImageIndex] || "";
+  const selectedImage = product.mediaAssets[selectedImageIndex]?.url || "";
 
   const handlePrevImage = () => {
     setSelectedImageIndex((prev) =>
-      prev > 0 ? prev - 1 : product.images.length - 1,
+      prev > 0 ? prev - 1 : product.mediaAssets.length - 1,
     );
   };
 
   const handleNextImage = () => {
     setSelectedImageIndex((prev) =>
-      prev < product.images.length - 1 ? prev + 1 : 0,
+      prev < product.mediaAssets.length - 1 ? prev + 1 : 0,
     );
   };
 
@@ -109,7 +109,7 @@ export default function ProductClient({
         name: product.name,
         price: finalPrice,
         originalPrice: isDiscounted ? basePrice : undefined,
-        image: product.images[0] || "",
+        image: product.mediaAssets[0]?.url || "",
         category: product.team,
         isCustomize: product.isCustomize ?? false,
       },
@@ -153,7 +153,7 @@ export default function ProductClient({
           <div className="w-full lg:w-1/2 flex flex-col lg:flex-row gap-4">
             {/* Thumbnails Row/Column */}
             <div className="flex flex-row lg:flex-col gap-3 overflow-auto scrollbar-hide w-full lg:w-24 flex-shrink-0 order-2 lg:order-1">
-              {product.images.map((img, idx) => (
+              {product.mediaAssets.map((asset, idx) => (
                 <button
                   key={idx}
                   onClick={() => setSelectedImageIndex(idx)}
@@ -164,7 +164,7 @@ export default function ProductClient({
                   }`}
                 >
                   <UploadedImage
-                    src={img}
+                    src={asset.url}
                     alt={`${product.name} view ${idx + 1}`}
                     fill
                     className="object-cover"
@@ -187,7 +187,7 @@ export default function ProductClient({
                 <span className="text-slate-400 font-medium">No Image</span>
               )}
               {/* Navigation Arrows */}
-              {product.images.length > 1 && (
+              {product.mediaAssets.length > 1 && (
                 <>
                   <button
                     onClick={handlePrevImage}

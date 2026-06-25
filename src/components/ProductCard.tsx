@@ -7,7 +7,7 @@ interface ProductCardProps {
     id: string;
     slug?: string | null;
     name: string;
-    images: string[];
+    mediaAssets: { url: string }[];
     team: string;
     variants: {
       size: string;
@@ -104,9 +104,9 @@ export default function ProductCard({ product }: ProductCardProps) {
 
         {/* Image Section */}
         <div className="relative w-full aspect-[3/4] bg-[#F5F5F5] dark:bg-zinc-800 overflow-hidden">
-          {product.images[0] ? (
+         {product.mediaAssets?.[0]?.url ? (
             <Image
-              src={product.images[0]}
+              src={product.mediaAssets[0].url}
               alt={product.name}
               unoptimized
               fill

@@ -998,10 +998,10 @@ function OrderCard({
                                       className="w-full border-b border-slate-100 px-3 py-2 text-left transition-colors hover:bg-slate-50 last:border-0 flex items-center gap-2"
                                     >
                                       <div className="w-7 h-7 rounded bg-slate-100 flex-shrink-0 overflow-hidden border border-slate-200">
-                                        {p.images?.[0] ? (
+                                        {p.mediaAssets?.[0]?.url ? (
                                           <img
-                                            src={p.images[0]}
-                                            alt=""
+                                            src={p.mediaAssets[0].url}
+                                            alt="image"
                                             className="w-full h-full object-cover"
                                           />
                                         ) : (

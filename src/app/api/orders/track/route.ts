@@ -39,7 +39,7 @@ const orderSelect = {
       printName: true,
       printNumber: true,
       printCost: true,
-      product: { select: { name: true, images: true, slug: true } },
+      product: { select: { name: true, slug: true, mediaAssets: { orderBy: { sortOrder: "asc" }, select: { url: true } } } },
     },
   },
 } as const;
@@ -72,7 +72,7 @@ function formatOrder(order: any) {
     items: order.items.map((item: any) => ({
       id: item.id,
       productName: item.product.name,
-      productImage: item.product.images?.[0] || null,
+      productImage: item.product.mediaAssets?.[0]?.url || null,
       productSlug: item.product.slug,
       size: item.size,
       quantity: item.quantity,

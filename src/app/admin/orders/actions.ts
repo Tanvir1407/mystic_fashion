@@ -1328,7 +1328,7 @@ export async function getOrderById(id: string) {
         items: {
           include: {
             product: {
-              select: { name: true, price: true, purchasePrice: true, images: true },
+              select: { name: true, price: true, purchasePrice: true, mediaAssets: { orderBy: { sortOrder: "asc" }, select: { url: true } } },
             },
           },
         },
@@ -1360,7 +1360,7 @@ export async function searchOrdersForReturn(searchQuery: string) {
         items: {
           include: {
             product: {
-              select: { name: true, price: true, purchasePrice: true, images: true },
+              select: { name: true, price: true, purchasePrice: true, mediaAssets: { orderBy: { sortOrder: "asc" }, select: { url: true } } },
             },
           },
         },

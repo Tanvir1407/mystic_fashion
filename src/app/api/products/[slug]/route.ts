@@ -18,6 +18,7 @@ export async function GET(_req: NextRequest, { params }: { params: { slug: strin
         subcategory: { select: { id: true, name: true } },
         sizeChart: { select: { id: true, category: true, data: true } },
         variants: { orderBy: { order: "asc" } },
+        mediaAssets: { orderBy: { sortOrder: "asc" } },
       },
     });
 
@@ -44,7 +45,7 @@ export async function GET(_req: NextRequest, { params }: { params: { slug: strin
         description: product.description,
         price: product.price,
         finalPrice,
-        images: product.images,
+        images: product.mediaAssets.map((ma) => ma.url),
         isFeatured: product.isFeatured,
         isCustomize: product.isCustomize,
         trackStock: product.trackStock,

@@ -774,8 +774,8 @@ export default function OrderDetailsClient({
                   <div key={item.id} className="flex items-start gap-4 px-5 py-4 hover:bg-slate-50/50 transition-colors">
                     {/* Product Image */}
                     <div className="w-14 h-16 relative bg-slate-100 rounded-lg overflow-hidden border border-slate-150 shrink-0">
-                      {item.product?.images?.[0] ? (
-                        <UploadedImage src={item.product.images[0]} alt={item.product.name} fill className="object-cover" />
+                      {item.product?.mediaAssets?.[0]?.url ? (
+                        <UploadedImage src={item.product.mediaAssets[0].url} alt={item.product.name} fill className="object-cover" />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center">
                           <Package className="w-5 h-5 text-slate-300" />

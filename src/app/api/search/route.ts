@@ -49,6 +49,7 @@ export async function GET(req: NextRequest) {
           brand: { select: { id: true, name: true } },
           categoryRel: { select: { id: true, name: true } },
           variants: { orderBy: { order: "asc" } },
+          mediaAssets: { orderBy: { sortOrder: "asc" } },
         },
       }),
     ]);
@@ -59,7 +60,7 @@ export async function GET(req: NextRequest) {
       slug: p.slug,
       price: p.price,
       finalPrice: calcFinalPrice(p),
-      images: p.images,
+      images: p.mediaAssets.map((ma) => ma.url),
       trackStock: p.trackStock,
       brand: p.brand,
       category: p.categoryRel,

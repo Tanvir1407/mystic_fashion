@@ -35,6 +35,7 @@ export default async function ProductPage({
         },
         sizeChart: true,
         discount: true,
+        mediaAssets: { orderBy: { sortOrder: "asc" } },
       },
     });
 
@@ -51,6 +52,7 @@ export default async function ProductPage({
         },
         sizeChart: true,
         discount: true,
+        mediaAssets: { orderBy: { sortOrder: "asc" } },
       },
     });
   }
@@ -65,6 +67,7 @@ export default async function ProductPage({
         },
         sizeChart: true,
         discount: true,
+        mediaAssets: { orderBy: { sortOrder: "asc" } },
       },
     });
     if (product && product.slug) {
@@ -105,6 +108,7 @@ export default async function ProductPage({
         include: {
           discount: true,
           variants: { include: { pricingMatrix: { select: { basePrice: true } } } },
+          mediaAssets: { orderBy: { sortOrder: "asc" }, select: { url: true } },
         },
       });
 
@@ -153,6 +157,7 @@ export default async function ProductPage({
           include: {
             discount: true,
             variants: { include: { pricingMatrix: { select: { basePrice: true } } } },
+            mediaAssets: { orderBy: { sortOrder: "asc" }, select: { url: true } },
           },
         });
         selected = [...selected, ...fallbackProducts];
