@@ -144,7 +144,7 @@ model Product {
   id            String           @id @default(uuid())
   name          String
   description   String
-  price         Float
+  price         Float?
   purchasePrice Float?
   images        String[]
   team          String?

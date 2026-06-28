@@ -52,8 +52,8 @@ async function _createProduct(data: {
   slug?: string | null;
   description: string;
   price: number; // This will become basePrice for all variants
-  images: string[];
-  team?: string;
+ mediaAssets: { url: string; boundAttributes?: Record<string, string> | null }[];
+   team?: string;
   category: string;
   brandId?: string | null;
   categoryId?: string | null;
@@ -77,7 +77,7 @@ async function _createProduct(data: {
   try {
     // --- VALIDATION PHASE ---
     // Enforce max image limit (UI should also enforce this, but server-side validation is crucial)
-    if (data.images.length > 6) {
+    if (data.mediaAssets.length > 6) {
       return {
         success: false,
         error: "A product can have a maximum of 6 images.",
@@ -114,10 +114,11 @@ async function _createProduct(data: {
         description: data.description,
         price: 0, // Keep legacy field for backward compatibility (fallback during migration)
         mediaAssets: {
-          create: data.images.map((url, index) => ({
-            url,
+          create: data.mediaAssets.map((item, index) => ({
+            url: item.url,
             isPrimary: index === 0,
             sortOrder: index,
+            boundAttributes: item.boundAttributes ?? null,
           })),
         },
         team: data.team,
@@ -228,9 +229,9 @@ async function _updateProduct(
   data: {
     name: string;
     slug?: string | null;
-    description: string;
-    price: number;
-    images: string[];
+    description: string; 
+    price: number;  
+    mediaAssets: { url: string; boundAttributes?: Record<string, string> | null }[];
     team?: string;
     category: string;
     brandId?: string | null;
@@ -255,7 +256,7 @@ async function _updateProduct(
 ) {
   try {
     // --- VALIDATION PHASE ---
-    if (data.images.length > 6) {
+    if (data.mediaAssets.length > 6) {
       return {
         success: false,
         error: "A product can have a maximum of 6 images.",
@@ -308,13 +309,14 @@ async function _updateProduct(
 
       // Step 1b: Sync MediaAsset rows — delete all, recreate from current images
       await tx.mediaAsset.deleteMany({ where: { productId: id } });
-      if (data.images.length > 0) {
+      if (data.mediaAssets.length > 0) {
         await tx.mediaAsset.createMany({
-          data: data.images.map((url, index) => ({
+          data: data.mediaAssets.map((item, index) => ({
             productId: id,
-            url,
+            url: item.url,
             isPrimary: index === 0,
             sortOrder: index,
+            boundAttributes: item.boundAttributes ?? null,
           })),
         });
       }
@@ -355,10 +357,10 @@ async function _updateProduct(
         // variantId is unique, so we can update or create pricing data
         await tx.variantPricingMatrix.upsert({
           where: { variantId: variant.id },
-          update: { basePrice: v.basePrice ?? data.price }, // Update price if already exists
+          update: { basePrice: v.basePrice ?? data.price  }, // Update price if already exists
           create: {
             variantId: variant.id,
-            basePrice: v.basePrice ?? data.price,
+            basePrice: v.basePrice ?? data.price ,
             costPrice: null, // Cost price set null by default (to be filled via purchase orders)
           },
         });

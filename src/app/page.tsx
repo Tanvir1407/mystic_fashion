@@ -42,6 +42,10 @@ export default async function Home() {
                 variants: {
                   include: { pricingMatrix: { select: { basePrice: true } } },
                 },
+                mediaAssets: {
+                  orderBy: { sortOrder: "asc" },
+                  select: { url: true },
+                },
               },
             })
             .catch((e) => {
@@ -68,6 +72,10 @@ export default async function Home() {
                 variants: {
                   include: { pricingMatrix: { select: { basePrice: true } } },
                 },
+                mediaAssets: {
+                  orderBy: { sortOrder: "asc" },
+                  select: { url: true },
+                },
               },
             });
 
@@ -92,6 +100,10 @@ export default async function Home() {
                   discount: true,
                   variants: {
                     include: { pricingMatrix: { select: { basePrice: true } } },
+                  },
+                  mediaAssets: {
+                    orderBy: { sortOrder: "asc" },
+                    select: { url: true },
                   },
                 },
               });

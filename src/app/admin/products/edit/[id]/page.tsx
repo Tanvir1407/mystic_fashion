@@ -17,6 +17,9 @@ export default async function EditProductPage({
           pricingMatrix: true,
         },
       },
+      mediaAssets: {
+        orderBy: { sortOrder: "asc" },
+      },
     },
   });
 

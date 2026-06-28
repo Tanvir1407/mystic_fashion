@@ -55,7 +55,9 @@ export default function ProductFormClient({
     "";
   const [price, setPrice] = useState(initialPrice);
   //
-  const [images, setImages] = useState<string[]>(initialData?.images || []);
+  const [images, setImages] = useState<string[]>(
+    initialData?.mediaAssets?.map((ma: any) => ma.url) || [],
+  );
   const [isUploading, setIsUploading] = useState(false);
   const [isFeatured, setIsFeatured] = useState(
     initialData?.isFeatured || false,
@@ -344,7 +346,7 @@ export default function ProductFormClient({
       return alert("Duplicate Size found. Each variant size must be unique.");
     }
 
-    // ✅ FIX 2: Filter out any undefined, null, or empty strings from images array
+    //  FIX 2: Filter out any undefined, null, or empty strings from images array
     const validImages = images.filter(
       (img) => typeof img === "string" && img.trim() !== "",
     );
@@ -359,9 +361,12 @@ export default function ProductFormClient({
     const productPayload = {
       name: name.trim(),
       slug: slug.trim(),
+      price: Number(price),
       description: description.trim(),
-      price: parseFloat(price), //main product table price
-      images: validImages, // Send the cleaned array
+      mediaAssets: validImages.map((url) => ({
+        url,
+        boundAttributes: null,
+      })), // Send media assets in the expected format
       category: categoryName,
       brandId: brandId || null,
       categoryId: categoryId || null,
@@ -407,7 +412,7 @@ export default function ProductFormClient({
     } catch (error) {
       console.error("Failed to save product:", error);
       alert("Failed to save product. Check the server logs.");
-      setLoading(false); // ✅ FIX 3: Error hole button loading state off korbe
+      setLoading(false); //  FIX 3: Error hole button loading state off korbe
     }
   };
 

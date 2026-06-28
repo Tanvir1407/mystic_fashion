@@ -12,7 +12,15 @@ export default async function SingleOrderPage({ params }: { params: { id: string
     prisma.order.findUnique({
       where: { id: params.id },
       include: {
-        items: { include: { product: true } },
+        items: {
+          include: {
+            product: {
+              include: {
+                mediaAssets: { orderBy: { sortOrder: "asc" }, select: { url: true } },
+              },
+            },
+          },
+        },
         createdBy: true,
       }
     }),
