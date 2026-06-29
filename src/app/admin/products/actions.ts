@@ -19,13 +19,14 @@ function formatPrismaError(error: any): string {
     const lines = error.message.split("\n");
     const details = lines
       .map((line) => line.trim())
-      .filter((line) =>
-        line.startsWith("Argument") ||
-        line.startsWith("Unknown arg") ||
-        line.includes("is missing") ||
-        line.includes("must be") ||
-        line.includes("Expected ") ||
-        line.includes("Required field")
+      .filter(
+        (line) =>
+          line.startsWith("Argument") ||
+          line.startsWith("Unknown arg") ||
+          line.includes("is missing") ||
+          line.includes("must be") ||
+          line.includes("Expected ") ||
+          line.includes("Required field"),
       );
 
     if (details.length > 0) {
@@ -41,7 +42,9 @@ function formatPrismaError(error: any): string {
     const code = (error as any).code;
     const meta = (error as any).meta;
     if (code === "P2002") {
-      const target = Array.isArray(meta?.target) ? meta.target.join(", ") : String(meta?.target || "unique field");
+      const target = Array.isArray(meta?.target)
+        ? meta.target.join(", ")
+        : String(meta?.target || "unique field");
       return `Database constraint error: A record already exists with this ${target.replace(/`/g, "'")}. Please use a unique value.`;
     }
     if (code === "P2025") {
@@ -51,6 +54,81 @@ function formatPrismaError(error: any): string {
   }
 
   return error.message.replace(/`/g, "'");
+}
+
+// ── SHARED HELPERS ──────────────────────────────────────────────────────────
+
+function validateSlug(name: string, slug?: string | null): string | null {
+  const raw = slug?.trim() || slugify(name);
+  const final = slugify(raw);
+  return final || null;
+}
+
+async function checkSlugExists(
+  slug: string,
+  excludeId?: string,
+): Promise<string | null> {
+  const existing = excludeId
+    ? await prisma.product.findFirst({
+        where: { slug, id: { not: excludeId } },
+      })
+    : await prisma.product.findUnique({ where: { slug } });
+  return existing
+    ? "Product slug already exists. Please choose a unique slug."
+    : null;
+}
+
+async function checkDuplicateSkus(
+  variants: { sku?: string }[],
+  excludeProductId?: string,
+): Promise<string | null> {
+  const skus = variants.map((v) => v.sku).filter(Boolean) as string[];
+  if (!skus.length) return null;
+  const dup = await prisma.productVariant.findFirst({
+    where: {
+      sku: { in: skus },
+      ...(excludeProductId ? { productId: { not: excludeProductId } } : {}),
+    },
+    include: { product: true },
+  });
+  return dup
+    ? `SKU "${dup.sku}" is already in use by product "${dup.product.name}". Please ensure all SKUs are unique.`
+    : null;
+}
+
+async function getOrCreateMainWarehouse(tx: any) {
+  try {
+    const code = "MAIN";
+    let w = await tx.warehouse.findUnique({ where: { code } });
+    if (!w) {
+      w = await tx.warehouse.create({
+        data: {
+          code,
+          name: "Main Warehouse Hub",
+          address: "Central fulfillment Center",
+          isActive: true,
+        },
+      });
+    }
+    return w;
+  } catch (error) {
+    console.error("Failed to get or create MAIN warehouse:", error);
+    throw new Error("Warehouse setup failed. Please ensure database is properly initialized.");
+  }
+}
+
+function handleProductError(
+  error: any,
+  context: string,
+): { success: false; error: string } {
+  if (
+    error?.message === "NEXT_REDIRECT" ||
+    error?.digest?.startsWith("NEXT_REDIRECT")
+  ) {
+    throw error;
+  }
+  console.error(`Error in ${context}:`, error);
+  return { success: false, error: formatPrismaError(error) };
 }
 
 // ─── PRODUCT CRUD ─────────────────────────────────────────────────────────────
@@ -70,63 +148,44 @@ async function _createProduct(data: {
   isFeatured: boolean;
   featuredOrder?: number;
   isPublished: boolean;
+  isCustomize: boolean;
+  trackStock: boolean;
   isCombo?: boolean;
   comboRequiredQty?: number;
   comboChildIds?: string[];
   comboDefaultChildIds?: string[];
-  variants: { size: string; color: string; colorCode?: string; sku?: string; stock: number; price?: number; attributes?: any }[];
+  variants: {
+    size: string;
+    color: string;
+    colorCode?: string;
+    sku?: string;
+    stock: number;
+    price?: number;
+    attributes?: any;
+  }[];
 }) {
   try {
     if (data.images.length > 20) {
-      return { success: false, error: "A product can have a maximum of 20 images." };
-    }
-
-    const rawSlug = data.slug ? data.slug.trim() : slugify(data.name);
-    const finalSlug = slugify(rawSlug);
-
-    if (!finalSlug) {
-      return { success: false, error: "A valid unique slug is required." };
-    }
-
-    const existing = await prisma.product.findUnique({ where: { slug: finalSlug } });
-    if (existing) {
       return {
         success: false,
-        error: "Product slug already exists. Please choose a unique slug.",
+        error: "A product can have a maximum of 20 images.",
       };
     }
 
-    // Proactive SKU uniqueness validation check
-    const incomingSkus = data.variants.map(v => v.sku).filter(Boolean) as string[];
-    if (incomingSkus.length > 0) {
-      const duplicateSkuVariant = await prisma.productVariant.findFirst({
-        where: { sku: { in: incomingSkus } },
-        include: { product: true }
-      });
+    const finalSlug = validateSlug(data.name, data.slug);
+    if (!finalSlug)
+      return { success: false, error: "A valid unique slug is required." };
 
-      if (duplicateSkuVariant) {
-        return {
-          success: false,
-          error: `SKU "${duplicateSkuVariant.sku}" is already in use by product "${duplicateSkuVariant.product.name}". Please ensure all SKUs are unique.`
-        };
-      }
-    }
+    const slugErr = await checkSlugExists(finalSlug);
+    if (slugErr) return { success: false, error: slugErr };
+
+    const skuErr = await checkDuplicateSkus(data.variants);
+    if (skuErr) return { success: false, error: skuErr };
 
     const product = await prisma.$transaction(async (tx) => {
-      const warehouseCode = "MAIN";
-      let warehouse = await tx.warehouse.findUnique({ where: { code: warehouseCode } });
-      if (!warehouse) {
-        warehouse = await tx.warehouse.create({
-          data: {
-            code: warehouseCode,
-            name: "Main Warehouse Hub",
-            address: "Central fulfillment Center",
-            isActive: true,
-          },
-        });
-      }
+      const warehouse = await getOrCreateMainWarehouse(tx);
 
-      const prod = await tx.product.create({
+      const prod = (await tx.product.create({
         data: {
           name: data.name,
           slug: finalSlug,
@@ -139,8 +198,10 @@ async function _createProduct(data: {
           isFeatured: data.isFeatured,
           featuredOrder: data.featuredOrder ?? 0,
           isPublished: data.isPublished,
+          //
           isCustomize: data.isCustomize ?? false,
-          trackStock: data.trackStock,
+          trackStock: data.trackStock ?? false,
+
           sizeChartId: data.sizeChartId || null,
           discountId: data.discountId || null,
           isCombo: data.isCombo ?? false,
@@ -157,12 +218,13 @@ async function _createProduct(data: {
           },
         },
         include: { variants: true },
-      }) as any;
+      })) as any;
 
       for (let idx = 0; idx < data.images.length; idx++) {
         const img = data.images[idx];
         const imageUrl = typeof img === "string" ? img : img.url;
-        const boundAttrs = typeof img === "string" ? {} : (img.boundAttributes || {});
+        const boundAttrs =
+          typeof img === "string" ? {} : img.boundAttributes || {};
         await tx.mediaAsset.create({
           data: {
             productId: prod.id,
@@ -175,12 +237,13 @@ async function _createProduct(data: {
 
       for (const variant of prod.variants) {
         const inputVariant = data.variants.find(
-          v => v.size === variant.size && v.color === variant.color
+          (v) => v.size === variant.size && v.color === variant.color,
         );
         const stockQty = inputVariant?.stock ?? 0;
-        const variantPrice = inputVariant?.price !== undefined && inputVariant.price > 0
-          ? inputVariant.price
-          : data.price;
+        const variantPrice =
+          inputVariant?.price !== undefined && inputVariant.price > 0
+            ? inputVariant.price
+            : data.price;
 
         await tx.variantPricingMatrix.create({
           data: {
@@ -238,17 +301,7 @@ async function _createProduct(data: {
     revalidatePath("/product/[slug]", "page");
     return { success: true, data: product };
   } catch (error: any) {
-    if (
-      error.message === "NEXT_REDIRECT" ||
-      error.digest?.startsWith("NEXT_REDIRECT")
-    ) {
-      throw error;
-    }
-    console.error("Error in createProduct:", error);
-    return {
-      success: false,
-      error: formatPrismaError(error),
-    };
+    return handleProductError(error, "createProduct");
   }
 }
 
@@ -278,67 +331,46 @@ async function _updateProduct(
     isFeatured: boolean;
     featuredOrder?: number;
     isPublished: boolean;
+
+    ///
+    isCustomize: boolean;
+    trackStock: boolean;
+    //
     isCombo?: boolean;
     comboRequiredQty?: number;
     comboChildIds?: string[];
     comboDefaultChildIds?: string[];
-    variants: { size: string; color: string; colorCode?: string; sku?: string; stock: number; price?: number; attributes?: any }[];
-  }
+    variants: {
+      size: string;
+      color: string;
+      colorCode?: string;
+      sku?: string;
+      stock: number;
+      price?: number;
+      attributes?: any;
+    }[];
+  },
 ) {
   try {
     if (data.images.length > 20) {
-      return { success: false, error: "A product can have a maximum of 20 images." };
-    }
-
-    const rawSlug = data.slug ? data.slug.trim() : slugify(data.name);
-    const finalSlug = slugify(rawSlug);
-
-    if (!finalSlug) {
-      return { success: false, error: "A valid unique slug is required." };
-    }
-
-    const existing = await prisma.product.findFirst({
-      where: { slug: finalSlug, id: { not: id } },
-    });
-    if (existing) {
       return {
         success: false,
-        error: "Product slug already exists. Please choose a unique slug.",
+        error: "A product can have a maximum of 20 images.",
       };
     }
 
-    // Proactive SKU uniqueness validation check (excluding current product being updated)
-    const incomingSkus = data.variants.map(v => v.sku).filter(Boolean) as string[];
-    if (incomingSkus.length > 0) {
-      const duplicateSkuVariant = await prisma.productVariant.findFirst({
-        where: {
-          sku: { in: incomingSkus },
-          productId: { not: id }
-        },
-        include: { product: true }
-      });
+    const finalSlug = validateSlug(data.name, data.slug);
+    if (!finalSlug)
+      return { success: false, error: "A valid unique slug is required." };
 
-      if (duplicateSkuVariant) {
-        return {
-          success: false,
-          error: `SKU "${duplicateSkuVariant.sku}" is already in use by product "${duplicateSkuVariant.product.name}". Please ensure all SKUs are unique.`
-        };
-      }
-    }
+    const slugErr = await checkSlugExists(finalSlug, id);
+    if (slugErr) return { success: false, error: slugErr };
+
+    const skuErr = await checkDuplicateSkus(data.variants, id);
+    if (skuErr) return { success: false, error: skuErr };
 
     const product = await prisma.$transaction(async (tx) => {
-      const warehouseCode = "MAIN";
-      let warehouse = await tx.warehouse.findUnique({ where: { code: warehouseCode } });
-      if (!warehouse) {
-        warehouse = await tx.warehouse.create({
-          data: {
-            code: warehouseCode,
-            name: "Main Warehouse Hub",
-            address: "Central fulfillment Center",
-            isActive: true,
-          },
-        });
-      }
+      const warehouse = await getOrCreateMainWarehouse(tx);
 
       const prod = await tx.product.update({
         where: { id },
@@ -355,7 +387,8 @@ async function _updateProduct(
           featuredOrder: data.featuredOrder ?? 0,
           isPublished: data.isPublished,
           isCustomize: data.isCustomize ?? false,
-          trackStock: data.trackStock,
+          //
+          trackStock: data.trackStock ?? false,
           sizeChartId: data.sizeChartId || null,
           discountId: data.discountId || null,
           isCombo: data.isCombo ?? false,
@@ -367,7 +400,8 @@ async function _updateProduct(
       for (let idx = 0; idx < data.images.length; idx++) {
         const img = data.images[idx];
         const imageUrl = typeof img === "string" ? img : img.url;
-        const boundAttrs = typeof img === "string" ? {} : (img.boundAttributes || {});
+        const boundAttrs =
+          typeof img === "string" ? {} : img.boundAttributes || {};
         await tx.mediaAsset.create({
           data: {
             productId: id,
@@ -383,15 +417,16 @@ async function _updateProduct(
         where: { productId: id },
         select: { id: true, size: true, color: true },
       });
-      const existingVariantIds = existingVariants.map(v => v.id);
-      const existingStocks = existingVariantIds.length > 0
-        ? await tx.stock.findMany({
-            where: {
-              variantId: { in: existingVariantIds },
-              warehouseId: warehouse.id,
-            },
-          })
-        : [];
+      const existingVariantIds = existingVariants.map((v) => v.id);
+      const existingStocks =
+        existingVariantIds.length > 0
+          ? await tx.stock.findMany({
+              where: {
+                variantId: { in: existingVariantIds },
+                warehouseId: warehouse.id,
+              },
+            })
+          : [];
       const stockMap = new Map<string, (typeof existingStocks)[number]>();
       for (const s of existingStocks) {
         stockMap.set(s.variantId, s);
@@ -401,8 +436,19 @@ async function _updateProduct(
       for (let idx = 0; idx < data.variants.length; idx++) {
         const v = data.variants[idx];
         const variant = await tx.productVariant.upsert({
-          where: { productId_size_color: { productId: id, size: v.size, color: v.color } },
-          update: { sku: v.sku, order: idx, colorCode: v.colorCode, attributes: v.attributes || {} },
+          where: {
+            productId_size_color: {
+              productId: id,
+              size: v.size,
+              color: v.color,
+            },
+          },
+          update: {
+            sku: v.sku,
+            order: idx,
+            colorCode: v.colorCode,
+            attributes: v.attributes || {},
+          },
           create: {
             productId: id,
             size: v.size,
@@ -415,9 +461,8 @@ async function _updateProduct(
         });
         upserted.push(variant);
 
-        const variantPrice = v.price !== undefined && v.price > 0
-          ? v.price
-          : data.price;
+        const variantPrice =
+          v.price !== undefined && v.price > 0 ? v.price : data.price;
 
         await tx.variantPricingMatrix.upsert({
           where: { variantId: variant.id },
@@ -522,17 +567,7 @@ async function _updateProduct(
     revalidatePath("/product/[slug]", "page");
     return { success: true, data: product };
   } catch (error: any) {
-    if (
-      error.message === "NEXT_REDIRECT" ||
-      error.digest?.startsWith("NEXT_REDIRECT")
-    ) {
-      throw error;
-    }
-    console.error("Error in updateProduct:", error);
-    return {
-      success: false,
-      error: formatPrismaError(error),
-    };
+    return handleProductError(error, "updateProduct");
   }
 }
 
@@ -554,7 +589,10 @@ async function _deleteProduct(id: string) {
     console.error("Error in deleteProduct:", error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : "An unexpected error occurred.",
+      error:
+        error instanceof Error
+          ? error.message
+          : "An unexpected error occurred.",
     };
   }
 }
@@ -577,7 +615,10 @@ async function _restoreProduct(id: string) {
     revalidatePath("/");
     return { success: true };
   } catch (error: any) {
-    return { success: false, error: error.message || "Failed to restore product." };
+    return {
+      success: false,
+      error: error.message || "Failed to restore product.",
+    };
   }
 }
 
@@ -597,7 +638,9 @@ export async function uploadImage(formData: FormData, maxWidth = 800) {
 
   const MAX_SIZE = 2 * 1024 * 1024; // 2MB raw — WebP conversion reduces significantly
   if (file.size > MAX_SIZE) {
-    throw new Error(`Image "${file.name}" is too large (${(file.size / 1024 / 1024).toFixed(1)}MB). Maximum allowed size is 2MB.`);
+    throw new Error(
+      `Image "${file.name}" is too large (${(file.size / 1024 / 1024).toFixed(1)}MB). Maximum allowed size is 2MB.`,
+    );
   }
 
   const bytes = await file.arrayBuffer();
@@ -614,7 +657,7 @@ export async function uploadImage(formData: FormData, maxWidth = 800) {
   const publicUploadsDir = join(process.cwd(), "public", "uploads");
   try {
     await mkdir(publicUploadsDir, { recursive: true });
-  } catch (e) { }
+  } catch (e) {}
 
   const filePath = join(publicUploadsDir, uniqueName);
   await sharp(buffer)
@@ -637,9 +680,9 @@ export async function getProductsForOrder() {
         include: {
           pricingMatrix: true,
           stocks: {
-            where: { warehouse: { code: "MAIN" } }
-          }
-        }
+            where: { warehouse: { code: "MAIN" } },
+          },
+        },
       },
       comboChildOptions: {
         include: {
@@ -648,17 +691,17 @@ export async function getProductsForOrder() {
               id: true,
               name: true,
               variants: {
-                select: { id: true, size: true, color: true }
-              }
-            }
-          }
-        }
-      }
+                select: { id: true, size: true, color: true },
+              },
+            },
+          },
+        },
+      },
     },
     orderBy: { name: "asc" },
   });
 
-  return products.map(p => {
+  return products.map((p) => {
     const basePrice = p.variants?.[0]?.pricingMatrix?.basePrice
       ? Number(p.variants[0].pricingMatrix.basePrice)
       : 0;
@@ -670,17 +713,18 @@ export async function getProductsForOrder() {
       price: basePrice,
       category: p.categoryRel?.name || "",
       images: displayImages,
-      variants: p.variants.map(v => ({
+      variants: p.variants.map((v) => ({
         ...v,
-        stock: v.stocks?.[0]?.availableQuantity ?? 0
+        stock: v.stocks?.[0]?.availableQuantity ?? 0,
       })),
       isCombo: p.isCombo,
       comboRequiredQty: p.comboRequiredQty,
-      comboChildOptions: p.comboChildOptions?.map((o: any) => ({
-        id: o.childProduct.id,
-        name: o.childProduct.name,
-        variantId: o.childProduct.variants?.[0]?.id || ""
-      })) || []
+      comboChildOptions:
+        p.comboChildOptions?.map((o: any) => ({
+          id: o.childProduct.id,
+          name: o.childProduct.name,
+          variantId: o.childProduct.variants?.[0]?.id || "",
+        })) || [],
     };
   });
 }
@@ -706,7 +750,10 @@ async function _saveSizeChart(category: string, data: any) {
     console.error("Error in saveSizeChart:", error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : "An unexpected error occurred.",
+      error:
+        error instanceof Error
+          ? error.message
+          : "An unexpected error occurred.",
     };
   }
 }
@@ -715,6 +762,7 @@ export const saveSizeChart = withAuditLog(_saveSizeChart, {
   entityType: "SizeChart",
   action: "UPDATE",
   getEntityId: () => null,
+
   getEntityIdFromResult: (r: any) => r?.data?.id ?? null,
   fetchAfter: (id) => prisma.sizeChart.findUnique({ where: { id } }),
   describe: (args) => `Saved size chart for category "${args[0]}"`,
@@ -729,7 +777,10 @@ async function _deleteSizeChart(id: string) {
     console.error("Error in deleteSizeChart:", error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : "An unexpected error occurred.",
+      error:
+        error instanceof Error
+          ? error.message
+          : "An unexpected error occurred.",
     };
   }
 }
