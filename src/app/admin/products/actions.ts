@@ -216,24 +216,16 @@ async function _createProduct(data: {
               attributes: v.attributes || {},
             })),
           },
-        },
-        include: { variants: true },
-      })) as any;
-
-      for (let idx = 0; idx < data.images.length; idx++) {
-        const img = data.images[idx];
-        const imageUrl = typeof img === "string" ? img : img.url;
-        const boundAttrs =
-          typeof img === "string" ? {} : img.boundAttributes || {};
-        await tx.mediaAsset.create({
-          data: {
-            productId: prod.id,
-            url: imageUrl,
-            sortOrder: idx,
-            boundAttributes: boundAttrs,
+          mediaAssets: {
+            create: data.images.map((img, idx) => ({
+              url: typeof img === "string" ? img : img.url,
+              sortOrder: idx,
+              boundAttributes: typeof img === "string" ? {} : img.boundAttributes || {},
+            })),
           },
-        });
-      }
+        },
+        include: { variants: true, mediaAssets: true },
+      })) as any;
 
       for (const variant of prod.variants) {
         const inputVariant = data.variants.find(
@@ -378,7 +370,6 @@ async function _updateProduct(
           name: data.name,
           slug: finalSlug,
           description: data.description,
-
           team: data.team || null,
           brandId: data.brandId || null,
           categoryId: data.categoryId || null,
@@ -387,30 +378,22 @@ async function _updateProduct(
           featuredOrder: data.featuredOrder ?? 0,
           isPublished: data.isPublished,
           isCustomize: data.isCustomize ?? false,
-          //
           trackStock: data.trackStock ?? false,
           sizeChartId: data.sizeChartId || null,
           discountId: data.discountId || null,
           isCombo: data.isCombo ?? false,
           comboRequiredQty: data.comboRequiredQty ?? 0,
-        },
-      });
-
-      await tx.mediaAsset.deleteMany({ where: { productId: id } });
-      for (let idx = 0; idx < data.images.length; idx++) {
-        const img = data.images[idx];
-        const imageUrl = typeof img === "string" ? img : img.url;
-        const boundAttrs =
-          typeof img === "string" ? {} : img.boundAttributes || {};
-        await tx.mediaAsset.create({
-          data: {
-            productId: id,
-            url: imageUrl,
-            sortOrder: idx,
-            boundAttributes: boundAttrs,
+          mediaAssets: {
+            deleteMany: {},
+            create: data.images.map((img, idx) => ({
+              url: typeof img === "string" ? img : img.url,
+              sortOrder: idx,
+              boundAttributes: typeof img === "string" ? {} : img.boundAttributes || {},
+            })),
           },
-        });
-      }
+        },
+        include: { mediaAssets: true },
+      });
 
       // ── Batch pre-fetch existing variants and stock ──────────────────────────
       const existingVariants = await tx.productVariant.findMany({
