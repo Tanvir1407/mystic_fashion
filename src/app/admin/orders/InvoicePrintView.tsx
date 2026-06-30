@@ -42,7 +42,7 @@ interface Order {
   remarks?: string | null;
 }
 
-export default function InvoicePrintView({ orders }: { orders: Order[] }) {
+export default function InvoicePrintView({ orders, posFooter }: { orders: Order[]; posFooter?: string }) {
   if (!orders || orders.length === 0) return null;
 
 
@@ -219,11 +219,16 @@ export default function InvoicePrintView({ orders }: { orders: Order[] }) {
                 {/* Bottom Section: Wash Care & Summary */}
                 <div className="flex justify-between text-xs mt-2 text-black flex-1">
                   {/* Note */}
-                  <div className="w-3/5 pr-8 pt-2">
-                    {order.remarks && order.remarks.trim() !== "" && (
-                      <div className="text-slate-800 text-left">
-                        <p className="text-xs leading-relaxed whitespace-pre-wrap font-medium">Note: <span className="italic font-normal">{order.remarks}</span></p>
-                      </div>
+                  <div className="w-3/5 pr-8 pt-2 flex flex-col justify-between">
+                    <div>
+                      {order.remarks && order.remarks.trim() !== "" && (
+                        <div className="text-slate-800 text-left mb-2">
+                          <p className="text-xs leading-relaxed whitespace-pre-wrap font-medium">Note: <span className="italic font-normal">{order.remarks}</span></p>
+                        </div>
+                      )}
+                    </div>
+                    {posFooter && (
+                      <p className="text-[9px] text-slate-500 italic leading-snug mt-auto">{posFooter}</p>
                     )}
                   </div>
 

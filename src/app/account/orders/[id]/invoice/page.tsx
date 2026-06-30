@@ -90,7 +90,10 @@ export default async function CustomerInvoicePage({
     }))
   };
 
-  const footerData = await getFooterData();
+  const [footerData, deliverySetting] = await Promise.all([
+    getFooterData(),
+    prisma.deliverySetting.findFirst(),
+  ]);
 
   return (
     <InvoiceClient
@@ -100,6 +103,7 @@ export default async function CustomerInvoicePage({
       discount={discount}
       deliveryCharge={deliveryCharge}
       footerData={footerData}
+      posFooter={deliverySetting?.posFooter ?? undefined}
     />
   );
 }

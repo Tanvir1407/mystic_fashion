@@ -257,7 +257,7 @@ export default function OrderListClient({
   return (
     <div className="flex flex-col gap-6">
       {/* Invoice print view — only this is visible during printing */}
-      {printType === "A4" && <InvoicePrintView orders={selectedOrdersToPrint} />}
+      {printType === "A4" && <InvoicePrintView orders={selectedOrdersToPrint} posFooter={posFooter} />}
       {printType === "80MM" && (
         <ThermalPrintView
           orders={selectedOrdersToPrint}

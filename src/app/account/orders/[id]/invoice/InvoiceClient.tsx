@@ -53,7 +53,8 @@ export default function InvoiceClient({
   dtfTotal,
   discount,
   deliveryCharge,
-  footerData
+  footerData,
+  posFooter
 }: {
   order: Order;
   baseSubtotal: number;
@@ -61,6 +62,7 @@ export default function InvoiceClient({
   discount: number;
   deliveryCharge: number;
   footerData: FooterData;
+  posFooter?: string;
 }) {
   const [isMounted, setIsMounted] = useState(false);
 
@@ -265,9 +267,11 @@ export default function InvoiceClient({
                 </div>
               )}
 
-              <div className="text-[10px] text-slate-400 font-light space-y-1 print:text-slate-500 leading-relaxed">
-                <p className="font-medium text-slate-700">Thank you for your purchase with Mystic Fashion!</p>
-              </div>
+              {posFooter && (
+                <div className="text-[10px] text-slate-500 font-light leading-relaxed print:text-slate-500">
+                  <p className="italic">{posFooter}</p>
+                </div>
+              )}
             </div>
 
             {/* Invoice Summary */}
