@@ -220,16 +220,17 @@ export default function InvoicePrintView({ orders, posFooter }: { orders: Order[
                 <div className="flex justify-between text-xs mt-2 text-black flex-1">
                   {/* Note */}
                   <div className="w-3/5 pr-8 pt-2 flex flex-col justify-between">
-                    <div>
+                    <div className="space-y-1">
                       {order.remarks && order.remarks.trim() !== "" && (
                         <div className="text-slate-800 text-left mb-2">
                           <p className="text-xs leading-relaxed whitespace-pre-wrap font-medium">Note: <span className="italic font-normal">{order.remarks}</span></p>
                         </div>
                       )}
-                    </div>
-                    {posFooter && (
+                      {posFooter && (
                       <p className="text-[9px] text-slate-500 italic leading-snug mt-auto">{posFooter}</p>
                     )}
+                    </div>
+                    
                   </div>
 
                   {/* Pricing Summary */}
