@@ -814,6 +814,15 @@ async function _createAdminOrder(data: {
           tags: data.tags || [],
           items: {
             create: data.items.flatMap((item) => {
+              const comboSelectionsData = item.comboSelections?.length
+                ? {
+                    create: item.comboSelections.map((sel) => ({
+                      productId: sel.productId,
+                      quantity: sel.quantity,
+                    })),
+                  }
+                : undefined;
+
               if (item.requiresPrint && item.printDetails && item.printDetails.length > 0) {
                 const printedItems = item.printDetails.map((pd) => ({
                   productId: item.productId,
@@ -824,6 +833,7 @@ async function _createAdminOrder(data: {
                   printName: pd.name,
                   printNumber: pd.number,
                   printCost: item.printCost || 0,
+                  comboSelections: comboSelectionsData,
                 }));
                 const remainingQty = item.quantity - item.printDetails.length;
                 if (remainingQty > 0) {
@@ -836,6 +846,7 @@ async function _createAdminOrder(data: {
                     printName: null,
                     printNumber: null,
                     printCost: 0,
+                    comboSelections: comboSelectionsData,
                   });
                 }
                 return printedItems;
@@ -850,16 +861,7 @@ async function _createAdminOrder(data: {
                     printName: item.printName || null,
                     printNumber: item.printNumber || null,
                     printCost: item.printCost || 0,
-                    ...(item.comboSelections?.length
-                      ? {
-                          comboSelections: {
-                            create: item.comboSelections.map((sel) => ({
-                              productId: sel.productId,
-                              quantity: sel.quantity,
-                            })),
-                          },
-                        }
-                      : {}),
+                    comboSelections: comboSelectionsData,
                   },
                 ];
               }

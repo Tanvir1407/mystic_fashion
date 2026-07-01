@@ -647,8 +647,14 @@ export async function getProductsForOrder() {
             select: {
               id: true,
               name: true,
+              trackStock: true,
               variants: {
-                select: { id: true, size: true, color: true }
+                select: {
+                  id: true,
+                  size: true,
+                  color: true,
+                  stocks: { where: { warehouse: { code: "MAIN" } }, select: { availableQuantity: true } }
+                }
               }
             }
           }
@@ -677,9 +683,20 @@ export async function getProductsForOrder() {
       isCombo: p.isCombo,
       comboRequiredQty: p.comboRequiredQty,
       comboChildOptions: p.comboChildOptions?.map((o: any) => ({
-        id: o.childProduct.id,
-        name: o.childProduct.name,
-        variantId: o.childProduct.variants?.[0]?.id || ""
+        id: o.id,
+        childProductId: o.childProductId,
+        maxQuantity: o.maxQuantity,
+        childProduct: {
+          id: o.childProduct.id,
+          name: o.childProduct.name,
+          trackStock: o.childProduct.trackStock,
+          variants: o.childProduct.variants.map((v) => ({
+            id: v.id,
+            size: v.size,
+            color: v.color,
+            stock: v.stocks?.[0]?.availableQuantity ?? 0
+          }))
+        }
       })) || []
     };
   });
