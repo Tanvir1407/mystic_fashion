@@ -412,15 +412,6 @@ export default function OrderDetailsClient({
     }
 
     setLoading(true);
-    let finalTags = formData.tags;
-    const pendingTag = tagInput.replace(/,/g, "").trim();
-    if (pendingTag) {
-      if (!finalTags.includes(pendingTag)) {
-        finalTags = [...finalTags, pendingTag];
-        setFormData(prev => ({ ...prev, tags: finalTags }));
-      }
-      setTagInput("");
-    }
 
     const result = await updateOrderDetails(order.id, {
       customerName: formData.customerName,
@@ -435,7 +426,7 @@ export default function OrderDetailsClient({
       pathaoZoneId: formData.pathaoZoneId,
       pathaoAreaId: formData.pathaoAreaId,
       specialInstruction: formData.specialInstruction || null,
-      tags: finalTags,
+      tags: formData.tags,
       createdById: formData.createdById || null,
       items: formData.items.map((i: any) => ({
         id: i.id,
@@ -1522,7 +1513,7 @@ export default function OrderDetailsClient({
                   <Tag className="w-4 h-4 text-slate-500" />
                   Tags
                 </h3>
-                {!isEditing && !isEditingTags && (
+                {!isEditingTags && (
                   <button
                     onClick={() => {
                       setIsEditingTags(true);
@@ -1546,6 +1537,7 @@ export default function OrderDetailsClient({
                     <button
                       onClick={() => {
                         setIsEditingTags(false);
+                        setTagInput("");
                       }}
                       disabled={loading}
                       className="text-xs font-bold text-slate-500 hover:text-slate-700 transition-colors"
@@ -1556,10 +1548,10 @@ export default function OrderDetailsClient({
                 )}
               </div>
               <div className="p-4">
-                {(isEditing || isEditingTags) ? (
+                {isEditingTags ? (
                   <div className="space-y-3">
                     <div className="flex flex-wrap items-center gap-2 p-2 bg-slate-50 border border-slate-200 rounded-lg focus-within:bg-white focus-within:ring-2 focus-within:ring-indigo-500/20 focus-within:border-indigo-500 transition-all min-h-[42px]">
-                      {(isEditing ? formData.tags : tagsFormData).map((tag: string, idx: number) => (
+                      {tagsFormData.map((tag: string, idx: number) => (
                         <span
                           key={tag}
                           className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-100 uppercase tracking-wide"
@@ -1568,14 +1560,7 @@ export default function OrderDetailsClient({
                           <button
                             type="button"
                             onClick={() => {
-                              if (isEditing) {
-                                setFormData({
-                                  ...formData,
-                                  tags: formData.tags.filter((_, i) => i !== idx),
-                                });
-                              } else {
-                                setTagsFormData(tagsFormData.filter((_, i) => i !== idx));
-                              }
+                              setTagsFormData(tagsFormData.filter((_, i) => i !== idx));
                             }}
                             className="text-indigo-400 hover:text-indigo-600 focus:outline-none transition-colors"
                           >
@@ -1592,23 +1577,14 @@ export default function OrderDetailsClient({
                             e.preventDefault();
                             const val = tagInput.replace(/,/g, "").trim();
                             if (val) {
-                              if (isEditing) {
-                                if (!formData.tags.includes(val)) {
-                                  setFormData({
-                                    ...formData,
-                                    tags: [...formData.tags, val],
-                                  });
-                                }
-                              } else {
-                                if (!tagsFormData.includes(val)) {
-                                  setTagsFormData([...tagsFormData, val]);
-                                }
+                              if (!tagsFormData.includes(val)) {
+                                setTagsFormData([...tagsFormData, val]);
                               }
                             }
                             setTagInput("");
                           }
                         }}
-                        placeholder={(isEditing ? formData.tags : tagsFormData).length === 0 ? "Type tag name and press Enter..." : "Add tag..."}
+                        placeholder={tagsFormData.length === 0 ? "Type tag name and press Enter..." : "Add tag..."}
                         className="flex-1 bg-transparent border-none p-0 text-sm focus:ring-0 outline-none placeholder:text-slate-400 min-w-[100px]"
                       />
                     </div>
