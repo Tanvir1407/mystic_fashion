@@ -17,6 +17,8 @@ const LOGIN_MAX = 5;
 const LOGIN_WINDOW_MS = 15 * 60 * 1000;
 
 function _checkLoginRateLimit(email: string): void {
+  if (process.env.NODE_ENV !== "production") return;
+
   const now = Date.now();
   const entry = _loginAttempts.get(email);
   if (entry && now < entry.resetAt) {

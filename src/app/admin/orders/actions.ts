@@ -459,51 +459,81 @@ async function _updateOrderDetails(
           }
         }
 
+        // ── Diff against existing items: update matched rows, create new ones, delete removed ones ──
+        // (previously this deleted & recreated every OrderItem on every save, which cascade-deleted comboSelections)
+        const removedItemIds: string[] = [];
+
         for (const newItem of data.items) {
+          let variantId: string | undefined = newItem.variantId;
+          if (!variantId && newItem.size) {
+            variantId = variantIdLookup.get(`${newItem.productId}_${newItem.size}_${(newItem as any).color || "Default"}`);
+          }
+          if (!variantId) {
+            throw new Error(`Could not resolve variant ID for product ${newItem.productId}`);
+          }
+
           const oldItem = oldItemsMap.get(newItem.id);
           if (oldItem) {
             const diff = newItem.quantity - oldItem.quantity;
             if (diff !== 0 && isStockHolding) {
-              let variantId = oldItem.variantId ?? newItem.variantId;
-              if (!variantId) {
-                variantId = variantIdLookup.get(`${newItem.productId}_${newItem.size}_${(newItem as any).color || "Default"}`) ?? undefined;
-              }
-              if (variantId) {
-                await updateStockDualWrite(tx, {
-                  variantId,
-                  quantityChange: -diff,
-                  movementType: diff > 0 ? "SALE" : "RETURN",
-                  referenceId: order.id,
-                  referenceType: "ORDER_ITEM_UPDATE",
-                });
-              }
+              const stockVariantId = oldItem.variantId ?? variantId;
+              await updateStockDualWrite(tx, {
+                variantId: stockVariantId,
+                quantityChange: -diff,
+                movementType: diff > 0 ? "SALE" : "RETURN",
+                referenceId: order.id,
+                referenceType: "ORDER_ITEM_UPDATE",
+              });
             }
+
+            await tx.orderItem.update({
+              where: { id: oldItem.id },
+              data: {
+                productId: newItem.productId,
+                variantId,
+                quantity: newItem.quantity,
+                price: newItem.price,
+                requiresPrint: newItem.requiresPrint,
+                printName: newItem.printName || null,
+                printNumber: newItem.printNumber || null,
+                printCost: newItem.printCost,
+              },
+            });
+
             oldItemsMap.delete(newItem.id);
           } else {
             if (isStockHolding) {
-              let variantId: string | undefined = (newItem as any).variantId;
-              if (!variantId) {
-                variantId = variantIdLookup.get(`${newItem.productId}_${newItem.size}_${(newItem as any).color || "Default"}`);
-              }
-              if (variantId) {
-                await updateStockDualWrite(tx, {
-                  variantId,
-                  quantityChange: -newItem.quantity,
-                  movementType: "SALE",
-                  referenceId: order.id,
-                  referenceType: "ORDER_ITEM_ADD",
-                });
-              }
+              await updateStockDualWrite(tx, {
+                variantId,
+                quantityChange: -newItem.quantity,
+                movementType: "SALE",
+                referenceId: order.id,
+                referenceType: "ORDER_ITEM_ADD",
+              });
             }
+
+            await tx.orderItem.create({
+              data: {
+                orderId: id,
+                productId: newItem.productId,
+                variantId,
+                quantity: newItem.quantity,
+                price: newItem.price,
+                requiresPrint: newItem.requiresPrint,
+                printName: newItem.printName || null,
+                printNumber: newItem.printNumber || null,
+                printCost: newItem.printCost,
+              },
+            });
           }
         }
 
-        if (isStockHolding) {
-          for (const remainingOld of oldItemsMap.values()) {
-            const variantId = remainingOld.variantId;
-            if (!variantId) continue;
+        // Anything left in oldItemsMap was removed by the admin in edit mode.
+        for (const remainingOld of oldItemsMap.values()) {
+          removedItemIds.push(remainingOld.id);
+          if (isStockHolding && remainingOld.variantId) {
             await updateStockDualWrite(tx, {
-              variantId,
+              variantId: remainingOld.variantId,
               quantityChange: remainingOld.quantity,
               movementType: "RETURN",
               referenceId: order.id,
@@ -512,32 +542,8 @@ async function _updateOrderDetails(
           }
         }
 
-        await tx.orderItem.deleteMany({ where: { orderId: id } });
-
-        for (const newItem of data.items) {
-          let variantId: string | undefined = newItem.variantId;
-
-          if (!variantId && newItem.size) {
-            variantId = variantIdLookup.get(`${newItem.productId}_${newItem.size}_${(newItem as any).color || "Default"}`);
-          }
-
-          if (!variantId) {
-            throw new Error(`Could not resolve variant ID for product ${newItem.productId}`);
-          }
-
-          await tx.orderItem.create({
-            data: {
-              orderId: id,
-              productId: newItem.productId,
-              variantId,
-              quantity: newItem.quantity,
-              price: newItem.price,
-              requiresPrint: newItem.requiresPrint,
-              printName: newItem.printName || null,
-              printNumber: newItem.printNumber || null,
-              printCost: newItem.printCost,
-            },
-          });
+        if (removedItemIds.length > 0) {
+          await tx.orderItem.deleteMany({ where: { id: { in: removedItemIds } } });
         }
       }
 
